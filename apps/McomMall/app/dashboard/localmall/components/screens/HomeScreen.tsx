@@ -192,10 +192,10 @@ export const HomeScreen: FC<HomeScreenProps> = ({
       {/* Primary Analytics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Ecosystem Points', value: points.toLocaleString(), desc: '+320 this week', color: 'text-orange-600', bg: 'bg-orange-50/50' },
+          { label: 'Ecosystem Points', value: points.toLocaleString(), desc: `+${(mallData?.weeklyPointsEarned ?? 0).toLocaleString()} this week`, color: 'text-orange-600', bg: 'bg-orange-50/50' },
           { label: 'Active Businesses', value: activeBusinessesCount.toString(), desc: 'In your Borough', color: 'text-amber-600', bg: 'bg-amber-50/50' },
           { label: 'Active Campaigns', value: activeCampaignsCount.toString(), desc: 'Shared promotions', color: 'text-red-600', bg: 'bg-red-50/50' },
-          { label: 'Customer Reaches', value: '4,840', desc: 'Active high street feed views', color: 'text-orange-700', bg: 'bg-orange-100/30' },
+          { label: 'Customer Reaches', value: (mallData?.consumerCount ?? 0).toLocaleString(), desc: 'Active high street feed views', color: 'text-orange-700', bg: 'bg-orange-100/30' },
         ].map((stat, idx) => (
           <div key={idx} className={`p-4 rounded-3xl border border-gray-100/50 ${stat.bg} shadow-sm flex flex-col justify-between min-h-[110px]`}>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
