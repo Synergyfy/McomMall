@@ -186,7 +186,7 @@ export default function LocalMallPage() {
       case 'request-partner':
         return <RequestPartnerScreen onNavigate={handleNavigate} />;
       case 'share-exchange':
-        return <ShareExchangeScreen onNavigate={handleNavigate} />;
+        return <ShareExchangeScreen onNavigate={handleNavigate} mallData={mallData} />;
       case 'campaign-builder':
         return <CampaignBuilderScreen onNavigate={handleNavigate} />;
       

@@ -318,11 +318,16 @@ export const RequestPartnerScreen: FC<RequestPartnerScreenProps> = ({
 // ─── SHARE EXCHANGE SCREEN ───────────────────────────────────────────────────
 interface ShareExchangeScreenProps {
   onNavigate: (screen: string) => void;
+  mallData: any;
 }
 
 export const ShareExchangeScreen: FC<ShareExchangeScreenProps> = ({
   onNavigate,
+  mallData,
 }) => {
+  const points = mallData?.pointsBalance ?? 2400;
+  const ecosystemPool = (mallData?.businesses?.length ?? 0) * 1200;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
@@ -332,11 +337,11 @@ export const ShareExchangeScreen: FC<ShareExchangeScreenProps> = ({
         <div className="grid grid-cols-2 gap-4 mt-6">
           <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-2xl text-center">
             <p className="text-[10px] font-bold text-gray-400 uppercase">Your Share Balance</p>
-            <p className="text-xl font-black text-orange-600 mt-1">500 shares</p>
+            <p className="text-xl font-black text-orange-600 mt-1">{points.toLocaleString()} shares</p>
           </div>
           <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl text-center">
             <p className="text-[10px] font-bold text-gray-400 uppercase">Ecosystem Pool</p>
-            <p className="text-xl font-black text-amber-600 mt-1">2,400 shares</p>
+            <p className="text-xl font-black text-amber-600 mt-1">{ecosystemPool.toLocaleString()} shares</p>
           </div>
         </div>
 
