@@ -50,6 +50,7 @@ const ScrollAnimatedSection = ({ children, className = "" }: { children: React.R
 
 export default function HomePage() {
   const [currentCopyIndex, setCurrentCopyIndex] = useState(0);
+  const solutionsUrl = process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000';
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
@@ -258,10 +259,10 @@ export default function HomePage() {
                   transition={{ duration: 0.7, delay: 0.2 }}
                   className="w-full max-w-2xl"
                 >
-                  <Link href="/getstarted/business" className="inline-flex items-center gap-3 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-orange-500/25 transition-all active:scale-95 text-sm md:text-base uppercase tracking-wider">
+                  <a href={`${solutionsUrl}/getstarted/business?source=mcommall`} className="inline-flex items-center gap-3 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-orange-500/25 transition-all active:scale-95 text-sm md:text-base uppercase tracking-wider">
                     <span>Create Merchant Account</span>
                     <ArrowRight size={18} />
-                  </Link>
+                  </a>
                 </motion.div>
 
                 {/* Sleek Trust Badges */}

@@ -20,8 +20,11 @@ async function configureApp(app: any) {
   app.enableCors({
     origin: [
       'https://mcommall.vercel.app',
+      'https://mcom-mall.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001',
+      'http://localhost:3002',
+      'http://localhost:3003',
     ],
     credentials: true,
   });

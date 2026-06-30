@@ -75,7 +75,7 @@ const authSlice = createSlice({
       const accessToken = Cookies.get('access');
       const userId = Cookies.get('userId');
       const userRole = Cookies.get('userRole');
-      const userName = localStorage.getItem('user-name');
+      const userName = localStorage.getItem('user-name') || (Cookies.get('userName') ? decodeURIComponent(Cookies.get('userName')!) : null);
       const packageInfo = Cookies.get('packageInfo');
 
       if (accessToken) {
