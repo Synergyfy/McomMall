@@ -16,6 +16,7 @@ const Footer = dynamic(() => import('@/components/Footer'));
 
 export default function BusinessLandingPage() {
   const router = useRouter();
+  const solutionsUrl = process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000';
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [postcodeQuery, setPostcodeQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -88,13 +89,13 @@ export default function BusinessLandingPage() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link
-                href="/getstarted/business"
+              <a
+                href={`${solutionsUrl}/getstarted/business?source=mcommall`}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-orange-500/25 transition-all active:scale-95 text-base uppercase tracking-wider"
               >
                 Create Merchant Account
                 <ArrowRight size={18} />
-              </Link>
+              </a>
               <Link
                 href="/getstarted"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 font-semibold py-4 px-8 rounded-2xl transition-all text-sm"
@@ -184,7 +185,7 @@ export default function BusinessLandingPage() {
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   </div>
                   <button 
-                    onClick={() => router.push('/getstarted/business')}
+                    onClick={() => window.location.href = `${solutionsUrl}/getstarted/business?source=mcommall`}
                     className="h-12 px-8 bg-slate-900 hover:bg-black text-white font-bold rounded-xl transition-colors text-sm shadow-md"
                   >
                     Check
@@ -328,13 +329,13 @@ export default function BusinessLandingPage() {
 
             {/* Repeat CTA */}
             <div className="text-center mt-14">
-              <Link
-                href="/getstarted/business"
+              <a
+                href={`${solutionsUrl}/getstarted/business?source=mcommall`}
                 className="inline-flex items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-orange-500/25 transition-all active:scale-95 text-base uppercase tracking-wider"
               >
                 Get Started Free
                 <ArrowRight size={18} />
-              </Link>
+              </a>
               <p className="text-xs text-slate-400 mt-3">No credit card required. Cancel anytime.</p>
             </div>
           </div>
@@ -377,13 +378,13 @@ export default function BusinessLandingPage() {
             <p className="text-base sm:text-lg text-white/80 max-w-xl mx-auto mb-10 leading-relaxed">
               Thousands of UK businesses already use McomMall to reach local customers, run cashback campaigns, and grow their presence on the high street.
             </p>
-            <Link
-              href="/getstarted/business"
+            <a
+              href={`${solutionsUrl}/getstarted/business?source=mcommall`}
               className="inline-flex items-center justify-center gap-3 bg-white text-orange-600 hover:text-orange-700 font-bold py-4 px-10 rounded-2xl shadow-xl transition-all active:scale-95 text-base uppercase tracking-wider"
             >
               Create Merchant Account
               <ArrowRight size={18} />
-            </Link>
+            </a>
           </div>
         </section>
 
