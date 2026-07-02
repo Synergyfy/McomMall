@@ -75,7 +75,7 @@ export default function GetStartedPage() {
           >
 
             {/* Shopper Card */}
-            <Link href="/signin" className="group w-full block h-full">
+            <a href={`${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/register/customer?source=mcommall`} className="group w-full block h-full">
               <motion.div
                 variants={itemVariants}
                 whileHover={{
@@ -103,7 +103,7 @@ export default function GetStartedPage() {
                   Continue as Customer <ArrowRight className="ml-2 w-4 h-4" />
                 </div>
               </motion.div>
-            </Link>
+            </a>
 
             {/* Merchant Card */}
             <a href={`${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`} className="group w-full block h-full">
