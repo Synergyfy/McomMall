@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { McomCentralService } from './mcom-central.service';
+import * as crypto from 'crypto';
 
 describe('McomCentralService', () => {
   let service: McomCentralService;
 
   beforeEach(async () => {
     process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
-    process.env.SSO_API_KEY = 'test-api-key';
+    process.env.SSO_CLIENT_ID = 'mcom-mall';
+    process.env.SSO_API_SECRET = 'test-hmac-secret';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [McomCentralService],
@@ -18,7 +20,8 @@ describe('McomCentralService', () => {
   afterEach(() => {
     jest.restoreAllMocks();
     delete process.env.MCOM_CENTRAL_BASE_URL;
-    delete process.env.SSO_API_KEY;
+    delete process.env.SSO_CLIENT_ID;
+    delete process.env.SSO_API_SECRET;
   });
 
   it('should be defined', () => {
@@ -26,7 +29,29 @@ describe('McomCentralService', () => {
   });
 
   describe('getUserMembership', () => {
-    it('should return membership data with active mall', async () => {
+    it('should send HMAC signed headers with the request', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ data: null }),
+      });
+
+      await service.getUserMembership('user-1');
+
+      const calledHeaders = (global.fetch as jest.Mock).mock.calls[0][1]
+        .headers;
+      expect(calledHeaders['X-Service-Id']).toBe('mcom-mall');
+      expect(calledHeaders['X-Timestamp']).toBeDefined();
+      expect(calledHeaders['X-Signature']).toBeDefined();
+
+      const timestamp = calledHeaders['X-Timestamp'];
+      const expectedSignature = crypto
+        .createHmac('sha256', 'test-hmac-secret')
+        .update(`mcom-mall:${timestamp}`)
+        .digest('hex');
+      expect(calledHeaders['X-Signature']).toBe(expectedSignature);
+    });
+
+    it('should return membership data with active mall using platform field', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({
@@ -34,8 +59,8 @@ describe('McomCentralService', () => {
             membershipLevel: 'Gold',
             membershipTier: 'Pro',
             packages: [
-              { platformName: 'MCOM Mall', status: 'active' },
-              { platformName: 'MCOM Loyalty', status: 'inactive' },
+              { platform: 'mall', status: 'active' },
+              { platform: 'loyalty', status: 'inactive' },
             ],
           },
         }),
@@ -48,30 +73,24 @@ describe('McomCentralService', () => {
         membershipTier: 'Pro',
         hasActiveMall: true,
         packages: [
-          { platformName: 'MCOM Mall', status: 'active' },
-          { platformName: 'MCOM Loyalty', status: 'inactive' },
+          { platform: 'mall', status: 'active' },
+          { platform: 'loyalty', status: 'inactive' },
         ],
       });
       expect(global.fetch).toHaveBeenCalledWith(
         'http://central:3010/api/v1/data/user?userId=user-1',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'X-Api-Key': 'test-api-key',
-          }),
-        }),
+        expect.anything(),
       );
     });
 
-    it('should return hasActiveMall=false when no active MCOM Mall package', async () => {
+    it('should return hasActiveMall=false when no active mall package', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({
           data: {
             membershipLevel: 'Silver',
             membershipTier: 'Basic',
-            packages: [
-              { platformName: 'MCOM Loyalty', status: 'active' },
-            ],
+            packages: [{ platform: 'loyalty', status: 'active' }],
           },
         }),
       });
@@ -80,6 +99,21 @@ describe('McomCentralService', () => {
 
       expect(result.hasActiveMall).toBe(false);
       expect(result.membershipLevel).toBe('Silver');
+    });
+
+    it('should be case-insensitive when checking platform name', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            packages: [{ platform: 'Mall', status: 'active' }],
+          },
+        }),
+      });
+
+      const result = await service.getUserMembership('user-3');
+
+      expect(result.hasActiveMall).toBe(true);
     });
 
     it('should return null when response is not OK', async () => {
@@ -164,6 +198,17 @@ describe('McomCentralService', () => {
       const result = await service.healthCheck();
 
       expect(result).toBe(true);
+    });
+
+    it('should send HMAC headers for health check', async () => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: true });
+
+      await service.healthCheck();
+
+      const calledHeaders = (global.fetch as jest.Mock).mock.calls[0][1]
+        .headers;
+      expect(calledHeaders['X-Service-Id']).toBe('mcom-mall');
+      expect(calledHeaders['X-Signature']).toBeDefined();
     });
 
     it('should return false when central returns non-OK', async () => {
