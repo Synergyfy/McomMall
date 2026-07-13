@@ -10,7 +10,7 @@ describe('SsoController', () => {
 
   const mockSsoService = {
     generateState: jest.fn().mockReturnValue('mock-state-hex'),
-    getAuthorizeUrl: jest.fn().mockReturnValue('http://central/authorize?state=mock'),
+    getAuthorizeUrl: jest.fn().mockReturnValue('http://central/api/v1/auth/sso/authorize?state=mock'),
     handleCallback: jest.fn(),
   };
 
@@ -65,7 +65,7 @@ describe('SsoController', () => {
         }),
       );
       expect(mockRes.redirect).toHaveBeenCalledWith(
-        'http://central/authorize?state=mock',
+        'http://central/api/v1/auth/sso/authorize?state=mock',
       );
     });
 

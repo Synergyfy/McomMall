@@ -44,7 +44,7 @@ export class SsoService {
       state,
     });
 
-    return `${baseUrl}/authorize?${params.toString()}`;
+    return `${baseUrl}/api/v1/auth/sso/authorize?${params.toString()}`;
   }
 
   async exchangeCode(code: string) {

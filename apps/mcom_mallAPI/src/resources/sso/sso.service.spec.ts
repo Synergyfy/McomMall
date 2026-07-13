@@ -94,7 +94,7 @@ describe('SsoService', () => {
       process.env.MALL_FRONTEND_URL = 'http://mall:3002';
 
       const url = service.getAuthorizeUrl('test-state');
-      expect(url).toContain('http://central:3010/authorize');
+      expect(url).toContain('http://central:3010/api/v1/auth/sso/authorize');
       expect(url).toContain('client_id=mcom-mall');
       expect(url).toContain('response_type=code');
       expect(url).toContain('state=test-state');
@@ -109,7 +109,7 @@ describe('SsoService', () => {
       delete process.env.MALL_FRONTEND_URL;
 
       const url = service.getAuthorizeUrl('state');
-      expect(url).toContain('http://localhost:3010/authorize');
+      expect(url).toContain('http://localhost:3010/api/v1/auth/sso/authorize');
       expect(url).toContain('client_id=mcom-mall');
     });
   });
