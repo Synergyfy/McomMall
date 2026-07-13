@@ -66,6 +66,7 @@ import { InterestSignalsModule } from './resources/interest-signals/interest-sig
 import { AutomationsModule } from './resources/automations/automations.module';
 import { VisibilityModule } from './resources/visibility/visibility.module';
 import { TeamModule } from './resources/team/team.module';
+import { SsoModule } from './resources/sso/sso.module';
 
 @Module({
   imports: [
@@ -138,6 +139,7 @@ import { TeamModule } from './resources/team/team.module';
     TerminalCashbackModule,
     CampaignCashbackModule,
     SeasonsModule,
+    SsoModule,
   ],
   controllers: [AppController],
   providers: [
