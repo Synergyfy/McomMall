@@ -16,7 +16,7 @@ import {
   useResetPassword,
   useCheckEmail,
 } from '@/service/auth/hook';
-import { Eye, EyeOff, ShieldCheck, RefreshCw, X } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, RefreshCw, X, LogIn } from 'lucide-react';
 import OTPInput from './ui/otp-input';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/service/api';
@@ -513,6 +513,18 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                         <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.22 0 12 0 7.39 0 3.18 2.12 1.21 5.37l4.06 3.15c.95-2.85 3.6-4.96 6.73-4.96z" />
                       </svg>
                       Sign In with Google
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1/';
+                        window.location.href = `${apiBase.replace(/\/$/, '')}/sso/authorize`;
+                      }}
+                      className="w-full h-11 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2.5 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
+                    >
+                      <LogIn className="w-4 h-4 shrink-0" />
+                      Sign In with MCOM Solutions
                     </button>
 
                     <div className="text-center mt-4">

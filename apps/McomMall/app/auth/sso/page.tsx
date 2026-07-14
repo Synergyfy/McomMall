@@ -12,9 +12,33 @@ function SSOReceiverContent() {
   const calledRef = useRef(false);
 
   useEffect(() => {
+    if (calledRef.current) return;
+
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
     const ssoToken = searchParams.get('sso_token');
-    
-    if (ssoToken && !calledRef.current) {
+    const accessToken = searchParams.get('accessToken');
+
+    if (code && state) {
+      calledRef.current = true;
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1/';
+      const callbackUrl = `${apiBase.replace(/\/$/, '')}/sso/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+      window.location.href = callbackUrl;
+    } else if (accessToken) {
+      calledRef.current = true;
+      const refreshToken = searchParams.get('refreshToken') || '';
+      const userId = searchParams.get('userId') || '';
+      const name = searchParams.get('name') || '';
+      const role = searchParams.get('role') || 'customer';
+      ssoLogin(accessToken)
+        .then(() => {
+          router.replace('/dashboard');
+        })
+        .catch((err) => {
+          console.error('SSO authentication failed:', err);
+          router.replace('/signin?error=sso_authentication_failed');
+        });
+    } else if (ssoToken && !calledRef.current) {
       calledRef.current = true;
       ssoLogin(ssoToken)
         .then(() => {
@@ -22,8 +46,9 @@ function SSOReceiverContent() {
         })
         .catch((err) => {
           console.error('SSO authentication failed:', err);
+          router.replace('/signin?error=sso_authentication_failed');
         });
-    } else if (!ssoToken) {
+    } else if (!code && !ssoToken && !accessToken) {
       router.replace('/');
     }
   }, [searchParams, ssoLogin, router]);
