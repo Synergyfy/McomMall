@@ -105,6 +105,7 @@ export class AuthController {
         tasks: activeTimers,
       };
     } catch (error) {
+      console.error('SSO login error:', error);
       throw ErrorFactory.invalidCredentials();
     }
   }

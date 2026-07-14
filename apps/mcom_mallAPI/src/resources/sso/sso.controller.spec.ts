@@ -20,7 +20,7 @@ describe('SsoController', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    process.env.MALL_FRONTEND_URL = 'http://mall:3002';
+    process.env.MALL_FRONTEND_URL = 'http://mall:3003';
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SsoController],
@@ -48,7 +48,7 @@ describe('SsoController', () => {
         redirect: jest.fn(),
       } as any;
 
-      controller.initiateSso(mockRes);
+      controller.initiateSso(undefined, mockRes);
 
       expect(mockSsoService.generateState).toHaveBeenCalled();
       expect(mockSsoService.getAuthorizeUrl).toHaveBeenCalledWith(
@@ -69,6 +69,41 @@ describe('SsoController', () => {
       );
     });
 
+    it('should store redirect path when state is provided', () => {
+      const mockRes = {
+        cookie: jest.fn(),
+        redirect: jest.fn(),
+      } as any;
+
+      controller.initiateSso('/cart', mockRes);
+
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        'sso_redirect_path',
+        '/cart',
+        expect.objectContaining({
+          httpOnly: true,
+          signed: true,
+          sameSite: 'lax',
+          maxAge: 300000,
+        }),
+      );
+    });
+
+    it('should not set redirect path cookie when state is undefined', () => {
+      const mockRes = {
+        cookie: jest.fn(),
+        redirect: jest.fn(),
+      } as any;
+
+      controller.initiateSso(undefined, mockRes);
+
+      expect(mockRes.cookie).not.toHaveBeenCalledWith(
+        'sso_redirect_path',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
     it('should set secure flag in production', () => {
       process.env.NODE_ENV = 'production';
       const mockRes = {
@@ -76,7 +111,7 @@ describe('SsoController', () => {
         redirect: jest.fn(),
       } as any;
 
-      controller.initiateSso(mockRes);
+      controller.initiateSso(undefined, mockRes);
 
       expect(mockRes.cookie).toHaveBeenCalledWith(
         'sso_state',
@@ -94,7 +129,7 @@ describe('SsoController', () => {
         redirect: jest.fn(),
       } as any;
 
-      controller.initiateSso(mockRes);
+      controller.initiateSso(undefined, mockRes);
 
       expect(mockRes.cookie).toHaveBeenCalledWith(
         'sso_state',
@@ -106,6 +141,50 @@ describe('SsoController', () => {
 
   describe('handleCallback', () => {
     it('should redirect to frontend with tokens on success', async () => {
+      mockSsoService.handleCallback.mockResolvedValue({
+        accessToken: 'at-123',
+        refreshToken: 'rt-456',
+        userId: 'user-1',
+        name: 'John Doe',
+        role: UserRole.CUSTOMER,
+      });
+
+      const mockReq = {
+        signedCookies: {
+          sso_state: 'valid-state',
+          sso_redirect_path: '/cart',
+        },
+      };
+      const mockRes = {
+        clearCookie: jest.fn(),
+        redirect: jest.fn(),
+      } as any;
+
+      await controller.handleCallback(
+        { code: 'auth-code', state: 'valid-state' } as any,
+        mockReq,
+        mockRes,
+      );
+
+      expect(mockSsoService.handleCallback).toHaveBeenCalledWith(
+        'auth-code',
+        'valid-state',
+        'valid-state',
+      );
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('sso_state');
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('sso_redirect_path');
+      expect(mockRes.redirect).toHaveBeenCalledWith(
+        expect.stringContaining('http://mall:3003/auth/sso?'),
+      );
+      const redirectUrl = mockRes.redirect.mock.calls[0][0];
+      expect(redirectUrl).toContain('accessToken=at-123');
+      expect(redirectUrl).toContain('refreshToken=rt-456');
+      expect(redirectUrl).toContain('userId=user-1');
+      expect(redirectUrl).toContain('name=John+Doe');
+      expect(redirectUrl).toContain('state=%2Fcart');
+    });
+
+    it('should default state to /dashboard when no redirect path cookie', async () => {
       mockSsoService.handleCallback.mockResolvedValue({
         accessToken: 'at-123',
         refreshToken: 'rt-456',
@@ -128,20 +207,8 @@ describe('SsoController', () => {
         mockRes,
       );
 
-      expect(mockSsoService.handleCallback).toHaveBeenCalledWith(
-        'auth-code',
-        'valid-state',
-        'valid-state',
-      );
-      expect(mockRes.clearCookie).toHaveBeenCalledWith('sso_state');
-      expect(mockRes.redirect).toHaveBeenCalledWith(
-        expect.stringContaining('http://mall:3002/auth/sso?'),
-      );
       const redirectUrl = mockRes.redirect.mock.calls[0][0];
-      expect(redirectUrl).toContain('accessToken=at-123');
-      expect(redirectUrl).toContain('refreshToken=rt-456');
-      expect(redirectUrl).toContain('userId=user-1');
-      expect(redirectUrl).toContain('name=John+Doe');
+      expect(redirectUrl).toContain('state=%2Fdashboard');
     });
 
     it('should redirect to signin with generic error on failure', async () => {

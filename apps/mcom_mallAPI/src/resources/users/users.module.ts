@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -31,7 +31,7 @@ import { TierModule } from '../tier/tier.module';
     ]),
     EmailModule,
     ProvisionModule,
-    MembershipModule,
+    forwardRef(() => MembershipModule),
     ActivityTimerModule,
     TierModule,
   ],

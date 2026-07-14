@@ -91,7 +91,7 @@ describe('SsoService', () => {
     it('should return a valid URL with query params', () => {
       process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
       process.env.SSO_CLIENT_ID = 'mcom-mall';
-      process.env.MALL_FRONTEND_URL = 'http://mall:3002';
+      process.env.MALL_FRONTEND_URL = 'http://mall:3003';
 
       const url = service.getAuthorizeUrl('test-state');
       expect(url).toContain('http://central:3010/api/v1/auth/sso/authorize');
@@ -99,7 +99,7 @@ describe('SsoService', () => {
       expect(url).toContain('response_type=code');
       expect(url).toContain('state=test-state');
       expect(url).toContain(
-        `redirect_uri=${encodeURIComponent('http://mall:3002/auth/sso')}`,
+        `redirect_uri=${encodeURIComponent('http://mall:3003/auth/sso')}`,
       );
     });
 
@@ -119,7 +119,7 @@ describe('SsoService', () => {
       process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
       process.env.SSO_CLIENT_ID = 'mcom-mall';
       process.env.SSO_CLIENT_SECRET = 'secret';
-      process.env.MALL_FRONTEND_URL = 'http://mall:3002';
+      process.env.MALL_FRONTEND_URL = 'http://mall:3003';
     });
 
     it('should return token data on success', async () => {
@@ -204,7 +204,7 @@ describe('SsoService', () => {
       process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
       process.env.SSO_CLIENT_ID = 'mcom-mall';
       process.env.SSO_CLIENT_SECRET = 'secret';
-      process.env.MALL_FRONTEND_URL = 'http://mall:3002';
+      process.env.MALL_FRONTEND_URL = 'http://mall:3003';
 
       mockJwtService.sign.mockReturnValue('mock-jwt-token');
     });

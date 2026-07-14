@@ -26,13 +26,10 @@ function SSOReceiverContent() {
       window.location.href = callbackUrl;
     } else if (accessToken) {
       calledRef.current = true;
-      const refreshToken = searchParams.get('refreshToken') || '';
-      const userId = searchParams.get('userId') || '';
-      const name = searchParams.get('name') || '';
-      const role = searchParams.get('role') || 'customer';
       ssoLogin(accessToken)
         .then(() => {
-          router.replace('/dashboard');
+          const redirectTo = state && state.startsWith('/') ? state : '/dashboard';
+          router.replace(redirectTo);
         })
         .catch((err) => {
           console.error('SSO authentication failed:', err);
@@ -42,7 +39,8 @@ function SSOReceiverContent() {
       calledRef.current = true;
       ssoLogin(ssoToken)
         .then(() => {
-          router.replace('/dashboard');
+          const redirectTo = state && state.startsWith('/') ? state : '/dashboard';
+          router.replace(redirectTo);
         })
         .catch((err) => {
           console.error('SSO authentication failed:', err);

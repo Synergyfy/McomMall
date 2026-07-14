@@ -106,7 +106,7 @@ export class AuthService {
       const secret = process.env.SSO_SECRET || 'shared-sso-secret';
       const payload = this.jwtService.verify(ssoToken, { secret });
 
-      if (payload.iss !== 'mcom-loyalty' || payload.aud !== 'mcom-mall') {
+      if ((payload.iss !== 'mcom-loyalty' && payload.iss !== 'mcom-central') || (payload.aud !== 'mcom-mall' && payload.aud !== 'mcom-ecosystem')) {
         throw new Error('Invalid SSO Token Issuer/Audience');
       }
 

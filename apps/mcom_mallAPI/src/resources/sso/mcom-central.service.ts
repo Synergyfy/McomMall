@@ -73,6 +73,58 @@ export class McomCentralService {
     }
   }
 
+  async getMembershipFromCentral(userId: string) {
+    try {
+      const headers = this.getHmacHeaders();
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/data/user/${encodeURIComponent(userId)}/membership`,
+        { headers },
+      );
+
+      if (!response.ok) {
+        this.logger.error(
+          `MCOM Central membership returned ${response.status} for userId=${userId}`,
+        );
+        return null;
+      }
+
+      const body = await response.json();
+      return body.data || body;
+    } catch (error) {
+      this.logger.error(
+        'Failed to fetch membership from MCOM Central:',
+        error,
+      );
+      return null;
+    }
+  }
+
+  async getUserContext(userId: string) {
+    try {
+      const headers = this.getHmacHeaders();
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/data/user?userId=${encodeURIComponent(userId)}`,
+        { headers },
+      );
+
+      if (!response.ok) {
+        this.logger.error(
+          `MCOM Central user context returned ${response.status} for userId=${userId}`,
+        );
+        return null;
+      }
+
+      const body = await response.json();
+      return body.data || null;
+    } catch (error) {
+      this.logger.error(
+        'Failed to fetch user context from MCOM Central:',
+        error,
+      );
+      return null;
+    }
+  }
+
   async healthCheck(): Promise<boolean> {
     try {
       const headers = this.getHmacHeaders();

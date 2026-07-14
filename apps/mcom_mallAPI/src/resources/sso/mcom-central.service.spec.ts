@@ -8,7 +8,7 @@ describe('McomCentralService', () => {
   beforeEach(async () => {
     process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
     process.env.SSO_CLIENT_ID = 'mcom-mall';
-    process.env.SSO_API_SECRET = 'test-hmac-secret';
+    process.env.SSO_API_SECRET = 'mcom_mall_dev_secret_change_in_prod';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [McomCentralService],
@@ -45,7 +45,7 @@ describe('McomCentralService', () => {
 
       const timestamp = calledHeaders['X-Timestamp'];
       const expectedSignature = crypto
-        .createHmac('sha256', 'test-hmac-secret')
+        .createHmac('sha256', 'mcom_mall_dev_secret_change_in_prod')
         .update(`mcom-mall:${timestamp}`)
         .digest('hex');
       expect(calledHeaders['X-Signature']).toBe(expectedSignature);

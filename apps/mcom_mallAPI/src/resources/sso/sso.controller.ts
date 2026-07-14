@@ -32,17 +32,30 @@ export class SsoController {
     status: 302,
     description: 'Redirects to MCOM Central authorize URL',
   })
-  initiateSso(@Res() res: Response) {
-    const state = this.ssoService.generateState();
-    const authorizeUrl = this.ssoService.getAuthorizeUrl(state);
+  initiateSso(
+    @Query('state') redirectPath: string | undefined,
+    @Res() res: Response,
+  ) {
+    const csrfState = this.ssoService.generateState();
+    const authorizeUrl = this.ssoService.getAuthorizeUrl(csrfState);
 
-    res.cookie('sso_state', state, {
+    res.cookie('sso_state', csrfState, {
       httpOnly: true,
       signed: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 5 * 60 * 1000,
     });
+
+    if (redirectPath) {
+      res.cookie('sso_redirect_path', redirectPath, {
+        httpOnly: true,
+        signed: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 5 * 60 * 1000,
+      });
+    }
 
     res.redirect(authorizeUrl);
   }
@@ -61,6 +74,7 @@ export class SsoController {
   ) {
     try {
       const cookieState = req.signedCookies?.sso_state;
+      const redirectPath = req.signedCookies?.sso_redirect_path || '/dashboard';
       const result = await this.ssoService.handleCallback(
         query.code,
         query.state,
@@ -68,15 +82,17 @@ export class SsoController {
       );
 
       res.clearCookie('sso_state');
+      res.clearCookie('sso_redirect_path');
 
       const frontendUrl =
-        process.env.MALL_FRONTEND_URL || 'http://localhost:3002';
+        process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
       const params = new URLSearchParams({
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
         userId: result.userId,
         name: result.name,
         role: String(result.role),
+        state: redirectPath,
       });
 
       res.redirect(`${frontendUrl}/auth/sso?${params.toString()}`);
@@ -85,7 +101,7 @@ export class SsoController {
         error instanceof Error ? error.message : 'sso_callback_failed';
       this.logger.error('SSO Callback failed:', message);
       const frontendUrl =
-        process.env.MALL_FRONTEND_URL || 'http://localhost:3002';
+        process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
       res.redirect(
         `${frontendUrl}/signin?error=${encodeURIComponent('sso_authentication_failed')}`,
       );

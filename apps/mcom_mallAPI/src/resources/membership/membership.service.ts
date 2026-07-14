@@ -22,6 +22,7 @@ import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { MembershipPayment } from './entities/membership-payment.entity';
 import { Tier } from '../tier/entities/tier.entity';
 import { TierType } from '../tier/enums/tier-type.enum';
+import { McomCentralService } from '../sso/mcom-central.service';
 
 @Injectable()
 export class MembershipService {
@@ -42,34 +43,36 @@ export class MembershipService {
     private readonly tierRepository: Repository<Tier>,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
+    private readonly mcomCentralService: McomCentralService,
     private readonly dataSource: DataSource,
   ) {}
 
-  async findOne(userId: string): Promise<Membership> {
-    const membership = await this.membershipRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['tier', 'tier.season'],
-    });
-    if (!membership) {
+  async findOne(userId: string): Promise<any> {
+    const centralData = await this.mcomCentralService.getUserContext(userId);
+
+    if (!centralData) {
       throw new NotFoundException('Membership not found.');
     }
 
-    await this.ensureDates(membership);
+    const isActive = centralData.membershipStatus === 'active';
+    const tierName = centralData.membershipTier || 'Free';
 
-    const now = new Date();
-    const expiresAt = new Date(membership.expiresAt);
-    const diffMs = Math.max(0, expiresAt.getTime() - now.getTime());
-    const totalSeconds = Math.floor(diffMs / 1000);
-
-    membership.expiresIn = {
-      days: Math.floor(totalSeconds / (3600 * 24)),
-      hours: Math.floor((totalSeconds % (3600 * 24)) / 3600),
-      minutes: Math.floor((totalSeconds % 3600) / 60),
-      seconds: totalSeconds % 60,
-      totalSeconds,
+    return {
+      id: `central-${userId}`,
+      isActive,
+      tierType: tierName,
+      tier: { name: tierName },
+      planType: null,
+      startDate: null,
+      expiresAt: null,
+      endDate: null,
+      isTrial: false,
+      trialDuration: 0,
+      membershipLevel: centralData.membershipLevel || null,
+      membershipStatus: centralData.membershipStatus || null,
+      packages: centralData.packages || [],
+      permissions: centralData.permissions || {},
     };
-
-    return membership;
   }
 
   private async ensureDates(membership: Membership): Promise<void> {

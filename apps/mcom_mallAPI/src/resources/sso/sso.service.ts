@@ -34,7 +34,7 @@ export class SsoService {
       process.env.MCOM_CENTRAL_BASE_URL || 'http://localhost:3010';
     const clientId = process.env.SSO_CLIENT_ID || 'mcom-mall';
     const frontendUrl =
-      process.env.MALL_FRONTEND_URL || 'http://localhost:3002';
+      process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
     const redirectUri = `${frontendUrl}/auth/sso`;
 
     const params = new URLSearchParams({
@@ -51,7 +51,7 @@ export class SsoService {
     const baseUrl =
       process.env.MCOM_CENTRAL_BASE_URL || 'http://localhost:3010';
     const frontendUrl =
-      process.env.MALL_FRONTEND_URL || 'http://localhost:3002';
+      process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
     const redirectUri = `${frontendUrl}/auth/sso`;
 
     const response = await fetch(`${baseUrl}/api/v1/auth/sso/token`, {
