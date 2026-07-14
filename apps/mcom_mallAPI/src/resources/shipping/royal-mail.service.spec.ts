@@ -3,7 +3,10 @@ import { RoyalMailService } from './royal-mail.service';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { of } from 'rxjs';
-import { InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ShippingStatus } from './enums/shipping-status.enum';
 import { Order } from '../order/entities/order.entity';
 import { DeepPartial } from 'typeorm';
@@ -53,7 +56,9 @@ describe('RoyalMailService', () => {
           expires_in: 14400,
         },
       };
-      mockHttpService.post.mockReturnValue(of(mockTokenResponse as AxiosResponse));
+      mockHttpService.post.mockReturnValue(
+        of(mockTokenResponse as AxiosResponse),
+      );
 
       const token = await (service as any).getAccessToken();
       expect(token).toBe('mock_token');
@@ -71,7 +76,9 @@ describe('RoyalMailService', () => {
 
     it('should throw InternalServerErrorException if credentials are missing', async () => {
       mockConfigService.get.mockReturnValue(null);
-      await expect((service as any).getAccessToken()).rejects.toThrow(InternalServerErrorException);
+      await expect((service as any).getAccessToken()).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -87,9 +94,7 @@ describe('RoyalMailService', () => {
         city: 'London',
         postalCode: 'SW1A 1AA',
       },
-      items: [
-        { product: { weight: 200 }, quantity: 2 } as any,
-      ],
+      items: [{ product: { weight: 200 }, quantity: 2 } as any],
     };
 
     it('should create a shipment and return shipmentId and trackingNumber', async () => {
@@ -107,7 +112,9 @@ describe('RoyalMailService', () => {
           ],
         },
       };
-      mockHttpService.post.mockReturnValue(of(mockShipmentResponse as AxiosResponse));
+      mockHttpService.post.mockReturnValue(
+        of(mockShipmentResponse as AxiosResponse),
+      );
 
       const result = await service.createShipment(mockOrder as Order);
       expect(result).toEqual({
@@ -117,8 +124,13 @@ describe('RoyalMailService', () => {
     });
 
     it('should throw BadRequestException if shippingAddress is missing', async () => {
-      const orderWithoutAddress: DeepPartial<Order> = { ...mockOrder, shippingAddress: null };
-      await expect(service.createShipment(orderWithoutAddress as Order)).rejects.toThrow(BadRequestException);
+      const orderWithoutAddress: DeepPartial<Order> = {
+        ...mockOrder,
+        shippingAddress: null,
+      };
+      await expect(
+        service.createShipment(orderWithoutAddress as Order),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -135,7 +147,9 @@ describe('RoyalMailService', () => {
           },
         },
       };
-      mockHttpService.get.mockReturnValue(of(mockTrackingResponse as AxiosResponse));
+      mockHttpService.get.mockReturnValue(
+        of(mockTrackingResponse as AxiosResponse),
+      );
 
       const result = await service.getTrackingSummary('RM123456789GB');
       expect(result?.status).toBe(ShippingStatus.DELIVERED);
@@ -153,7 +167,9 @@ describe('RoyalMailService', () => {
           },
         },
       };
-      mockHttpService.get.mockReturnValue(of(mockTrackingResponse as AxiosResponse));
+      mockHttpService.get.mockReturnValue(
+        of(mockTrackingResponse as AxiosResponse),
+      );
 
       const result = await service.getTrackingSummary('RM123456789GB');
       expect(result?.status).toBe(ShippingStatus.SHIPPED);

@@ -9,7 +9,10 @@ import { Business } from '../src/resources/listings/entities/listing.entity';
 import { Product } from '../src/resources/product/entities/product.entity';
 import { ShippingAddress } from '../src/resources/shipping-address/entities/shipping-address.entity';
 import { UserRole } from '../src/common/role.enum';
-import { ListingType, BusinessStatus } from '../src/resources/listings/listing.enum';
+import {
+  ListingType,
+  BusinessStatus,
+} from '../src/resources/listings/listing.enum';
 import { Order } from '../src/resources/order/entities/order.entity';
 import { RoyalMailService } from '../src/resources/shipping/royal-mail.service';
 import { ShippingStatus } from '../src/resources/shipping/enums/shipping-status.enum';
@@ -136,7 +139,7 @@ describe('Shipping (e2e)', () => {
     const loginRes = await request(app.getHttpServer())
       .post('/auth')
       .send({ email: user.email, password: 'Password123!' });
-    
+
     const body = loginRes.body as LoginResponse;
     jwtToken = body.auth.accessToken;
   });
@@ -149,16 +152,16 @@ describe('Shipping (e2e)', () => {
   it('/order/checkout (POST) - should initiate checkout with Royal Mail shipping', async () => {
     const checkoutDto = {
       directPurchase: {
-          productId: product.id,
-          quantity: 1,
+        productId: product.id,
+        quantity: 1,
       },
       shippingAddressId: shippingAddress.id,
       carrierCode: 'royalmail',
       payment: {
-          amount: 14.50, // 10.00 product + 4.50 shipping
-          paymentMethod: 'stripe',
-          transactionId: 'test-tx-123'
-      }
+        amount: 14.5, // 10.00 product + 4.50 shipping
+        paymentMethod: 'stripe',
+        transactionId: 'test-tx-123',
+      },
     };
 
     const response = await request(app.getHttpServer())
@@ -168,56 +171,56 @@ describe('Shipping (e2e)', () => {
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('id');
-    
+
     const body = response.body as CheckoutResponse;
     const order = await dataSource.getRepository(Order).findOne({
-        where: { id: body.id },
-        relations: ['shippingAddress']
+      where: { id: body.id },
+      relations: ['shippingAddress'],
     });
 
     if (!order) throw new Error('Order not found');
 
     expect(order.carrierCode).toBe('royalmail');
-    expect(Number(order.estimatedShippingFee)).toBe(4.50);
+    expect(Number(order.estimatedShippingFee)).toBe(4.5);
     expect(order.shippingAddress.id).toBe(shippingAddress.id);
-    expect(Number(order.total)).toBe(14.50);
+    expect(Number(order.total)).toBe(14.5);
   });
 
   it('/shipping/generate-label/:orderId (POST) - should generate Royal Mail label', async () => {
     // 1. Create a paid order
     const checkoutDto = {
-        directPurchase: {
-            productId: product.id,
-            quantity: 1,
-        },
-        shippingAddressId: shippingAddress.id,
-        carrierCode: 'royalmail',
-        payment: {
-            amount: 14.50,
-            paymentMethod: 'stripe',
-            transactionId: 'tx-for-label'
-        }
+      directPurchase: {
+        productId: product.id,
+        quantity: 1,
+      },
+      shippingAddressId: shippingAddress.id,
+      carrierCode: 'royalmail',
+      payment: {
+        amount: 14.5,
+        paymentMethod: 'stripe',
+        transactionId: 'tx-for-label',
+      },
     };
 
     const checkoutRes = await request(app.getHttpServer())
-        .post('/order/checkout')
-        .set('Authorization', `Bearer ${jwtToken}`)
-        .send(checkoutDto);
-    
+      .post('/order/checkout')
+      .set('Authorization', `Bearer ${jwtToken}`)
+      .send(checkoutDto);
+
     const checkoutBody = checkoutRes.body as CheckoutResponse;
     const orderId = checkoutBody.id;
 
     // 2. Generate Label
     const response = await request(app.getHttpServer())
-        .post(`/shipping/generate-label/${orderId}`)
-        .set('Authorization', `Bearer ${jwtToken}`)
-        .send();
+      .post(`/shipping/generate-label/${orderId}`)
+      .set('Authorization', `Bearer ${jwtToken}`)
+      .send();
 
     expect(response.status).toBe(201);
-    
+
     // 3. Verify Order Updates
     const order = await dataSource.getRepository(Order).findOne({
-        where: { id: orderId }
+      where: { id: orderId },
     });
 
     if (!order) throw new Error('Order not found');
@@ -227,8 +230,10 @@ describe('Shipping (e2e)', () => {
     expect(order.royalMailShipmentId).toBe('rm_shipment_123');
     expect(order.royalMailLabelData).toBe('mock_base64_label_data');
     expect(order.labelUrl).toContain('rm_shipment_123');
-    
+
     expect(mockRoyalMailService.createShipment).toHaveBeenCalled();
-    expect(mockRoyalMailService.getLabel).toHaveBeenCalledWith('rm_shipment_123');
+    expect(mockRoyalMailService.getLabel).toHaveBeenCalledWith(
+      'rm_shipment_123',
+    );
   });
 });

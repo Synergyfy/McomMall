@@ -1,6 +1,9 @@
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { GoogleBusinessService, CompleteOnboardingDto } from './google-business.service';
+import {
+  GoogleBusinessService,
+  CompleteOnboardingDto,
+} from './google-business.service';
 import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('GoogleBusiness')
@@ -18,7 +21,9 @@ export class GoogleBusinessController {
 
   @Public()
   @Get('map-category')
-  @ApiOperation({ summary: 'Translate a Google Category ID to internal taxonomy' })
+  @ApiOperation({
+    summary: 'Translate a Google Category ID to internal taxonomy',
+  })
   @ApiResponse({ status: 200, description: 'Return mapped taxonomy IDs.' })
   async mapCategory(@Query('googleCategoryId') googleCategoryId: string) {
     return this.googleBusinessService.mapGoogleCategory(googleCategoryId);
@@ -26,15 +31,25 @@ export class GoogleBusinessController {
 
   @Public()
   @Post('complete-onboarding')
-  @ApiOperation({ summary: 'Atomically claims a branch, creates a merchant account, and sets up storefront' })
-  @ApiResponse({ status: 201, description: 'Onboarding completed successfully.' })
-  async completeOnboarding(@Body() completeOnboardingDto: CompleteOnboardingDto) {
+  @ApiOperation({
+    summary:
+      'Atomically claims a branch, creates a merchant account, and sets up storefront',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Onboarding completed successfully.',
+  })
+  async completeOnboarding(
+    @Body() completeOnboardingDto: CompleteOnboardingDto,
+  ) {
     return this.googleBusinessService.completeOnboarding(completeOnboardingDto);
   }
 
   @Public()
   @Post('login')
-  @ApiOperation({ summary: 'Login via Google SSO (handles both mock and real)' })
+  @ApiOperation({
+    summary: 'Login via Google SSO (handles both mock and real)',
+  })
   @ApiResponse({ status: 200, description: 'Login successful' })
   async googleLogin(@Body('email') body: { email: string }) {
     return this.googleBusinessService.googleLogin(body.email);

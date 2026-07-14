@@ -145,7 +145,9 @@ export class AuthService {
 
         if (!existingBusiness) {
           const locationRepository = this.dataSource.getRepository(Location);
-          const cleanPostcode = (payload.postcode || 'SW1A 1AA').trim().toUpperCase();
+          const cleanPostcode = (payload.postcode || 'SW1A 1AA')
+            .trim()
+            .toUpperCase();
           const address = payload.address || 'High Street';
 
           // Resolve coordinates & borough dynamically using Postcodes.io
@@ -155,14 +157,15 @@ export class AuthService {
 
           try {
             const postcodeResponse = await fetch(
-              `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode.replace(/\s+/g, ''))}`
+              `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode.replace(/\s+/g, ''))}`,
             );
             if (postcodeResponse.ok) {
               const body = await postcodeResponse.json();
               if (body && body.status === 200 && body.result) {
                 lat = body.result.latitude;
                 lon = body.result.longitude;
-                const rawBorough = body.result.admin_district || body.result.region || '';
+                const rawBorough =
+                  body.result.admin_district || body.result.region || '';
                 borough = rawBorough
                   .replace(/London Borough of /i, '')
                   .replace(/Borough of /i, '')
@@ -191,7 +194,8 @@ export class AuthService {
           }
 
           // Mark region as active so it displays on the frontend without "Peckham High Street" fallback
-          const activatedRegionRepository = this.dataSource.getRepository(ActivatedRegion);
+          const activatedRegionRepository =
+            this.dataSource.getRepository(ActivatedRegion);
           let activeRegion = await activatedRegionRepository.findOne({
             where: { name: borough },
           });
@@ -211,7 +215,8 @@ export class AuthService {
             businessName: payload.name || 'Hyperlocal Merchant',
             businessPhone: payload.phoneNumber || '0000000000',
             businessEmail: payload.email,
-            shortDescription: 'Hyperlocal business listing imported from MCOM Ecosystem.',
+            shortDescription:
+              'Hyperlocal business listing imported from MCOM Ecosystem.',
             listingType: [ListingType.PRODUCT, ListingType.SERVICE],
             status: BusinessStatus.PUBLISHED,
             isVerified: true,
@@ -231,7 +236,9 @@ export class AuthService {
           });
 
           await locationRepository.save(newLocation);
-          console.log(`[SSO JIT] Automatically provisioned business listing & location for ${user.email} with postcode ${cleanPostcode} under ${mallName}`);
+          console.log(
+            `[SSO JIT] Automatically provisioned business listing & location for ${user.email} with postcode ${cleanPostcode} under ${mallName}`,
+          );
         }
       }
 

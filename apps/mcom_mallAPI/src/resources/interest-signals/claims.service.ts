@@ -39,12 +39,17 @@ export class ClaimsService {
       relations: ['business'],
     });
     if (!claim) {
-      throw new NotFoundException(`Storefront claim request with ID ${id} not found`);
+      throw new NotFoundException(
+        `Storefront claim request with ID ${id} not found`,
+      );
     }
     return claim;
   }
 
-  async updateStatus(id: string, updateDto: UpdateClaimDto): Promise<BusinessClaim> {
+  async updateStatus(
+    id: string,
+    updateDto: UpdateClaimDto,
+  ): Promise<BusinessClaim> {
     const claim = await this.findOne(id);
     claim.status = updateDto.status;
     return this.businessClaimRepository.save(claim);

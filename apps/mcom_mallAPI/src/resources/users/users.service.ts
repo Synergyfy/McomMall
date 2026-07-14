@@ -629,7 +629,10 @@ export class UsersService {
 
     await this.dataSource.transaction(async (manager) => {
       // 1. Delete dependent listing data (cascade will handle child rows of businesses)
-      const businesses = await manager.query('SELECT id FROM businesses WHERE "userId" = $1', [userId]);
+      const businesses = await manager.query(
+        'SELECT id FROM businesses WHERE "userId" = $1',
+        [userId],
+      );
       for (const b of businesses) {
         await manager.query('DELETE FROM businesses WHERE id = $1', [b.id]);
       }
@@ -637,29 +640,55 @@ export class UsersService {
       // 2. Delete rows in other dependent tables
       await manager.query('DELETE FROM wallets WHERE "userId" = $1', [userId]);
       await manager.query('DELETE FROM socials WHERE "userId" = $1', [userId]);
-      await manager.query('DELETE FROM memberships WHERE "userId" = $1', [userId]);
-      await manager.query('DELETE FROM service_provider_profiles WHERE "userId" = $1', [userId]);
-      await manager.query('DELETE FROM shipping_addresses WHERE "userId" = $1', [userId]);
+      await manager.query('DELETE FROM memberships WHERE "userId" = $1', [
+        userId,
+      ]);
+      await manager.query(
+        'DELETE FROM service_provider_profiles WHERE "userId" = $1',
+        [userId],
+      );
+      await manager.query(
+        'DELETE FROM shipping_addresses WHERE "userId" = $1',
+        [userId],
+      );
       await manager.query('DELETE FROM reviews WHERE "userId" = $1', [userId]);
-      await manager.query('DELETE FROM transactions WHERE "userId" = $1', [userId]);
-      await manager.query('DELETE FROM promotion_participants WHERE "userId" = $1', [userId]);
-      await manager.query('DELETE FROM promotion_activities WHERE "userId" = $1', [userId]);
-      await manager.query('DELETE FROM voucher_products WHERE "userId" = $1', [userId]);
-      await manager.query('DELETE FROM vouchers WHERE "ownerId" = $1 OR "buyerId" = $1', [userId, userId]);
+      await manager.query('DELETE FROM transactions WHERE "userId" = $1', [
+        userId,
+      ]);
+      await manager.query(
+        'DELETE FROM promotion_participants WHERE "userId" = $1',
+        [userId],
+      );
+      await manager.query(
+        'DELETE FROM promotion_activities WHERE "userId" = $1',
+        [userId],
+      );
+      await manager.query('DELETE FROM voucher_products WHERE "userId" = $1', [
+        userId,
+      ]);
+      await manager.query(
+        'DELETE FROM vouchers WHERE "ownerId" = $1 OR "buyerId" = $1',
+        [userId, userId],
+      );
       await manager.query('DELETE FROM offers WHERE "userId" = $1', [userId]);
-      
+
       // Update referred users
-      await manager.query('UPDATE users SET "referredById" = NULL WHERE "referredById" = $1', [userId]);
+      await manager.query(
+        'UPDATE users SET "referredById" = NULL WHERE "referredById" = $1',
+        [userId],
+      );
 
       // Finally delete the user
       await manager.query('DELETE FROM users WHERE id = $1', [userId]);
     });
 
-    return { success: true, message: `User with email ${email} deleted successfully` };
+    return {
+      success: true,
+      message: `User with email ${email} deleted successfully`,
+    };
   }
 
   async updateLastLogin(id: string) {
     return this.userRepository.update(id, { lastLogin: new Date() });
   }
 }
-

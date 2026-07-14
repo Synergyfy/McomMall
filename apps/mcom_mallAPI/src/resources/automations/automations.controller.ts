@@ -37,10 +37,7 @@ export class AutomationsController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateAutomationDto,
-  ) {
+  update(@Param('id') id: string, @Body() updateDto: UpdateAutomationDto) {
     return this.automationsService.update(id, updateDto);
   }
 

@@ -1,6 +1,10 @@
 import { IsEnum, IsOptional, IsObject } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { TeamRole, TeamMemberStatus, TeamPermissions } from '../entities/team-member.entity';
+import {
+  TeamRole,
+  TeamMemberStatus,
+  TeamPermissions,
+} from '../entities/team-member.entity';
 
 export class UpdateMemberDto {
   @ApiProperty({

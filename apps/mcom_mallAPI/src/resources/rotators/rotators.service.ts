@@ -15,13 +15,18 @@ export class RotatorsService {
     private readonly businessRepository: Repository<Business>,
   ) {}
 
-  async create(userId: string, createRotatorDto: CreateRotatorDto): Promise<Rotator> {
+  async create(
+    userId: string,
+    createRotatorDto: CreateRotatorDto,
+  ): Promise<Rotator> {
     const business = await this.businessRepository.findOne({
       where: { user: { id: userId } },
     });
 
     if (!business) {
-      throw new NotFoundException('No business found for the current merchant user');
+      throw new NotFoundException(
+        'No business found for the current merchant user',
+      );
     }
 
     const rotator = this.rotatorRepository.create({
@@ -39,7 +44,9 @@ export class RotatorsService {
     });
 
     if (!business) {
-      throw new NotFoundException('No business found for the current merchant user');
+      throw new NotFoundException(
+        'No business found for the current merchant user',
+      );
     }
 
     return this.rotatorRepository.find({
@@ -61,7 +68,10 @@ export class RotatorsService {
     return rotator;
   }
 
-  async update(id: string, updateRotatorDto: UpdateRotatorDto): Promise<Rotator> {
+  async update(
+    id: string,
+    updateRotatorDto: UpdateRotatorDto,
+  ): Promise<Rotator> {
     const rotator = await this.findOne(id);
     const updated = this.rotatorRepository.merge(rotator, updateRotatorDto);
     return this.rotatorRepository.save(updated);

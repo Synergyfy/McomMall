@@ -60,7 +60,7 @@ export class CampaignCashbackService {
     private walletService: WalletService,
     private paymentProviderService: PaymentProviderService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   async create(
     createDto: CreateCampaignCashbackDto,
@@ -166,8 +166,8 @@ export class CampaignCashbackService {
       contributionPaid: false,
       activationTimerDate: campaign.activationTimerDays
         ? new Date(
-          Date.now() + campaign.activationTimerDays * 24 * 60 * 60 * 1000,
-        )
+            Date.now() + campaign.activationTimerDays * 24 * 60 * 60 * 1000,
+          )
         : null,
     });
 

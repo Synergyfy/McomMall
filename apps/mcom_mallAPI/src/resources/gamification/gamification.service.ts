@@ -15,13 +15,18 @@ export class GamificationService {
     private readonly businessRepository: Repository<Business>,
   ) {}
 
-  async create(userId: string, createDto: CreateGamificationDto): Promise<Gamification> {
+  async create(
+    userId: string,
+    createDto: CreateGamificationDto,
+  ): Promise<Gamification> {
     const business = await this.businessRepository.findOne({
       where: { user: { id: userId } },
     });
 
     if (!business) {
-      throw new NotFoundException('No business found for the current merchant user');
+      throw new NotFoundException(
+        'No business found for the current merchant user',
+      );
     }
 
     const gamification = this.gamificationRepository.create({
@@ -43,7 +48,9 @@ export class GamificationService {
     });
 
     if (!business) {
-      throw new NotFoundException('No business found for the current merchant user');
+      throw new NotFoundException(
+        'No business found for the current merchant user',
+      );
     }
 
     return this.gamificationRepository.find({
@@ -59,13 +66,18 @@ export class GamificationService {
     });
 
     if (!gamification) {
-      throw new NotFoundException(`Gamification campaign with ID "${id}" not found`);
+      throw new NotFoundException(
+        `Gamification campaign with ID "${id}" not found`,
+      );
     }
 
     return gamification;
   }
 
-  async update(id: string, updateDto: UpdateGamificationDto): Promise<Gamification> {
+  async update(
+    id: string,
+    updateDto: UpdateGamificationDto,
+  ): Promise<Gamification> {
     const gamification = await this.findOne(id);
     const updated = this.gamificationRepository.merge(gamification, updateDto);
     return this.gamificationRepository.save(updated);
@@ -78,17 +90,17 @@ export class GamificationService {
 
   async simulatePlay(id: string): Promise<Gamification> {
     const gamification = await this.findOne(id);
-    
+
     // Increment stats to simulate user engagement
     gamification.gamesPlayed += 1;
-    
+
     // Add unique/new participants occasionally or on every play for simplicity
     gamification.totalParticipants += 1;
-    
+
     // Simulate issuing a reward occasionally (80% chance)
     if (Math.random() < 0.8) {
       gamification.rewardsIssued += 1;
-      
+
       // Simulate claiming the reward (70% of issued)
       if (Math.random() < 0.7) {
         gamification.rewardsClaimed += 1;

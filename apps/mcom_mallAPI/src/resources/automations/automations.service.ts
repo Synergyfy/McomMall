@@ -25,14 +25,21 @@ export class AutomationsService {
   }
 
   async findOne(id: string): Promise<Automation> {
-    const automation = await this.automationRepository.findOne({ where: { id } });
+    const automation = await this.automationRepository.findOne({
+      where: { id },
+    });
     if (!automation) {
-      throw new NotFoundException(`Automation campaign flow with ID ${id} not found`);
+      throw new NotFoundException(
+        `Automation campaign flow with ID ${id} not found`,
+      );
     }
     return automation;
   }
 
-  async update(id: string, updateDto: UpdateAutomationDto): Promise<Automation> {
+  async update(
+    id: string,
+    updateDto: UpdateAutomationDto,
+  ): Promise<Automation> {
     const automation = await this.findOne(id);
     Object.assign(automation, updateDto);
     return this.automationRepository.save(automation);
@@ -46,7 +53,7 @@ export class AutomationsService {
   async getDashboardSummary(businessId: string) {
     const automations = await this.findAllByBusiness(businessId);
     const totalCount = automations.length;
-    const activeCount = automations.filter(a => a.isActive).length;
+    const activeCount = automations.filter((a) => a.isActive).length;
 
     // Simulated dashboard stats
     const efficiencyHoursSaved = activeCount * 4 + 8; // Simulated: 4 hours per active workflow

@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
@@ -110,7 +114,7 @@ export class GoogleBusinessService {
   // Translates Google Category IDs dynamically using DB sectors/categories/subcategories
   async mapGoogleCategory(googleCategoryId: string): Promise<any> {
     const gcid = (googleCategoryId || '').toLowerCase();
-    
+
     // Find all database sectors, categories, and subcategories
     const sectors = await this.sectorRepository.find({
       relations: ['categories', 'categories.subcategories'],
@@ -123,18 +127,50 @@ export class GoogleBusinessService {
     // Helper: clean strings for match checks
     const matchesKeyword = (val: string, keywords: string[]) => {
       const lower = val.toLowerCase();
-      return keywords.some(k => lower.includes(k));
+      return keywords.some((k) => lower.includes(k));
     };
 
     // Keyword mapping rules
     let keywords: string[] = [];
-    if (matchesKeyword(gcid, ['computer', 'electronics', 'device', 'mobile', 'phone', 'gadget', 'tech'])) {
+    if (
+      matchesKeyword(gcid, [
+        'computer',
+        'electronics',
+        'device',
+        'mobile',
+        'phone',
+        'gadget',
+        'tech',
+      ])
+    ) {
       keywords = ['electronic', 'tech', 'digital', 'retail'];
-    } else if (matchesKeyword(gcid, ['coffee', 'cafe', 'restaurant', 'food', 'bakery', 'dining', 'drink', 'bar'])) {
+    } else if (
+      matchesKeyword(gcid, [
+        'coffee',
+        'cafe',
+        'restaurant',
+        'food',
+        'bakery',
+        'dining',
+        'drink',
+        'bar',
+      ])
+    ) {
       keywords = ['food', 'drink', 'cafe', 'restaurant', 'dining', 'catering'];
-    } else if (matchesKeyword(gcid, ['clothing', 'fashion', 'apparel', 'shoe', 'boutique', 'wear'])) {
+    } else if (
+      matchesKeyword(gcid, [
+        'clothing',
+        'fashion',
+        'apparel',
+        'shoe',
+        'boutique',
+        'wear',
+      ])
+    ) {
       keywords = ['fashion', 'retail', 'clothing', 'apparel'];
-    } else if (matchesKeyword(gcid, ['grocery', 'supermarket', 'market', 'grocer'])) {
+    } else if (
+      matchesKeyword(gcid, ['grocery', 'supermarket', 'market', 'grocer'])
+    ) {
       keywords = ['grocery', 'groceries', 'food', 'retail', 'supermarket'];
     } else if (matchesKeyword(gcid, ['florist', 'flower', 'gift', 'garden'])) {
       keywords = ['gift', 'flower', 'garden', 'florist', 'retail'];
@@ -143,18 +179,25 @@ export class GoogleBusinessService {
     // Search for matches in our database sectors/categories
     if (keywords.length > 0) {
       // 1. Try to find matching sector
-      matchedSector = sectors.find(s => matchesKeyword(s.name, keywords)) || null;
+      matchedSector =
+        sectors.find((s) => matchesKeyword(s.name, keywords)) || null;
 
       if (matchedSector) {
         // 2. Try to find category inside sector
-        matchedCategory = matchedSector.categories.find(c => matchesKeyword(c.name, keywords)) || null;
+        matchedCategory =
+          matchedSector.categories.find((c) =>
+            matchesKeyword(c.name, keywords),
+          ) || null;
         if (!matchedCategory && matchedSector.categories.length > 0) {
           matchedCategory = matchedSector.categories[0];
         }
 
         if (matchedCategory) {
           // 3. Try to find subcategory inside category
-          matchedSubcategory = matchedCategory.subcategories.find(sub => matchesKeyword(sub.name, keywords)) || null;
+          matchedSubcategory =
+            matchedCategory.subcategories.find((sub) =>
+              matchesKeyword(sub.name, keywords),
+            ) || null;
           if (!matchedSubcategory && matchedCategory.subcategories.length > 0) {
             matchedSubcategory = matchedCategory.subcategories[0];
           }
@@ -202,27 +245,38 @@ export class GoogleBusinessService {
     // Basic UK Postcode regex check
     const ukPostcodeRegex = /^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$/i;
     if (!postcode || !ukPostcodeRegex.test(postcode.trim())) {
-      throw new BadRequestException('We currently only support businesses within the United Kingdom. Please select a valid UK branch.');
+      throw new BadRequestException(
+        'We currently only support businesses within the United Kingdom. Please select a valid UK branch.',
+      );
     }
 
     const isUuid = (val: string) =>
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val || '');
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        val || '',
+      );
 
     if (!sectorId || !isUuid(sectorId)) {
-      throw new BadRequestException('Sector ID is required and must be a valid UUID');
+      throw new BadRequestException(
+        'Sector ID is required and must be a valid UUID',
+      );
     }
     if (!categoryId || !isUuid(categoryId)) {
-      throw new BadRequestException('Category ID is required and must be a valid UUID');
+      throw new BadRequestException(
+        'Category ID is required and must be a valid UUID',
+      );
     }
     if (!subCategoryId || !isUuid(subCategoryId)) {
-      throw new BadRequestException('SubCategory ID is required and must be a valid UUID');
+      throw new BadRequestException(
+        'SubCategory ID is required and must be a valid UUID',
+      );
     }
 
     // Check if user already exists
     let user = await this.userRepository.findOne({ where: { email } });
 
     // Generate a secure random password for passwordless Google login
-    const autoGeneratedPassword = Math.random().toString(36).slice(-12) + 'Gb1!';
+    const autoGeneratedPassword =
+      Math.random().toString(36).slice(-12) + 'Gb1!';
 
     if (!user) {
       const userPassword = dto.password || autoGeneratedPassword;
@@ -248,7 +302,8 @@ export class GoogleBusinessService {
     else if (selectedPlan === 'payg') tierName = 'PAYG';
     else if (selectedPlan === 'standard') tierName = 'Standard';
 
-    let tier = await tierRepository.createQueryBuilder('tier')
+    let tier = await tierRepository
+      .createQueryBuilder('tier')
       .where('LOWER(tier.name) = :name', { name: tierName.toLowerCase() })
       .getOne();
 
@@ -336,9 +391,18 @@ export class GoogleBusinessService {
 
     // Prepare storefront listing payload
     const listingPayload: any = {
-      listingType: businessType === 'both' ? [ListingType.PRODUCT, ListingType.SERVICE] : businessType === 'products' ? [ListingType.PRODUCT] : [ListingType.SERVICE],
+      listingType:
+        businessType === 'both'
+          ? [ListingType.PRODUCT, ListingType.SERVICE]
+          : businessType === 'products'
+            ? [ListingType.PRODUCT]
+            : [ListingType.SERVICE],
       businessName,
-      shortDescription: shortDescription || (googlePlaceId ? 'Imported from Google Business Profile.' : 'Fresh local business profile.'),
+      shortDescription:
+        shortDescription ||
+        (googlePlaceId
+          ? 'Imported from Google Business Profile.'
+          : 'Fresh local business profile.'),
       businessPhone: businessPhone || user.phoneNumber,
       businessEmail: email,
       location: {
@@ -390,7 +454,9 @@ export class GoogleBusinessService {
   async googleLogin(email: string) {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
-      throw new NotFoundException(`Account with email ${email} not found. Please sign up first.`);
+      throw new NotFoundException(
+        `Account with email ${email} not found. Please sign up first.`,
+      );
     }
 
     const name = `${user.firstName} ${user.lastName}`;

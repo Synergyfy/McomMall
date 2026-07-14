@@ -1,7 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TeamMember, TeamRole, TeamMemberStatus } from './entities/team-member.entity';
+import {
+  TeamMember,
+  TeamRole,
+  TeamMemberStatus,
+} from './entities/team-member.entity';
 import { TeamInvite, TeamInviteStatus } from './entities/team-invite.entity';
 import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
@@ -22,7 +30,9 @@ export class TeamService {
   ) {}
 
   async getTeam(businessId: string) {
-    const business = await this.businessRepository.findOne({ where: { id: businessId } });
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
     if (!business) {
       throw new NotFoundException(`Business storefront not found`);
     }
@@ -39,17 +49,19 @@ export class TeamService {
     });
 
     return {
-      members: members.map(m => ({
+      members: members.map((m) => ({
         id: m.id,
         userId: m.userId,
-        name: m.user ? `${m.user.firstName} ${m.user.lastName}` : 'Pending Signup',
+        name: m.user
+          ? `${m.user.firstName} ${m.user.lastName}`
+          : 'Pending Signup',
         email: m.user?.email || 'N/A',
         role: m.role,
         status: m.status,
         permissions: m.permissions,
         created_at: m.created_at,
       })),
-      invites: invites.map(i => ({
+      invites: invites.map((i) => ({
         id: i.id,
         email: i.email,
         role: i.role,
@@ -62,18 +74,24 @@ export class TeamService {
   }
 
   async inviteMember(businessId: string, dto: InviteMemberDto) {
-    const business = await this.businessRepository.findOne({ where: { id: businessId } });
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
     if (!business) {
       throw new NotFoundException(`Business storefront not found`);
     }
 
-    const targetUser = await this.userRepository.findOne({ where: { email: dto.email } });
+    const targetUser = await this.userRepository.findOne({
+      where: { email: dto.email },
+    });
     if (targetUser) {
       const existingMember = await this.teamMemberRepository.findOne({
         where: { businessId, userId: targetUser.id },
       });
       if (existingMember) {
-        throw new BadRequestException('User is already a team member of this business');
+        throw new BadRequestException(
+          'User is already a team member of this business',
+        );
       }
     }
 
@@ -101,11 +119,17 @@ export class TeamService {
     }
 
     await this.teamInviteRepository.save(invite);
-    console.log(`[TeamService] Dispatched invite email to ${dto.email} for business ${businessId}`);
+    console.log(
+      `[TeamService] Dispatched invite email to ${dto.email} for business ${businessId}`,
+    );
     return invite;
   }
 
-  async updateMember(businessId: string, memberId: string, dto: UpdateMemberDto) {
+  async updateMember(
+    businessId: string,
+    memberId: string,
+    dto: UpdateMemberDto,
+  ) {
     const member = await this.teamMemberRepository.findOne({
       where: { id: memberId, businessId },
     });

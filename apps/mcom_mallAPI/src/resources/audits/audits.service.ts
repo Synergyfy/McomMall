@@ -44,7 +44,9 @@ export class AuditsService {
 
     let business: Business | undefined;
     if (dto.businessId) {
-      business = await this.businessRepository.findOne({ where: { id: dto.businessId } });
+      business = await this.businessRepository.findOne({
+        where: { id: dto.businessId },
+      });
     }
 
     // Dynamic scoring calculation based on answers
@@ -70,7 +72,8 @@ export class AuditsService {
       suggestions.push({
         id: 'sug-loyalty',
         title: 'Activate Loyalty Vouchers',
-        description: 'Set up a recurring loyalty voucher campaign to incentivize repeat visits and boost sales.',
+        description:
+          'Set up a recurring loyalty voucher campaign to incentivize repeat visits and boost sales.',
         category: 'vouchers',
         impact: 'High',
         actionLink: '/dashboard/membership-audits/vouchers',
@@ -78,11 +81,15 @@ export class AuditsService {
       });
     }
 
-    if (responses.campaignFrequency === 'rarely' || !responses.campaignFrequency) {
+    if (
+      responses.campaignFrequency === 'rarely' ||
+      !responses.campaignFrequency
+    ) {
       suggestions.push({
         id: 'sug-campaign',
         title: 'Launch Weekly Campaign Rotations',
-        description: 'Create regular ad campaigns to keep local customers engaged and interested in your storefront.',
+        description:
+          'Create regular ad campaigns to keep local customers engaged and interested in your storefront.',
         category: 'campaigns',
         impact: 'Medium',
         actionLink: '/dashboard/marketing',
@@ -94,7 +101,8 @@ export class AuditsService {
       suggestions.push({
         id: 'sug-google',
         title: 'Verify Google Business Listing',
-        description: 'Sync and verify your Google Place profile to rank higher in local search results.',
+        description:
+          'Sync and verify your Google Place profile to rank higher in local search results.',
         category: 'visibility',
         impact: 'High',
         actionLink: '/dashboard/membership-audits/audits',
@@ -106,7 +114,8 @@ export class AuditsService {
       suggestions.push({
         id: 'sug-profile',
         title: 'Enhance Product Metadata',
-        description: 'Complete your listings profile, add descriptions, and upload product catalog images.',
+        description:
+          'Complete your listings profile, add descriptions, and upload product catalog images.',
         category: 'storefront',
         impact: 'Medium',
         actionLink: '/dashboard/storefront',
@@ -133,7 +142,8 @@ export class AuditsService {
   }
 
   async getLatestAudit(userId: string, businessId?: string): Promise<Audit> {
-    const query = this.auditRepository.createQueryBuilder('audit')
+    const query = this.auditRepository
+      .createQueryBuilder('audit')
       .where('audit.userId = :userId', { userId });
 
     if (businessId) {
@@ -160,7 +170,8 @@ export class AuditsService {
       {
         id: 'sug-loyalty',
         title: 'Activate Loyalty Vouchers',
-        description: 'Set up a recurring loyalty voucher campaign to incentivize repeat visits and boost sales.',
+        description:
+          'Set up a recurring loyalty voucher campaign to incentivize repeat visits and boost sales.',
         category: 'vouchers',
         impact: 'High',
         actionLink: '/dashboard/membership-audits/vouchers',
@@ -169,12 +180,13 @@ export class AuditsService {
       {
         id: 'sug-profile',
         title: 'Enhance Product Metadata',
-        description: 'Complete your listings profile, add descriptions, and upload product catalog images.',
+        description:
+          'Complete your listings profile, add descriptions, and upload product catalog images.',
         category: 'storefront',
         impact: 'Medium',
         actionLink: '/dashboard/storefront',
         status: 'active',
-      }
+      },
     ];
     defaultAudit.userId = userId;
     defaultAudit.created_at = new Date();

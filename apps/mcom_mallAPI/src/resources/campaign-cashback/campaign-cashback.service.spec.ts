@@ -157,7 +157,9 @@ describe('CampaignCashbackService', () => {
     it('should return campaign for ALL audience', async () => {
       jest.spyOn(campaignRepo, 'find').mockResolvedValue([mockCampaign as any]);
       jest.spyOn(userCampaignRepo, 'findOne').mockResolvedValue(null);
-      jest.spyOn(userCampaignRepo, 'save').mockImplementation(async (c) => c as any);
+      jest
+        .spyOn(userCampaignRepo, 'save')
+        .mockImplementation(async (c) => c as any);
 
       const result = await service.findAllForUser(mockUser);
       expect(result).toHaveLength(1);
@@ -165,7 +167,10 @@ describe('CampaignCashbackService', () => {
     });
 
     it('should filter out BUSINESS campaigns for CUSTOMER role', async () => {
-      const bizCampaign = { ...mockCampaign, targetType: CampaignTargetType.BUSINESS };
+      const bizCampaign = {
+        ...mockCampaign,
+        targetType: CampaignTargetType.BUSINESS,
+      };
       jest.spyOn(campaignRepo, 'find').mockResolvedValue([bizCampaign as any]);
 
       const result = await service.findAllForUser(mockUser);

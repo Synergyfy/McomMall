@@ -12,7 +12,9 @@ export class VisibilityService {
   ) {}
 
   async getOrCreateSettings(businessId: string): Promise<VisibilitySettings> {
-    let settings = await this.settingsRepository.findOne({ where: { businessId } });
+    let settings = await this.settingsRepository.findOne({
+      where: { businessId },
+    });
     if (!settings) {
       settings = this.settingsRepository.create({
         businessId,

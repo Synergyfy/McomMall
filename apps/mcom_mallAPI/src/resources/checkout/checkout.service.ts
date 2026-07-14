@@ -48,14 +48,12 @@ export class CheckoutService {
     private readonly couponService: CouponService,
   ) {}
 
-  async initiateCheckout(userId: string, initiateCheckoutDto: InitiateCheckoutDto) {
-    const {
-      items,
-      giftCardCode,
-      couponCode,
-      shippingAddressId,
-      carrierCode,
-    } = initiateCheckoutDto;
+  async initiateCheckout(
+    userId: string,
+    initiateCheckoutDto: InitiateCheckoutDto,
+  ) {
+    const { items, giftCardCode, couponCode, shippingAddressId, carrierCode } =
+      initiateCheckoutDto;
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 

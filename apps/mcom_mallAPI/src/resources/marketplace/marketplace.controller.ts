@@ -43,7 +43,7 @@ import { Public } from 'src/common/decorators/public.decorator';
 @ApiTags('Marketplace Page CMS')
 @Controller('marketplace')
 export class MarketplaceController {
-  constructor(private readonly marketplaceService: MarketplaceService) { }
+  constructor(private readonly marketplaceService: MarketplaceService) {}
 
   // ===========================================================================
   // PUBLIC ENDPOINTS

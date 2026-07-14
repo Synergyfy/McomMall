@@ -24,7 +24,11 @@ export class TeamInvite extends AbstractBaseEntity {
   @Column({ type: 'enum', enum: TeamRole, default: TeamRole.STAFF })
   role: TeamRole;
 
-  @Column({ type: 'enum', enum: TeamInviteStatus, default: TeamInviteStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: TeamInviteStatus,
+    default: TeamInviteStatus.PENDING,
+  })
   status: TeamInviteStatus;
 
   @Column({ type: 'jsonb', nullable: true })

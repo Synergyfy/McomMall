@@ -39,7 +39,9 @@ export class RotatorsController {
 
   @Get('my-rotators')
   @Roles(UserRole.OWNER)
-  @ApiOperation({ summary: 'Get all rotator campaigns for the current business merchant' })
+  @ApiOperation({
+    summary: 'Get all rotator campaigns for the current business merchant',
+  })
   async findAllMyRotators(@CurrentUser() user: User) {
     return this.rotatorsService.findAllForBusiness(user.id);
   }

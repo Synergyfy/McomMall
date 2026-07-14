@@ -55,7 +55,11 @@ export class AdminController {
     summary: 'Get all orders across the platform',
     description: 'Returns a paginated list of all orders. Roles: ADMIN only.',
   })
-  @ApiResponse({ status: 200, type: PageDto, description: 'List of all platform orders.' })
+  @ApiResponse({
+    status: 200,
+    type: PageDto,
+    description: 'List of all platform orders.',
+  })
   @Roles(UserRole.ADMIN)
   @Get('orders')
   async getAllOrders(@Query() pagination: PaginationQueryDto) {

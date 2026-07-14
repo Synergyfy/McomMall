@@ -37,7 +37,7 @@ export class Gamification extends AbstractBaseEntity {
   @Column({ length: 10, default: 'USD' })
   minSpendCurrency: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 15.00 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 15.0 })
   minSpendValue: number;
 
   @Column({ type: 'boolean', default: true })
@@ -68,7 +68,9 @@ export class Gamification extends AbstractBaseEntity {
   @Column()
   businessId: string;
 
-  @ManyToOne(() => Business, (business) => business.gamifications, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Business, (business) => business.gamifications, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'businessId' })
   business: Business;
 }

@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Body, Query, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { OnboardingDeciderService } from './onboarding-decider.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
@@ -46,7 +55,8 @@ export class LocalMallController {
 
     if (postcode) {
       try {
-        const deciderResult = await this.onboardingDeciderService.checkLocation(postcode);
+        const deciderResult =
+          await this.onboardingDeciderService.checkLocation(postcode);
         if (deciderResult && deciderResult.resolvedArea) {
           resolvedBorough = deciderResult.resolvedArea;
           userLat = deciderResult.latitude;
@@ -63,12 +73,18 @@ export class LocalMallController {
             headers: {
               'User-Agent': 'McomMall-Customer/1.0 (contact@mcommall.com)',
             },
-          }
+          },
         );
         if (response.ok) {
           const data = await response.json();
           const addr = data.address || {};
-          const borough = addr.suburb || addr.neighbourhood || addr.city_district || addr.town || addr.city || '';
+          const borough =
+            addr.suburb ||
+            addr.neighbourhood ||
+            addr.city_district ||
+            addr.town ||
+            addr.city ||
+            '';
           if (borough) {
             resolvedBorough = borough
               .replace(/London Borough of /i, '')
@@ -83,11 +99,17 @@ export class LocalMallController {
     }
 
     const mallName = `${resolvedBorough} Local Mall`;
-    
+
     // Fetch businesses in this local mall with their active offers and campaigns
     const mall = await this.localMallRepository.findOne({
       where: { name: mallName },
-      relations: ['businesses', 'businesses.location', 'businesses.category', 'businesses.offers', 'businesses.campaigns'],
+      relations: [
+        'businesses',
+        'businesses.location',
+        'businesses.category',
+        'businesses.offers',
+        'businesses.campaigns',
+      ],
     });
 
     const businesses = mall ? mall.businesses : [];
@@ -100,8 +122,14 @@ export class LocalMallController {
         if (b.offers) {
           for (const offer of b.offers) {
             if (offer.isActive) {
-              const daysLeft = offer.endDate 
-                ? Math.max(0, Math.ceil((new Date(offer.endDate).getTime() - now.getTime()) / (1000 * 3600 * 24)))
+              const daysLeft = offer.endDate
+                ? Math.max(
+                    0,
+                    Math.ceil(
+                      (new Date(offer.endDate).getTime() - now.getTime()) /
+                        (1000 * 3600 * 24),
+                    ),
+                  )
                 : 3;
               nearbyDeals.push({
                 business: b.businessName,
@@ -114,10 +142,18 @@ export class LocalMallController {
         }
         if (b.campaigns) {
           for (const camp of b.campaigns) {
-            const isActive = new Date(camp.startDate) <= now && (!camp.endDate || new Date(camp.endDate) >= now);
+            const isActive =
+              new Date(camp.startDate) <= now &&
+              (!camp.endDate || new Date(camp.endDate) >= now);
             if (isActive) {
               const daysLeft = camp.endDate
-                ? Math.max(0, Math.ceil((new Date(camp.endDate).getTime() - now.getTime()) / (1000 * 3600 * 24)))
+                ? Math.max(
+                    0,
+                    Math.ceil(
+                      (new Date(camp.endDate).getTime() - now.getTime()) /
+                        (1000 * 3600 * 24),
+                    ),
+                  )
                 : 3;
               activeCampaigns.push({
                 id: camp.id,
@@ -139,14 +175,16 @@ export class LocalMallController {
     let pointsBalance = 2400;
     let weeklyPointsEarned = 0;
     if (user && user.id) {
-      const dbUser = await this.userRepository.findOne({ where: { id: user.id } });
+      const dbUser = await this.userRepository.findOne({
+        where: { id: user.id },
+      });
       if (dbUser) {
         pointsBalance = dbUser.points;
       }
-      
+
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      
+
       const weeklyTransactionResult = await this.pointTransactionRepository
         .createQueryBuilder('pt')
         .select('SUM(pt.points)', 'total')
@@ -154,15 +192,17 @@ export class LocalMallController {
         .andWhere('pt.points > 0') // only count earned points
         .andWhere('pt.createdAt >= :oneWeekAgo', { oneWeekAgo })
         .getRawOne();
-      
-      weeklyPointsEarned = weeklyTransactionResult?.total ? parseInt(weeklyTransactionResult.total) : 0;
+
+      weeklyPointsEarned = weeklyTransactionResult?.total
+        ? parseInt(weeklyTransactionResult.total)
+        : 0;
     }
 
     return {
       borough: resolvedBorough,
       mallName,
       mallId: mall ? mall.id : null,
-      businesses: businesses.map(b => ({
+      businesses: businesses.map((b) => ({
         id: b.id,
         businessName: b.businessName,
         shortDescription: b.shortDescription,
@@ -176,7 +216,7 @@ export class LocalMallController {
       weeklyPointsEarned,
       consumerCount,
       activeCampaigns,
-      nearbyDeals
+      nearbyDeals,
     };
   }
 
@@ -204,7 +244,7 @@ export class LocalMallController {
 
     // 3. Compute partnerships based on category mapping
     const currentCategoryName = business.category ? business.category.name : '';
-    
+
     // Categorise business types based on category name or business name keywords
     const getCategoryType = (catName: string, bizName: string) => {
       const name = (catName || bizName || '').toLowerCase();
@@ -271,75 +311,124 @@ export class LocalMallController {
       return 'general';
     };
 
-    const currentType = getCategoryType(currentCategoryName, business.businessName);
+    const currentType = getCategoryType(
+      currentCategoryName,
+      business.businessName,
+    );
 
     if (otherBusinesses.length === 0) {
       // Fallback sector-specific templates
       switch (currentType) {
         case 'tech':
           return [
-            { pct: 96, name: `${business.businessName} × Local Tech Support`, description: 'Tech Synergy' },
-            { pct: 92, name: `${business.businessName} × Co-working Spaces`, description: 'Co-working Hub' },
+            {
+              pct: 96,
+              name: `${business.businessName} × Local Tech Support`,
+              description: 'Tech Synergy',
+            },
+            {
+              pct: 92,
+              name: `${business.businessName} × Co-working Spaces`,
+              description: 'Co-working Hub',
+            },
           ];
         case 'food':
           return [
-            { pct: 96, name: `${business.businessName} × Local Bakery`, description: 'Menu Collaboration' },
-            { pct: 92, name: `Community Garden × ${business.businessName}`, description: 'Organic Supply' },
+            {
+              pct: 96,
+              name: `${business.businessName} × Local Bakery`,
+              description: 'Menu Collaboration',
+            },
+            {
+              pct: 92,
+              name: `Community Garden × ${business.businessName}`,
+              description: 'Organic Supply',
+            },
           ];
         case 'fashion':
           return [
-            { pct: 96, name: `${business.businessName} × Local Tailor & Repairs`, description: 'Complementary Fit' },
-            { pct: 92, name: `${business.businessName} × Artisan Jewellery`, description: 'Accessory Bundle' },
+            {
+              pct: 96,
+              name: `${business.businessName} × Local Tailor & Repairs`,
+              description: 'Complementary Fit',
+            },
+            {
+              pct: 92,
+              name: `${business.businessName} × Artisan Jewellery`,
+              description: 'Accessory Bundle',
+            },
           ];
         case 'wellness':
           return [
-            { pct: 96, name: `${business.businessName} × Organic Skincare Shop`, description: 'Product Synergy' },
-            { pct: 92, name: `Local Yoga Studio × ${business.businessName}`, description: 'Wellness Bundle' },
+            {
+              pct: 96,
+              name: `${business.businessName} × Organic Skincare Shop`,
+              description: 'Product Synergy',
+            },
+            {
+              pct: 92,
+              name: `Local Yoga Studio × ${business.businessName}`,
+              description: 'Wellness Bundle',
+            },
           ];
         default:
           return [
-            { pct: 96, name: `${business.businessName} × Local Bakery`, description: 'Menu Collaboration' },
-            { pct: 92, name: `Community Garden × ${business.businessName}`, description: 'Supply Logistics' },
+            {
+              pct: 96,
+              name: `${business.businessName} × Local Bakery`,
+              description: 'Menu Collaboration',
+            },
+            {
+              pct: 92,
+              name: `Community Garden × ${business.businessName}`,
+              description: 'Supply Logistics',
+            },
           ];
       }
     }
 
     // Match with other actual businesses in the mall
-    return otherBusinesses.map((b) => {
-      const otherCategoryName = b.category ? b.category.name : '';
-      const otherType = getCategoryType(otherCategoryName, b.businessName);
+    return otherBusinesses
+      .map((b) => {
+        const otherCategoryName = b.category ? b.category.name : '';
+        const otherType = getCategoryType(otherCategoryName, b.businessName);
 
-      let pct = 70;
-      let description = 'Ecosystem Member';
+        let pct = 70;
+        let description = 'Ecosystem Member';
 
-      if (currentType === otherType && currentType !== 'general') {
-        pct = 96;
-        description = 'Direct Sector Synergy';
-      } else if (
-        (currentType === 'tech' && otherType === 'general') ||
-        (currentType === 'food' && otherType === 'general')
-      ) {
-        pct = 84;
-        description = 'Ecosystem Supplier';
-      } else if (currentType === 'food' && b.businessName.toLowerCase().includes('garden')) {
-        pct = 92;
-        description = 'Farm-to-Table Supply';
-      } else if (currentType === 'tech' && otherType === 'food') {
-        pct = 76;
-        description = 'Remote Work Promo';
-      } else if (currentType === 'food' && otherType === 'tech') {
-        pct = 76;
-        description = 'Smart POS Partner';
-      } else {
-        pct = 54;
-        description = 'Local Foot Traffic';
-      }
+        if (currentType === otherType && currentType !== 'general') {
+          pct = 96;
+          description = 'Direct Sector Synergy';
+        } else if (
+          (currentType === 'tech' && otherType === 'general') ||
+          (currentType === 'food' && otherType === 'general')
+        ) {
+          pct = 84;
+          description = 'Ecosystem Supplier';
+        } else if (
+          currentType === 'food' &&
+          b.businessName.toLowerCase().includes('garden')
+        ) {
+          pct = 92;
+          description = 'Farm-to-Table Supply';
+        } else if (currentType === 'tech' && otherType === 'food') {
+          pct = 76;
+          description = 'Remote Work Promo';
+        } else if (currentType === 'food' && otherType === 'tech') {
+          pct = 76;
+          description = 'Smart POS Partner';
+        } else {
+          pct = 54;
+          description = 'Local Foot Traffic';
+        }
 
-      return {
-        pct,
-        name: `${business.businessName} × ${b.businessName}`,
-        description,
-      };
-    }).sort((a, b) => b.pct - a.pct).slice(0, 2);
+        return {
+          pct,
+          name: `${business.businessName} × ${b.businessName}`,
+          description,
+        };
+      })
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 2);
   }
 }
