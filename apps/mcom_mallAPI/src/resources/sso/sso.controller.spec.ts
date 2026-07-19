@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SsoController } from './sso.controller';
 import { SsoService } from './sso.service';
 import { McomCentralService } from './mcom-central.service';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { UserRole } from '../../common/role.enum';
 
 describe('SsoController', () => {
@@ -12,6 +12,7 @@ describe('SsoController', () => {
     generateState: jest.fn().mockReturnValue('mock-state-hex'),
     getAuthorizeUrl: jest.fn().mockReturnValue('http://central/api/v1/auth/sso/authorize?state=mock'),
     handleCallback: jest.fn(),
+    handleCallbackFromCode: jest.fn(),
   };
 
   const mockMcomCentralService = {
@@ -284,6 +285,80 @@ describe('SsoController', () => {
         'state',
         undefined,
       );
+    });
+
+    it('should redirect to signin with subscription_required error when ForbiddenException', async () => {
+      mockSsoService.handleCallback.mockRejectedValue(
+        new ForbiddenException('No active MCOM Mall subscription'),
+      );
+
+      const mockReq = {
+        signedCookies: { sso_state: 'valid-state' },
+      };
+      const mockRes = {
+        clearCookie: jest.fn(),
+        redirect: jest.fn(),
+      } as any;
+
+      await controller.handleCallback(
+        { code: 'auth-code', state: 'valid-state' } as any,
+        mockReq,
+        mockRes,
+      );
+
+      expect(mockRes.redirect).toHaveBeenCalledWith(
+        expect.stringContaining('/signin?error=subscription_required'),
+      );
+    });
+  });
+
+  describe('handleCodeCallback', () => {
+    it('should return tokens on success', async () => {
+      mockSsoService.handleCallbackFromCode.mockResolvedValue({
+        accessToken: 'at-123',
+        refreshToken: 'rt-456',
+        userId: 'user-1',
+        name: 'John Doe',
+        role: UserRole.CUSTOMER,
+        email: 'john@example.com',
+        packageInfo: { planType: 'tier-uuid' },
+      });
+
+      const result = await controller.handleCodeCallback({
+        code: 'auth-code',
+        redirect_uri: 'http://localhost:3003/auth/callback',
+      });
+
+      expect(result.auth.accessToken).toBe('at-123');
+      expect(result.auth.refreshToken).toBe('rt-456');
+      expect(result.userId).toBe('user-1');
+      expect(result.packageInfo).toBeNull();
+    });
+
+    it('should throw ForbiddenException with subscription_required when no active package', async () => {
+      mockSsoService.handleCallbackFromCode.mockRejectedValue(
+        new ForbiddenException('No active MCOM Mall subscription'),
+      );
+
+      await expect(
+        controller.handleCodeCallback({
+          code: 'auth-code',
+          redirect_uri: 'http://localhost:3003/auth/callback',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException on other errors', async () => {
+      mockSsoService.handleCallbackFromCode.mockRejectedValue(
+        new Error('Token exchange failed'),
+      );
+
+      await expect(
+        controller.handleCodeCallback({
+          code: 'bad-code',
+          redirect_uri: 'http://localhost:3003/auth/callback',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -10,10 +10,13 @@ import { HashService } from '../../common/hash/hash.service';
 import { EmailService } from '../email/email.service';
 import { OtpType } from '../email/entities/otp.entity';
 import { ActivityTimerService } from '../activity-timer/activity-timer.service';
+import { McomCentralService } from '../sso/mcom-central.service';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let emailService: EmailService;
+  let mcomCentralService: McomCentralService;
 
   const mockEmailService = {
     sendOtp: jest.fn(),
@@ -25,15 +28,25 @@ describe('AuthController', () => {
     getUserActiveTasks: jest.fn().mockResolvedValue([]),
   };
 
+  const mockAuthService = {
+    loginWithSso: jest.fn(),
+  };
+
+  const mockUsersService = {
+    findCurrentUser: jest.fn(),
+    updateLastLogin: jest.fn(),
+  };
+
+  const mockMcomCentralService = {
+    getUserPackages: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
-        AuthService,
-        {
-          provide: UsersService,
-          useValue: {},
-        },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: UsersService, useValue: mockUsersService },
         {
           provide: JwtService,
           useValue: {},
@@ -54,11 +67,18 @@ describe('AuthController', () => {
           provide: ActivityTimerService,
           useValue: mockActivityTimerService,
         },
+        {
+          provide: McomCentralService,
+          useValue: mockMcomCentralService,
+        },
       ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
     emailService = module.get<EmailService>(EmailService);
+    mcomCentralService = module.get<McomCentralService>(McomCentralService);
+
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -86,6 +106,80 @@ describe('AuthController', () => {
       };
       await controller.resetPassword(dto);
       expect(emailService.resetPassword).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe('ssoLogin', () => {
+    const ssoToken = 'valid-sso-token';
+
+    it('should return auth data when subscription is active with tierId', async () => {
+      mockAuthService.loginWithSso.mockResolvedValue({
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        email: 'user@test.com',
+      });
+      mockUsersService.findCurrentUser.mockResolvedValue({
+        id: 'user-1',
+        firstName: 'John',
+        lastName: 'Doe',
+        role: 'owner',
+        centralUserId: 'central-1',
+      });
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: 'tier-1',
+        isActive: true,
+        packages: [],
+      });
+
+      const result = await controller.ssoLogin(ssoToken);
+
+      expect(result.auth.accessToken).toBe('access');
+      expect(result.name).toBe('John Doe');
+      expect(mockUsersService.updateLastLogin).toHaveBeenCalledWith('user-1');
+    });
+
+    it('should throw when subscription is inactive', async () => {
+      mockAuthService.loginWithSso.mockResolvedValue({
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        email: 'user@test.com',
+      });
+      mockUsersService.findCurrentUser.mockResolvedValue({
+        id: 'user-1',
+        firstName: 'John',
+        lastName: 'Doe',
+        role: 'owner',
+        centralUserId: 'central-1',
+      });
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: null,
+        isActive: false,
+        packages: [],
+      });
+
+      await expect(controller.ssoLogin(ssoToken)).rejects.toThrow();
+    });
+
+    it('should throw when tierId is missing', async () => {
+      mockAuthService.loginWithSso.mockResolvedValue({
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        email: 'user@test.com',
+      });
+      mockUsersService.findCurrentUser.mockResolvedValue({
+        id: 'user-1',
+        firstName: 'John',
+        lastName: 'Doe',
+        role: 'owner',
+        centralUserId: 'central-1',
+      });
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: null,
+        isActive: true,
+        packages: [],
+      });
+
+      await expect(controller.ssoLogin(ssoToken)).rejects.toThrow();
     });
   });
 });

@@ -47,31 +47,63 @@ export class MembershipService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async findOne(userId: string): Promise<any> {
-    const centralData = await this.mcomCentralService.getUserContext(userId);
-
-    if (!centralData) {
-      throw new NotFoundException('Membership not found.');
+  async findOne(user: User): Promise<any> {
+    let centralUserId = user.centralUserId;
+    if (!centralUserId) {
+      const dbUser = await this.userRepository.findOne({
+        where: { id: user.id },
+      });
+      centralUserId = dbUser?.centralUserId;
     }
 
-    const isActive = centralData.membershipStatus === 'active';
-    const tierName = centralData.membershipTier || 'Free';
+    if (!centralUserId) {
+      throw new BadRequestException(
+        'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
+      );
+    }
+
+    const userPackages = await this.mcomCentralService.getUserPackages(
+      centralUserId,
+    );
+
+    if (!userPackages) {
+      return null;
+    }
+
+    if (!userPackages.isActive || !userPackages.tierId) {
+      return null;
+    }
+
+    const tier = await this.tierRepository.findOne({
+      where: { id: userPackages.tierId },
+    });
+
+    if (!tier) {
+      return null;
+    }
 
     return {
-      id: `central-${userId}`,
-      isActive,
-      tierType: tierName,
-      tier: { name: tierName },
+      id: `subscription-${user.id}`,
+      isActive: true,
+      tierId: tier.id,
+      tier: {
+        id: tier.id,
+        name: tier.name,
+        description: tier.description,
+        monthlyPrice: tier.monthlyPrice,
+        quarterlyPrice: tier.quarterlyPrice,
+        annualPrice: tier.annualPrice,
+        features: tier.features,
+        configuration: tier.configuration,
+        isActive: tier.isActive,
+      },
       planType: null,
       startDate: null,
       expiresAt: null,
       endDate: null,
       isTrial: false,
       trialDuration: 0,
-      membershipLevel: centralData.membershipLevel || null,
-      membershipStatus: centralData.membershipStatus || null,
-      packages: centralData.packages || [],
-      permissions: centralData.permissions || {},
+      packages: userPackages.packages,
     };
   }
 

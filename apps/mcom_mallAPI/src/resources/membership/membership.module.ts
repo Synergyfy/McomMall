@@ -12,7 +12,7 @@ import { SsoModule } from '../sso/sso.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Membership, User, MembershipPayment, Tier]),
-    PaymentsModule,
+    forwardRef(() => PaymentsModule),
     forwardRef(() => SsoModule),
   ],
   controllers: [MembershipController],

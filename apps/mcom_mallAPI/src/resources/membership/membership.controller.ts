@@ -36,7 +36,7 @@ export class MembershipController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Membership not found.' })
   findOne(@CurrentUser() user: User): Promise<Membership> {
-    return this.membershipService.findOne(user.id);
+    return this.membershipService.findOne(user);
   }
 
   @Post('initiate-payment')

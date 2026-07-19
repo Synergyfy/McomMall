@@ -5,7 +5,7 @@ import { Membership } from './entities/membership.entity';
 import { User } from '../users/entities/user.entity';
 import { MembershipTier } from './membership-tier.enum';
 import { UserRole } from '../../common/role.enum';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, BadRequestException } from '@nestjs/common';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { MembershipPayment } from './entities/membership-payment.entity';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
@@ -18,6 +18,7 @@ import { Tier } from '../tier/entities/tier.entity';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { TierType } from '../tier/enums/tier-type.enum';
 import { DataSource } from 'typeorm';
+import { McomCentralService } from '../sso/mcom-central.service';
 
 describe('MembershipService', () => {
   let service: MembershipService;
@@ -51,6 +52,11 @@ describe('MembershipService', () => {
     createPaypalOrder: jest.fn(),
     verifyStripePaymentIntent: jest.fn(),
     captureAndVerifyPaypalOrder: jest.fn(),
+  };
+
+  const mockMcomCentralService = {
+    getUserPackages: jest.fn(),
+    getUserContext: jest.fn(),
   };
 
   const mockDataSource = {
@@ -100,6 +106,10 @@ describe('MembershipService', () => {
         {
           provide: CentralIntegrationService,
           useValue: mockCentralIntegrationService,
+        },
+        {
+          provide: McomCentralService,
+          useValue: mockMcomCentralService,
         },
         {
           provide: DataSource,
@@ -180,6 +190,159 @@ describe('MembershipService', () => {
   describe('getMembershipPrice', () => {
     it('should return the correct price for a tier', () => {
       expect(service.getMembershipPrice(MembershipTier.BASIC)).toBe(10);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return membership with tier data from local DB when tierId is provided', async () => {
+      const mockTier = {
+        id: 'tier-uuid-123',
+        name: 'Gold Plan',
+        description: 'Premium features',
+        monthlyPrice: 29.99,
+        quarterlyPrice: 79.99,
+        annualPrice: 299.99,
+        features: ['Priority support', 'Advanced analytics'],
+        configuration: { quotas: { maxListings: 50 } },
+        isActive: true,
+      };
+
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: 'tier-uuid-123',
+        isActive: true,
+        packages: [{ platform: 'MCOM Mall', status: 'active' }],
+      });
+
+      mockTierRepository.findOne.mockResolvedValue(mockTier);
+
+      const testUser = { id: 'user-1', centralUserId: 'central-1' } as User;
+      const result = await service.findOne(testUser);
+
+      expect(result).toEqual({
+        id: 'subscription-user-1',
+        isActive: true,
+        tierId: 'tier-uuid-123',
+        tier: {
+          id: 'tier-uuid-123',
+          name: 'Gold Plan',
+          description: 'Premium features',
+          monthlyPrice: 29.99,
+          quarterlyPrice: 79.99,
+          annualPrice: 299.99,
+          features: ['Priority support', 'Advanced analytics'],
+          configuration: { quotas: { maxListings: 50 } },
+          isActive: true,
+        },
+        planType: null,
+        startDate: null,
+        expiresAt: null,
+        endDate: null,
+        isTrial: false,
+        trialDuration: 0,
+        packages: [{ platform: 'MCOM Mall', status: 'active' }],
+      });
+    });
+
+    it('should return null when no active package from Mcom Solutions', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: null,
+        isActive: false,
+        packages: [],
+      });
+
+      const testUser = { id: 'user-2', centralUserId: 'central-2' } as User;
+      const result = await service.findOne(testUser);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when McomCentralService returns null', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue(null);
+
+      const testUser = { id: 'user-3', centralUserId: 'central-3' } as User;
+      const result = await service.findOne(testUser);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when tierId exists but tier not found in local DB', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: 'nonexistent-tier',
+        isActive: true,
+        packages: [{ platform: 'MCOM Mall', status: 'active' }],
+      });
+
+      mockTierRepository.findOne.mockResolvedValue(null);
+
+      const testUser = { id: 'user-4', centralUserId: 'central-4' } as User;
+      const result = await service.findOne(testUser);
+
+      expect(result).toBeNull();
+    });
+
+    it('should call getUserPackages with centralUserId when available', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: 'tier-1',
+        isActive: true,
+        packages: [],
+      });
+      mockTierRepository.findOne.mockResolvedValue({ id: 'tier-1', name: 'Basic' });
+
+      const testUser = { id: 'user-5', centralUserId: 'central-5' } as User;
+      await service.findOne(testUser);
+
+      expect(mockMcomCentralService.getUserPackages).toHaveBeenCalledWith('central-5');
+    });
+
+    it('should fallback to query database when centralUserId is missing on input user object', async () => {
+      mockUserRepository.findOne.mockResolvedValue({
+        id: 'user-5b',
+        centralUserId: 'central-5b',
+      });
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: 'tier-1',
+        isActive: true,
+        packages: [],
+      });
+      mockTierRepository.findOne.mockResolvedValue({
+        id: 'tier-1',
+        name: 'Basic',
+      });
+
+      const testUser = { id: 'user-5b', centralUserId: null } as User;
+      await service.findOne(testUser);
+
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'user-5b' },
+      });
+      expect(mockMcomCentralService.getUserPackages).toHaveBeenCalledWith(
+        'central-5b',
+      );
+    });
+
+    it('should throw BadRequestException if centralUserId is completely missing in database', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      const testUser = { id: 'user-5c', centralUserId: null } as User;
+      await expect(service.findOne(testUser)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should call tierRepository with the tierId from Mcom Solutions', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: 'tier-from-solutions',
+        isActive: true,
+        packages: [],
+      });
+      mockTierRepository.findOne.mockResolvedValue({ id: 'tier-from-solutions', name: 'Pro' });
+
+      const testUser = { id: 'user-6', centralUserId: 'central-6' } as User;
+      await service.findOne(testUser);
+
+      expect(mockTierRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'tier-from-solutions' },
+      });
     });
   });
 });

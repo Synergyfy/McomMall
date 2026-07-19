@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -12,6 +12,8 @@ import { ListingType, BusinessStatus } from '../listings/listing.enum';
 import { LocalMall } from '../localmall/entities/localmall.entity';
 import { ActivatedRegion } from '../localmall/entities/activated-region.entity';
 import * as crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
+import { McomCentralService } from './mcom-central.service';
 
 @Injectable()
 export class SsoService {
@@ -23,19 +25,44 @@ export class SsoService {
     private readonly jwtService: JwtService,
     private readonly userService: UsersService,
     private readonly dataSource: DataSource,
+    private readonly mcomCentralService: McomCentralService,
   ) {}
+
+  private getMcomSolutionsBackendUrl(): string {
+    return process.env.MCOM_SOLUTIONS_BACKEND_URL || 'http://localhost:3010';
+  }
+
+  private getMcomSolutionsFrontendUrl(): string {
+    return process.env.MCOM_SOLUTIONS_FRONTEND_URL || 'http://localhost:3000';
+  }
+
+  private getMallFrontendUrl(): string {
+    return process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
+  }
+
+  private getClientId(): string {
+    return process.env.SSO_CLIENT_ID || 'mcom-mall';
+  }
+
+  private getClientSecret(): string {
+    return process.env.SSO_CLIENT_SECRET || 'mall_secret_123';
+  }
+
+  private getBasicAuthHeader(): string {
+    const credentials = Buffer.from(
+      `${this.getClientId()}:${this.getClientSecret()}`,
+    ).toString('base64');
+    return `Basic ${credentials}`;
+  }
 
   generateState(): string {
     return crypto.randomBytes(32).toString('hex');
   }
 
   getAuthorizeUrl(state: string): string {
-    const baseUrl =
-      process.env.MCOM_CENTRAL_BASE_URL || 'http://localhost:3010';
-    const clientId = process.env.SSO_CLIENT_ID || 'mcom-mall';
-    const frontendUrl =
-      process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
-    const redirectUri = `${frontendUrl}/auth/sso`;
+    const baseUrl = this.getMcomSolutionsFrontendUrl();
+    const clientId = this.getClientId();
+    const redirectUri = `${this.getMallFrontendUrl()}/auth/sso`;
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -47,21 +74,20 @@ export class SsoService {
     return `${baseUrl}/api/v1/auth/sso/authorize?${params.toString()}`;
   }
 
-  async exchangeCode(code: string) {
-    const baseUrl =
-      process.env.MCOM_CENTRAL_BASE_URL || 'http://localhost:3010';
-    const frontendUrl =
-      process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
-    const redirectUri = `${frontendUrl}/auth/sso`;
+  async exchangeCode(code: string, redirectUri?: string) {
+    const baseUrl = this.getMcomSolutionsBackendUrl();
+    const uri = redirectUri || `${this.getMallFrontendUrl()}/auth/sso`;
 
     const response = await fetch(`${baseUrl}/api/v1/auth/sso/token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getBasicAuthHeader(),
+      },
       body: JSON.stringify({
-        client_id: process.env.SSO_CLIENT_ID,
-        client_secret: process.env.SSO_CLIENT_SECRET,
         code,
-        redirect_uri: redirectUri,
+        client_id: this.getClientId(),
+        redirect_uri: uri,
       }),
     });
 
@@ -76,10 +102,79 @@ export class SsoService {
     const data = await response.json().catch(() => null);
     if (!data) {
       throw new UnauthorizedException(
-        'Invalid response from MCOM Central token endpoint',
+        'Invalid response from MCOM Solutions token endpoint',
       );
     }
     return data;
+  }
+
+  async refreshSsoToken(refreshToken: string) {
+    const baseUrl = this.getMcomSolutionsBackendUrl();
+
+    const response = await fetch(`${baseUrl}/api/v1/auth/sso/token/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      this.logger.error(
+        `SSO token refresh failed: ${response.status}`,
+        errorBody,
+      );
+      throw new UnauthorizedException(
+        errorBody.error || 'SSO token refresh failed',
+      );
+    }
+
+    return response.json();
+  }
+
+  async getSsoUserInfo(accessToken: string) {
+    const baseUrl = this.getMcomSolutionsBackendUrl();
+
+    const response = await fetch(`${baseUrl}/api/v1/auth/sso/userinfo`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      this.logger.error(
+        `SSO userinfo fetch failed: ${response.status}`,
+        errorBody,
+      );
+      throw new UnauthorizedException(
+        errorBody.error || 'Failed to fetch SSO user info',
+      );
+    }
+
+    return response.json();
+  }
+
+  async logoutSso(accessToken: string) {
+    const baseUrl = this.getMcomSolutionsBackendUrl();
+
+    const response = await fetch(`${baseUrl}/api/v1/auth/sso/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ access_token: accessToken }),
+    });
+
+    if (!response.ok) {
+      this.logger.warn(
+        `SSO logout returned ${response.status} (non-fatal)`,
+      );
+    }
+
+    return { success: true };
   }
 
   async handleCallback(code: string, state: string, cookieState: string) {
@@ -88,13 +183,66 @@ export class SsoService {
     }
 
     const tokenData = await this.exchangeCode(code);
+    return this.processSsoUser(tokenData);
+  }
+
+  async handleCallbackFromCode(code: string, redirectUri?: string) {
+    const tokenData = await this.exchangeCode(code, redirectUri);
+    return this.processSsoUser(tokenData);
+  }
+
+  private async processSsoUser(tokenData: any) {
     const centralUser = tokenData.user;
 
     if (!centralUser || !centralUser.email) {
       throw new UnauthorizedException(
-        'Invalid user data received from MCOM Central',
+        'Invalid user data received from MCOM Solutions',
       );
     }
+
+    const centralUserId = centralUser.sub || centralUser.id;
+
+    if (!centralUserId) {
+      throw new UnauthorizedException(
+        'MCOM Solutions user ID not found in token response',
+      );
+    }
+
+    // --- Subscription gate: check if user has an active MCOM Mall package ---
+    let userPackages: { tierId: string | null; isActive: boolean; packages: any[] } | null = null;
+
+    // Prefer the membership status already included in the token response
+    // (avoids an extra network call that may fail or return mismatched data).
+    const membershipStatus = centralUser.businessProfile?.membershipStatus;
+    const membershipLevel = centralUser.businessProfile?.membershipLevel;
+
+    if (membershipStatus) {
+      const isActive = membershipStatus.toLowerCase() === 'active';
+      userPackages = {
+        tierId: membershipLevel || null,
+        isActive,
+        packages: [],
+      };
+    } else if (centralUserId) {
+      // Fallback: query MCOM Solutions for package data
+      try {
+        userPackages = await this.mcomCentralService.getUserPackages(
+          centralUserId,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Could not verify subscription for user ${centralUserId}: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
+
+    // Only block login if we got a definitive "not active" response.
+    if (userPackages && !userPackages.isActive) {
+      throw new ForbiddenException(
+        'No active MCOM Mall subscription. Please subscribe at MCOM Solutions.',
+      );
+    }
+    // --- End subscription gate ---
 
     let localUser = await this.userRepository.findOne({
       where: { email: centralUser.email },
@@ -144,6 +292,12 @@ export class SsoService {
       }
     }
 
+    // Store the Mcom Solutions user ID for future subscription lookups
+    if (centralUserId && localUser.centralUserId !== centralUserId) {
+      localUser.centralUserId = centralUserId;
+      await this.userRepository.save(localUser);
+    }
+
     if (localUser.role === UserRole.OWNER) {
       await this.jitStorefrontSync(localUser, centralUser);
     }
@@ -154,6 +308,7 @@ export class SsoService {
       email: localUser.email,
       name: `${localUser.firstName} ${localUser.lastName}`,
       userId: localUser.id,
+      centralUserId: centralUserId,
     };
 
     const tokens = this.createToken(tokenPayload);
@@ -163,6 +318,8 @@ export class SsoService {
       userId: localUser.id,
       name: `${localUser.firstName} ${localUser.lastName}`,
       role: localUser.role,
+      email: localUser.email,
+      packageInfo: userPackages?.tierId ? { planType: userPackages.tierId } : null,
     };
   }
 
@@ -272,12 +429,17 @@ export class SsoService {
   }
 
   private createToken(payload: createTokenInterface) {
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '30m' as any,
-    });
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: '7d' as any,
-    });
+    const accessJti = uuidv4();
+    const refreshJti = uuidv4();
+
+    const accessToken = this.jwtService.sign(
+      { ...payload, jti: accessJti },
+      { expiresIn: '30m' as any },
+    );
+    const refreshToken = this.jwtService.sign(
+      { ...payload, jti: refreshJti },
+      { expiresIn: '7d' as any },
+    );
     return { accessToken, refreshToken };
   }
 }

@@ -12,12 +12,16 @@ import { Location } from '../listings/entities/location.entity';
 import { ListingType, BusinessStatus } from '../listings/listing.enum';
 import { LocalMall } from '../localmall/entities/localmall.entity';
 import { ActivatedRegion } from '../localmall/entities/activated-region.entity';
+import { RevokedToken } from './entities/revoked-token.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(RevokedToken)
+    private revokedTokenRepository: Repository<RevokedToken>,
     private readonly hashService: HashService,
     private readonly jwtService: JwtService,
     private readonly userService: UsersService,
@@ -42,13 +46,18 @@ export class AuthService {
     refreshTokenExpiry?: string,
   ) {
     if (payload) {
-      const accessToken = this.jwtService.sign(payload, {
-        expiresIn: (accessTokenExpiry || '30m') as any,
-      });
+      const accessJti = uuidv4();
+      const refreshJti = uuidv4();
 
-      const refreshToken = this.jwtService.sign(payload, {
-        expiresIn: (refreshTokenExpiry || '7d') as any,
-      });
+      const accessToken = this.jwtService.sign(
+        { ...payload, jti: accessJti },
+        { expiresIn: (accessTokenExpiry || '30m') as any },
+      );
+
+      const refreshToken = this.jwtService.sign(
+        { ...payload, jti: refreshJti },
+        { expiresIn: (refreshTokenExpiry || '7d') as any },
+      );
 
       return {
         accessToken,
@@ -61,6 +70,35 @@ export class AuthService {
     return this.createToken({ ...payload });
   }
 
+  async logout(accessToken: string): Promise<{ success: boolean }> {
+    try {
+      const decoded = this.jwtService.decode(accessToken) as any;
+      if (!decoded || !decoded.jti) {
+        return { success: true };
+      }
+
+      const expiresAt = new Date(decoded.exp * 1000);
+
+      const revoked = this.revokedTokenRepository.create({
+        jti: decoded.jti,
+        tokenType: 'access',
+        expiresAt,
+      });
+      await this.revokedTokenRepository.save(revoked);
+
+      return { success: true };
+    } catch {
+      return { success: true };
+    }
+  }
+
+  async isTokenRevoked(jti: string): Promise<boolean> {
+    const revoked = await this.revokedTokenRepository.findOne({
+      where: { jti },
+    });
+    return !!revoked;
+  }
+
   async refreshAccessToken(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken);
@@ -71,7 +109,7 @@ export class AuthService {
         throw new Error('User not found');
       }
 
-      const { id, role, firstName, lastName, email } = user;
+      const { id, role, firstName, lastName, email, centralUserId } = user;
       const name = `${firstName} ${lastName}`;
 
       // Create new token payload
@@ -81,6 +119,7 @@ export class AuthService {
         email,
         name,
         userId: id,
+        centralUserId,
       };
 
       const newAccessToken = this.jwtService.sign(tokenPayload, {
@@ -111,6 +150,12 @@ export class AuthService {
       }
 
       const email = payload.email;
+      const centralUserId = payload.sub;
+
+      if (!centralUserId) {
+        throw new Error('MCOM Solutions user ID not found in SSO token');
+      }
+
       let user = await this.userRepository.findOne({ where: { email } });
 
       if (!user) {
@@ -136,7 +181,14 @@ export class AuthService {
         });
       }
 
+      // Store the Mcom Solutions user ID for future subscription lookups
+      if (centralUserId && user.centralUserId !== centralUserId) {
+        user.centralUserId = centralUserId;
+        await this.userRepository.save(user);
+      }
+
       // Check if Business listing exists for this user (JIT Storefront Sync)
+      // Fire-and-forget: don't block the response on JIT provisioning
       if (user.role === UserRole.OWNER) {
         const businessRepository = this.dataSource.getRepository(Business);
         const existingBusiness = await businessRepository.findOne({
@@ -144,101 +196,9 @@ export class AuthService {
         });
 
         if (!existingBusiness) {
-          const locationRepository = this.dataSource.getRepository(Location);
-          const cleanPostcode = (payload.postcode || 'SW1A 1AA')
-            .trim()
-            .toUpperCase();
-          const address = payload.address || 'High Street';
-
-          // Resolve coordinates & borough dynamically using Postcodes.io
-          let lat = 51.5074;
-          let lon = -0.1278;
-          let borough = 'London';
-
-          try {
-            const postcodeResponse = await fetch(
-              `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode.replace(/\s+/g, ''))}`,
-            );
-            if (postcodeResponse.ok) {
-              const body = await postcodeResponse.json();
-              if (body && body.status === 200 && body.result) {
-                lat = body.result.latitude;
-                lon = body.result.longitude;
-                const rawBorough =
-                  body.result.admin_district || body.result.region || '';
-                borough = rawBorough
-                  .replace(/London Borough of /i, '')
-                  .replace(/Borough of /i, '')
-                  .replace(/City of /i, '')
-                  .replace(/Royal Borough of /i, '')
-                  .trim();
-              }
-            }
-          } catch (err) {
-            console.error('Postcodes.io lookup error in JIT:', err);
-          }
-
-          const mallName = `${borough} Local Mall`;
-          const localMallRepository = this.dataSource.getRepository(LocalMall);
-          let localMall = await localMallRepository.findOne({
-            where: { name: mallName },
+          this.jitStorefrontSync(user, payload).catch((err) => {
+            console.error('[SSO JIT] Background sync failed:', err);
           });
-
-          if (!localMall) {
-            localMall = localMallRepository.create({
-              name: mallName,
-              latitude: lat,
-              longitude: lon,
-            });
-            await localMallRepository.save(localMall);
-          }
-
-          // Mark region as active so it displays on the frontend without "Peckham High Street" fallback
-          const activatedRegionRepository =
-            this.dataSource.getRepository(ActivatedRegion);
-          let activeRegion = await activatedRegionRepository.findOne({
-            where: { name: borough },
-          });
-          if (!activeRegion) {
-            activeRegion = activatedRegionRepository.create({
-              name: borough,
-              isActive: true,
-            });
-            await activatedRegionRepository.save(activeRegion);
-          } else if (!activeRegion.isActive) {
-            activeRegion.isActive = true;
-            await activatedRegionRepository.save(activeRegion);
-          }
-
-          const newBusiness = businessRepository.create({
-            user,
-            businessName: payload.name || 'Hyperlocal Merchant',
-            businessPhone: payload.phoneNumber || '0000000000',
-            businessEmail: payload.email,
-            shortDescription:
-              'Hyperlocal business listing imported from MCOM Ecosystem.',
-            listingType: [ListingType.PRODUCT, ListingType.SERVICE],
-            status: BusinessStatus.PUBLISHED,
-            isVerified: true,
-            isGoogleVerified: true,
-            localMall, // Link Business listing to its local mall!
-          });
-
-          const savedBusiness = await businessRepository.save(newBusiness);
-
-          const newLocation = locationRepository.create({
-            business: savedBusiness,
-            postcode: cleanPostcode,
-            addressLine1: address,
-            city: borough,
-            countryCode: 'GB',
-            showPublicly: true,
-          });
-
-          await locationRepository.save(newLocation);
-          console.log(
-            `[SSO JIT] Automatically provisioned business listing & location for ${user.email} with postcode ${cleanPostcode} under ${mallName}`,
-          );
         }
       }
 
@@ -249,16 +209,119 @@ export class AuthService {
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
         userId: user.id,
+        centralUserId: centralUserId,
       };
 
       const tokens = this.createToken(tokenPayload);
       return {
         ...tokens,
         email: user.email,
+        centralUserId: centralUserId,
       };
     } catch (error) {
       console.error('SSO Error', error);
       throw new Error('SSO Failed');
+    }
+  }
+
+  private async jitStorefrontSync(user: User, payload: any) {
+    try {
+      const locationRepository = this.dataSource.getRepository(Location);
+      const cleanPostcode = (payload.postcode || 'SW1A 1AA')
+        .trim()
+        .toUpperCase();
+      const address = payload.address || 'High Street';
+
+      let lat = 51.5074;
+      let lon = -0.1278;
+      let borough = 'London';
+
+      try {
+        const postcodeResponse = await fetch(
+          `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode.replace(/\s+/g, ''))}`,
+        );
+        if (postcodeResponse.ok) {
+          const body = await postcodeResponse.json();
+          if (body && body.status === 200 && body.result) {
+            lat = body.result.latitude;
+            lon = body.result.longitude;
+            const rawBorough =
+              body.result.admin_district || body.result.region || '';
+            borough = rawBorough
+              .replace(/London Borough of /i, '')
+              .replace(/Borough of /i, '')
+              .replace(/City of /i, '')
+              .replace(/Royal Borough of /i, '')
+              .trim();
+          }
+        }
+      } catch (err) {
+        console.error('Postcodes.io lookup error in JIT:', err);
+      }
+
+      const mallName = `${borough} Local Mall`;
+      const localMallRepository = this.dataSource.getRepository(LocalMall);
+      let localMall = await localMallRepository.findOne({
+        where: { name: mallName },
+      });
+
+      if (!localMall) {
+        localMall = localMallRepository.create({
+          name: mallName,
+          latitude: lat,
+          longitude: lon,
+        });
+        await localMallRepository.save(localMall);
+      }
+
+      const activatedRegionRepository =
+        this.dataSource.getRepository(ActivatedRegion);
+      let activeRegion = await activatedRegionRepository.findOne({
+        where: { name: borough },
+      });
+      if (!activeRegion) {
+        activeRegion = activatedRegionRepository.create({
+          name: borough,
+          isActive: true,
+        });
+        await activatedRegionRepository.save(activeRegion);
+      } else if (!activeRegion.isActive) {
+        activeRegion.isActive = true;
+        await activatedRegionRepository.save(activeRegion);
+      }
+
+      const businessRepository = this.dataSource.getRepository(Business);
+      const newBusiness = businessRepository.create({
+        user,
+        businessName: payload.name || 'Hyperlocal Merchant',
+        businessPhone: payload.phoneNumber || '0000000000',
+        businessEmail: user.email,
+        shortDescription:
+          'Hyperlocal business listing imported from MCOM Ecosystem.',
+        listingType: [ListingType.PRODUCT, ListingType.SERVICE],
+        status: BusinessStatus.PUBLISHED,
+        isVerified: true,
+        isGoogleVerified: true,
+        localMall,
+      });
+
+      const savedBusiness = await businessRepository.save(newBusiness);
+
+      const newLocation = locationRepository.create({
+        business: savedBusiness,
+        postcode: cleanPostcode,
+        addressLine1: address,
+        city: borough,
+        countryCode: 'GB',
+        showPublicly: true,
+      });
+
+      await locationRepository.save(newLocation);
+      console.log(
+        `[SSO JIT] Automatically provisioned business listing & location for ${user.email} with postcode ${cleanPostcode} under ${mallName}`,
+      );
+    } catch (err) {
+      console.error('[SSO JIT] Failed to provision storefront:', err);
     }
   }
 }

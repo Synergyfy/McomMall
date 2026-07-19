@@ -35,3 +35,11 @@ export class RefreshAuthDto {
   @IsString()
   refreshToken: string;
 }
+
+export class LogoutAuthDto {
+  @ApiProperty({
+    description: 'The access token to revoke',
+  })
+  @IsString()
+  accessToken: string;
+}

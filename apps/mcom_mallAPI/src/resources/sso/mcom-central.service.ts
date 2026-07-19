@@ -10,7 +10,7 @@ export class McomCentralService {
 
   constructor() {
     this.baseUrl =
-      process.env.MCOM_CENTRAL_BASE_URL || 'http://localhost:3010';
+      process.env.MCOM_SOLUTIONS_BACKEND_URL || 'http://localhost:3010';
     this.serviceId = process.env.SSO_CLIENT_ID || 'mcom-mall';
     this.apiSecret = process.env.SSO_API_SECRET || '';
   }
@@ -54,7 +54,9 @@ export class McomCentralService {
       const hasActiveMall = Array.isArray(userData.packages)
         ? userData.packages.some(
             (pkg: any) =>
-              pkg.platform?.toLowerCase() === 'mall' && pkg.status === 'active',
+              ((pkg.platformName || pkg.platform)?.toLowerCase() === 'mcom mall' ||
+               (pkg.platformName || pkg.platform)?.toLowerCase() === 'mall') &&
+              pkg.status === 'active',
           )
         : false;
 
@@ -119,6 +121,70 @@ export class McomCentralService {
     } catch (error) {
       this.logger.error(
         'Failed to fetch user context from MCOM Central:',
+        error,
+      );
+      return null;
+    }
+  }
+
+  async getUserPackages(
+    userId: string,
+  ): Promise<{ tierId: string | null; isActive: boolean; packages: any[] } | null> {
+    try {
+      const headers = this.getHmacHeaders();
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/data/user?userId=${encodeURIComponent(userId)}`,
+        { headers },
+      );
+
+      if (!response.ok) {
+        this.logger.error(
+          `MCOM Central returned ${response.status} for userId=${userId}`,
+        );
+        return null;
+      }
+
+      const body = await response.json();
+      const userData = body.data;
+
+      if (!userData) return null;
+
+      const packages = userData.packages || [];
+
+      // 1. Find the MCOM Mall package
+      const mallPackage = Array.isArray(packages)
+        ? packages.find(
+            (pkg: any) =>
+              (pkg.platformName || pkg.platform)?.toLowerCase() === 'mcom mall' ||
+              (pkg.platformName || pkg.platform)?.toLowerCase() === 'mall',
+          )
+        : null;
+
+      if (mallPackage) {
+        const isActive = mallPackage.status === 'active';
+        const tierId =
+          mallPackage.externalPlanId ||
+          mallPackage.packageId ||
+          mallPackage.tierId ||
+          null;
+        return { tierId, isActive, packages };
+      }
+
+      // 2. Fallback: Check membership status from business profile (most reliable)
+      const membershipStatus =
+        userData.membershipStatus || userData.businessProfile?.membershipStatus;
+      if (membershipStatus && membershipStatus.toLowerCase() === 'active') {
+        const tierId =
+          userData.tierId ||
+          userData.businessProfile?.membershipLevel ||
+          null;
+        return { tierId, isActive: true, packages };
+      }
+
+      return { tierId: null, isActive: false, packages };
+    } catch (error) {
+      this.logger.error(
+        'Failed to fetch user packages from MCOM Central:',
         error,
       );
       return null;

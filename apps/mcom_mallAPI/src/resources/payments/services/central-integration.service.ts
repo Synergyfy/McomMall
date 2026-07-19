@@ -5,7 +5,7 @@ import axios from 'axios';
 export class CentralIntegrationService {
   private readonly logger = new Logger(CentralIntegrationService.name);
   private readonly centralUrl =
-    process.env.MCOM_CENTRAL_URL || 'http://localhost:3000/api/v1';
+    process.env.MCOM_CENTRAL_URL || 'http://localhost:3010/api/v1';
 
   async processCashback(
     userEmail: string,

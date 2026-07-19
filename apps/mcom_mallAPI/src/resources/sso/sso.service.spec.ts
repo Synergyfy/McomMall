@@ -5,8 +5,9 @@ import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { DataSource, Repository } from 'typeorm';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { UserRole } from '../../common/role.enum';
+import { McomCentralService } from './mcom-central.service';
 
 describe('SsoService', () => {
   let service: SsoService;
@@ -30,6 +31,12 @@ describe('SsoService', () => {
       create: jest.fn().mockReturnValue({ id: 'mall-1' }),
       save: jest.fn().mockResolvedValue({ id: 'mall-1' }),
     }),
+  };
+
+  const mockMcomCentralService = {
+    getUserPackages: jest.fn(),
+    getUserMembership: jest.fn(),
+    getUserContext: jest.fn(),
   };
 
   const mockUser: Partial<User> = {
@@ -63,6 +70,10 @@ describe('SsoService', () => {
           provide: DataSource,
           useValue: mockDataSource,
         },
+        {
+          provide: McomCentralService,
+          useValue: mockMcomCentralService,
+        },
       ],
     }).compile();
 
@@ -89,12 +100,13 @@ describe('SsoService', () => {
 
   describe('getAuthorizeUrl', () => {
     it('should return a valid URL with query params', () => {
-      process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
+      process.env.MCOM_SOLUTIONS_FRONTEND_URL = 'http://central-frontend:3000';
+      process.env.MCOM_SOLUTIONS_BACKEND_URL = 'http://central:3010';
       process.env.SSO_CLIENT_ID = 'mcom-mall';
       process.env.MALL_FRONTEND_URL = 'http://mall:3003';
 
       const url = service.getAuthorizeUrl('test-state');
-      expect(url).toContain('http://central:3010/api/v1/auth/sso/authorize');
+      expect(url).toContain('http://central-frontend:3000/api/v1/auth/sso/authorize');
       expect(url).toContain('client_id=mcom-mall');
       expect(url).toContain('response_type=code');
       expect(url).toContain('state=test-state');
@@ -104,19 +116,20 @@ describe('SsoService', () => {
     });
 
     it('should use default values when env vars are missing', () => {
-      delete process.env.MCOM_CENTRAL_BASE_URL;
+      delete process.env.MCOM_SOLUTIONS_FRONTEND_URL;
+      delete process.env.MCOM_SOLUTIONS_BACKEND_URL;
       delete process.env.SSO_CLIENT_ID;
       delete process.env.MALL_FRONTEND_URL;
 
       const url = service.getAuthorizeUrl('state');
-      expect(url).toContain('http://localhost:3010/api/v1/auth/sso/authorize');
+      expect(url).toContain('http://localhost:3000/api/v1/auth/sso/authorize');
       expect(url).toContain('client_id=mcom-mall');
     });
   });
 
   describe('exchangeCode', () => {
     beforeEach(() => {
-      process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
+      process.env.MCOM_SOLUTIONS_BACKEND_URL = 'http://central:3010';
       process.env.SSO_CLIENT_ID = 'mcom-mall';
       process.env.SSO_CLIENT_SECRET = 'secret';
       process.env.MALL_FRONTEND_URL = 'http://mall:3003';
@@ -194,14 +207,14 @@ describe('SsoService', () => {
       global.fetch = jest.fn().mockResolvedValue(mockResponse);
 
       await expect(service.exchangeCode('code')).rejects.toThrow(
-        'Invalid response from MCOM Central token endpoint',
+        'Invalid response from MCOM Solutions token endpoint',
       );
     });
   });
 
   describe('handleCallback', () => {
     beforeEach(() => {
-      process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
+      process.env.MCOM_SOLUTIONS_BACKEND_URL = 'http://central:3010';
       process.env.SSO_CLIENT_ID = 'mcom-mall';
       process.env.SSO_CLIENT_SECRET = 'secret';
       process.env.MALL_FRONTEND_URL = 'http://mall:3003';
@@ -235,7 +248,7 @@ describe('SsoService', () => {
 
       await expect(
         service.handleCallback('code', 'state', 'state'),
-      ).rejects.toThrow('Invalid user data received from MCOM Central');
+      ).rejects.toThrow('Invalid user data received from MCOM Solutions');
     });
 
     it('should throw UnauthorizedException when MCOM Central returns user without email', async () => {
@@ -246,7 +259,7 @@ describe('SsoService', () => {
 
       await expect(
         service.handleCallback('code', 'state', 'state'),
-      ).rejects.toThrow('Invalid user data received from MCOM Central');
+      ).rejects.toThrow('Invalid user data received from MCOM Solutions');
     });
 
     it('should create a new user when user does not exist locally', async () => {
@@ -407,6 +420,130 @@ describe('SsoService', () => {
       expect(result.userId).toBe('user-1');
       expect(result.name).toBe('John Doe');
       expect(result.role).toBe(UserRole.CUSTOMER);
+    });
+
+    it('should throw ForbiddenException when user has no active MCOM Mall package', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: null,
+        isActive: false,
+        packages: [],
+      });
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          user: {
+            sub: 'central-user-1',
+            email: 'test@example.com',
+            name: 'John Doe',
+            role: 'customer',
+          },
+        }),
+      });
+
+      await expect(
+        service.handleCallback('code', 'state', 'state'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException when getUserPackages returns null', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue(null);
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          user: {
+            sub: 'central-user-2',
+            email: 'test@example.com',
+            name: 'John Doe',
+            role: 'customer',
+          },
+        }),
+      });
+
+      await expect(
+        service.handleCallback('code', 'state', 'state'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should proceed with JIT provisioning when user has active package', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: 'tier-uuid-123',
+        isActive: true,
+        packages: [{ platform: 'MCOM Mall', status: 'active' }],
+      });
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockUserService.create.mockResolvedValue({
+        ...mockUser,
+        role: UserRole.CUSTOMER,
+      });
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          user: {
+            sub: 'central-user-3',
+            email: 'newuser@example.com',
+            name: 'New User',
+            role: 'customer',
+          },
+        }),
+      });
+
+      const result = await service.handleCallback('code', 'state', 'state');
+
+      expect(result.accessToken).toBe('mock-jwt-token');
+      expect(result.userId).toBe('user-1');
+    });
+
+    it('should include tierId in packageInfo when package is active', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: 'tier-uuid-456',
+        isActive: true,
+        packages: [{ platform: 'MCOM Mall', status: 'active' }],
+      });
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          user: {
+            sub: 'central-user-4',
+            email: 'test@example.com',
+            name: 'John Doe',
+            role: 'customer',
+          },
+        }),
+      });
+
+      const result = await service.handleCallback('code', 'state', 'state');
+
+      expect(result.packageInfo).toEqual({ planType: 'tier-uuid-456' });
+    });
+
+    it('should set packageInfo to null when tierId is missing', async () => {
+      mockMcomCentralService.getUserPackages.mockResolvedValue({
+        tierId: null,
+        isActive: true,
+        packages: [{ platform: 'MCOM Mall', status: 'active' }],
+      });
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          user: {
+            sub: 'central-user-5',
+            email: 'test@example.com',
+            name: 'John Doe',
+            role: 'customer',
+          },
+        }),
+      });
+
+      const result = await service.handleCallback('code', 'state', 'state');
+
+      expect(result.packageInfo).toBeNull();
     });
   });
 });

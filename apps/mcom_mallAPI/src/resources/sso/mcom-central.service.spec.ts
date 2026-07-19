@@ -6,7 +6,7 @@ describe('McomCentralService', () => {
   let service: McomCentralService;
 
   beforeEach(async () => {
-    process.env.MCOM_CENTRAL_BASE_URL = 'http://central:3010';
+    process.env.MCOM_SOLUTIONS_BACKEND_URL = 'http://central:3010';
     process.env.SSO_CLIENT_ID = 'mcom-mall';
     process.env.SSO_API_SECRET = 'mcom_mall_dev_secret_change_in_prod';
 
@@ -19,7 +19,7 @@ describe('McomCentralService', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
-    delete process.env.MCOM_CENTRAL_BASE_URL;
+    delete process.env.MCOM_SOLUTIONS_BACKEND_URL;
     delete process.env.SSO_CLIENT_ID;
     delete process.env.SSO_API_SECRET;
   });
@@ -225,6 +225,228 @@ describe('McomCentralService', () => {
       const result = await service.healthCheck();
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('getUserPackages', () => {
+    it('should return tierId and isActive when user has active MCOM Mall package', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            packages: [
+              { platform: 'MCOM Mall', tierId: 'tier-uuid-123', status: 'active' },
+              { platform: 'MCOM Rewards', status: 'active' },
+            ],
+          },
+        }),
+      });
+
+      const result = await service.getUserPackages('user-1');
+
+      expect(result).toEqual({
+        tierId: 'tier-uuid-123',
+        isActive: true,
+        packages: [
+          { platform: 'MCOM Mall', tierId: 'tier-uuid-123', status: 'active' },
+          { platform: 'MCOM Rewards', status: 'active' },
+        ],
+      });
+    });
+
+    it('should return isActive: false when package status is inactive', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            packages: [
+              { platform: 'MCOM Mall', tierId: 'tier-uuid-456', status: 'inactive' },
+            ],
+          },
+        }),
+      });
+
+      const result = await service.getUserPackages('user-2');
+
+      expect(result).toEqual({
+        tierId: 'tier-uuid-456',
+        isActive: false,
+        packages: [
+          { platform: 'MCOM Mall', tierId: 'tier-uuid-456', status: 'inactive' },
+        ],
+      });
+    });
+
+    it('should return null when packages array is empty', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: { packages: [] },
+        }),
+      });
+
+      const result = await service.getUserPackages('user-3');
+
+      expect(result).toEqual({
+        tierId: null,
+        isActive: false,
+        packages: [],
+      });
+    });
+
+    it('should return null when no MCOM Mall platform entry exists', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            packages: [
+              { platform: 'MCOM Rewards', status: 'active' },
+            ],
+          },
+        }),
+      });
+
+      const result = await service.getUserPackages('user-4');
+
+      expect(result).toEqual({
+        tierId: null,
+        isActive: false,
+        packages: [
+          { platform: 'MCOM Rewards', status: 'active' },
+        ],
+      });
+    });
+
+    it('should return null on network error', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+      const result = await service.getUserPackages('user-5');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null on non-OK response', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+      });
+
+      const result = await service.getUserPackages('user-6');
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle missing tierId gracefully', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            packages: [
+              { platform: 'MCOM Mall', status: 'active' },
+            ],
+          },
+        }),
+      });
+
+      const result = await service.getUserPackages('user-7');
+
+      expect(result).toEqual({
+        tierId: null,
+        isActive: true,
+        packages: [
+          { platform: 'MCOM Mall', status: 'active' },
+        ],
+      });
+    });
+
+    it('should be case-insensitive when matching platform name', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            packages: [
+              { platform: 'mcom mall', tierId: 'tier-789', status: 'active' },
+            ],
+          },
+        }),
+      });
+
+      const result = await service.getUserPackages('user-8');
+
+      expect(result.tierId).toBe('tier-789');
+      expect(result.isActive).toBe(true);
+    });
+
+    it('should also match "mall" as platform name', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            packages: [
+              { platform: 'mall', tierId: 'tier-mall', status: 'active' },
+            ],
+          },
+        }),
+      });
+
+      const result = await service.getUserPackages('user-9');
+
+      expect(result.tierId).toBe('tier-mall');
+      expect(result.isActive).toBe(true);
+    });
+
+    it('should handle packages in body.data.packages', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: {
+            packages: [
+              { platform: 'MCOM Mall', tierId: 'tier-top', status: 'active' },
+            ],
+          },
+        }),
+      });
+
+      const result = await service.getUserPackages('user-10');
+
+      expect(result.tierId).toBe('tier-top');
+      expect(result.isActive).toBe(true);
+    });
+
+    it('should send HMAC signed headers', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ data: { packages: [] } }),
+      });
+
+      await service.getUserPackages('user-11');
+
+      const calledHeaders = (global.fetch as jest.Mock).mock.calls[0][1]
+        .headers;
+      expect(calledHeaders['X-Service-Id']).toBe('mcom-mall');
+      expect(calledHeaders['X-Timestamp']).toBeDefined();
+      expect(calledHeaders['X-Signature']).toBeDefined();
+
+      const timestamp = calledHeaders['X-Timestamp'];
+      const expectedSignature = crypto
+        .createHmac('sha256', 'mcom_mall_dev_secret_change_in_prod')
+        .update(`mcom-mall:${timestamp}`)
+        .digest('hex');
+      expect(calledHeaders['X-Signature']).toBe(expectedSignature);
+    });
+
+    it('should use the same endpoint as getUserMembership', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ data: { packages: [] } }),
+      });
+
+      await service.getUserPackages('user-12');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/data/user?userId='),
+        expect.anything(),
+      );
     });
   });
 });
