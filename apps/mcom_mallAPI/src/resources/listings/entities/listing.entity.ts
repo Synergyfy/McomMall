@@ -188,11 +188,15 @@ export class Business extends AbstractBaseEntity {
   })
   productSellerProfile?: ProductSellerProfile;
 
-  @OneToOne(() => BusinessServiceProviderProfile, (profile) => profile.business, {
-    cascade: ['insert', 'update', 'remove'],
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
+  @OneToOne(
+    () => BusinessServiceProviderProfile,
+    (profile) => profile.business,
+    {
+      cascade: ['insert', 'update', 'remove'],
+      nullable: true,
+      onDelete: 'CASCADE',
+    },
+  )
   serviceProviderProfile?: BusinessServiceProviderProfile;
 
   @OneToMany(() => Product, (product) => product.business, {
@@ -226,7 +230,10 @@ export class Business extends AbstractBaseEntity {
   })
   offers: Offer[];
 
-  @ManyToOne(() => LocalMall, (mall) => mall.businesses, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => LocalMall, (mall) => mall.businesses, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   localMall?: LocalMall;
 
   @Column({ nullable: true })

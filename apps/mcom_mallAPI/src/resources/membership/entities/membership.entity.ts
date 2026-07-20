@@ -14,7 +14,7 @@ export class Membership extends AbstractBaseEntity {
   tierType: MembershipTier;
 
   @ApiProperty({ type: () => Tier, nullable: true })
-  @ManyToOne(() => Tier, { nullable: true })
+  @ManyToOne(() => Tier, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'tier_id' })
   tier: Tier;
 

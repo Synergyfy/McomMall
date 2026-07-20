@@ -37,7 +37,8 @@ export class QrCodesController {
   @Get('scan/:id')
   async scan(@Param('id') id: string, @Res() res: Response) {
     try {
-      const redirectUrl = await this.qrCodesService.trackScanAndResolveRedirect(id);
+      const redirectUrl =
+        await this.qrCodesService.trackScanAndResolveRedirect(id);
       return res.redirect(HttpStatus.FOUND, redirectUrl);
     } catch (error) {
       // If code doesn't exist, redirect to root storefront page

@@ -10,12 +10,14 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { CamelCaseInterceptor } from './interceptors/camel-case.interceptor';
 import { json, urlencoded } from 'express';
+import * as cookieParser from 'cookie-parser';
 
 // 1. Shared Configuration Function
 // This setup applies to both Local and Vercel environments
 async function configureApp(app: any) {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ limit: '50mb', extended: true }));
+  app.use(cookieParser(process.env.COOKIE_SECRET));
 
   app.enableCors({
     origin: [

@@ -95,14 +95,16 @@ export class ShippingService {
 
   private async generateShipStationLabel(order: Order): Promise<Order> {
     this.logger.log(`Generating ShipStation Label for Order ${order.id}`);
-    
+
     // Existing ShipStation logic...
     const payload = this.createShipmentPayload(order, order.business);
     const apiKey = this.configService.get<string>('SHIPSTATION_API_KEY');
     const apiSecret = this.configService.get<string>('SHIPSTATION_API_SECRET');
 
     if (!apiKey || !apiSecret) {
-      throw new InternalServerErrorException('ShipStation API credentials not configured');
+      throw new InternalServerErrorException(
+        'ShipStation API credentials not configured',
+      );
     }
 
     const authHeader = `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`;
@@ -138,7 +140,9 @@ export class ShippingService {
       return savedOrder;
     } catch (error) {
       this.logger.error(`ShipStation API Error: ${error.message}`);
-      throw new InternalServerErrorException('Failed to generate shipping label via ShipStation');
+      throw new InternalServerErrorException(
+        'Failed to generate shipping label via ShipStation',
+      );
     }
   }
 
@@ -150,19 +154,25 @@ export class ShippingService {
     const activeOrders = await this.orderRepository.find({
       where: {
         carrierCode: 'royalmail',
-        shippingStatus: Not(In([ShippingStatus.DELIVERED, ShippingStatus.PENDING])),
+        shippingStatus: Not(
+          In([ShippingStatus.DELIVERED, ShippingStatus.PENDING]),
+        ),
       },
     });
 
     for (const order of activeOrders) {
       if (!order.trackingNumber) continue;
 
-      const tracking = await this.royalMailService.getTrackingSummary(order.trackingNumber);
+      const tracking = await this.royalMailService.getTrackingSummary(
+        order.trackingNumber,
+      );
       if (tracking && tracking.status !== order.shippingStatus) {
-        this.logger.log(`Updating Order ${order.id} status: ${order.shippingStatus} -> ${tracking.status}`);
+        this.logger.log(
+          `Updating Order ${order.id} status: ${order.shippingStatus} -> ${tracking.status}`,
+        );
         order.shippingStatus = tracking.status;
         await this.orderRepository.save(order);
-        
+
         this.eventEmitter.emit('SHIPPING_STATUS_UPDATED', {
           orderId: order.id,
           status: tracking.status,
@@ -175,8 +185,8 @@ export class ShippingService {
   private createShipmentPayload(order: Order, business: Business) {
     // ... (Keep existing payload logic)
     return {
-        orderNumber: order.id,
-        // (rest of the payload)
+      orderNumber: order.id,
+      // (rest of the payload)
     } as any;
   }
 }

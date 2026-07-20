@@ -1,6 +1,6 @@
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto, RefreshAuthDto } from './dto/create-auth.dto';
+import { CreateAuthDto, RefreshAuthDto, LogoutAuthDto } from './dto/create-auth.dto';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { ResetPasswordDto } from '../email/dto/reset-password.dto';
@@ -17,6 +17,7 @@ import {
 import { UserRole } from '../../common/role.enum';
 
 import { ActivityTimerService } from '../activity-timer/activity-timer.service';
+import { McomCentralService } from '../sso/mcom-central.service';
 
 @ApiTags('auth')
 @ApiBearerAuth()
@@ -28,6 +29,7 @@ export class AuthController {
     private readonly userService: UsersService,
     private readonly emailService: EmailService,
     private readonly activityTimerService: ActivityTimerService,
+    private readonly mcomCentralService: McomCentralService,
   ) {}
 
   @ApiOperation({ summary: 'Authenticate as user' })
@@ -50,7 +52,7 @@ export class AuthController {
     );
     if (!validPassword) throw ErrorFactory.invalidCredentials();
 
-    const { id, role, firstName, lastName } = user;
+    const { id, role, firstName, lastName, centralUserId } = user;
     const name = `${firstName} ${lastName}`;
 
     const auth = await this.authService.createLogin({
@@ -59,6 +61,7 @@ export class AuthController {
       email,
       name,
       userId: id,
+      centralUserId,
     });
 
     await this.userService.updateLastLogin(id);
@@ -88,6 +91,18 @@ export class AuthController {
     try {
       const authData = await this.authService.loginWithSso(token);
       const user = await this.userService.findCurrentUser(authData.email);
+
+      // Check subscription using Mcom Solutions user ID
+      if (!user.centralUserId) {
+        throw new ForbiddenException(
+          'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
+        );
+      }
+      const subscription = await this.mcomCentralService.getUserPackages(user.centralUserId);
+      if (!subscription.isActive || !subscription.tierId) {
+        throw new ForbiddenException('Active subscription required. Please subscribe at Mcom Solutions.');
+      }
+
       await this.userService.updateLastLogin(user.id);
 
       const activeTimers =
@@ -105,6 +120,7 @@ export class AuthController {
         tasks: activeTimers,
       };
     } catch (error) {
+      console.error('SSO login error:', error);
       throw ErrorFactory.invalidCredentials();
     }
   }
@@ -155,5 +171,14 @@ export class AuthController {
       otp: body.otp,
       type: OtpType.VERIFICATION,
     });
+  }
+
+  @ApiOperation({ summary: 'Logout and revoke token' })
+  @ApiResponse({ status: 200, description: 'Logged out successfully.' })
+  @Public()
+  @Post('logout')
+  async logout(@Body() body: LogoutAuthDto) {
+    const result = await this.authService.logout(body.accessToken);
+    return result;
   }
 }

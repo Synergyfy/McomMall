@@ -39,7 +39,9 @@ export class GamificationController {
 
   @Get('my-games')
   @Roles(UserRole.OWNER)
-  @ApiOperation({ summary: 'Get all gamification campaigns for the current business merchant' })
+  @ApiOperation({
+    summary: 'Get all gamification campaigns for the current business merchant',
+  })
   async findAllMyGames(@CurrentUser() user: User) {
     return this.gamificationService.findAllForBusiness(user.id);
   }

@@ -32,10 +32,14 @@ export class RoyalMailService {
     }
 
     const clientId = this.configService.get<string>('ROYAL_MAIL_CLIENT_ID');
-    const clientSecret = this.configService.get<string>('ROYAL_MAIL_CLIENT_SECRET');
+    const clientSecret = this.configService.get<string>(
+      'ROYAL_MAIL_CLIENT_SECRET',
+    );
 
     if (!clientId || !clientSecret) {
-      throw new InternalServerErrorException('Royal Mail API credentials not configured');
+      throw new InternalServerErrorException(
+        'Royal Mail API credentials not configured',
+      );
     }
 
     try {
@@ -54,11 +58,16 @@ export class RoyalMailService {
 
       this.accessToken = response.data.xRMGAuthToken;
       // Tokens are usually valid for 4 hours (14400 seconds)
-      this.tokenExpiry = Date.now() + (response.data.expires_in || 14400) * 1000 - 60000; // Subtract 1 min for safety
+      this.tokenExpiry =
+        Date.now() + (response.data.expires_in || 14400) * 1000 - 60000; // Subtract 1 min for safety
       return this.accessToken;
     } catch (error) {
-      this.logger.error(`Failed to get Royal Mail Access Token: ${error.message}`);
-      throw new InternalServerErrorException('Royal Mail Authentication Failed');
+      this.logger.error(
+        `Failed to get Royal Mail Access Token: ${error.message}`,
+      );
+      throw new InternalServerErrorException(
+        'Royal Mail Authentication Failed',
+      );
     }
   }
 
@@ -90,7 +99,11 @@ export class RoyalMailService {
             country_code: 'GB',
           },
           package_details: {
-            weight: order.items.reduce((acc, item) => acc + (item.product.weight * item.quantity), 0) || 500, // Default to 500g if missing
+            weight:
+              order.items.reduce(
+                (acc, item) => acc + item.product.weight * item.quantity,
+                0,
+              ) || 500, // Default to 500g if missing
             package_count: 1,
           },
           service_selection: {
@@ -117,8 +130,12 @@ export class RoyalMailService {
         trackingNumber: shipmentResult.tracking_number,
       };
     } catch (error) {
-      this.logger.error(`Royal Mail Shipment Creation Failed: ${error.response?.data?.errors?.[0]?.message || error.message}`);
-      throw new InternalServerErrorException('Failed to create Royal Mail shipment');
+      this.logger.error(
+        `Royal Mail Shipment Creation Failed: ${error.response?.data?.errors?.[0]?.message || error.message}`,
+      );
+      throw new InternalServerErrorException(
+        'Failed to create Royal Mail shipment',
+      );
     }
   }
 
@@ -141,8 +158,12 @@ export class RoyalMailService {
 
       return response.data.label_data; // Usually base64
     } catch (error) {
-      this.logger.error(`Failed to retrieve Royal Mail label: ${error.message}`);
-      throw new InternalServerErrorException('Failed to retrieve shipping label');
+      this.logger.error(
+        `Failed to retrieve Royal Mail label: ${error.message}`,
+      );
+      throw new InternalServerErrorException(
+        'Failed to retrieve shipping label',
+      );
     }
   }
 
@@ -155,12 +176,15 @@ export class RoyalMailService {
 
     try {
       const response = await lastValueFrom(
-        this.httpService.get(`${this.trackingBaseUrl}/mailpieces/${trackingNumber}/summary`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'X-IBM-Client-Id': clientId,
+        this.httpService.get(
+          `${this.trackingBaseUrl}/mailpieces/${trackingNumber}/summary`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'X-IBM-Client-Id': clientId,
+            },
           },
-        }),
+        ),
       );
 
       const summary = response.data.mailpiece.summary_status;
@@ -207,7 +231,9 @@ export class RoyalMailService {
       };
     } catch (error) {
       this.logger.error(`Royal Mail Manifesting Failed: ${error.message}`);
-      throw new InternalServerErrorException('Failed to generate Royal Mail manifest');
+      throw new InternalServerErrorException(
+        'Failed to generate Royal Mail manifest',
+      );
     }
   }
 

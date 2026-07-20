@@ -12,6 +12,9 @@ export class Certification extends AbstractBaseEntity {
   @IsUrl()
   fileUrl: string; // URL to the uploaded PDF/JPG
 
-  @ManyToOne(() => BusinessServiceProviderProfile, (profile) => profile.certifications)
+  @ManyToOne(
+    () => BusinessServiceProviderProfile,
+    (profile) => profile.certifications,
+  )
   serviceProviderProfile: BusinessServiceProviderProfile;
 }

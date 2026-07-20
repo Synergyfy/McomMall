@@ -1,29 +1,62 @@
 'use client';
 
-import React, { useEffect, Suspense, useRef } from 'react';
+import React, { useEffect, Suspense, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSsoLogin } from '@/service/auth/hook';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { redirectToMcomSolutionsSubscription } from '@/service/auth/hook';
 
 function SSOReceiverContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { mutateAsync: ssoLogin, isError, error } = useSsoLogin();
   const calledRef = useRef(false);
+  const [subscriptionError, setSubscriptionError] = useState(false);
 
   useEffect(() => {
+    if (calledRef.current) return;
+
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
     const ssoToken = searchParams.get('sso_token');
-    
-    if (ssoToken && !calledRef.current) {
+    const accessToken = searchParams.get('accessToken');
+    const errorParam = searchParams.get('error');
+
+    // Handle subscription_required error from backend redirect
+    if (errorParam === 'subscription_required') {
       calledRef.current = true;
-      ssoLogin(ssoToken)
+      setSubscriptionError(true);
+      return;
+    }
+
+    if (code && state) {
+      calledRef.current = true;
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1/';
+      const callbackUrl = `${apiBase.replace(/\/$/, '')}/sso/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+      window.location.href = callbackUrl;
+    } else if (accessToken) {
+      calledRef.current = true;
+      ssoLogin(accessToken)
         .then(() => {
-          router.replace('/dashboard');
+          const redirectTo = state && state.startsWith('/') ? state : '/dashboard';
+          router.replace(redirectTo);
         })
         .catch((err) => {
           console.error('SSO authentication failed:', err);
+          router.replace('/signin?error=sso_authentication_failed');
         });
-    } else if (!ssoToken) {
+    } else if (ssoToken && !calledRef.current) {
+      calledRef.current = true;
+      ssoLogin(ssoToken)
+        .then(() => {
+          const redirectTo = state && state.startsWith('/') ? state : '/dashboard';
+          router.replace(redirectTo);
+        })
+        .catch((err) => {
+          console.error('SSO authentication failed:', err);
+          router.replace('/signin?error=sso_authentication_failed');
+        });
+    } else if (!code && !ssoToken && !accessToken) {
       router.replace('/');
     }
   }, [searchParams, ssoLogin, router]);
@@ -36,7 +69,23 @@ function SSOReceiverContent() {
       </div>
 
       <div className="relative z-10 text-center space-y-6 max-w-sm px-6">
-        {isError ? (
+        {subscriptionError ? (
+          <>
+            <div className="w-16 h-16 rounded-2xl bg-orange-500/20 flex items-center justify-center mx-auto shadow-xl">
+              <Sparkles className="w-8 h-8 text-orange-500" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold tracking-tight text-white">Subscription Required</h2>
+              <p className="text-sm text-slate-400">You need an active MCOM Mall subscription to access the dashboard.</p>
+            </div>
+            <button
+              onClick={() => redirectToMcomSolutionsSubscription()}
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl text-sm font-semibold transition-all"
+            >
+              Subscribe to MCOM Mall
+            </button>
+          </>
+        ) : isError ? (
           <>
             <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto shadow-xl">
               <AlertCircle className="w-8 h-8 text-red-500" />

@@ -52,7 +52,7 @@ describe('MembershipController', () => {
 
       const result = await controller.findOne(mockUser);
 
-      expect(mockMembershipService.findOne).toHaveBeenCalledWith(mockUser.id);
+      expect(mockMembershipService.findOne).toHaveBeenCalledWith(mockUser);
       expect(result).toEqual(membership);
     });
   });

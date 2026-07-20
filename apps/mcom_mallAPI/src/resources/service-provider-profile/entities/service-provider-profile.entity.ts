@@ -72,4 +72,3 @@ export class ServiceProviderProfile extends AbstractBaseEntity {
   })
   certifications: Certification[];
 }
-

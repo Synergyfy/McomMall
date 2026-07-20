@@ -23,10 +23,7 @@ export class ClaimsController {
   }
 
   @Patch(':id')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateClaimDto,
-  ) {
+  updateStatus(@Param('id') id: string, @Body() updateDto: UpdateClaimDto) {
     return this.claimsService.updateStatus(id, updateDto);
   }
 }

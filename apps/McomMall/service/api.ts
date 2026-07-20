@@ -16,22 +16,48 @@ export const setBearerToken = (token: string) => {
   api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 };
 
-// Initialize the token from cookies when the application loads
-const initialToken = Cookies.get('access');
-if (initialToken) {
-  setBearerToken(initialToken);
+// Initialize the token from cookies when the application loads.
+// Skip this during the SSO callback — the callback page manages its own auth lifecycle
+// and a stale token here would leak into other requests (e.g. Header) causing spurious 401s.
+if (typeof window !== 'undefined') {
+  const isCallbackPath = window.location.pathname.startsWith('/auth/callback');
+  if (!isCallbackPath) {
+    const initialToken = Cookies.get('access');
+    if (initialToken) {
+      setBearerToken(initialToken);
+    }
+  }
 }
 
-// Global response interceptor to handle trial expiration
+// Paths that handle their own auth flow — never auto-redirect to /login from these
+const AUTH_EXEMPT_PATHS = ['/auth/callback', '/auth/sso', '/login', '/signin'];
+
+// Global response interceptor to handle trial expiration and 401 unauthorized
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+
     if (error.response?.status === 403) {
       const message = error.response.data?.message || "";
       if (message.toLowerCase().includes("trial period has expired")) {
-        // Redirect to Pricing/Tiers page
         if (typeof window !== "undefined") {
           window.location.href = "/pricing";
+        }
+      }
+    }
+    if (error.response?.status === 401) {
+      const isExempt = AUTH_EXEMPT_PATHS.some((p) => pathname.startsWith(p));
+      if (!isExempt) {
+        // Token is invalid or expired — clear auth and redirect to login
+        Cookies.remove('access');
+        Cookies.remove('refresh');
+        Cookies.remove('userId');
+        Cookies.remove('userRole');
+        Cookies.remove('packageInfo');
+        setBearerToken('');
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
         }
       }
     }

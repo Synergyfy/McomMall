@@ -18,9 +18,9 @@ export class QrCodesService {
       status: QrStatus.ACTIVE,
       scanCount: 0,
     });
-    
+
     const saved = await this.qrCodeRepository.save(qrCode);
-    
+
     // Set a placeholder shortUrl based on the saved ID
     saved.shortUrl = `/api/qr-codes/scan/${saved.id}`;
     return this.qrCodeRepository.save(saved);
@@ -54,7 +54,7 @@ export class QrCodesService {
 
   async trackScanAndResolveRedirect(id: string): Promise<string> {
     const qrCode = await this.findOne(id);
-    
+
     // Increment scanCount
     qrCode.scanCount += 1;
     await this.qrCodeRepository.save(qrCode);
@@ -62,7 +62,7 @@ export class QrCodesService {
     // Resolve target URL in frontend
     // Business storefront target or sub resources
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    
+
     switch (qrCode.qrType) {
       case 'product':
         return `${baseUrl}/business/${qrCode.businessId}?product=${qrCode.targetId || ''}`;

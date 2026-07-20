@@ -8,9 +8,7 @@ import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([TeamMember, TeamInvite, User, Business]),
-  ],
+  imports: [TypeOrmModule.forFeature([TeamMember, TeamInvite, User, Business])],
   controllers: [TeamController],
   providers: [TeamService],
   exports: [TeamService],

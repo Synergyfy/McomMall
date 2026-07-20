@@ -221,7 +221,12 @@ export class PaymentsService {
 
   async getSubscriptionStatus(userId: string): Promise<SubscriptionStatusDto> {
     try {
-      const membership = await this.membershipService.findOne(userId);
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      const membership = user
+        ? await this.membershipService.findOne(user)
+        : null;
 
       if (membership && membership.isTrial) {
         // Populate tasks
@@ -234,14 +239,14 @@ export class PaymentsService {
         };
 
         try {
-          // Need user object for activityTimerService
-          const user = await this.userRepository.findOne({
+          // Need user object with relations for activityTimerService
+          const userWithRelations = await this.userRepository.findOne({
             where: { id: userId },
             relations: ['membership', 'membership.tier'],
           });
-          if (user) {
+          if (userWithRelations) {
             const activityTasks =
-              await this.activityTimerService.getUserActiveTasks(user);
+              await this.activityTimerService.getUserActiveTasks(userWithRelations);
 
             // Find TRIAL composite task or just check all tasks
             for (const group of activityTasks) {

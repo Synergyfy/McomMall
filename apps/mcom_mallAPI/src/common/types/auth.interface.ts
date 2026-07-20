@@ -6,4 +6,6 @@ export interface createTokenInterface {
   email: string;
   role: UserRole;
   userId?: string;
+  centralUserId?: string;
+  jti?: string;
 }

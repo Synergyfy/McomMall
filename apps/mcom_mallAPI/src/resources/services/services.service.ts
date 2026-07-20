@@ -20,7 +20,10 @@ import {
 } from './dto/create-service.dto';
 import { BundledService } from './entities/bundled-service.entity';
 import { ConfigurableAddon } from './entities/configurable-addon.entity';
-import { SpareCapacityOffer, SpareCapacityStatus } from './entities/spare-capacity-offer.entity';
+import {
+  SpareCapacityOffer,
+  SpareCapacityStatus,
+} from './entities/spare-capacity-offer.entity';
 import { PublishSpareCapacityDto } from './dto/publish-spare-capacity.dto';
 import { ActivitiesService } from '../activities/activities.service';
 import { SearchServiceDto } from './dto/search-service.dto';
@@ -525,7 +528,15 @@ export class ServicesService {
     dto: PublishSpareCapacityDto,
     userId: string,
   ): Promise<SpareCapacityOffer> {
-    const { serviceId, slots, discountPercent, headline, note, expiresAt, isLiveFeed } = dto;
+    const {
+      serviceId,
+      slots,
+      discountPercent,
+      headline,
+      note,
+      expiresAt,
+      isLiveFeed,
+    } = dto;
 
     const service = await this.serviceRepository.findOne({
       where: { id: serviceId },
@@ -543,8 +554,9 @@ export class ServicesService {
     }
 
     // Compute the discounted price from the service's pricing
-    const basePrice =
-      Number(service.fixedPrice ?? service.pricePerHour ?? service.basePrice ?? 0);
+    const basePrice = Number(
+      service.fixedPrice ?? service.pricePerHour ?? service.basePrice ?? 0,
+    );
     const discountedPrice =
       discountPercent > 0
         ? parseFloat((basePrice * (1 - discountPercent / 100)).toFixed(2))

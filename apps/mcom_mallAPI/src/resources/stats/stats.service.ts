@@ -365,7 +365,11 @@ export class StatsService {
     const days = period === 'weekly' ? 7 : 30;
 
     // Use user ID characters to generate deterministic random-like values for simulation
-    const seedNum = user.id.split('-').map(p => parseInt(p, 16) || 0).reduce((a, b) => a + b, 0) || 42;
+    const seedNum =
+      user.id
+        .split('-')
+        .map((p) => parseInt(p, 16) || 0)
+        .reduce((a, b) => a + b, 0) || 42;
 
     const trafficTrends = [];
     let totalCustomers = 0;
@@ -395,7 +399,10 @@ export class StatsService {
       totalPassersby += passersby;
     }
 
-    const conversionRate = totalPassersby > 0 ? Number(((totalCustomers / totalPassersby) * 100).toFixed(1)) : 0;
+    const conversionRate =
+      totalPassersby > 0
+        ? Number(((totalCustomers / totalPassersby) * 100).toFixed(1))
+        : 0;
 
     // Borough rank based on seed
     const boroughRank = (seedNum % 25) + 3; // Rank 3 to 28
@@ -418,16 +425,18 @@ export class StatsService {
         {
           id: 'action-1',
           title: 'Activate Loyalty Vouchers',
-          description: 'Merchant stores in your borough using loyalty vouchers experience a 22% footfall conversion lift.',
+          description:
+            'Merchant stores in your borough using loyalty vouchers experience a 22% footfall conversion lift.',
           actionLink: '/dashboard/membership-audits/vouchers',
         },
         {
           id: 'action-2',
           title: 'Complete Google Place Verification',
-          description: 'Verification increases local mapping impressions by up to 30%.',
+          description:
+            'Verification increases local mapping impressions by up to 30%.',
           actionLink: '/dashboard/membership-audits/audits',
-        }
-      ]
+        },
+      ],
     };
   }
 }

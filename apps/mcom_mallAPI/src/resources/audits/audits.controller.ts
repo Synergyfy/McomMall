@@ -7,7 +7,13 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Audit } from './entities/audit.entity';
 
 @ApiTags('Business Audits')
@@ -19,7 +25,9 @@ export class AuditsController {
 
   @Post()
   @Roles(UserRole.OWNER)
-  @ApiOperation({ summary: 'Submit questionnaire responses and run storefront audit' })
+  @ApiOperation({
+    summary: 'Submit questionnaire responses and run storefront audit',
+  })
   @ApiResponse({ status: 201, type: Audit })
   async submitAudit(
     @CurrentUser() user: User,
@@ -30,7 +38,9 @@ export class AuditsController {
 
   @Get('latest')
   @Roles(UserRole.OWNER)
-  @ApiOperation({ summary: 'Retrieve the latest run audit and suggestions list' })
+  @ApiOperation({
+    summary: 'Retrieve the latest run audit and suggestions list',
+  })
   @ApiQuery({ name: 'businessId', required: false, type: String })
   @ApiResponse({ status: 200, type: Audit })
   async getLatestAudit(

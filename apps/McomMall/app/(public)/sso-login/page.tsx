@@ -9,6 +9,7 @@ function SsoLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const state = searchParams.get("state");
   const { mutateAsync: ssoLogin } = useSsoLogin();
   const attempted = useRef(false);
 
@@ -17,7 +18,8 @@ function SsoLoginContent() {
       attempted.current = true;
       ssoLogin(token)
         .then(() => {
-          router.push("/dashboard");
+          const redirectTo = state && state.startsWith('/') ? state : '/dashboard';
+          router.push(redirectTo);
         })
         .catch((error) => {
           console.error("SSO Login Error:", error);
@@ -26,7 +28,7 @@ function SsoLoginContent() {
     } else if (!token && !attempted.current) {
       router.push("/signin");
     }
-  }, [token, ssoLogin, router]);
+  }, [token, state, ssoLogin, router]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">

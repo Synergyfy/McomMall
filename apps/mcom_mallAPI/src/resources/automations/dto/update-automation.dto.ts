@@ -1,4 +1,11 @@
-import { IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { TriggerType } from '../entities/automation.entity';
 
 export class UpdateAutomationDto {

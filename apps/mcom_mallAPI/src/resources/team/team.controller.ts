@@ -12,7 +12,12 @@ import {
 import { TeamService } from './team.service';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
@@ -24,7 +29,10 @@ import { UserRole } from '../../common/role.enum';
 export class TeamController {
   constructor(private readonly teamService: TeamService) {}
 
-  @ApiOperation({ summary: 'Get all team members and pending invites for a business storefront' })
+  @ApiOperation({
+    summary:
+      'Get all team members and pending invites for a business storefront',
+  })
   @ApiResponse({ status: 200, description: 'Return team list.' })
   @Roles(UserRole.OWNER, UserRole.ADMIN)
   @Get(':businessId')

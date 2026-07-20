@@ -19,7 +19,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import UserNav from './UserNav';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { useLogout } from '@/service/auth/hook';
+import { useLogout, redirectToMcomSolutionsLogin } from '@/service/auth/hook';
 import { useGetMyMembership } from '@/service/membership/hooks';
 
 const mobileMenuVariants: Variants = {
@@ -44,6 +44,7 @@ export default function Header() {
   if (
     pathname?.startsWith('/dashboard') ||
     pathname?.startsWith('/getstarted') ||
+    pathname?.startsWith('/auth/') ||
     pathname === '/'
   ) {
     return null;
@@ -278,11 +279,14 @@ export default function Header() {
                     Get Started
                   </Button>
                 </Link>
-                <Link href="/signin">
-                  <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 border-orange-200">
-                    Login
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-orange-600 hover:text-orange-700 border-orange-200"
+                  onClick={() => redirectToMcomSolutionsLogin()}
+                >
+                  Login
+                </Button>
               </div>
             )}
 
