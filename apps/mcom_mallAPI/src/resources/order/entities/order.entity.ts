@@ -34,7 +34,7 @@ export class Order extends AbstractBaseEntity {
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items: OrderItem[];
 
-  @ApiProperty({ example: 14.50 })
+  @ApiProperty({ example: 14.5 })
   @Column('decimal')
   total: number;
 
@@ -104,7 +104,7 @@ export class Order extends AbstractBaseEntity {
   })
   shippingStatus: ShippingStatus;
 
-  @ApiProperty({ example: 4.50 })
+  @ApiProperty({ example: 4.5 })
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   estimatedShippingFee: number;
 

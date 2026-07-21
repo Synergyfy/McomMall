@@ -39,7 +39,9 @@ export class EventsController {
 
   @Get('my-events')
   @Roles(UserRole.OWNER)
-  @ApiOperation({ summary: 'Get all events created by the current business merchant' })
+  @ApiOperation({
+    summary: 'Get all events created by the current business merchant',
+  })
   async findAllMyEvents(@CurrentUser() user: User) {
     return this.eventsService.findAllForBusiness(user.id);
   }

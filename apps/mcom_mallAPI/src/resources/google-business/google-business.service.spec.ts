@@ -125,7 +125,9 @@ describe('GoogleBusinessService', () => {
     });
 
     it('should return null for an unknown category ID', async () => {
-      const result = await service.mapGoogleCategory('gcid:unknown_or_generic_category');
+      const result = await service.mapGoogleCategory(
+        'gcid:unknown_or_generic_category',
+      );
       expect(result).toBeNull();
     });
   });

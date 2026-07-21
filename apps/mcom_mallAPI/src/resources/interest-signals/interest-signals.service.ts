@@ -28,7 +28,7 @@ export class InterestSignalsService {
     });
 
     const totalVotes = signals.length;
-    
+
     // Group signals by type to get categories
     const categoryCounts: Record<string, number> = {};
     signals.forEach((sig) => {
@@ -36,14 +36,19 @@ export class InterestSignalsService {
       categoryCounts[type] = (categoryCounts[type] || 0) + 1;
     });
 
-    const topCategories = Object.keys(categoryCounts).map((key) => ({
-      category: key,
-      votes: categoryCounts[key],
-    })).sort((a, b) => b.votes - a.votes);
+    const topCategories = Object.keys(categoryCounts)
+      .map((key) => ({
+        category: key,
+        votes: categoryCounts[key],
+      }))
+      .sort((a, b) => b.votes - a.votes);
 
     // Calculate a simulated target metrics model
     const targetGoal = 100;
-    const progressPercent = Math.min(100, Math.round((totalVotes / targetGoal) * 100));
+    const progressPercent = Math.min(
+      100,
+      Math.round((totalVotes / targetGoal) * 100),
+    );
 
     return {
       totalViews: totalVotes * 4 + 124, // Simulated view multiplier

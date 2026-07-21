@@ -61,8 +61,14 @@ export class ListingsGoogleController {
   }
 
   @Get('photo/:photoReference')
-  @ApiOperation({ summary: 'Retrieve a photo by its reference (redirects directly to Google CDN)' })
-  @ApiResponse({ status: 302, description: 'Redirected to Google Place Photo URL' })
+  @ApiOperation({
+    summary:
+      'Retrieve a photo by its reference (redirects directly to Google CDN)',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirected to Google Place Photo URL',
+  })
   @ApiResponse({ status: 400, description: 'Invalid photo reference' })
   @ApiResponse({ status: 500, description: 'Failed to resolve photo URL' })
   async getPlacePhoto(

@@ -56,7 +56,7 @@ export class CouponService {
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
-  ) { }
+  ) {}
 
   async create(dto: CreateCouponDto): Promise<Coupon> {
     const {
@@ -481,7 +481,10 @@ export class CouponService {
     return coupon;
   }
 
-  async findAllForUser(user: User, pagination: PaginationQueryDto): Promise<PageDto<Coupon>> {
+  async findAllForUser(
+    user: User,
+    pagination: PaginationQueryDto,
+  ): Promise<PageDto<Coupon>> {
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
 

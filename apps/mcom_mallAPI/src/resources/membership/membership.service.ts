@@ -22,6 +22,7 @@ import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { MembershipPayment } from './entities/membership-payment.entity';
 import { Tier } from '../tier/entities/tier.entity';
 import { TierType } from '../tier/enums/tier-type.enum';
+import { McomCentralService } from '../sso/mcom-central.service';
 
 @Injectable()
 export class MembershipService {
@@ -42,34 +43,68 @@ export class MembershipService {
     private readonly tierRepository: Repository<Tier>,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
+    private readonly mcomCentralService: McomCentralService,
     private readonly dataSource: DataSource,
   ) {}
 
-  async findOne(userId: string): Promise<Membership> {
-    const membership = await this.membershipRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['tier', 'tier.season'],
-    });
-    if (!membership) {
-      throw new NotFoundException('Membership not found.');
+  async findOne(user: User): Promise<any> {
+    let centralUserId = user.centralUserId;
+    if (!centralUserId) {
+      const dbUser = await this.userRepository.findOne({
+        where: { id: user.id },
+      });
+      centralUserId = dbUser?.centralUserId;
     }
 
-    await this.ensureDates(membership);
+    if (!centralUserId) {
+      throw new BadRequestException(
+        'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
+      );
+    }
 
-    const now = new Date();
-    const expiresAt = new Date(membership.expiresAt);
-    const diffMs = Math.max(0, expiresAt.getTime() - now.getTime());
-    const totalSeconds = Math.floor(diffMs / 1000);
+    const userPackages = await this.mcomCentralService.getUserPackages(
+      centralUserId,
+    );
 
-    membership.expiresIn = {
-      days: Math.floor(totalSeconds / (3600 * 24)),
-      hours: Math.floor((totalSeconds % (3600 * 24)) / 3600),
-      minutes: Math.floor((totalSeconds % 3600) / 60),
-      seconds: totalSeconds % 60,
-      totalSeconds,
+    if (!userPackages) {
+      return null;
+    }
+
+    if (!userPackages.isActive || !userPackages.tierId) {
+      return null;
+    }
+
+    const tier = await this.tierRepository.findOne({
+      where: { id: userPackages.tierId },
+    });
+
+    if (!tier) {
+      return null;
+    }
+
+    return {
+      id: `subscription-${user.id}`,
+      isActive: true,
+      tierId: tier.id,
+      tier: {
+        id: tier.id,
+        name: tier.name,
+        description: tier.description,
+        monthlyPrice: tier.monthlyPrice,
+        quarterlyPrice: tier.quarterlyPrice,
+        annualPrice: tier.annualPrice,
+        features: tier.features,
+        configuration: tier.configuration,
+        isActive: tier.isActive,
+      },
+      planType: null,
+      startDate: null,
+      expiresAt: null,
+      endDate: null,
+      isTrial: false,
+      trialDuration: 0,
+      packages: userPackages.packages,
     };
-
-    return membership;
   }
 
   private async ensureDates(membership: Membership): Promise<void> {

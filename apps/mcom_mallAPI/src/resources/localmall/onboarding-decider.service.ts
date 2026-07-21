@@ -30,7 +30,8 @@ export class OnboardingDeciderService {
       return {
         postcode: cleanPostcode,
         status: 'inactive',
-        message: 'We currently only support businesses within the United Kingdom. Please enter a valid UK postcode.',
+        message:
+          'We currently only support businesses within the United Kingdom. Please enter a valid UK postcode.',
         options: {
           allowWaitlist: false,
           allowDigitalOnly: false,
@@ -46,14 +47,15 @@ export class OnboardingDeciderService {
 
     try {
       const postcodeResponse = await fetch(
-        `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode.replace(/\s+/g, ''))}`
+        `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode.replace(/\s+/g, ''))}`,
       );
       if (postcodeResponse.ok) {
         const body = await postcodeResponse.json();
         if (body && body.status === 200 && body.result) {
           lat = body.result.latitude;
           lon = body.result.longitude;
-          const rawBorough = body.result.admin_district || body.result.region || '';
+          const rawBorough =
+            body.result.admin_district || body.result.region || '';
           borough = rawBorough
             .replace(/London Borough of /i, '')
             .replace(/Borough of /i, '')
@@ -75,7 +77,7 @@ export class OnboardingDeciderService {
             headers: {
               'User-Agent': 'McomMall-Onboarding/1.0 (contact@mcommall.com)',
             },
-          }
+          },
         );
         if (response.ok) {
           const data = await response.json();
@@ -141,9 +143,13 @@ export class OnboardingDeciderService {
     const activeCampaignsCount = await this.businessRepository.manager
       .createQueryBuilder(Campaign, 'campaign')
       .innerJoin('campaign.business', 'business')
-      .where('business.localMallId = :localMallId', { localMallId: localMall.id })
+      .where('business.localMallId = :localMallId', {
+        localMallId: localMall.id,
+      })
       .andWhere('campaign.startDate <= :now', { now: new Date() })
-      .andWhere('(campaign.endDate IS NULL OR campaign.endDate >= :now)', { now: new Date() })
+      .andWhere('(campaign.endDate IS NULL OR campaign.endDate >= :now)', {
+        now: new Date(),
+      })
       .getCount();
 
     const consumerCount = await this.businessRepository.manager.count(User, {

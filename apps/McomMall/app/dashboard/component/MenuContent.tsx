@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useRouter, usePathname } from 'next/navigation';
 import { Plus, Minus, ChevronDown, LogOut } from 'lucide-react';
 import { RootState } from '@/service/store/store';
-import { logout } from '@/service/store/authSlice';
+import { useLogout } from '@/service/auth/hook';
 import { useGetUserListings } from '@/service/listings/hook';
 import {
   mainMenuItems,
@@ -28,9 +28,9 @@ interface MenuContentProps {
 
 export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
   const { userRole } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
+  const logout = useLogout();
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -61,7 +61,7 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
   };
 
   const handleLogout = () => {
-    dispatch(logout());
+    logout();
     router.push('/login');
     if (onLinkClick) onLinkClick();
   };

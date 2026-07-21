@@ -78,7 +78,9 @@ export class Event extends AbstractBaseEntity {
   @Column()
   businessId: string;
 
-  @ManyToOne(() => Business, (business) => business.events, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Business, (business) => business.events, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'businessId' })
   business: Business;
 }

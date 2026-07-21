@@ -33,7 +33,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 @Controller('campaign-cashback')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CampaignCashbackController {
-  constructor(private readonly service: CampaignCashbackService) { }
+  constructor(private readonly service: CampaignCashbackService) {}
 
   @Post()
   @Roles(UserRole.ADMIN)
@@ -115,7 +115,10 @@ export class CampaignCashbackController {
     description:
       'Returns a paginated list of all campaign templates in the system, including those not yet started or already expired.',
   })
-  @ApiResponse({ status: 200, description: 'Paginated list of all campaign templates' })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of all campaign templates',
+  })
   findAllTemplates(@Query() pagination: PaginationQueryDto) {
     return this.service.findAllTemplates(pagination);
   }

@@ -38,24 +38,33 @@ export class SpareCapacityOffer extends AbstractBaseEntity {
   @Column({ type: 'text', nullable: true })
   note?: string;
 
-  @ApiProperty({ description: 'Discount percentage applied to the service price' })
+  @ApiProperty({
+    description: 'Discount percentage applied to the service price',
+  })
   @Column({ type: 'int', default: 0 })
   discountPercent: number;
 
-  @ApiProperty({ description: 'The discounted price in pence/minor currency unit', nullable: true })
+  @ApiProperty({
+    description: 'The discounted price in pence/minor currency unit',
+    nullable: true,
+  })
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   discountedPrice?: number;
 
-  @ApiProperty({ description: 'Original/base price of the service at time of publishing' })
+  @ApiProperty({
+    description: 'Original/base price of the service at time of publishing',
+  })
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   originalPrice?: number;
 
-  @ApiProperty({ description: 'Time slots offered (array of { date, startTime, endTime })' })
+  @ApiProperty({
+    description: 'Time slots offered (array of { date, startTime, endTime })',
+  })
   @Column({ type: 'jsonb' })
   slots: Array<{
-    date: string;       // ISO date: "2024-06-10"
-    startTime: string;  // "09:00"
-    endTime: string;    // "11:00"
+    date: string; // ISO date: "2024-06-10"
+    startTime: string; // "09:00"
+    endTime: string; // "11:00"
   }>;
 
   @ApiProperty({ description: 'Number of slots available' })
@@ -78,11 +87,16 @@ export class SpareCapacityOffer extends AbstractBaseEntity {
   })
   status: SpareCapacityStatus;
 
-  @ApiProperty({ description: 'Whether the offer is featured in the Local Mall feed' })
+  @ApiProperty({
+    description: 'Whether the offer is featured in the Local Mall feed',
+  })
   @Column({ default: true })
   isLiveFeed: boolean;
 
-  @ApiProperty({ description: 'Borough / area tag for the Local Mall feed', nullable: true })
+  @ApiProperty({
+    description: 'Borough / area tag for the Local Mall feed',
+    nullable: true,
+  })
   @Column({ nullable: true })
   boroughTag?: string;
 

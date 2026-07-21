@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Search, ShoppingBag, Store, Flower2, Utensils, Coffee, Scissors, Wheat, Play, X, Sparkles, MapPin, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { redirectToMcomSolutionsLogin } from '@/service/auth/hook';
 
 const SLIDES = [
   {
@@ -197,7 +198,7 @@ export default function RootLandingPage() {
               Get Started
             </button>
             <button
-              onClick={() => router.push('/signin')}
+              onClick={() => redirectToMcomSolutionsLogin()}
               className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-slate-900/10 transition-all active:scale-95"
             >
               Login

@@ -15,48 +15,71 @@ function normalizePlaceResult(place: any): any {
   if (!place || typeof place !== 'object') return place;
 
   return {
-    place_id:          place.place_id          ?? place.placeId          ?? null,
-    name:              place.name                                          ?? null,
-    formatted_address: place.formatted_address ?? place.formattedAddress  ?? place.vicinity ?? null,
-    vicinity:          place.vicinity                                      ?? null,
-    rating:            place.rating                                        ?? null,
-    user_ratings_total: place.user_ratings_total ?? place.userRatingsTotal ?? null,
-    business_status:   place.business_status   ?? place.businessStatus    ?? null,
-    types:             place.types                                         ?? [],
-    geometry:          place.geometry                                      ?? null,
-    icon:              place.icon                                          ?? null,
+    place_id: place.place_id ?? place.placeId ?? null,
+    name: place.name ?? null,
+    formatted_address:
+      place.formatted_address ??
+      place.formattedAddress ??
+      place.vicinity ??
+      null,
+    vicinity: place.vicinity ?? null,
+    rating: place.rating ?? null,
+    user_ratings_total:
+      place.user_ratings_total ?? place.userRatingsTotal ?? null,
+    business_status: place.business_status ?? place.businessStatus ?? null,
+    types: place.types ?? [],
+    geometry: place.geometry ?? null,
+    icon: place.icon ?? null,
     opening_hours: place.opening_hours
       ? place.opening_hours
       : place.openingHours
-      ? {
-          open_now:     place.openingHours.openNow     ?? null,
-          weekday_text: place.openingHours.weekdayText ?? [],
-        }
-      : null,
+        ? {
+            open_now: place.openingHours.openNow ?? null,
+            weekday_text: place.openingHours.weekdayText ?? [],
+          }
+        : null,
     photos: Array.isArray(place.photos)
       ? place.photos.map((p: any) => ({
-          photo_reference:   p.photo_reference   ?? p.photoReference   ?? null,
-          height:            p.height                                   ?? null,
-          width:             p.width                                    ?? null,
+          photo_reference: p.photo_reference ?? p.photoReference ?? null,
+          height: p.height ?? null,
+          width: p.width ?? null,
           html_attributions: p.html_attributions ?? p.htmlAttributions ?? [],
         }))
       : [],
     // Detail-only fields (from Place Details endpoint)
-    formatted_phone_number:       place.formatted_phone_number       ?? place.formattedPhoneNumber       ?? null,
-    international_phone_number:   place.international_phone_number   ?? place.internationalPhoneNumber   ?? null,
-    website:                      place.website                                                          ?? null,
-    plus_code:                    place.plus_code                    ?? place.plusCode                   ?? null,
+    formatted_phone_number:
+      place.formatted_phone_number ?? place.formattedPhoneNumber ?? null,
+    international_phone_number:
+      place.international_phone_number ??
+      place.internationalPhoneNumber ??
+      null,
+    website: place.website ?? null,
+    plus_code: place.plus_code ?? place.plusCode ?? null,
     // Pass through any other fields we haven't mapped
     ...Object.fromEntries(
-      Object.entries(place).filter(([key]) =>
-        ![
-          'placeId','place_id','formattedAddress','formatted_address','vicinity',
-          'userRatingsTotal','user_ratings_total','businessStatus','business_status',
-          'openingHours','opening_hours','photoReference','photos',
-          'formattedPhoneNumber','formatted_phone_number',
-          'internationalPhoneNumber','international_phone_number',
-          'plusCode','plus_code',
-        ].includes(key),
+      Object.entries(place).filter(
+        ([key]) =>
+          ![
+            'placeId',
+            'place_id',
+            'formattedAddress',
+            'formatted_address',
+            'vicinity',
+            'userRatingsTotal',
+            'user_ratings_total',
+            'businessStatus',
+            'business_status',
+            'openingHours',
+            'opening_hours',
+            'photoReference',
+            'photos',
+            'formattedPhoneNumber',
+            'formatted_phone_number',
+            'internationalPhoneNumber',
+            'international_phone_number',
+            'plusCode',
+            'plus_code',
+          ].includes(key),
       ),
     ),
   };
@@ -65,7 +88,11 @@ function normalizePlaceResult(place: any): any {
 @Injectable()
 export class GooglePlacesService {
   private get apiKey(): string {
-    return this.configService.get<string>('GOOGLE_API_KEY') || process.env.GOOGLE_API_KEY || '';
+    return (
+      this.configService.get<string>('GOOGLE_API_KEY') ||
+      process.env.GOOGLE_API_KEY ||
+      ''
+    );
   }
   constructor(
     private readonly httpService: HttpService,
@@ -149,5 +176,3 @@ export class GooglePlacesService {
     }
   }
 }
-
-

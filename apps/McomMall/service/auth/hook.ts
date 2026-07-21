@@ -241,6 +241,51 @@ export const useSsoLogin = () => {
   return { ...mutation, mutateAsync: mutation.mutateAsync };
 };
 
+const MCOM_SOLUTIONS_URL =
+  process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000';
+
+export function redirectToMcomSolutionsLogin() {
+  const state = crypto.randomUUID();
+  const clientId = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'mcom-mall';
+  const redirectUri = `${window.location.origin}/auth/callback`;
+  const scope = 'profile email';
+
+  sessionStorage.setItem('sso_state', state);
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    state: state,
+    scope: scope,
+  });
+
+  window.location.href = `${MCOM_SOLUTIONS_URL}/login?${params.toString()}`;
+}
+
+export function redirectToMcomSolutionsSignup() {
+  const state = crypto.randomUUID();
+  const clientId = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'mcom-mall';
+  const redirectUri = `${window.location.origin}/auth/callback`;
+  const scope = 'profile email';
+
+  sessionStorage.setItem('sso_state', state);
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    state: state,
+    scope: scope,
+  });
+
+  window.location.href = `${MCOM_SOLUTIONS_URL}/signup?${params.toString()}`;
+}
+
+export function redirectToMcomSolutionsSubscription(callbackPath: string = '/dashboard/billing/success') {
+  const callbackUrl = encodeURIComponent(window.location.origin + callbackPath);
+  const subscribeUrl = `${MCOM_SOLUTIONS_URL}/getstarted/business?source=mcommall&redirect=${callbackUrl}`;
+  window.location.href = subscribeUrl;
+}
+
 export const useRefreshToken = () => {
   const dispatch: AppDispatch = useDispatch();
   const refresh = async (
@@ -280,6 +325,23 @@ export const useRefreshToken = () => {
 export const useLogout = () => {
   const dispatch: AppDispatch = useDispatch();
   const logout = () => {
+    const accessToken = Cookies.get('access');
+    if (accessToken) {
+      fetch(`${api.defaults.baseURL}auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken }),
+      }).catch(() => {});
+      fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/v1\/?$/, '') || 'http://localhost:3001'}/api/v1/sso/logout`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_token: accessToken }),
+        },
+      ).catch(() => {});
+    }
+    setBearerToken('');
     dispatch(logoutAction());
   };
   return logout;

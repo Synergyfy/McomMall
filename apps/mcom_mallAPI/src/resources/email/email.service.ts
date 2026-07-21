@@ -31,7 +31,10 @@ export class EmailService {
         },
       });
     } catch (error) {
-      console.error(`Failed to send welcome email to ${user.email}:`, error.message);
+      console.error(
+        `Failed to send welcome email to ${user.email}:`,
+        error.message,
+      );
     }
   }
 

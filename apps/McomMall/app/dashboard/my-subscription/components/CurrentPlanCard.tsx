@@ -8,8 +8,10 @@ import {
 } from '@/components/ui/card';
 import { formatEnumValue } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, Info, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, Clock, Info, XCircle, ArrowRight, Sparkles } from 'lucide-react';
 import React from 'react';
+import { redirectToMcomSolutionsSubscription } from '@/service/auth/hook';
 
 interface CurrentPlanCardProps {
   subscription: Membership;
@@ -28,17 +30,25 @@ export default function CurrentPlanCard({
 }: CurrentPlanCardProps) {
   if (!subscription) {
     return (
-      <Card className="w-full max-w-lg mx-auto my-8">
+      <Card className="w-full max-w-lg mx-auto my-8 border-orange-200 bg-orange-50/30">
         <CardHeader>
-          <CardTitle>No Active Subscription</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-orange-800">No Active Subscription</CardTitle>
+          <CardDescription className="text-orange-700/80">
             You are not currently subscribed to any plan.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p>
-            Please choose a plan below to get started.
+        <CardContent className="space-y-4">
+          <p className="text-gray-600">
+            Subscribe to unlock advanced platform features and grow your business.
           </p>
+          <Button
+            onClick={() => redirectToMcomSolutionsSubscription()}
+            className="bg-orange-600 hover:bg-orange-700 text-white w-full"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Subscribe to Mcom Mall
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
         </CardContent>
       </Card>
     );

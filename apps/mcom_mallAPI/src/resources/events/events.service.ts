@@ -21,7 +21,9 @@ export class EventsService {
     });
 
     if (!business) {
-      throw new NotFoundException('No business found for the current merchant user');
+      throw new NotFoundException(
+        'No business found for the current merchant user',
+      );
     }
 
     const event = this.eventRepository.create({
@@ -39,7 +41,9 @@ export class EventsService {
     });
 
     if (!business) {
-      throw new NotFoundException('No business found for the current merchant user');
+      throw new NotFoundException(
+        'No business found for the current merchant user',
+      );
     }
 
     return this.eventRepository.find({

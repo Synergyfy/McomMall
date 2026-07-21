@@ -52,6 +52,7 @@ import { TerminalCashbackModule } from './resources/terminal-cashback/terminal-c
 import { CampaignCashbackModule } from './resources/campaign-cashback/campaign-cashback.module';
 import { ActivityTimerModule } from './resources/activity-timer/activity-timer.module';
 import { ActivityTimerGuard } from './resources/activity-timer/activity-timer.guard';
+import { SubscriptionGuard } from './common/guards/subscription.guard';
 import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
 import { SeasonsModule } from './resources/seasons/seasons.module';
 import { DigitalValueModule } from './resources/digital-value/digital-value.module';
@@ -66,6 +67,7 @@ import { InterestSignalsModule } from './resources/interest-signals/interest-sig
 import { AutomationsModule } from './resources/automations/automations.module';
 import { VisibilityModule } from './resources/visibility/visibility.module';
 import { TeamModule } from './resources/team/team.module';
+import { SsoModule } from './resources/sso/sso.module';
 
 @Module({
   imports: [
@@ -138,6 +140,7 @@ import { TeamModule } from './resources/team/team.module';
     TerminalCashbackModule,
     CampaignCashbackModule,
     SeasonsModule,
+    SsoModule,
   ],
   controllers: [AppController],
   providers: [
@@ -149,6 +152,10 @@ import { TeamModule } from './resources/team/team.module';
     {
       provide: APP_GUARD,
       useClass: ActivityTimerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: SubscriptionGuard,
     },
   ],
 })

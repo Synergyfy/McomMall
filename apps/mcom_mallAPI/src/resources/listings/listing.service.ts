@@ -114,7 +114,9 @@ export class ListingsService {
         createBusinessDto;
 
       const isUuid = (val: string) =>
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val || '');
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          val || '',
+        );
 
       if (!sectorId || !isUuid(sectorId)) {
         throw new BadRequestException('Invalid Sector ID');
@@ -162,13 +164,15 @@ export class ListingsService {
       let resolvedArea: string | undefined = undefined;
       if (createBusinessDto.location && createBusinessDto.location.postcode) {
         try {
-          const deciderResult = await this.onboardingDeciderService.checkLocation(
-            createBusinessDto.location.postcode,
-          );
+          const deciderResult =
+            await this.onboardingDeciderService.checkLocation(
+              createBusinessDto.location.postcode,
+            );
           if (deciderResult) {
             (businessData.location as any).latitude = deciderResult.latitude;
             (businessData.location as any).longitude = deciderResult.longitude;
-            (businessData.location as any).resolvedArea = deciderResult.resolvedArea;
+            (businessData.location as any).resolvedArea =
+              deciderResult.resolvedArea;
             resolvedArea = deciderResult.resolvedArea;
             localMallId = deciderResult.localMallId;
           }

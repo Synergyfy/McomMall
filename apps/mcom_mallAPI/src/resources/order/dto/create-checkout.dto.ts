@@ -29,15 +29,21 @@ class ServiceBookingDetailsDto {
 }
 
 class PaymentDto {
-  @ApiProperty({ enum: PaymentMethod, description: 'The method used for payment.' })
+  @ApiProperty({
+    enum: PaymentMethod,
+    description: 'The method used for payment.',
+  })
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
 
-  @ApiProperty({ description: 'The transaction ID from the payment provider (Stripe/PayPal).' })
+  @ApiProperty({
+    description:
+      'The transaction ID from the payment provider (Stripe/PayPal).',
+  })
   @IsString()
   transactionId: string;
 
-  @ApiProperty({ description: 'The total amount paid.', example: 14.50 })
+  @ApiProperty({ description: 'The total amount paid.', example: 14.5 })
   @IsNumber()
   amount: number;
 }
@@ -52,24 +58,35 @@ class DirectPurchaseDto {
   @IsPositive()
   quantity: number;
 
-  @ApiPropertyOptional({ description: 'Selected variants for the product (e.g. { size: "XL" }).' })
+  @ApiPropertyOptional({
+    description: 'Selected variants for the product (e.g. { size: "XL" }).',
+  })
   @IsOptional()
   variant?: Record<string, string>;
 }
 
 export class CreateCheckoutDto {
-  @ApiProperty({ type: PaymentDto, description: 'Payment details for the order.' })
+  @ApiProperty({
+    type: PaymentDto,
+    description: 'Payment details for the order.',
+  })
   @ValidateNested()
   @Type(() => PaymentDto)
   payment: PaymentDto;
 
-  @ApiPropertyOptional({ type: DirectPurchaseDto, description: 'Direct purchase details (if not using cart).' })
+  @ApiPropertyOptional({
+    type: DirectPurchaseDto,
+    description: 'Direct purchase details (if not using cart).',
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => DirectPurchaseDto)
   directPurchase?: DirectPurchaseDto;
 
-  @ApiPropertyOptional({ type: [PurchaseGiftCardDto], description: 'Gift cards being purchased in this transaction.' })
+  @ApiPropertyOptional({
+    type: [PurchaseGiftCardDto],
+    description: 'Gift cards being purchased in this transaction.',
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PurchaseGiftCardDto)
@@ -106,14 +123,20 @@ export class CreateCheckoutDto {
   @IsOptional()
   voucherAmount?: number;
 
-  @ApiPropertyOptional({ type: [ServiceBookingDetailsDto], description: 'Services to book along with the product.' })
+  @ApiPropertyOptional({
+    type: [ServiceBookingDetailsDto],
+    description: 'Services to book along with the product.',
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ServiceBookingDetailsDto)
   @IsOptional()
   serviceBookings?: ServiceBookingDetailsDto[];
 
-  @ApiPropertyOptional({ description: 'The ID of the shipping address (required for physical products).' })
+  @ApiPropertyOptional({
+    description:
+      'The ID of the shipping address (required for physical products).',
+  })
   @IsUUID()
   @IsOptional()
   shippingAddressId?: string;

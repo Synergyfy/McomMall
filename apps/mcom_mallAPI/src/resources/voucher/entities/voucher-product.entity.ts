@@ -116,7 +116,7 @@ export class VoucherProduct {
   valueType: string;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
   value: number;
 
   @Expose()

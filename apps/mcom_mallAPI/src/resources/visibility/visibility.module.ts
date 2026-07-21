@@ -23,15 +23,7 @@ import { BoroughCampaignsController } from './borough-campaigns.controller';
     HighStreetController,
     BoroughCampaignsController,
   ],
-  providers: [
-    VisibilityService,
-    HighStreetService,
-    BoroughCampaignsService,
-  ],
-  exports: [
-    VisibilityService,
-    HighStreetService,
-    BoroughCampaignsService,
-  ],
+  providers: [VisibilityService, HighStreetService, BoroughCampaignsService],
+  exports: [VisibilityService, HighStreetService, BoroughCampaignsService],
 })
 export class VisibilityModule {}

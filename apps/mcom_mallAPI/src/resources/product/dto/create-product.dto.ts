@@ -502,7 +502,8 @@ export class CreateProductDto {
   isFeatured?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Whether the product is eligible for the Local Mall rotator/carousel.',
+    description:
+      'Whether the product is eligible for the Local Mall rotator/carousel.',
     default: false,
   })
   @IsOptional()

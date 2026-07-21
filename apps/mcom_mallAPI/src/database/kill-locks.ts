@@ -6,13 +6,13 @@ const client = new Client({
   user: 'postgres.wqqtcbustmiwvrjxtsnp',
   password: 'Mcomgbs100%',
   database: 'postgres',
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
 });
 
 async function main() {
   await client.connect();
   console.log('Connected to database!');
-  
+
   const res = await client.query(`
     SELECT pid, age(clock_timestamp(), query_start), usename, state, query
     FROM pg_stat_activity
@@ -20,9 +20,9 @@ async function main() {
       AND query NOT LIKE '%pg_stat_activity%'
       AND state != 'idle';
   `);
-  
+
   console.log('Active queries:', res.rows);
-  
+
   for (const row of res.rows) {
     console.log(`Killing process ${row.pid} running query: ${row.query}`);
     try {
@@ -32,7 +32,7 @@ async function main() {
       console.error(`Failed to kill ${row.pid}:`, err.message);
     }
   }
-  
+
   await client.end();
 }
 

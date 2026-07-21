@@ -56,7 +56,7 @@ export class CreateBannerDto {
   isActive?: boolean;
 }
 
-export class UpdateBannerDto extends PartialType(CreateBannerDto) { }
+export class UpdateBannerDto extends PartialType(CreateBannerDto) {}
 
 // --- SECTION DTOs ---
 
@@ -116,7 +116,7 @@ export class CreateMarketplaceCategoryDto {
 
 export class UpdateMarketplaceCategoryDto extends PartialType(
   CreateMarketplaceCategoryDto,
-) { }
+) {}
 
 // --- PUBLIC VIEW RESPONSE ---
 

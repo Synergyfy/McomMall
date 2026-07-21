@@ -9,6 +9,9 @@ import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClien
 import { Tier } from '@/service/tiers/types';
 import { PlanType } from '@/service/payments/types';
 import { useRouter } from 'next/navigation';
+import { redirectToMcomSolutionsSubscription } from '@/service/auth/hook';
+import { Button } from '@/components/ui/button';
+import { ArrowRight, Lock, Sparkles } from 'lucide-react';
 
 export default function MySubscriptionPageClient() {
   const router = useRouter();
@@ -30,6 +33,8 @@ export default function MySubscriptionPageClient() {
     }
   };
 
+  const hasActivePlan = subscriptionStatus?.isActive || subscriptionStatus?.status === 'active' || subscriptionStatus?.status === 'paid';
+
   if (selectedTier) {
     let price: number = 0;
     switch (selectedTier.cycle) {
@@ -44,7 +49,6 @@ export default function MySubscriptionPageClient() {
         break;
     }
 
-    // Ensure price is formatted as a string for the checkout component
     const priceString = `£${price.toFixed(2)}`;
     const planType = mapCycleToPlanType(selectedTier.cycle);
 
@@ -53,7 +57,7 @@ export default function MySubscriptionPageClient() {
         planName={`${selectedTier.tier.name} (${selectedTier.cycle})`}
         planPrice={priceString}
         isTrial={false}
-        isPayg={false} // Treat dynamic tiers as Co-Branded/Subscription
+        isPayg={false}
         listingId={listingId}
         tierId={selectedTier.tier.id}
         planType={planType}
@@ -80,12 +84,41 @@ export default function MySubscriptionPageClient() {
         </div>
       )}
 
-      <section className="w-full flex flex-col items-center">
-        <h3 className="text-xl md:text-2xl font-medium text-center mb-6">
-          Select your plan
-        </h3>
-        <TiersList onSelectTier={handleSelectTier} />
-      </section>
+      {!hasActivePlan && !isLoading && (
+        <div className="w-full max-w-4xl mb-10">
+          <div className="border-2 border-dashed border-orange-200 rounded-xl bg-orange-50/50 p-8 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center">
+                <Lock className="w-7 h-7 text-orange-600" />
+              </div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              Upgrade Required
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Unlock advanced platform features by subscribing to a platform plan.
+            </p>
+            <Button
+              size="lg"
+              onClick={() => redirectToMcomSolutionsSubscription()}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg shadow-orange-200 transition-all hover:shadow-xl hover:shadow-orange-300"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Subscribe to Mcom Mall
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {hasActivePlan && (
+        <section className="w-full flex flex-col items-center">
+          <h3 className="text-xl md:text-2xl font-medium text-center mb-6">
+            Change your plan
+          </h3>
+          <TiersList onSelectTier={handleSelectTier} />
+        </section>
+      )}
     </div>
   );
 }

@@ -3,11 +3,11 @@ services:
     image: postgres:15
     container_name: mcommall-postgres
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: dbname
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Nov52002#
+      POSTGRES_DB: mcom_mall
     ports:
-      - '5444:5432'
+      - '5432:5432'
     volumes:
       - mcommall-pgdata:/var/lib/postgresql/data
     restart: unless-stopped

@@ -34,7 +34,9 @@ export class Rotator extends AbstractBaseEntity {
   @Column()
   businessId: string;
 
-  @ManyToOne(() => Business, (business) => business.rotators, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Business, (business) => business.rotators, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'businessId' })
   business: Business;
 }

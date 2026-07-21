@@ -15,8 +15,10 @@ import {
   useValidateOtp,
   useResetPassword,
   useCheckEmail,
+  redirectToMcomSolutionsLogin,
+  redirectToMcomSolutionsSignup,
 } from '@/service/auth/hook';
-import { Eye, EyeOff, ShieldCheck, RefreshCw, X } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, RefreshCw, X, LogIn, UserPlus } from 'lucide-react';
 import OTPInput from './ui/otp-input';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/service/api';
@@ -515,6 +517,15 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                       Sign In with Google
                     </button>
 
+                    <button
+                      type="button"
+                      onClick={() => redirectToMcomSolutionsLogin()}
+                      className="w-full h-11 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2.5 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
+                    >
+                      <LogIn className="w-4 h-4 shrink-0" />
+                      Sign In with MCOM Solutions
+                    </button>
+
                     <div className="text-center mt-4">
                         <p className="text-sm text-gray-600">
                              Don't have an account? <button type="button" onClick={() => handleToggleMode('register')} className="text-orange-600 font-bold hover:underline text-orange-600">Sign Up</button>
@@ -536,6 +547,22 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                              <Button type="button" onClick={handleNextStep} className="w-full bg-orange-500 hover:bg-orange-600" disabled={checkEmailPending || sendOtpPending}>
                                  {checkEmailPending ? 'Checking...' : sendOtpPending ? 'Sending OTP...' : 'Next'}
                              </Button>
+
+                             <div className="relative flex py-1 items-center">
+                               <div className="flex-grow border-t border-gray-200"></div>
+                               <span className="flex-shrink mx-4 text-gray-400 text-[10px] font-semibold uppercase tracking-wider">or</span>
+                               <div className="flex-grow border-t border-gray-200"></div>
+                             </div>
+
+                             <button
+                               type="button"
+                               onClick={() => redirectToMcomSolutionsSignup()}
+                               className="w-full h-11 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2.5 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
+                             >
+                               <UserPlus className="w-4 h-4 shrink-0" />
+                               Sign Up with MCOM Solutions
+                             </button>
+
                              <div className="text-center mt-2">
                                  <p className="text-sm text-gray-600">
                                      Already have an account? <Link href="/signin" className="text-orange-600 font-bold hover:underline">Sign in</Link>

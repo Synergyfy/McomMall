@@ -42,7 +42,11 @@ export class TeamMember extends AbstractBaseEntity {
   @Column({ type: 'enum', enum: TeamRole, default: TeamRole.STAFF })
   role: TeamRole;
 
-  @Column({ type: 'enum', enum: TeamMemberStatus, default: TeamMemberStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: TeamMemberStatus,
+    default: TeamMemberStatus.ACTIVE,
+  })
   status: TeamMemberStatus;
 
   @Column({ type: 'jsonb', nullable: true })
