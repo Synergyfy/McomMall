@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
 import { ShoppingBag, Store, Users, ArrowRight, Sparkles } from 'lucide-react';
+import { redirectToMcomSolutionsSignup } from '@/service/auth/hook';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -75,7 +76,7 @@ export default function GetStartedPage() {
           >
 
             {/* Shopper Card */}
-            <a href={`${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/register/customer?source=mcommall`} className="group w-full block h-full">
+            <div onClick={() => redirectToMcomSolutionsSignup()} className="group w-full block h-full cursor-pointer">
               <motion.div
                 variants={itemVariants}
                 whileHover={{
@@ -103,7 +104,7 @@ export default function GetStartedPage() {
                   Continue as Customer <ArrowRight className="ml-2 w-4 h-4" />
                 </div>
               </motion.div>
-            </a>
+            </div>
 
             {/* Merchant Card */}
             <a href={`${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`} className="group w-full block h-full">

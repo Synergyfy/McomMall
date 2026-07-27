@@ -39,6 +39,11 @@ export class SubscriptionGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
+    // Customers do not require a paid merchant subscription
+    if (user?.role?.toString().toLowerCase() === 'customer') {
+      return true;
+    }
+
     const centralUserId = user.centralUserId;
 
     if (!centralUserId) {
