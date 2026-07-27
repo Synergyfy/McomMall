@@ -26,7 +26,7 @@ export class SsoService {
     private readonly userService: UsersService,
     private readonly dataSource: DataSource,
     private readonly mcomCentralService: McomCentralService,
-  ) {}
+  ) { }
 
   private getMcomSolutionsBackendUrl(): string {
     return process.env.MCOM_SOLUTIONS_BACKEND_URL || 'http://localhost:3010';
@@ -60,7 +60,7 @@ export class SsoService {
   }
 
   getAuthorizeUrl(state: string): string {
-    const baseUrl = this.getMcomSolutionsBackendUrl();
+    const baseUrl = this.getMcomSolutionsFrontendUrl();
     const clientId = this.getClientId();
     const redirectUri = `${this.getMallFrontendUrl()}/auth/sso`;
 

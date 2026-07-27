@@ -17,7 +17,7 @@ import * as cookieParser from 'cookie-parser';
 async function configureApp(app: any) {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ limit: '50mb', extended: true }));
-  app.use(cookieParser(process.env.COOKIE_SECRET));
+  app.use(cookieParser(process.env.COOKIE_SECRET || 'mcom-mall-cookie-secret-key-12345'));
 
   app.enableCors({
     origin: [
