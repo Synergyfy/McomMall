@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Gift, MapPin, Compass, Search, Smartphone } from 'lucide-react';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import { redirectToMcomSolutionsSignup } from '@/service/auth/hook';
 
 export default function CustomerLandingPage() {
     return (
@@ -37,9 +38,9 @@ export default function CustomerLandingPage() {
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                            <Link href="/signup?role=customer" className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl shadow-xl shadow-orange-500/20 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2">
+                            <button onClick={() => redirectToMcomSolutionsSignup()} className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl shadow-xl shadow-orange-500/20 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                                 Join Rewards <ArrowRight size={18} />
-                            </Link>
+                            </button>
                             <Link href="/search" className="w-full sm:w-auto bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-bold py-4 px-8 rounded-xl shadow-sm transition-all hover:bg-slate-50 flex items-center justify-center gap-2">
                                 <Search size={18} className="text-slate-400" />
                                 Explore Offers
@@ -138,12 +139,12 @@ export default function CustomerLandingPage() {
                 <div className="relative z-10 max-w-4xl mx-auto text-center">
                     <h2 className="text-3xl md:text-5xl font-black mb-6 text-white tracking-tight">Your next favourite local find is waiting</h2>
                     <p className="text-slate-300 text-lg mb-10 font-medium">Join thousands of shoppers earning daily rewards.</p>
-                    <Link
-                        href="/signup?role=customer"
-                        className="inline-flex items-center justify-center gap-3 bg-white text-slate-900 hover:bg-orange-50 text-lg font-bold px-10 py-5 rounded-2xl shadow-xl hover:-translate-y-1 transition-all duration-300"
+                    <button
+                        onClick={() => redirectToMcomSolutionsSignup()}
+                        className="inline-flex items-center justify-center gap-3 bg-white text-slate-900 hover:bg-orange-50 text-lg font-bold px-10 py-5 rounded-2xl shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
                     >
                         Create Your Account <ArrowRight className="w-5 h-5 text-orange-500" />
-                    </Link>
+                    </button>
                 </div>
             </section>
 

@@ -244,40 +244,27 @@ export const useSsoLogin = () => {
 const MCOM_SOLUTIONS_URL =
   process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000';
 
-export function redirectToMcomSolutionsLogin() {
-  const state = crypto.randomUUID();
-  const clientId = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'mcom-mall';
-  const redirectUri = `${window.location.origin}/auth/callback`;
-  const scope = 'profile email';
-
-  sessionStorage.setItem('sso_state', state);
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    state: state,
-    scope: scope,
-  });
-
-  window.location.href = `${MCOM_SOLUTIONS_URL}/login?${params.toString()}`;
+export function redirectToMcomSolutionsLogin(returnState: string = '/dashboard') {
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1/';
+  const authorizeUrl = `${apiBase.replace(/\/$/, '')}/sso/authorize?state=${encodeURIComponent(returnState)}`;
+  window.location.href = authorizeUrl;
 }
 
-export function redirectToMcomSolutionsSignup() {
+export function redirectToMcomSolutionsSignup(returnState: string = '/dashboard') {
   const state = crypto.randomUUID();
   const clientId = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'mcom-mall';
-  const redirectUri = `${window.location.origin}/auth/callback`;
-  const scope = 'profile email';
+  const redirectUri = `${window.location.origin}/auth/sso`;
 
   sessionStorage.setItem('sso_state', state);
 
   const params = new URLSearchParams({
     client_id: clientId,
+    source: 'mcommall',
     redirect_uri: redirectUri,
-    state: state,
-    scope: scope,
+    state: returnState,
   });
 
-  window.location.href = `${MCOM_SOLUTIONS_URL}/signup?${params.toString()}`;
+  window.location.href = `${MCOM_SOLUTIONS_URL}/register/customer?${params.toString()}`;
 }
 
 export function redirectToMcomSolutionsSubscription(callbackPath: string = '/dashboard/billing/success') {

@@ -92,15 +92,17 @@ export class AuthController {
       const authData = await this.authService.loginWithSso(token);
       const user = await this.userService.findCurrentUser(authData.email);
 
-      // Check subscription using Mcom Solutions user ID
-      if (!user.centralUserId) {
-        throw new ForbiddenException(
-          'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
-        );
-      }
-      const subscription = await this.mcomCentralService.getUserPackages(user.centralUserId);
-      if (!subscription.isActive || !subscription.tierId) {
-        throw new ForbiddenException('Active subscription required. Please subscribe at Mcom Solutions.');
+      // Check subscription using Mcom Solutions user ID (Business owners only)
+      if (user.role?.toLowerCase() === UserRole.OWNER || user.role === UserRole.OWNER) {
+        if (!user.centralUserId) {
+          throw new ForbiddenException(
+            'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
+          );
+        }
+        const subscription = await this.mcomCentralService.getUserPackages(user.centralUserId);
+        if (!subscription || !subscription.isActive || !subscription.tierId) {
+          throw new ForbiddenException('Active subscription required. Please subscribe at Mcom Solutions.');
+        }
       }
 
       await this.userService.updateLastLogin(user.id);
@@ -120,6 +122,9 @@ export class AuthController {
         tasks: activeTimers,
       };
     } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
       console.error('SSO login error:', error);
       throw ErrorFactory.invalidCredentials();
     }

@@ -13,8 +13,10 @@ import {
   useLogin,
   useSendOtp,
   useValidateOtp,
+  redirectToMcomSolutionsLogin,
+  redirectToMcomSolutionsSignup,
 } from '@/service/auth/hook';
-import { Eye, EyeOff, X } from 'lucide-react';
+import { Eye, EyeOff, X, LogIn, UserPlus } from 'lucide-react';
 import { UserRole } from '@/service/auth/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -205,6 +207,32 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = 'register'
           <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={registerPending || loginPending || validateOtpPending}>
             {mode === 'login' ? 'Login' : mode === 'register' ? 'Sign Up' : 'Verify'}
           </Button>
+
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-gray-200"></div>
+            <span className="flex-shrink mx-4 text-gray-400 text-[10px] font-semibold uppercase tracking-wider">or</span>
+            <div className="flex-grow border-t border-gray-200"></div>
+          </div>
+
+          {mode === 'register' ? (
+            <button
+              type="button"
+              onClick={() => redirectToMcomSolutionsSignup()}
+              className="w-full h-10 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4 shrink-0" />
+              Sign Up with MCOM Solutions
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => redirectToMcomSolutionsLogin()}
+              className="w-full h-10 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
+            >
+              <LogIn className="w-4 h-4 shrink-0" />
+              Sign In with MCOM Solutions
+            </button>
+          )}
 
           <div className="text-center text-sm mt-4">
             {mode === 'register' ? (

@@ -208,39 +208,43 @@ export class SsoService {
       );
     }
 
-    // --- Subscription gate: check if user has an active MCOM Mall package ---
+    // --- Subscription gate: check if business user has an active MCOM Mall package ---
     let userPackages: { tierId: string | null; isActive: boolean; packages: any[] } | null = null;
+    const isOwnerRole =
+      centralUser.role?.toLowerCase() === 'owner' ||
+      centralUser.role?.toLowerCase() === 'business';
 
-    // Prefer the membership status already included in the token response
-    // (avoids an extra network call that may fail or return mismatched data).
-    const membershipStatus = centralUser.businessProfile?.membershipStatus;
-    const membershipLevel = centralUser.businessProfile?.membershipLevel;
+    if (isOwnerRole) {
+      // Prefer the membership status already included in the token response
+      const membershipStatus = centralUser.businessProfile?.membershipStatus;
+      const membershipLevel = centralUser.businessProfile?.membershipLevel;
 
-    if (membershipStatus) {
-      const isActive = membershipStatus.toLowerCase() === 'active';
-      userPackages = {
-        tierId: membershipLevel || null,
-        isActive,
-        packages: [],
-      };
-    } else if (centralUserId) {
-      // Fallback: query MCOM Solutions for package data
-      try {
-        userPackages = await this.mcomCentralService.getUserPackages(
-          centralUserId,
-        );
-      } catch (err) {
-        this.logger.warn(
-          `Could not verify subscription for user ${centralUserId}: ${err instanceof Error ? err.message : err}`,
+      if (membershipStatus) {
+        const isActive = membershipStatus.toLowerCase() === 'active';
+        userPackages = {
+          tierId: membershipLevel || null,
+          isActive,
+          packages: [],
+        };
+      } else if (centralUserId) {
+        // Fallback: query MCOM Solutions for package data
+        try {
+          userPackages = await this.mcomCentralService.getUserPackages(
+            centralUserId,
+          );
+        } catch (err) {
+          this.logger.warn(
+            `Could not verify subscription for user ${centralUserId}: ${err instanceof Error ? err.message : err}`,
+          );
+        }
+      }
+
+      // Only block business login if we got a definitive "not active" response.
+      if (userPackages && !userPackages.isActive) {
+        throw new ForbiddenException(
+          'No active MCOM Mall subscription. Please subscribe at MCOM Solutions.',
         );
       }
-    }
-
-    // Only block login if we got a definitive "not active" response.
-    if (userPackages && !userPackages.isActive) {
-      throw new ForbiddenException(
-        'No active MCOM Mall subscription. Please subscribe at MCOM Solutions.',
-      );
     }
     // --- End subscription gate ---
 
