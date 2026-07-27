@@ -60,7 +60,7 @@ export class SsoService {
   }
 
   getAuthorizeUrl(state: string): string {
-    const baseUrl = this.getMcomSolutionsFrontendUrl();
+    const baseUrl = this.getMcomSolutionsBackendUrl();
     const clientId = this.getClientId();
     const redirectUri = `${this.getMallFrontendUrl()}/auth/sso`;
 

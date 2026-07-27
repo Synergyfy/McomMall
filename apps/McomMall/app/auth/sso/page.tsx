@@ -2,6 +2,10 @@
 
 import React, { useEffect, Suspense, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '@/service/store/store';
+import { setAuthTokens, setUserData } from '@/service/store/authSlice';
+import { setBearerToken } from '@/service/api';
 import { useSsoLogin } from '@/service/auth/hook';
 import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { redirectToMcomSolutionsSubscription } from '@/service/auth/hook';
@@ -9,6 +13,7 @@ import { redirectToMcomSolutionsSubscription } from '@/service/auth/hook';
 function SSOReceiverContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const dispatch: AppDispatch = useDispatch();
   const { mutateAsync: ssoLogin, isError, error } = useSsoLogin();
   const calledRef = useRef(false);
   const [subscriptionError, setSubscriptionError] = useState(false);
@@ -36,15 +41,24 @@ function SSOReceiverContent() {
       window.location.href = callbackUrl;
     } else if (accessToken) {
       calledRef.current = true;
-      ssoLogin(accessToken)
-        .then(() => {
-          const redirectTo = state && state.startsWith('/') ? state : '/dashboard';
-          router.replace(redirectTo);
-        })
-        .catch((err) => {
-          console.error('SSO authentication failed:', err);
-          router.replace('/signin?error=sso_authentication_failed');
-        });
+      const refreshToken = searchParams.get('refreshToken') || '';
+      const userId = searchParams.get('userId') || '';
+      const name = searchParams.get('name') || searchParams.get('userName') || 'User';
+      const role = searchParams.get('role') || searchParams.get('userRole') || 'customer';
+
+      dispatch(setAuthTokens({ accessToken, refreshToken }));
+      dispatch(
+        setUserData({
+          id: userId,
+          userName: name,
+          userRole: role,
+          packageInfo: null,
+        }),
+      );
+      setBearerToken(accessToken);
+
+      const redirectTo = state && state.startsWith('/') ? state : '/dashboard';
+      router.replace(redirectTo);
     } else if (ssoToken && !calledRef.current) {
       calledRef.current = true;
       ssoLogin(ssoToken)
@@ -59,7 +73,7 @@ function SSOReceiverContent() {
     } else if (!code && !ssoToken && !accessToken) {
       router.replace('/');
     }
-  }, [searchParams, ssoLogin, router]);
+  }, [searchParams, ssoLogin, router, dispatch]);
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white font-sans selection:bg-orange-500">
