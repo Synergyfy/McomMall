@@ -247,7 +247,7 @@ const MCOM_SOLUTIONS_URL =
 export function redirectToMcomSolutionsLogin(returnState: string = '/dashboard') {
   const state = crypto.randomUUID();
   const clientId = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'mcom-mall';
-  const redirectUri = `${window.location.origin}/auth/sso`;
+  const redirectUri = `${window.location.origin}/auth/callback`;
 
   sessionStorage.setItem('sso_state', state);
   sessionStorage.setItem('post_login_redirect', returnState);
@@ -264,7 +264,7 @@ export function redirectToMcomSolutionsLogin(returnState: string = '/dashboard')
 export function redirectToMcomSolutionsSignup(returnState: string = '/dashboard') {
   const state = crypto.randomUUID();
   const clientId = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'mcom-mall';
-  const redirectUri = `${window.location.origin}/auth/sso`;
+  const redirectUri = `${window.location.origin}/auth/callback`;
 
   sessionStorage.setItem('sso_state', state);
   sessionStorage.setItem('post_login_redirect', returnState);
