@@ -181,5 +181,27 @@ describe('AuthController', () => {
 
       await expect(controller.ssoLogin(ssoToken)).rejects.toThrow();
     });
+
+    it('should succeed for customer role without subscription check', async () => {
+      mockAuthService.loginWithSso.mockResolvedValue({
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        email: 'customer@test.com',
+      });
+      mockUsersService.findCurrentUser.mockResolvedValue({
+        id: 'user-2',
+        firstName: 'Jane',
+        lastName: 'Customer',
+        role: 'customer',
+        centralUserId: 'central-2',
+      });
+
+      const result = await controller.ssoLogin(ssoToken);
+
+      expect(result.auth.accessToken).toBe('access');
+      expect(result.name).toBe('Jane Customer');
+      expect(result.role).toBe('customer');
+      expect(mockUsersService.updateLastLogin).toHaveBeenCalledWith('user-2');
+    });
   });
 });
