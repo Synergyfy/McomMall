@@ -286,6 +286,18 @@ export class VoucherService {
       const voucherRepo = manager.getRepository(Voucher);
       const _transactionRepo = manager.getRepository(VoucherTransaction);
 
+      // Idempotency check: if transactionId already processed, return existing voucher
+      const existingPayment = await paymentRepo.findOne({
+        where: { transactionId },
+      });
+      if (existingPayment) {
+        const existingVoucher = await voucherRepo.findOne({
+          where: { buyer: { id: userId } },
+          order: { created_at: 'DESC' },
+        });
+        if (existingVoucher) return existingVoucher;
+      }
+
       const newPayment = paymentRepo.create({
         user: { id: userId } as User,
         amount,
@@ -493,6 +505,14 @@ export class VoucherService {
       const orderRepo = manager.getRepository(Order);
       const paymentRepo = manager.getRepository(OrderPayment);
       const voucherRepo = manager.getRepository(Voucher);
+
+      // Idempotency check: if transactionId already processed, return existing voucher
+      const existingPayment = await paymentRepo.findOne({
+        where: { transactionId },
+      });
+      if (existingPayment) {
+        return this.findVoucherByCode(code);
+      }
 
       const newPayment = paymentRepo.create({
         user: { id: userId } as User,

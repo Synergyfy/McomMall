@@ -115,6 +115,18 @@ export class MoneyEngineService {
 
     // 2. Proceed with Voucher Creation
     return await this.dataSource.transaction(async (manager) => {
+      // Idempotency check: if payment with transactionId already processed, return existing voucher
+      const existingHistory = await manager.findOne(PaymentHistory, {
+        where: { transactionId: dto.transactionId },
+      });
+      if (existingHistory) {
+        const existingVoucher = await manager.findOne(UserVoucher, {
+          where: { owner: { id: userId } },
+          order: { created_at: 'DESC' },
+        });
+        if (existingVoucher) return existingVoucher;
+      }
+
       const definition = await manager.findOne(RewardDefinition, {
         where: { id: dto.rewardDefinitionId },
       });

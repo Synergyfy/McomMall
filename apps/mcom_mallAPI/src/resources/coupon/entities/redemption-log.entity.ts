@@ -47,4 +47,9 @@ export class RedemptionLog {
   @ApiPropertyOptional()
   @Column({ nullable: true })
   failureReason: string;
+
+  @ApiPropertyOptional()
+  @Index()
+  @Column({ nullable: true })
+  orderId: string;
 }

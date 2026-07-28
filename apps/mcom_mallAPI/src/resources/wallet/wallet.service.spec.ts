@@ -374,4 +374,70 @@ describe('WalletService', () => {
       expect(result.earningsFromBookings).toBe(100);
     });
   });
+
+  describe('verifyAndCompleteFunding', () => {
+    it('should return existing wallet idempotently if transactionId was already processed', async () => {
+      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({ ok: true });
+
+      const existingPayment = { id: 'payment-1', transactionId: 'txn-123' };
+      const existingWallet = { id: 'wallet-1', spendableBalance: 50 };
+
+      (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
+        const manager = {
+          getRepository: (entity) => {
+            if (entity === OrderPayment || entity.name === 'OrderPayment')
+              return {
+                findOne: jest.fn().mockResolvedValue(existingPayment),
+              };
+            if (entity === Wallet || entity.name === 'Wallet')
+              return {
+                findOne: jest.fn().mockResolvedValue(existingWallet),
+              };
+          },
+        };
+        return cb(manager);
+      });
+
+      const verifyDto = {
+        amount: 20,
+        paymentProvider: 'stripe' as any,
+        transactionId: 'txn-123',
+      };
+
+      const result = await service.verifyAndCompleteFunding(verifyDto, 'user-1');
+
+      expect(result).toBe(existingWallet);
+    });
+  });
+
+  describe('spendBalance', () => {
+    it('should acquire a pessimistic_write lock on the wallet before deducting balance', async () => {
+      const wallet = { id: 'wallet-1', spendableBalance: 50 };
+
+      (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
+        const manager = {
+          getRepository: (entity) => {
+            if (entity === Wallet || entity.name === 'Wallet')
+              return {
+                findOne: jest.fn().mockImplementation((opts) => {
+                  expect(opts.lock).toEqual({ mode: 'pessimistic_write' });
+                  return Promise.resolve(wallet);
+                }),
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction || entity.name === 'WalletTransaction')
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
+          },
+        };
+        return cb(manager);
+      });
+
+      const result = await service.spendBalance('user-1', 20, 'Test purchase');
+
+      expect(result.spendableBalance).toBe(30);
+    });
+  });
 });

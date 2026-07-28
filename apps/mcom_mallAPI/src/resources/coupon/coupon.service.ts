@@ -363,11 +363,18 @@ export class CouponService {
   async redeem(
     code: string,
     user: User,
-    _order: Order,
+    order?: Order,
   ): Promise<RedemptionLog> {
     return this.dataSource.transaction(async (manager) => {
       const couponRepo = manager.getRepository(Coupon);
       const logRepo = manager.getRepository(RedemptionLog);
+
+      if (order?.id) {
+        const existingLog = await logRepo.findOne({
+          where: { coupon: { code }, orderId: order.id, status: RedemptionStatus.REDEEMED },
+        });
+        if (existingLog) return existingLog;
+      }
 
       const coupon = await couponRepo.findOne({
         where: { code },
@@ -382,6 +389,7 @@ export class CouponService {
       const log = logRepo.create({
         coupon,
         user,
+        orderId: order?.id || null,
         status: RedemptionStatus.REDEEMED,
       });
       return await logRepo.save(log);
@@ -406,6 +414,14 @@ export class CouponService {
     if (manager) {
       const couponRepo = manager.getRepository(Coupon);
       const logRepo = manager.getRepository(RedemptionLog);
+
+      if (order?.id) {
+        const existingLog = await logRepo.findOne({
+          where: { coupon: { code: payload.code }, orderId: order.id, status: RedemptionStatus.REDEEMED },
+        });
+        if (existingLog) return;
+      }
+
       const coupon = await couponRepo.findOne({
         where: { code: payload.code },
         relations: ['campaign', 'business', 'business.user'],
@@ -418,6 +434,7 @@ export class CouponService {
       const log = logRepo.create({
         coupon,
         user,
+        orderId: order?.id || null,
         status: RedemptionStatus.REDEEMED,
       });
       await logRepo.save(log);
