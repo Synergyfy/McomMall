@@ -183,11 +183,39 @@ export class AdminAnalyticsService {
       .limit(5)
       .getRawMany();
 
-    return data.map((d) => ({
-      name: d.name || 'Uncategorized',
-      value: `£${Number(d.value).toLocaleString()}`,
-      change: '+0%', // Placeholder
-    }));
+    const prevMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+    const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+    const prevData = await this.orderRepository
+      .createQueryBuilder('o')
+      .leftJoin('o.items', 'oi')
+      .leftJoin('oi.product', 'p')
+      .select('p.category', 'name')
+      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .where('o.created_at >= :prevMonthStart AND o.created_at < :currentMonthStart', {
+        prevMonthStart,
+        currentMonthStart,
+      })
+      .groupBy('p.category')
+      .getRawMany();
+
+    const prevMap = new Map(prevData.map((pd) => [pd.name, Number(pd.value) || 0]));
+
+    return data.map((d) => {
+      const currentVal = Number(d.value) || 0;
+      const prevVal = prevMap.get(d.name) || 0;
+      let pctChange = 0;
+      if (prevVal > 0) {
+        pctChange = Math.round(((currentVal - prevVal) / prevVal) * 100);
+      } else if (currentVal > 0) {
+        pctChange = 100;
+      }
+      return {
+        name: d.name || 'Uncategorized',
+        value: `£${currentVal.toLocaleString()}`,
+        change: pctChange >= 0 ? `+${pctChange}%` : `${pctChange}%`,
+      };
+    });
   }
 
   private async getTopBusinesses(): Promise<TopItemDto[]> {

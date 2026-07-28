@@ -1,15 +1,17 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 
 import { Coupon } from './entities/coupon.entity';
 import { CouponStatus, CouponSourceType } from './coupon.enum';
+import { UserRole } from '../../common/role.enum';
 import {
   RedemptionLog,
   RedemptionStatus,
@@ -35,6 +37,9 @@ import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 
 import { SavedCoupon } from './entities/saved-coupon.entity';
+import { CouponStatsDto } from './dto/coupon-stats.dto';
+import { CouponChartDataDto } from './dto/coupon-chart-data.dto';
+import { CouponTransactionHistoryDto } from './dto/coupon-transaction-history.dto';
 
 @Injectable()
 export class CouponService {
@@ -58,7 +63,7 @@ export class CouponService {
     private readonly capabilityService: CapabilityService,
   ) {}
 
-  async create(dto: CreateCouponDto): Promise<Coupon> {
+  async create(dto: CreateCouponDto, creator?: User): Promise<Coupon> {
     const {
       title,
       description,
@@ -68,12 +73,22 @@ export class CouponService {
       discountType,
       usageLimit,
       perUserLimit,
-      startDate: _startDate,
+      startDate,
       expiresAt,
       campaignId,
       businessId,
       brandingBusinessId,
     } = dto;
+
+    if (
+      sourceType === CouponSourceType.PLATFORM &&
+      creator &&
+      creator.role !== UserRole.ADMIN
+    ) {
+      throw new ForbiddenException(
+        'Only platform admins can create platform coupons.',
+      );
+    }
 
     // Validate Business and Capability
     let business: Business | null = null;
@@ -83,6 +98,17 @@ export class CouponService {
         relations: ['user'],
       });
       if (!business) throw new NotFoundException('Business not found');
+
+      if (
+        sourceType === CouponSourceType.BUSINESS &&
+        creator &&
+        creator.role !== UserRole.ADMIN &&
+        business.user.id !== creator.id
+      ) {
+        throw new ForbiddenException(
+          'You can only create coupons for a business that you own.',
+        );
+      }
 
       if (sourceType === CouponSourceType.BUSINESS) {
         await this.capabilityService.checkPermission(
@@ -110,7 +136,8 @@ export class CouponService {
       discountType,
       usageLimit: usageLimit || 0,
       perUserLimit: perUserLimit || 1,
-      expiresAt: expiresAt || campaign?.endDate,
+      startDate: startDate || campaign?.startDate || null,
+      expiresAt: expiresAt || campaign?.endDate || null,
       status: CouponStatus.DRAFT,
       campaign,
       business,
@@ -274,6 +301,65 @@ export class CouponService {
     return coupon;
   }
 
+  private async assertCouponEligibleForRedemption(
+    coupon: Coupon,
+    user: User,
+    logRepo: Repository<RedemptionLog>,
+  ): Promise<void> {
+    if (coupon.sourceType === CouponSourceType.BUSINESS && coupon.business) {
+      if (coupon.business.status !== BusinessStatus.PUBLISHED) {
+        throw new BadRequestException(
+          `Business "${coupon.business.businessName}" is not currently active. Coupon cannot be redeemed.`,
+        );
+      }
+      if (!coupon.business.user || !coupon.business.user.isActive) {
+        throw new BadRequestException(
+          `The owner of business "${coupon.business.businessName}" is not currently active. Coupon cannot be redeemed.`,
+        );
+      }
+    }
+
+    const now = new Date();
+    if (
+      coupon.status !== CouponStatus.ACTIVE &&
+      coupon.status !== CouponStatus.SCHEDULED
+    ) {
+      throw new BadRequestException('Coupon is not active.');
+    }
+    if (coupon.expiresAt && now > coupon.expiresAt)
+      throw new BadRequestException('Coupon has expired.');
+    if (coupon.campaign) {
+      if (coupon.campaign.status !== MarketingCampaignStatus.ACTIVE)
+        throw new BadRequestException('Campaign is not active.');
+      if (coupon.campaign.endDate && now > coupon.campaign.endDate)
+        throw new BadRequestException('Campaign has ended.');
+    }
+
+    if (coupon.usageLimit > 0) {
+      const totalRedemptions = await logRepo.count({
+        where: {
+          coupon: { id: coupon.id },
+          status: RedemptionStatus.REDEEMED,
+        },
+      });
+      if (totalRedemptions >= coupon.usageLimit)
+        throw new BadRequestException('Coupon usage limit reached.');
+    }
+
+    const userRedemptions = await logRepo.count({
+      where: {
+        coupon: { id: coupon.id },
+        user: { id: user.id },
+        status: RedemptionStatus.REDEEMED,
+      },
+    });
+    if (userRedemptions >= coupon.perUserLimit) {
+      throw new BadRequestException(
+        'You have already used this coupon the maximum number of times.',
+      );
+    }
+  }
+
   async redeem(
     code: string,
     user: User,
@@ -291,58 +377,7 @@ export class CouponService {
 
       if (!coupon) throw new NotFoundException('Coupon not found');
 
-      if (coupon.sourceType === CouponSourceType.BUSINESS && coupon.business) {
-        if (coupon.business.status !== BusinessStatus.PUBLISHED) {
-          throw new BadRequestException(
-            `Business "${coupon.business.businessName}" is not currently active. Coupon cannot be redeemed.`,
-          );
-        }
-        if (!coupon.business.user || !coupon.business.user.isActive) {
-          throw new BadRequestException(
-            `The owner of business "${coupon.business.businessName}" is not currently active. Coupon cannot be redeemed.`,
-          );
-        }
-      }
-
-      const now = new Date();
-      if (
-        coupon.status !== CouponStatus.ACTIVE &&
-        coupon.status !== CouponStatus.SCHEDULED
-      ) {
-        throw new BadRequestException('Coupon is not active.');
-      }
-      if (coupon.expiresAt && now > coupon.expiresAt)
-        throw new BadRequestException('Coupon has expired.');
-      if (coupon.campaign) {
-        if (coupon.campaign.status !== MarketingCampaignStatus.ACTIVE)
-          throw new BadRequestException('Campaign is not active.');
-        if (coupon.campaign.endDate && now > coupon.campaign.endDate)
-          throw new BadRequestException('Campaign has ended.');
-      }
-
-      if (coupon.usageLimit > 0) {
-        const totalRedemptions = await logRepo.count({
-          where: {
-            coupon: { id: coupon.id },
-            status: RedemptionStatus.REDEEMED,
-          },
-        });
-        if (totalRedemptions >= coupon.usageLimit)
-          throw new BadRequestException('Coupon usage limit reached.');
-      }
-
-      const userRedemptions = await logRepo.count({
-        where: {
-          coupon: { id: coupon.id },
-          user: { id: user.id },
-          status: RedemptionStatus.REDEEMED,
-        },
-      });
-      if (userRedemptions >= coupon.perUserLimit) {
-        throw new BadRequestException(
-          'You have already used this coupon the maximum number of times.',
-        );
-      }
+      await this.assertCouponEligibleForRedemption(coupon, user, logRepo);
 
       const log = logRepo.create({
         coupon,
@@ -373,8 +408,12 @@ export class CouponService {
       const logRepo = manager.getRepository(RedemptionLog);
       const coupon = await couponRepo.findOne({
         where: { code: payload.code },
+        relations: ['campaign', 'business', 'business.user'],
+        lock: { mode: 'pessimistic_write' },
       });
       if (!coupon) throw new NotFoundException('Coupon not found');
+
+      await this.assertCouponEligibleForRedemption(coupon, user, logRepo);
 
       const log = logRepo.create({
         coupon,
@@ -387,33 +426,140 @@ export class CouponService {
     }
   }
 
-  async getSummaryStatistics(_ownerId: string): Promise<{
+  private async getOwnerBusinessIds(userId: string): Promise<string[]> {
+    const businesses = await this.businessRepository.find({
+      where: { user: { id: userId } },
+    });
+    return businesses.map((b) => b.id);
+  }
+
+  async getSummaryStatistics(ownerId: string): Promise<{
     totalSold: number;
     totalRedeemed: number;
     outstandingLiability: number;
   }> {
-    return { totalSold: 0, totalRedeemed: 0, outstandingLiability: 0 };
-  }
-
-  async getOwnerStats(_userId: string): Promise<any> {
+    const stats = await this.getOwnerStats(ownerId);
     return {
-      totalSold: 0,
-      totalRedeemed: 0,
-      outstandingLiability: 0,
-      activeCoupons: 0,
+      totalSold: stats.totalSold,
+      totalRedeemed: stats.totalRedeemed,
+      outstandingLiability: stats.outstandingLiability,
     };
   }
 
-  async getSalesVsRedemptionsChartData(_userId: string): Promise<any> {
-    return { data: [] };
+  async getOwnerStats(userId: string): Promise<CouponStatsDto> {
+    const businessIds = await this.getOwnerBusinessIds(userId);
+    if (businessIds.length === 0) {
+      return {
+        totalSold: 0,
+        totalRedeemed: 0,
+        outstandingLiability: 0,
+        activeCoupons: 0,
+      };
+    }
+
+    const activeCoupons = await this.couponRepository.count({
+      where: {
+        business: { id: In(businessIds) },
+        status: CouponStatus.ACTIVE,
+      },
+    });
+
+    const { rawTotalRedeemed } = await this.redemptionLogRepository
+      .createQueryBuilder('log')
+      .innerJoin('log.coupon', 'coupon')
+      .where('coupon.businessId IN (:...businessIds)', { businessIds })
+      .andWhere('log.status = :status', { status: RedemptionStatus.REDEEMED })
+      .select('SUM(coupon.discountValue)', 'rawTotalRedeemed')
+      .getRawOne();
+
+    const totalRedeemed = Number(rawTotalRedeemed || 0);
+
+    const { rawTotalSold } = await this.couponRepository
+      .createQueryBuilder('coupon')
+      .where('coupon.businessId IN (:...businessIds)', { businessIds })
+      .select(
+        'SUM(coupon.discountValue * CASE WHEN coupon.usageLimit > 0 THEN coupon.usageLimit ELSE 1 END)',
+        'rawTotalSold',
+      )
+      .getRawOne();
+
+    const totalSold = Number(rawTotalSold || 0);
+    const outstandingLiability = Math.max(0, totalSold - totalRedeemed);
+
+    return {
+      totalSold,
+      totalRedeemed,
+      outstandingLiability,
+      activeCoupons,
+    };
+  }
+
+  async getSalesVsRedemptionsChartData(
+    userId: string,
+  ): Promise<CouponChartDataDto> {
+    const businessIds = await this.getOwnerBusinessIds(userId);
+    if (businessIds.length === 0) {
+      return { data: [] };
+    }
+
+    const rawResults = await this.redemptionLogRepository
+      .createQueryBuilder('log')
+      .innerJoin('log.coupon', 'coupon')
+      .where('coupon.businessId IN (:...businessIds)', { businessIds })
+      .andWhere('log.status = :status', { status: RedemptionStatus.REDEEMED })
+      .select("SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)", 'month')
+      .addSelect('COUNT(log.id)', 'redemptions')
+      .groupBy("SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)")
+      .orderBy("month", 'ASC')
+      .getRawMany();
+
+    const data = rawResults.map((r) => ({
+      month: r.month,
+      sales: 0,
+      redemptions: Number(r.redemptions || 0),
+    }));
+
+    return { data };
   }
 
   async getTransactionHistoryForOwner(
-    _userId: string,
-    _startDate?: string,
-    _endDate?: string,
-  ): Promise<any[]> {
-    return [];
+    userId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<CouponTransactionHistoryDto[]> {
+    const businessIds = await this.getOwnerBusinessIds(userId);
+    if (businessIds.length === 0) {
+      return [];
+    }
+
+    const query = this.redemptionLogRepository
+      .createQueryBuilder('log')
+      .innerJoinAndSelect('log.coupon', 'coupon')
+      .leftJoinAndSelect('log.user', 'user')
+      .where('coupon.businessId IN (:...businessIds)', { businessIds })
+      .orderBy('log.timestamp', 'DESC');
+
+    if (startDate) {
+      query.andWhere('log.timestamp >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    }
+    if (endDate) {
+      query.andWhere('log.timestamp <= :endDate', {
+        endDate: new Date(endDate),
+      });
+    }
+
+    const logs = await query.getMany();
+
+    return logs.map((log) => ({
+      id: log.id,
+      couponCode: log.coupon?.code,
+      discountValue: log.coupon?.discountValue,
+      status: log.status,
+      timestamp: log.timestamp,
+      userEmail: log.user?.email,
+    }));
   }
 
   async countForUser(userId: string): Promise<number> {

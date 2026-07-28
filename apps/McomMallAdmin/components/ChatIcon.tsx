@@ -25,7 +25,7 @@ export default function ChatIcon({
 
   const handleStartConversation = () => {
     if (!user) {
-      router.push('/login');
+      router.push('/signin');
       return;
     }
     sendMessage({

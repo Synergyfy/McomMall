@@ -111,10 +111,16 @@ export class CheckoutService {
 
     const totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
 
-    // Shipping Fee Calculation
+    // Dynamic Shipping Fee Calculation
     let estimatedShippingFee = 0;
     if (carrierCode === 'royalmail') {
-      estimatedShippingFee = 4.5; // Placeholder flat rate for Tracked 48
+      estimatedShippingFee = totalAfterCoupon >= 50 ? 0 : 4.50; // Royal Mail Tracked 48 with free shipping threshold
+    } else if (carrierCode === 'royalmail_express' || carrierCode === 'express') {
+      estimatedShippingFee = 6.99;
+    } else if (carrierCode === 'dpd' || carrierCode === 'evri') {
+      estimatedShippingFee = 5.49;
+    } else if (carrierCode) {
+      estimatedShippingFee = 3.99;
     }
 
     // Apply gift card if provided

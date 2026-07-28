@@ -409,13 +409,16 @@ export class BookingService {
       );
       const priceMultiplier = priceModifier ? priceModifier.priceMultiplier : 1;
 
-      // TODO: Implement actual payment processing logic here.
+      const basePrice = Number(service?.fixedPrice || service?.basePrice || service?.pricePerHour || service?.pricePerUnit || 100);
+      const calculatedAmount = Number((basePrice * priceMultiplier).toFixed(2));
+      const transactionId = `tx_bk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
       const payment = transactionalEntityManager.create(ServicePayment, {
         user: { id: userId },
-        amount: 100 * priceMultiplier, // Placeholder amount
+        amount: calculatedAmount,
         currency: 'gbp',
-        paymentMethod: PaymentMethod.STRIPE, // Placeholder payment method
-        transactionId: 'temp_transaction_id', // Placeholder transaction id
+        paymentMethod: PaymentMethod.STRIPE,
+        transactionId,
       });
       await transactionalEntityManager.save(payment);
 

@@ -57,7 +57,7 @@ api.interceptors.response.use(
         Cookies.remove('packageInfo');
         setBearerToken('');
         if (typeof window !== "undefined") {
-          window.location.href = "/login";
+          window.location.href = "/signin";
         }
       }
     }
