@@ -101,7 +101,7 @@ export class SsoController {
         state: redirectPath,
       });
 
-      res.redirect(`${frontendUrl}/auth/sso?${params.toString()}`);
+      res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'sso_callback_failed';

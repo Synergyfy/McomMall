@@ -111,7 +111,7 @@ describe('SsoService', () => {
       expect(url).toContain('response_type=code');
       expect(url).toContain('state=test-state');
       expect(url).toContain(
-        `redirect_uri=${encodeURIComponent('http://mall:3003/auth/sso')}`,
+        `redirect_uri=${encodeURIComponent('http://mall:3003/auth/callback')}`,
       );
     });
 

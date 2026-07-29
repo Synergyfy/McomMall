@@ -175,7 +175,7 @@ describe('SsoController', () => {
       expect(mockRes.clearCookie).toHaveBeenCalledWith('sso_state');
       expect(mockRes.clearCookie).toHaveBeenCalledWith('sso_redirect_path');
       expect(mockRes.redirect).toHaveBeenCalledWith(
-        expect.stringContaining('http://mall:3003/auth/sso?'),
+        expect.stringContaining('http://mall:3003/auth/callback?'),
       );
       const redirectUrl = mockRes.redirect.mock.calls[0][0];
       expect(redirectUrl).toContain('accessToken=at-123');

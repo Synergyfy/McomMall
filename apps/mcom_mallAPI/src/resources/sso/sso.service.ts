@@ -26,7 +26,7 @@ export class SsoService {
     private readonly userService: UsersService,
     private readonly dataSource: DataSource,
     private readonly mcomCentralService: McomCentralService,
-  ) {}
+  ) { }
 
   private getMcomSolutionsBackendUrl(): string {
     return process.env.MCOM_SOLUTIONS_BACKEND_URL || 'http://localhost:3010';
@@ -62,7 +62,7 @@ export class SsoService {
   getAuthorizeUrl(state: string): string {
     const baseUrl = this.getMcomSolutionsFrontendUrl();
     const clientId = this.getClientId();
-    const redirectUri = `${this.getMallFrontendUrl()}/auth/sso`;
+    const redirectUri = `${this.getMallFrontendUrl()}/auth/callback`;
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -76,7 +76,7 @@ export class SsoService {
 
   async exchangeCode(code: string, redirectUri?: string) {
     const baseUrl = this.getMcomSolutionsBackendUrl();
-    const uri = redirectUri || `${this.getMallFrontendUrl()}/auth/sso`;
+    const uri = redirectUri || `${this.getMallFrontendUrl()}/auth/callback`;
 
     const response = await fetch(`${baseUrl}/api/v1/auth/sso/token`, {
       method: 'POST',

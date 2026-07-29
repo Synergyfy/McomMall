@@ -190,7 +190,7 @@ export class LocalMallController {
         .select('SUM(pt.points)', 'total')
         .where('pt.userId = :userId', { userId: user.id })
         .andWhere('pt.points > 0') // only count earned points
-        .andWhere('pt.createdAt >= :oneWeekAgo', { oneWeekAgo })
+        .andWhere('pt.created_at >= :oneWeekAgo', { oneWeekAgo })
         .getRawOne();
 
       weeklyPointsEarned = weeklyTransactionResult?.total

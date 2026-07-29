@@ -66,6 +66,10 @@ export class Coupon extends AbstractBaseEntity {
 
   @ApiPropertyOptional()
   @Column({ type: 'timestamp', nullable: true })
+  startDate: Date | null;
+
+  @ApiPropertyOptional()
+  @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 
   @ApiPropertyOptional({ type: () => Business })

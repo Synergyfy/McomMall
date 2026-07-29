@@ -57,8 +57,8 @@ export const useCreateUser = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to create user account'
+        err.message ||
+        'Failed to create user account'
       );
     }
   };
@@ -131,8 +131,8 @@ export const useResetPassword = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to reset password'
+        err.message ||
+        'Failed to reset password'
       );
     }
   };
@@ -167,8 +167,8 @@ export const useLogin = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to login. Please check your credentials and try again.'
+        err.message ||
+        'Failed to login. Please check your credentials and try again.'
       );
     }
   };
@@ -210,8 +210,8 @@ export const useSsoLogin = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'SSO login failed'
+        err.message ||
+        'SSO login failed'
       );
     }
   };
@@ -245,23 +245,35 @@ const MCOM_SOLUTIONS_URL =
   process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000';
 
 export function redirectToMcomSolutionsLogin(returnState: string = '/dashboard') {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1/';
-  const authorizeUrl = `${apiBase.replace(/\/$/, '')}/sso/authorize?state=${encodeURIComponent(returnState)}`;
-  window.location.href = authorizeUrl;
+  const state = crypto.randomUUID();
+  const clientId = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'mcom-mall';
+  const redirectUri = `${window.location.origin}/auth/callback`;
+
+  sessionStorage.setItem('sso_state', state);
+  sessionStorage.setItem('post_login_redirect', returnState);
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    state: state,
+  });
+
+  window.location.href = `${MCOM_SOLUTIONS_URL}/login?${params.toString()}`;
 }
 
 export function redirectToMcomSolutionsSignup(returnState: string = '/dashboard') {
   const state = crypto.randomUUID();
   const clientId = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || 'mcom-mall';
-  const redirectUri = `${window.location.origin}/auth/sso`;
+  const redirectUri = `${window.location.origin}/auth/callback`;
 
   sessionStorage.setItem('sso_state', state);
+  sessionStorage.setItem('post_login_redirect', returnState);
 
   const params = new URLSearchParams({
     client_id: clientId,
     source: 'mcommall',
     redirect_uri: redirectUri,
-    state: returnState,
+    state: state,
   });
 
   window.location.href = `${MCOM_SOLUTIONS_URL}/register/customer?${params.toString()}`;
@@ -318,7 +330,7 @@ export const useLogout = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accessToken }),
-      }).catch(() => {});
+      }).catch(() => { });
       fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/v1\/?$/, '') || 'http://localhost:3001'}/api/v1/sso/logout`,
         {
@@ -326,7 +338,7 @@ export const useLogout = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ access_token: accessToken }),
         },
-      ).catch(() => {});
+      ).catch(() => { });
     }
     setBearerToken('');
     dispatch(logoutAction());
@@ -345,8 +357,8 @@ export const useClaimBusiness = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to create business'
+        err.message ||
+        'Failed to create business'
       );
     }
   };

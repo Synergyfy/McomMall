@@ -288,10 +288,16 @@ export class OrderService {
 
     const totalAfterDiscounts = totalBeforeRedemption - couponAmountToApply;
 
-    // Shipping Fee Calculation
+    // Dynamic Shipping Fee Calculation
     let estimatedShippingFee = 0;
     if (carrierCode === 'royalmail') {
-      estimatedShippingFee = 4.5; // Placeholder flat rate
+      estimatedShippingFee = totalAfterDiscounts >= 50 ? 0 : 4.50; // Tracked 48 with free shipping over £50
+    } else if (carrierCode === 'royalmail_express' || carrierCode === 'express') {
+      estimatedShippingFee = 6.99; // Tracked 24 / Express
+    } else if (carrierCode === 'dpd' || carrierCode === 'evri') {
+      estimatedShippingFee = 5.49; // Courier partner rate
+    } else if (carrierCode) {
+      estimatedShippingFee = 3.99; // Standard shipping fallback
     }
 
     const totalWithShipping = totalAfterDiscounts + estimatedShippingFee;

@@ -111,10 +111,16 @@ export class CheckoutService {
 
     const totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
 
-    // Shipping Fee Calculation
+    // Dynamic Shipping Fee Calculation
     let estimatedShippingFee = 0;
     if (carrierCode === 'royalmail') {
-      estimatedShippingFee = 4.5; // Placeholder flat rate for Tracked 48
+      estimatedShippingFee = totalAfterCoupon >= 50 ? 0 : 4.50; // Royal Mail Tracked 48 with free shipping threshold
+    } else if (carrierCode === 'royalmail_express' || carrierCode === 'express') {
+      estimatedShippingFee = 6.99;
+    } else if (carrierCode === 'dpd' || carrierCode === 'evri') {
+      estimatedShippingFee = 5.49;
+    } else if (carrierCode) {
+      estimatedShippingFee = 3.99;
     }
 
     // Apply gift card if provided
@@ -226,38 +232,47 @@ export class CheckoutService {
     return this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(Order);
 
+      const lockedOrder = await orderRepo.findOne({
+        where: { id: orderId, user: { id: userId } },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!lockedOrder || lockedOrder.status !== OrderStatus.PENDING) {
+        throw new BadRequestException('Pending order not found or already processed.');
+      }
+
       // Redeem gift card
-      if (order.giftCardCode && order.giftCardAmountApplied > 0) {
+      if (lockedOrder.giftCardCode && lockedOrder.giftCardAmountApplied > 0) {
         const redeemDto: RedeemGiftCardDto = {
-          code: order.giftCardCode,
-          amount: order.giftCardAmountApplied,
+          code: lockedOrder.giftCardCode,
+          amount: lockedOrder.giftCardAmountApplied,
         };
 
         // Fetch order items to get a potential business ID for non-system gift cards
         const orderWithItems = await orderRepo.findOne({
-          where: { id: order.id },
+          where: { id: lockedOrder.id },
           relations: ['items', 'items.product', 'items.product.business'],
         });
 
         const businessId =
-          orderWithItems.items?.length > 0
+          orderWithItems?.items?.length > 0
             ? orderWithItems.items[0].product.business.id
             : undefined;
         await this.giftCardService.redeem(
           redeemDto,
-          order,
+          lockedOrder,
           businessId,
           manager,
         );
       }
 
       // Redeem Coupon
-      if (order.couponCode && order.couponDiscountApplied > 0) {
-        await this.couponService.redeem(order.couponCode, user, order);
+      if (lockedOrder.couponCode && lockedOrder.couponDiscountApplied > 0) {
+        await this.couponService.redeem(lockedOrder.couponCode, user, lockedOrder);
       }
 
-      order.status = OrderStatus.COMPLETED;
-      return await orderRepo.save(order);
+      lockedOrder.status = OrderStatus.COMPLETED;
+      return await orderRepo.save(lockedOrder);
     });
   }
 

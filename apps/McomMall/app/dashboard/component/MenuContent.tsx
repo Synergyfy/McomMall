@@ -38,10 +38,10 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
 
   const { data: listingsData } = useGetUserListings(1, 100);
   const listings = listingsData?.data || [];
-  
+
   const hasProducts = listings.some(l => l.listingType?.includes('RETAIL'));
   const hasServices = listings.some(l => l.listingType?.includes('SERVICE'));
-  
+
   const showProducts = listings.length === 0 || hasProducts;
   const showServices = listings.length === 0 || hasServices;
 
@@ -62,7 +62,7 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/signin');
     if (onLinkClick) onLinkClick();
   };
 

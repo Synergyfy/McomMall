@@ -177,4 +177,30 @@ describe('PaymentsService', () => {
       expect(result.status).toBe(SubscriptionStatusEnum.INACTIVE);
     });
   });
+
+  describe('recordPayment', () => {
+    it('should return existing payment history idempotently if transactionId was already processed', async () => {
+      const existingHistory = {
+        id: 'existing-ph-id',
+        transactionId: 'txn-123',
+        amountPaid: 10,
+      } as PaymentHistory;
+
+      mockPaymentHistoryRepository.findOne.mockResolvedValue(existingHistory);
+
+      const dto = {
+        amount: 10,
+        currency: 'gbp',
+        paymentGateway: 'stripe' as any,
+        transactionId: 'txn-123',
+        purpose: 'membership' as any,
+      };
+
+      const result = await service.recordPayment(dto, '1');
+
+      expect(result).toBe(existingHistory);
+      expect(mockPaymentProviderService.verifyStripePaymentIntent).not.toHaveBeenCalled();
+      expect(mockPaymentHistoryRepository.save).not.toHaveBeenCalled();
+    });
+  });
 });

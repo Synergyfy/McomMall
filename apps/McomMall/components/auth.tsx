@@ -89,10 +89,10 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
     setShowGoogleSignInPopup(true);
   };
 
-  const handleGoogleSignInSelect = async (email: string) => {
+  const handleGoogleSignInSelect = async (email: string, idToken?: string) => {
     setShowGoogleSignInPopup(false);
     try {
-      const res = await api.post('google-business/login', { email });
+      const res = await api.post('google-business/login', { email, idToken });
       const { auth, user } = res.data;
 
       // Set headers and auth cookies

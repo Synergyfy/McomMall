@@ -13,6 +13,7 @@ import { CouponService } from './coupon.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../../common/types';
 import { CreateCouponDto } from './dto/create-coupon.dto';
+import { ValidateCouponDto } from './dto/validate-coupon.dto';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -40,8 +41,11 @@ export class CouponController {
       'Enforces tier-based capabilities for businesses. Admins can create platform coupons. Owners can create business coupons.',
   })
   @ApiResponse({ status: 201, type: Coupon })
-  create(@Body() createCouponDto: CreateCouponDto) {
-    return this.couponService.create(createCouponDto);
+  create(
+    @Body() createCouponDto: CreateCouponDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.couponService.create(createCouponDto, req.user);
   }
 
   @Get('list')
@@ -77,8 +81,15 @@ export class CouponController {
       'Checks expiry, usage limits, stacking rules, and hyperlocal restrictions.',
   })
   @ApiResponse({ status: 200, type: Coupon })
-  validate(@Body('code') code: string, @Req() req: AuthenticatedRequest) {
-    return this.couponService.validateCoupon(code, req.user);
+  validate(
+    @Body() validateDto: ValidateCouponDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.couponService.validateCoupon(
+      validateDto.code,
+      req.user,
+      validateDto.existingCouponCode,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

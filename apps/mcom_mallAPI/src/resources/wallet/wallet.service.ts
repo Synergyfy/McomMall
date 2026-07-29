@@ -375,6 +375,17 @@ export class WalletService {
       const walletRepo = manager.getRepository(Wallet);
       const userRepo = manager.getRepository(User);
 
+      // Idempotency check: if payment with transactionId already processed, return current wallet
+      const existingPayment = await paymentRepo.findOne({
+        where: { transactionId },
+      });
+      if (existingPayment) {
+        const existingWallet = await walletRepo.findOne({
+          where: { user: { id: userId } },
+        });
+        return existingWallet;
+      }
+
       const user = await userRepo.findOne({
         where: { id: userId },
         relations: ['wallet'],
@@ -435,34 +446,43 @@ export class WalletService {
     type: WalletTransactionType = WalletTransactionType.SPEND,
     manager?: EntityManager,
   ): Promise<Wallet> {
-    const finalManager = manager || this.dataSource.manager;
-    const walletRepo = finalManager.getRepository(Wallet);
+    const executeSpend = async (execManager: EntityManager) => {
+      const walletRepo = execManager.getRepository(Wallet);
 
-    const wallet = await walletRepo.findOne({
-      where: { user: { id: userId } },
+      const wallet = await walletRepo.findOne({
+        where: { user: { id: userId } },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!wallet) {
+        throw new NotFoundException('Wallet not found');
+      }
+
+      if (Number(wallet.spendableBalance) < amount) {
+        throw new BadRequestException('Insufficient spendable balance');
+      }
+
+      wallet.spendableBalance = Number(wallet.spendableBalance) - amount;
+      const savedWallet = await walletRepo.save(wallet);
+
+      await this.createTransaction(
+        savedWallet,
+        amount,
+        type,
+        description,
+        savedWallet.spendableBalance,
+        execManager,
+      );
+
+      return savedWallet;
+    };
+
+    if (manager) {
+      return executeSpend(manager);
+    }
+    return this.dataSource.transaction(async (txManager) => {
+      return executeSpend(txManager);
     });
-
-    if (!wallet) {
-      throw new NotFoundException('Wallet not found');
-    }
-
-    if (Number(wallet.spendableBalance) < amount) {
-      throw new BadRequestException('Insufficient spendable balance');
-    }
-
-    wallet.spendableBalance = Number(wallet.spendableBalance) - amount;
-    const savedWallet = await walletRepo.save(wallet);
-
-    await this.createTransaction(
-      savedWallet,
-      amount,
-      type,
-      description,
-      savedWallet.spendableBalance,
-      finalManager,
-    );
-
-    return savedWallet;
   }
 
   private async createTransaction(

@@ -67,9 +67,9 @@ describe('CouponController', () => {
         discountValue: 10,
         discountType: DiscountType.FIXED,
       };
-      const result = await controller.create(createDto);
+      const result = await controller.create(createDto, mockRequest);
       expect(result).toEqual(mockCoupon);
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(service.create).toHaveBeenCalledWith(createDto, mockUser);
     });
   });
 
@@ -83,10 +83,18 @@ describe('CouponController', () => {
   });
 
   describe('validate', () => {
-    it('should validate a coupon code', async () => {
-      const result = await controller.validate('TESTCODE', mockRequest);
+    it('should validate a coupon code and pass existingCouponCode if provided', async () => {
+      const validateDto = {
+        code: 'TESTCODE',
+        existingCouponCode: 'EXISTING',
+      };
+      const result = await controller.validate(validateDto, mockRequest);
       expect(result).toEqual(mockCoupon);
-      expect(service.validateCoupon).toHaveBeenCalledWith('TESTCODE', mockUser);
+      expect(service.validateCoupon).toHaveBeenCalledWith(
+        'TESTCODE',
+        mockUser,
+        'EXISTING',
+      );
     });
   });
 

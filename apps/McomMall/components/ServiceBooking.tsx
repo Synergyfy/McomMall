@@ -42,7 +42,7 @@ const ServiceBooking: React.FC<ServiceBookingProps> = ({ service, onBookingConfi
         <div className="md:col-span-4">
           <div className="relative h-full min-h-[250px]">
             <Image
-              src={service.media && service.media.length > 0 ? service.media[0] : 'https://via.placeholder.com/400x400.png?text=Service'}
+              src={service.media && service.media.length > 0 ? service.media[0] : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" rx="16" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="sans-serif" font-size="24">Service Image</text></svg>'}
               alt={service.name}
               layout="fill"
               objectFit="cover"

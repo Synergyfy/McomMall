@@ -21,6 +21,6 @@ export class MembershipPayment extends AbstractBaseEntity {
   @Column()
   currency: string;
 
-  @Column()
+  @Column({ unique: true })
   transactionId: string;
 }
