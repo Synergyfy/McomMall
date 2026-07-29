@@ -10,7 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 
 import { Coupon } from './entities/coupon.entity';
-import { CouponStatus, CouponSourceType } from './coupon.enum';
+import { CouponStatus, CouponSourceType, TransactionType } from './coupon.enum';
 import { UserRole } from '../../common/role.enum';
 import {
   RedemptionLog,
@@ -571,11 +571,14 @@ export class CouponService {
 
     return logs.map((log) => ({
       id: log.id,
-      couponCode: log.coupon?.code,
-      discountValue: log.coupon?.discountValue,
-      status: log.status,
-      timestamp: log.timestamp,
-      userEmail: log.user?.email,
+      type: TransactionType.REDEMPTION,
+      amount: Number(log.coupon?.discountValue || 0),
+      createdAt: log.timestamp,
+      customerName: log.user
+        ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() || log.user.fullName || 'N/A'
+        : 'N/A',
+      customerEmail: log.user?.email || 'N/A',
+      couponCode: log.coupon?.code || '',
     }));
   }
 

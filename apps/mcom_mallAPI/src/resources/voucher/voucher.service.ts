@@ -293,7 +293,7 @@ export class VoucherService {
       if (existingPayment) {
         const existingVoucher = await voucherRepo.findOne({
           where: { buyer: { id: userId } },
-          order: { created_at: 'DESC' },
+          order: { createdAt: 'DESC' },
         });
         if (existingVoucher) return existingVoucher;
       }
