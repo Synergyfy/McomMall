@@ -264,11 +264,15 @@ describe('BookingService', () => {
         customerCompleted: false,
         providerAmount: 90,
         commissionAmount: 10,
+        payment: { paymentMethod: PaymentMethod.STRIPE },
       } as ServiceBooking;
 
       // 1. First completion by Owner
       (mockEntityManager.findOne as jest.Mock).mockResolvedValue(booking);
       (mockEntityManager.save as jest.Mock).mockImplementation((b) => b);
+      jest
+        .spyOn(_paymentProviderService, 'createStripeTransfer')
+        .mockResolvedValue({ id: 'transfer_1' } as any);
 
       let result = await service.completeBooking('book-1', 'owner-1');
       expect(result.businessOwnerCompleted).toBe(true);
