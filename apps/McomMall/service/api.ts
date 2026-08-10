@@ -30,7 +30,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Paths that handle their own auth flow — never auto-redirect to /login from these
-const AUTH_EXEMPT_PATHS = ['/auth/callback', '/auth/sso', '/login', '/signin', '/getstarted'];
+const AUTH_EXEMPT_PATHS = ['/', '/auth/callback', '/auth/sso', '/login', '/signin', '/getstarted'];
 
 // Global response interceptor to handle trial expiration and 401 unauthorized
 api.interceptors.response.use(
