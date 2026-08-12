@@ -17,6 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import api from '@/service/api';
+import { stripHtmlText } from '@/lib/utils';
 
 // ─── PARTNERSHIPS SCREEN ──────────────────────────────────────────────────────
 interface PartnershipsScreenProps {
@@ -204,7 +205,7 @@ export const PartnerMatchesScreen: FC<PartnerMatchesScreenProps> = ({
               <div>
                 <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest">{item.pct}% Compatibility</span>
                 <h4 className="text-xs font-black text-gray-900 mt-0.5">{item.name}</h4>
-                <p className="text-[10px] text-gray-400 mt-0.5">{item.description}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{stripHtmlText(item.description)}</p>
               </div>
               <button 
                 onClick={() => onNavigate('request-partner')}
@@ -365,23 +366,55 @@ export const CampaignBuilderScreen: FC<CampaignBuilderScreenProps> = ({
   onNavigate,
 }) => {
   const [campaignTitle, setCampaignTitle] = useState('');
-  const [pointsRate, setPointsRate] = useState(10);
   const [budget, setBudget] = useState(100);
+  const [type, setType] = useState<'pay_per_click' | 'pay_per_view'>('pay_per_view');
+  const [adPlacement, setAdPlacement] = useState<string[]>(['homepage']);
+  const [businessId, setBusinessId] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchBusiness = async () => {
+      try {
+        const res = await api.get('listings/mine');
+        const listing = res.data?.data?.[0];
+        if (listing?.id) {
+          setBusinessId(listing.id);
+        } else {
+          setError('No business listing found. Create a listing before launching a campaign.');
+        }
+      } catch (err) {
+        console.error('Error fetching business for campaign:', err);
+        setError('Unable to load business listing for campaign.');
+      }
+    };
+    fetchBusiness();
+  }, []);
+
+  const togglePlacement = (placement: string) => {
+    setAdPlacement((prev) =>
+      prev.includes(placement)
+        ? prev.filter((p) => p !== placement)
+        : [...prev, placement],
+    );
+  };
 
   const handleLaunch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!businessId) return;
+
     setLoading(true);
     setSuccess(false);
+    setError('');
 
     try {
       await api.post('campaigns', {
-        name: campaignTitle.trim(),
-        type: 'localmall_loyalty',
-        budget,
-        pointsRate,
+        businessId,
+        type,
         startDate: new Date().toISOString(),
+        budget,
+        adPlacement,
       });
       setSuccess(true);
       setTimeout(() => {
@@ -389,6 +422,7 @@ export const CampaignBuilderScreen: FC<CampaignBuilderScreenProps> = ({
       }, 1000);
     } catch (err) {
       console.error('Error creating localmall campaign:', err);
+      setError('Failed to publish campaign. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -415,14 +449,16 @@ export const CampaignBuilderScreen: FC<CampaignBuilderScreenProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Loyalty Points Rate</label>
-              <input 
-                type="number"
-                value={pointsRate}
-                onChange={(e) => setPointsRate(parseInt(e.target.value))}
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Campaign Type</label>
+              <select 
+                value={type}
+                onChange={(e) => setType(e.target.value as 'pay_per_click' | 'pay_per_view')}
                 className="px-3.5 py-3 bg-gray-50 border border-gray-150 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-800"
                 required
-              />
+              >
+                <option value="pay_per_view">Pay Per View</option>
+                <option value="pay_per_click">Pay Per Click</option>
+              </select>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-gray-400 uppercase">Points Budget</label>
@@ -435,6 +471,30 @@ export const CampaignBuilderScreen: FC<CampaignBuilderScreenProps> = ({
               />
             </div>
           </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Ad Placements</label>
+            <div className="flex flex-wrap gap-2">
+              {['homepage', 'top_of_search_result', 'side_bar'].map((placement) => (
+                <button
+                  key={placement}
+                  type="button"
+                  onClick={() => togglePlacement(placement)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${
+                    adPlacement.includes(placement)
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'bg-gray-50 text-gray-500 border-gray-200'
+                  }`}
+                >
+                  {placement.replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-[11px] font-semibold text-red-500">{error}</p>
+          )}
 
           <button 
             type="submit"

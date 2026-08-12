@@ -132,7 +132,11 @@ export default function SupportTicketsPage() {
                             <Plus className="mr-2 h-5 w-5" /> Create New Ticket
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-none">
+                    <DialogContent
+                        className="sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-none"
+                        onPointerDownOutside={(e) => e.preventDefault()}
+                        onInteractOutside={(e) => e.preventDefault()}
+                    >
                         <DialogHeader className="p-6 bg-slate-50 border-b border-slate-100">
                             <DialogTitle className="text-xl font-bold text-slate-900">Open a Support Ticket</DialogTitle>
                             <DialogDescription className="text-slate-500 font-medium mt-1">

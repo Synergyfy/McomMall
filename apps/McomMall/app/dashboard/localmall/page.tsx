@@ -51,7 +51,8 @@ import {
 } from './components/screens/OverlayScreens';
 import { 
   HubParticipationScreen, 
-  AccountManagerSupportScreen 
+  AccountManagerSupportScreen,
+  IdVerificationScreen 
 } from './components/screens/SupportScreens';
 
 export default function LocalMallPage() {
@@ -63,6 +64,20 @@ export default function LocalMallPage() {
   const [postcode, setPostcode] = useState('');
   const [mallData, setMallData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const fetchUnreadNotifications = async () => {
+    try {
+      const res = await api.get('notifications');
+      const notifications = res.data || [];
+      const unread = Array.isArray(notifications)
+        ? notifications.filter((n: any) => !n.seen).length
+        : 0;
+      setUnreadNotifications(unread);
+    } catch (err) {
+      console.error('Error fetching unread notifications count:', err);
+    }
+  };
 
   const fetchEcosystemData = async (resolvedPostcode?: string) => {
     try {
@@ -109,10 +124,14 @@ export default function LocalMallPage() {
     };
 
     loadProfile().finally(() => setLoading(false));
+    fetchUnreadNotifications();
   }, []);
 
   const handleNavigate = (screen: string) => {
     setScreenStack((prev) => [...prev, screen]);
+    if (screen === 'notifications') {
+      fetchUnreadNotifications();
+    }
   };
 
   const handleBack = () => {
@@ -221,6 +240,8 @@ export default function LocalMallPage() {
         return <HubParticipationScreen onNavigate={handleNavigate} mallData={mallData} />;
       case 'support':
         return <AccountManagerSupportScreen onNavigate={handleNavigate} boroughName={boroughName} />;
+      case 'id-verification':
+        return <IdVerificationScreen onNavigate={handleNavigate} businessName={businessName} />;
 
       // Global Header/Notifications Triggers
       case 'notifications':
@@ -259,6 +280,7 @@ export default function LocalMallPage() {
       onNotificationsClick={() => handleNavigate('notifications')}
       onSearchClick={() => handleNavigate('search')}
       onStatusClick={() => handleNavigate('status')}
+      unreadNotifications={unreadNotifications}
     >
       {renderActiveScreen()}
     </LocalMallShell>

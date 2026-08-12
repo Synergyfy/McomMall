@@ -17,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 import { toast } from 'sonner';
-import { CURRENCY } from '@/lib/utils';
+import { CURRENCY, stripHtmlText } from '@/lib/utils';
 import { InProgressDialog } from '@/components/InProgressDialog';
 import { Coupon } from '@/service/my-coupons/types';
 
@@ -112,7 +112,7 @@ export default function CouponPurchaseModal({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Purchase {product.name}</DialogTitle>
-            <DialogDescription>{product.description}</DialogDescription>
+            <DialogDescription>{stripHtmlText(product.description)}</DialogDescription>
           </DialogHeader>
           {!clientSecret && !paypalOrderId && (
             <div className="space-y-4">
