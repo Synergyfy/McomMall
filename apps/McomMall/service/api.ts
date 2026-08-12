@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import { MOCK_BYPASS, handleMockRequest, initMockAuth } from '@/lib/mock-data/mock-api-provider';
 
 export const baseURL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'https://mcom-mall-rest.vercel.app/api/v1/';
@@ -10,6 +11,45 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+if (MOCK_BYPASS && typeof window !== 'undefined') {
+  initMockAuth();
+
+  (api.defaults as any).adapter = (config: any) => {
+    const method = (config.method || 'get').toUpperCase();
+    let url = config.url || '';
+
+    if (url.startsWith('http')) {
+      try {
+        const parsed = new URL(url);
+        url = parsed.pathname;
+        const apiIdx = url.indexOf('/api/v1/');
+        if (apiIdx !== -1) {
+          url = url.substring(apiIdx + '/api/v1/'.length);
+        }
+      } catch {
+        url = url.replace(/^https?:\/\/[^\/]+\/api\/v1\//, '');
+      }
+    }
+
+    url = url.replace(/^\/+/, '').replace(/\/+$/, '');
+
+    let requestData = config.data;
+    if (typeof requestData === 'string') {
+      try { requestData = JSON.parse(requestData); } catch {}
+    }
+
+    const result = handleMockRequest(method, url, requestData);
+
+    return Promise.resolve({
+      data: result.data,
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: config,
+    });
+  };
+}
 
 // This function sets the bearer token for all subsequent API requests.
 export const setBearerToken = (token: string) => {
@@ -36,6 +76,8 @@ const AUTH_EXEMPT_PATHS = ['/', '/auth/callback', '/auth/sso', '/login', '/signi
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (MOCK_BYPASS) return Promise.reject(error);
+
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
 
     if (error.response?.status === 403) {

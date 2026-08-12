@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import Cookies from 'js-cookie';
 import { useState, useEffect } from 'react';
+import { MOCK_BYPASS } from '@/lib/mock-data/mock-api-provider';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [mounted, setMounted] = useState(false);
@@ -16,6 +17,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!mounted) {
     return null;
+  }
+
+  if (MOCK_BYPASS) {
+    return <>{children}</>;
   }
 
   if (!accessToken && refreshToken) {
