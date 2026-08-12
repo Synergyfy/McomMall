@@ -549,6 +549,14 @@ export class GiftCardService {
       const giftCardRepo = manager.getRepository(GiftCard);
       const transactionRepo = manager.getRepository(GiftCardTransaction);
 
+      // Idempotency check: return giftCard if transactionId already processed
+      const existingPayment = await paymentRepo.findOne({
+        where: { transactionId },
+      });
+      if (existingPayment) {
+        return giftCard;
+      }
+
       const newPayment = paymentRepo.create({
         user: { id: userId } as User,
         amount,
@@ -800,6 +808,17 @@ export class GiftCardService {
     const entityManager = manager || this.dataSource.manager;
 
     return entityManager.transaction(async (transactionalManager) => {
+      const lockedCard = await transactionalManager.findOne(GiftCard, {
+        where: { id: giftCard.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!lockedCard || !lockedCard.isActive) {
+        throw new BadRequestException('This gift card is not active.');
+      }
+      if (redeemDto.amount > lockedCard.currentBalance) {
+        throw new BadRequestException('Redemption amount exceeds balance.');
+      }
+
       // Update Digital Value Master
       try {
         const dv = await this.digitalValueService.getByCode(redeemDto.code);
@@ -812,15 +831,6 @@ export class GiftCardService {
           transactionalManager,
         );
       } catch (e) {
-        // If DV not found (legacy card?) or other error.
-        // If legacy card doesn't exist in DV, we should perhaps skip or fail?
-        // Ideally fail to enforce consistency.
-        // But for migration, maybe old cards don't have DV records?
-        // "Unified Digital Value Engine".
-        // Assuming all cards should be in DV. If not, maybe create one?
-        // For now, allow failure if DV not found? No, better to fail and force migration.
-        // But if I can't migrate DB...
-        // I'll log and ignore if DV not found, but if found, ensure consistency.
         if (e instanceof NotFoundException) {
           // Ignore if DV missing (legacy)
         } else {
@@ -828,16 +838,16 @@ export class GiftCardService {
         }
       }
 
-      giftCard.currentBalance -= redeemDto.amount;
+      lockedCard.currentBalance -= redeemDto.amount;
 
       const transaction = this.transactionRepository.create({
-        giftCardId: giftCard.id,
+        giftCardId: lockedCard.id,
         orderId: order.id,
         type: GiftCardTransactionType.REDEEM,
         amount: -redeemDto.amount,
       });
 
-      await transactionalManager.save(giftCard);
+      await transactionalManager.save(lockedCard);
       return transactionalManager.save(transaction);
     });
   }

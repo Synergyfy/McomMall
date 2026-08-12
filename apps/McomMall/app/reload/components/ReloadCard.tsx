@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader } from 'lucide-react';
 
@@ -97,6 +98,7 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
     );
   };
 
+  const queryClient = useQueryClient();
   const handleVerifyFund = async (transactionId: string) => {
     setIsProcessing(true);
     verifyFund.mutate(
@@ -105,7 +107,10 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
         onSuccess: () => {
           toast.success('Reload successful');
           setIsProcessing(false);
-          // TODO: Invalidate queries to refetch card balance
+          queryClient.invalidateQueries({ queryKey: ['wallet'] });
+          queryClient.invalidateQueries({ queryKey: ['cards'] });
+          queryClient.invalidateQueries({ queryKey: ['gift-cards'] });
+          queryClient.invalidateQueries({ queryKey: ['vouchers'] });
         },
         onError: (error) => {
           toast.error(`Error verifying reload: ${error.message}`);
@@ -131,13 +136,14 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
     );
   }
 
+  const defaultCardImage = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250"><rect width="400" height="250" rx="16" fill="%23FF7F50"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="sans-serif" font-size="20" font-weight="bold">Digital Card</text></svg>`;
+
   const cardToDisplay =
     currentCard ??
     ({
       title: `${type.charAt(0).toUpperCase() + type.slice(1)}`,
       balance: 0.0,
-      image: `https://via.placeholder.com/400x250.png/FF7F50/FFFFFF?text=Dummy+${type.charAt(0).toUpperCase() + type.slice(1)
-        }`,
+      image: defaultCardImage,
     } as { title: string; balance: number; image: string });
 
   return (

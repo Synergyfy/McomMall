@@ -1,0 +1,9 @@
+.next/types/app/dashboard/loyalty/promotion/edit/[id]/page.ts(2,24): error TS2307: Cannot find module '../../../../../../../../app/dashboard/loyalty/promotion/edit/[id]/page.js' or its corresponding type declarations.
+.next/types/app/dashboard/loyalty/promotion/edit/[id]/page.ts(7,29): error TS2307: Cannot find module '../../../../../../../../app/dashboard/loyalty/promotion/edit/[id]/page.js' or its corresponding type declarations.
+.next/types/app/dashboard/loyalty/promotion/new/page.ts(2,24): error TS2307: Cannot find module '../../../../../../../app/dashboard/loyalty/promotion/new/page.js' or its corresponding type declarations.
+.next/types/app/dashboard/loyalty/promotion/new/page.ts(7,29): error TS2307: Cannot find module '../../../../../../../app/dashboard/loyalty/promotion/new/page.js' or its corresponding type declarations.
+.next/types/app/dashboard/loyalty/promotion/page.ts(2,24): error TS2307: Cannot find module '../../../../../../app/dashboard/loyalty/promotion/page.js' or its corresponding type declarations.
+.next/types/app/dashboard/loyalty/promotion/page.ts(7,29): error TS2307: Cannot find module '../../../../../../app/dashboard/loyalty/promotion/page.js' or its corresponding type declarations.
+.next/types/validator.ts(845,39): error TS2307: Cannot find module '../../app/dashboard/loyalty/promotion/edit/[id]/page.js' or its corresponding type declarations.
+.next/types/validator.ts(854,39): error TS2307: Cannot find module '../../app/dashboard/loyalty/promotion/new/page.js' or its corresponding type declarations.
+.next/types/validator.ts(863,39): error TS2307: Cannot find module '../../app/dashboard/loyalty/promotion/page.js' or its corresponding type declarations.

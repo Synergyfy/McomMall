@@ -103,6 +103,15 @@ import { SsoModule } from './resources/sso/sso.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],
+      validationSchema: require('joi').object({
+        NODE_ENV: require('joi').string().valid('development', 'production', 'test', 'staging').default('development'),
+        PORT: require('joi').number().default(3000),
+        COOKIE_SECRET: require('joi').string().default('mcom-mall-cookie-secret-key-12345'),
+      }),
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
     }),
     TypeOrmModule.forRootAsync({
       useFactory: async () => ({

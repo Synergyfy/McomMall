@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { OAuth2Client } from 'google-auth-library';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
@@ -451,7 +452,32 @@ export class GoogleBusinessService {
     };
   }
 
-  async googleLogin(email: string) {
+  async googleLogin(payload: { email?: string; idToken?: string }) {
+    let email = payload.email;
+
+    if (payload.idToken) {
+      const googleClientId = process.env.GOOGLE_CLIENT_ID;
+      const client = new OAuth2Client(googleClientId);
+      try {
+        const ticket = await client.verifyIdToken({
+          idToken: payload.idToken,
+          audience: googleClientId,
+        });
+        const verifiedPayload = ticket.getPayload();
+        if (verifiedPayload?.email) {
+          email = verifiedPayload.email;
+        }
+      } catch (_e) {
+        throw new BadRequestException('Invalid or expired Google ID token');
+      }
+    } else if (process.env.NODE_ENV === 'production') {
+      throw new BadRequestException('Google ID token (idToken) is required for production login.');
+    }
+
+    if (!email) {
+      throw new BadRequestException('Valid email address or verified ID token is required.');
+    }
+
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new NotFoundException(

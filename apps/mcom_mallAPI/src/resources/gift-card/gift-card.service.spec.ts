@@ -852,4 +852,41 @@ describe('GiftCardService (User-Centric)', () => {
       );
     });
   });
+
+  describe('redeem (Pessimistic Locking & Idempotency)', () => {
+    it('should acquire a pessimistic_write lock on the GiftCard during redemption', async () => {
+      const activeCard = {
+        id: 'card-1',
+        code: 'GC12345678901234',
+        currentBalance: 50,
+        currency: 'GBP',
+        isActive: true,
+        ownerId: 'owner-1',
+      };
+
+      (giftCardRepo.findOne as jest.Mock).mockResolvedValue(activeCard);
+      (settingsRepo.findOne as jest.Mock).mockResolvedValue({ isEnabled: true, ownerId: 'owner-1' });
+
+      const order = { id: 'order-1', total: 100 } as Order;
+      const redeemDto = { code: 'GC12345678901234', amount: 20 };
+
+      (dataSource.manager.transaction as jest.Mock).mockImplementation(async (cb) => {
+        const manager = {
+          findOne: jest.fn().mockImplementation((entity, opts) => {
+            if (entity === GiftCard || entity.name === 'GiftCard') {
+              expect(opts.lock).toEqual({ mode: 'pessimistic_write' });
+              return Promise.resolve({ ...activeCard });
+            }
+            return Promise.resolve(null);
+          }),
+          save: (item) => Promise.resolve(item),
+          create: (entity, obj) => obj,
+        };
+        return cb(manager);
+      });
+
+      await service.redeem(redeemDto, order);
+      expect(dataSource.manager.transaction).toHaveBeenCalled();
+    });
+  });
 });

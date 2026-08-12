@@ -62,7 +62,7 @@ export default function BookingSidebar({
 
   const handleStartConversation = () => {
     if (!user) {
-      router.push('/login');
+      router.push('/signin');
       return;
     }
     sendMessage({

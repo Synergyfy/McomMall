@@ -127,6 +127,14 @@ export class PaymentsService {
     } = recordPaymentDto;
 
     // Convert amount to decimal if it's not already
+    // Idempotency check: return existing payment history if transactionId already recorded
+    const existingPayment = await this.paymentHistoryRepository.findOne({
+      where: { transactionId },
+    });
+    if (existingPayment) {
+      return existingPayment;
+    }
+
     const decimalAmount =
       typeof amount === 'string' ? parseFloat(amount) : Number(amount);
 

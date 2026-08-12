@@ -17,17 +17,27 @@ import * as cookieParser from 'cookie-parser';
 async function configureApp(app: any) {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ limit: '50mb', extended: true }));
-  app.use(cookieParser(process.env.COOKIE_SECRET || 'mcom-mall-cookie-secret-key-12345'));
+  const cookieSecret = process.env.COOKIE_SECRET;
+  if (!cookieSecret && process.env.NODE_ENV === 'production') {
+    throw new Error('COOKIE_SECRET environment variable must be set in production!');
+  }
+  app.use(cookieParser(cookieSecret || 'mcom-mall-cookie-secret-key-12345'));
 
-  app.enableCors({
-    origin: [
-      'https://mcommall.vercel.app',
-      'https://mcom-mall.vercel.app',
+  const allowedOrigins: (string | RegExp)[] = [
+    'https://mcommall.vercel.app',
+    'https://mcom-mall.vercel.app',
+  ];
+  if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.push(
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
       'http://localhost:3003',
-    ],
+    );
+  }
+
+  app.enableCors({
+    origin: allowedOrigins,
     credentials: true,
   });
 

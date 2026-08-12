@@ -93,21 +93,21 @@ export const useDeleteCouponProduct = () => {
 export const useGetCouponStats = () => {
   return useQuery<CouponStats>({
     queryKey: ['coupon-stats'],
-    queryFn: () => api.get('/business/coupon-products/stats').then(res => res.data),
+    queryFn: () => api.get('/business/coupons/stats').then(res => res.data),
   });
 };
 
 export const useGetCouponChartData = () => {
   return useQuery<CouponChartData>({
     queryKey: ['coupon-chart-data'],
-    queryFn: () => api.get('/business/coupon-products/chart-data').then(res => res.data),
+    queryFn: () => api.get('/business/coupons/chart-data').then(res => res.data),
   });
 };
 
 export const useGetCouponTransactions = (startDate: string, endDate: string) => {
   return useQuery<CouponTransaction[]>({
     queryKey: ['coupon-transactions', startDate, endDate],
-    queryFn: () => api.get('/business/coupon-products/sales-and-redemptions', {
+    queryFn: () => api.get('/business/coupons/sales-and-redemptions', {
       params: { startDate, endDate }
     }).then(res => res.data),
     enabled: !!startDate && !!endDate,

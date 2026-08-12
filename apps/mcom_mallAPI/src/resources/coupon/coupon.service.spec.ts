@@ -261,4 +261,77 @@ describe('CouponService', () => {
       );
     });
   });
+
+  describe('create', () => {
+    it('should throw ForbiddenException if a non-admin tries to create a platform coupon', async () => {
+      const ownerUser = { id: 'owner-1', role: 'owner' } as any;
+      const dto = {
+        title: 'Platform Coupon',
+        code: 'PLATFORM10',
+        sourceType: CouponSourceType.PLATFORM,
+        discountValue: 10,
+        discountType: DiscountType.FIXED,
+      };
+
+      await expect(service.create(dto, ownerUser)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should save startDate on the created coupon entity', async () => {
+      const adminUser = { id: 'admin-1', role: 'admin' } as any;
+      const startDate = new Date();
+      const dto = {
+        title: 'Platform Coupon',
+        code: 'PLATFORM10',
+        sourceType: CouponSourceType.PLATFORM,
+        discountValue: 10,
+        discountType: DiscountType.FIXED,
+        startDate,
+      };
+
+      jest.spyOn(couponRepo, 'create').mockImplementation((entity) => entity as Coupon);
+      jest.spyOn(couponRepo, 'save').mockImplementation(async (entity) => entity as Coupon);
+
+      const result = await service.create(dto, adminUser);
+      expect(result.startDate).toEqual(startDate);
+    });
+
+    it('should throw ForbiddenException if an owner tries to create a business coupon for another business', async () => {
+      const ownerUser = { id: 'owner-1', role: 'owner' } as any;
+      const businessUser = { id: 'other-owner-2' } as User;
+      const business = { id: 'bus-2', user: businessUser } as Business;
+
+      jest.spyOn(service['businessRepository'], 'findOne').mockResolvedValue(business);
+
+      const dto = {
+        title: 'Business Coupon',
+        code: 'BUS10',
+        sourceType: CouponSourceType.BUSINESS,
+        discountValue: 10,
+        discountType: DiscountType.FIXED,
+        businessId: 'bus-2',
+      };
+
+      await expect(service.create(dto, ownerUser)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+  });
+
+  describe('Business Analytics', () => {
+    const businessRepoMock = {
+      find: jest.fn(),
+    };
+
+    it('should return zeroes in getOwnerStats if user has no businesses', async () => {
+      const result = await service.getOwnerStats('no-business-user');
+      expect(result).toEqual({
+        totalSold: 0,
+        totalRedeemed: 0,
+        outstandingLiability: 0,
+        activeCoupons: 0,
+      });
+    });
+  });
 });

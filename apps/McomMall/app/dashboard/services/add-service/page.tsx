@@ -39,6 +39,8 @@ const ALL_STEPS = [
   { id: 8, name: 'Review', label: '8' },
 ];
 
+const DRAFT_STORAGE_KEY = 'mcommall_service_draft';
+
 function AddServicePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -106,7 +108,7 @@ function AddServicePageContent() {
       enableTieredPackages: false,
       requireApproval: true,
       deliveryConfig: {
-        mode: undefined,
+        mode: 'onsite',
         cities: '',
         regions: '',
         travelFee: 0
@@ -291,6 +293,7 @@ function AddServicePageContent() {
       setIsUploading(false);
       addService(serviceData, {
         onSuccess: (data: any) => {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
           if (data.plusItem || form.getValues('plusItem')) {
               const selectedPlusItem = form.getValues('plusItem');
               const requestDto: any = {};
@@ -334,12 +337,19 @@ function AddServicePageContent() {
       setIsNavigating(false);
       toast.error('Please fix the errors before proceeding.');
       setTimeout(() => {
-        const errorElement = document.querySelector('[aria-invalid="true"], .text-destructive, [role="alert"]');
+        const formEl = document.querySelector('form');
+        if (!formEl) return;
+        const errorElement = formEl.querySelector('[aria-invalid="true"], [data-slot="form-message"]');
         if (errorElement) {
-          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          (errorElement as HTMLElement).focus();
+          const item = (errorElement.closest('[data-slot="form-item"]') || errorElement) as HTMLElement;
+          item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const field = formEl.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+          if (field) {
+            field.classList.add('ring-2', 'ring-destructive');
+            setTimeout(() => field.classList.remove('ring-2', 'ring-destructive'), 2500);
+          }
         }
-      }, 150);
+      }, 300);
     }
   };
 
@@ -349,6 +359,41 @@ function AddServicePageContent() {
     const prevIndex = Math.max(currentIndex - 1, 0);
     setCurrentStep(STEPS[prevIndex].id);
   };
+
+  const handleSaveDraft = () => {
+    if (isNavigating || isUploading || isAddingService) return;
+    const values = form.getValues();
+    const draftValues = {
+      ...values,
+      media: Array.isArray(values.media) ? values.media.filter((m: any) => typeof m === 'string') : [],
+      plusItem: values.plusItem ?? null,
+    };
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ values: draftValues, step: currentStep }));
+      toast.success(`Draft saved (step ${currentStep}). You can continue later.`);
+    } catch (e) {
+      console.error('Failed to save draft', e);
+      toast.error('Could not save draft locally.');
+    }
+  };
+
+  // Restore a previously saved draft on mount
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft || typeof draft !== 'object' || !draft.values || typeof draft.values !== 'object') return;
+      form.reset({ ...form.getValues(), ...draft.values, media: [] });
+      if (Number.isInteger(draft.step) && draft.step >= 1 && draft.step <= ALL_STEPS.length) {
+        setCurrentStep(draft.step);
+      }
+      toast.info('Draft restored from last session. Re-upload any media before publishing.');
+    } catch (e) {
+      console.error('Failed to restore draft', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="font-sans min-h-screen bg-gray-50/50 pb-24 sm:pb-32">
@@ -486,7 +531,9 @@ function AddServicePageContent() {
 
                     <button
                       type="button"
-                      className="flex-1 md:flex-none md:ml-auto px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-200 bg-white text-[#f48c25] font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap hover:bg-orange-50 transition-colors"
+                      onClick={handleSaveDraft}
+                      disabled={isAddingService || isUploading || isNavigating}
+                      className="flex-1 md:flex-none md:ml-auto px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-200 bg-white text-[#f48c25] font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap hover:bg-orange-50 transition-colors disabled:opacity-50"
                     >
                       Save Draft
                     </button>

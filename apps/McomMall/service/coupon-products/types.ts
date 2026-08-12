@@ -55,7 +55,7 @@ export interface CouponChartData {
 
 export interface CouponTransaction {
   id: string;
-  type: 'PURCHASE' | 'REDEEM' | 'REFUND';
+  type: 'purchase' | 'redemption' | 'refund' | 'PURCHASE' | 'REDEEM' | 'REFUND';
   amount: number;
   createdAt: string;
   customerName: string;

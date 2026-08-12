@@ -39,11 +39,11 @@ const CampaignsPage = () => {
     return campaignsData.data.map((c: any) => ({
       id: c.id,
       listingName: c.business?.businessName || c.name || 'Unknown Business',
-      status: 'active', // TODO: Implement status from backend
+      status: c.status || (new Date(c.endDate) < new Date() ? 'completed' : 'active'),
       type: c.type,
       startDate: new Date(c.startDate),
-      budget: c.budget,
-      spent: 0, // TODO: Implement spent from backend
+      budget: Number(c.budget) || 0,
+      spent: Number(c.spent ?? c.totalSpent ?? 0),
       placements: c.adPlacement || [],
     }));
   }, [campaignsData]);

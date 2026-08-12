@@ -17,6 +17,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useRouter, useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import OfferForm from '../../components/offer-form';
 import { UpdateOfferDto, CreateOfferDto } from '@/service/offers/types';
 
@@ -35,6 +36,14 @@ export default function EditOfferPage() {
       setIsSuccess(true);
     } catch (error) {
       console.error('Failed to update offer:', error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message;
+      toast.error(
+        typeof message === 'string'
+          ? message
+          : 'Failed to update offer. Please try again.'
+      );
     }
   };
 
@@ -63,6 +72,8 @@ export default function EditOfferPage() {
         allowLimitToReset: offer.allowLimitToReset || false,
         includedProductIds: offer.includedProducts?.map(p => p.id) || [],
         excludedProductIds: offer.excludedProducts?.map(p => p.id) || [],
+        offerScope: offer.offerScope,
+        businessIds: offer.businesses?.map(b => b.id) || [],
       }
     : {};
 

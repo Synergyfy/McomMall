@@ -7,30 +7,34 @@ import {
   OrderRequest,
   CheckoutPaymentIntent,
   OrdersController,
+  PaymentsController,
 } from '@paypal/paypal-server-sdk';
 
 @Injectable()
 export class PaymentProviderService {
   private stripe: Stripe;
   private ordersController: OrdersController;
+  private paymentsController: PaymentsController;
 
   constructor(private configService: ConfigService) {
-    const stripeKey =
-      this.configService.get<string>('STRIPE_SECRET_KEY') ||
-      'stripe_secret_key_not_set_in_env_file';
-    this.stripe = new Stripe(stripeKey);
+    const stripeKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (!stripeKey && process.env.NODE_ENV === 'production') {
+      throw new Error('STRIPE_SECRET_KEY is required in production environment');
+    }
+    this.stripe = new Stripe(stripeKey || 'dummy_stripe_secret_key_dev');
 
     const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
     const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');
 
     const client = new Client({
-      environment: Environment.Sandbox,
+      environment: process.env.NODE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
       clientCredentialsAuthCredentials: {
-        oAuthClientId: clientId,
-        oAuthClientSecret: clientSecret,
+        oAuthClientId: clientId || '',
+        oAuthClientSecret: clientSecret || '',
       },
     });
     this.ordersController = new OrdersController(client);
+    this.paymentsController = new PaymentsController(client);
   }
 
   async createStripePaymentIntent(
@@ -91,12 +95,7 @@ export class PaymentProviderService {
     }
 
     const expectedAmountInCents = Math.round(expectedAmount * 100);
-    const intentAmountInGBP = intent.amount / 100;
-    const isAmount100xLarger =
-      Math.abs(intentAmountInGBP - expectedAmount * 100) < 1; // Allow for small floating point differences
-
-    const amountMatches =
-      intent.amount_received === expectedAmountInCents || isAmount100xLarger;
+    const amountMatches = intent.amount_received === expectedAmountInCents;
     const currencyMatches =
       intent.currency.toLowerCase() === currency.toLowerCase();
 
@@ -184,16 +183,67 @@ export class PaymentProviderService {
     return this.stripe.refunds.create(refundParams);
   }
 
-  // Placeholder for PayPal Payouts and Refunds
   async createPaypalPayout(
-    _amount: number,
-    _currency: string,
-    _receiverEmail: string,
+    amount: number,
+    currency: string,
+    receiverEmail: string,
   ): Promise<any> {
-    return { batch_header: { payout_batch_id: 'mock_paypal_payout_id' } };
+    const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');
+
+    if (!clientId || !clientSecret) {
+      return { batch_header: { payout_batch_id: `payout_sim_${Date.now()}`, batch_status: 'PENDING' } };
+    }
+
+    // Call PayPal REST API endpoint for Payouts
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://api-m.paypal.com' 
+      : 'https://api-m.sandbox.paypal.com';
+
+    const response = await fetch(`${baseUrl}/v1/payments/payouts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${auth}`,
+      },
+      body: JSON.stringify({
+        sender_batch_header: {
+          sender_batch_id: `batch_${Date.now()}`,
+          email_subject: 'You have a payout from Mcom Mall',
+        },
+        items: [
+          {
+            recipient_type: 'EMAIL',
+            amount: { value: amount.toFixed(2), currency },
+            receiver: receiverEmail,
+            note: 'Thank you for your business with Mcom Mall',
+          },
+        ],
+      }),
+    });
+    return response.json();
   }
 
-  async refundPaypalOrder(_captureId: string, _amount?: number): Promise<any> {
-    return { id: 'mock_paypal_refund_id', status: 'COMPLETED' };
+  async refundPaypalOrder(captureId: string, amount?: number, currency = 'GBP'): Promise<any> {
+    try {
+      const response = await this.paymentsController.refundCapturedPayment({
+        captureId,
+        body: amount
+          ? {
+              amount: {
+                value: amount.toFixed(2),
+                currencyCode: currency,
+              },
+            }
+          : {},
+      });
+      return response.result;
+    } catch (error: any) {
+      if (!this.configService.get<string>('PAYPAL_CLIENT_ID')) {
+        return { id: `refund_sim_${Date.now()}`, status: 'COMPLETED' };
+      }
+      throw error;
+    }
   }
 }

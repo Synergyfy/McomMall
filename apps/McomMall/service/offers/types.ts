@@ -34,6 +34,7 @@ export interface Offer {
   allowLimitToReset?: boolean;
   includedProducts?: Product[];
   excludedProducts?: Product[];
+  businesses?: Product[];
   offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS';
   businessIds?: string[];
   created_at: string; // ISO

@@ -17,7 +17,7 @@ export class PaymentHistory extends AbstractBaseEntity {
   @Column({ type: 'varchar', length: 8, default: 'gbp' })
   currency: string;
 
-  @Column({ type: 'varchar', length: 128 })
+  @Column({ type: 'varchar', length: 128, unique: true })
   transactionId: string;
 
   @Column({ type: 'enum', enum: PlanType, nullable: true })

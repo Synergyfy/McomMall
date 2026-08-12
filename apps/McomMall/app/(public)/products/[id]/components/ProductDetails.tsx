@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation';
 import { ServiceBookingDetailsDto } from '@/hooks/useCheckout';
 import { useDispatch } from 'react-redux';
 import { addBooking } from '@/service/store/bookingSlice';
+import { richTextHTML, stripHtmlText } from '@/lib/utils';
 
 const isImageUrl = (url: string) => {
     if (!url) return false;
@@ -269,7 +270,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
             </div>
 
             <p className="text-gray-700 text-lg leading-relaxed">
-              {product.shortDescription || product.description.substring(0, 200) + '...'}
+              {product.shortDescription || (stripHtmlText(product.description).slice(0, 200)) + '...'}
             </p>
 
             {/* RENDER VARIANTS (MATRIX OR SIMPLE) */}
@@ -437,9 +438,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
               <TabsTrigger value="promotions" className="py-3">Promotions</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-6 p-8 border rounded-lg text-lg">
-              <p className="text-gray-700 whitespace-pre-wrap">
-                {product.description}
-              </p>
+              <div
+                className="text-gray-700 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-orange-600 [&_a]:underline"
+                dangerouslySetInnerHTML={richTextHTML(product.description)}
+              />
             </TabsContent>
             <TabsContent value="reviews" className="mt-6 p-8 border rounded-lg text-lg">
               <p className="text-gray-700">No reviews yet.</p>

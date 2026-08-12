@@ -102,7 +102,7 @@ export class CreateCouponDto {
     description: 'Business ID for custom branding of a platform coupon',
     format: 'uuid',
   })
-  @IsString()
+  @IsUUID()
   @IsOptional()
   brandingBusinessId?: string;
 }

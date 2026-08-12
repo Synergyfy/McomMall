@@ -48,10 +48,10 @@ export class GoogleBusinessController {
   @Public()
   @Post('login')
   @ApiOperation({
-    summary: 'Login via Google SSO (handles both mock and real)',
+    summary: 'Login via Google SSO (verifies ID token in production)',
   })
   @ApiResponse({ status: 200, description: 'Login successful' })
-  async googleLogin(@Body('email') body: { email: string }) {
-    return this.googleBusinessService.googleLogin(body.email);
+  async googleLogin(@Body() body: { email?: string; idToken?: string }) {
+    return this.googleBusinessService.googleLogin(body);
   }
 }

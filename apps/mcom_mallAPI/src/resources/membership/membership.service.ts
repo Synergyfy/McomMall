@@ -319,6 +319,15 @@ export class MembershipService {
       const membershipRepo = manager.getRepository(Membership);
       const userRepo = manager.getRepository(User);
 
+      // Idempotency check: if transactionId already processed, return existing membership
+      const existingPayment = await paymentRepo.findOne({
+        where: { transactionId },
+        relations: ['membership'],
+      });
+      if (existingPayment?.membership) {
+        return existingPayment.membership;
+      }
+
       const newPayment = paymentRepo.create({
         user,
         amount: price,

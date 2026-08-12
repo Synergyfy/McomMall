@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Gift, Ticket, Sparkles, Tag, Zap, Timer, ShieldCheck, Pencil, Trash2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CURRENCY } from '@/lib/utils';
+import { CURRENCY, stripHtmlText } from '@/lib/utils';
 import { DiscountType } from '@/service/coupons/types';
 
 // --- Gift Card Dashboard Component ---
@@ -240,7 +240,7 @@ export const DashboardVoucher: React.FC<VoucherProps> = ({ product, onEdit, onDe
                     <div className="relative z-10 mt-2 mb-4">
                         <h2 className="text-4xl font-black text-gray-900 tracking-tighter uppercase leading-none mb-2">VOUCHER</h2>
                         <p className="text-[10px] text-gray-500 font-medium leading-relaxed max-w-[200px]">
-                            {product.description || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna.'}
+                            {stripHtmlText(product.description) || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna.'}
                         </p>
                     </div>
 
@@ -302,77 +302,120 @@ interface CouponProps {
         id: string;
         code?: string;
         title?: string;
+        description?: string;
         discountValue: string | number;
         discountType: string;
         status?: string;
+        expiresAt?: string | null;
     };
     onEdit: (id: string) => void;
     onDelete: (id: string) => void;
 }
 
 export const DashboardCoupon: React.FC<CouponProps> = ({ coupon, onEdit, onDelete }) => {
-    const displayValue = coupon.discountType === DiscountType.PERCENTAGE
-        ? `${coupon.discountValue}% OFF`
+    const isPercentage = coupon.discountType === DiscountType.PERCENTAGE;
+    const displayValue = isPercentage
+        ? `${coupon.discountValue}%`
         : `${CURRENCY}${Number(coupon.discountValue).toFixed(2)}`;
+    const status = (coupon.status || 'active').toLowerCase();
+
+    const statusConfig: Record<string, { label: string; badge: string; dot: string }> = {
+        active: { label: 'Active', badge: 'bg-emerald-400/15 text-emerald-200 border-emerald-400/40', dot: 'bg-emerald-400' },
+        draft: { label: 'Draft', badge: 'bg-slate-400/15 text-slate-200 border-slate-400/40', dot: 'bg-slate-400' },
+        scheduled: { label: 'Scheduled', badge: 'bg-sky-400/15 text-sky-200 border-sky-400/40', dot: 'bg-sky-400' },
+        expired: { label: 'Expired', badge: 'bg-rose-400/15 text-rose-200 border-rose-400/40', dot: 'bg-rose-400' },
+        redeemed: { label: 'Redeemed', badge: 'bg-violet-400/15 text-violet-200 border-violet-400/40', dot: 'bg-violet-400' },
+        archived: { label: 'Archived', badge: 'bg-zinc-400/15 text-zinc-200 border-zinc-400/40', dot: 'bg-zinc-400' },
+        disabled: { label: 'Disabled', badge: 'bg-red-400/15 text-red-200 border-red-400/40', dot: 'bg-red-400' },
+    };
+    const statusInfo = statusConfig[status] ?? statusConfig.active;
+
+    const expiryText = coupon.expiresAt
+        ? new Date(coupon.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+        : null;
 
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="group relative aspect-[1.58/1]"
+            whileHover={{ y: -4 }}
+            className="group relative aspect-[1.58/1] w-full max-w-[380px] mx-auto"
         >
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-600 to-orange-700 rounded-[2rem] p-6 shadow-xl border border-white/10 flex flex-col justify-between overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none"
-                    style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '20px 20px' }} />
+            <div className="absolute inset-0 rounded-[1.75rem] bg-gradient-to-br from-[#1c1917] via-[#431407] to-[#f58220] shadow-2xl shadow-orange-950/30 overflow-hidden">
+                <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+                <div className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-orange-400/25 blur-3xl" />
+                <div
+                    className="absolute inset-0 opacity-[0.07] pointer-events-none"
+                    style={{
+                        backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+                        backgroundSize: '18px 18px',
+                    }}
+                />
 
-                <div className="flex justify-between items-start">
-                    <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl border border-white/20">
-                        <div className="flex items-center gap-2">
-                            <Zap className="text-yellow-400 fill-yellow-400" size={14} />
-                            <span className="text-[9px] font-black text-white uppercase tracking-widest">
-                                {coupon.status || 'Active'}
+                <div className="relative h-full flex flex-col justify-between p-5 sm:p-6">
+                    <div className="flex items-start justify-between gap-2">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.15em] ${statusInfo.badge}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${statusInfo.dot} shadow-[0_0_6px_rgba(255,255,255,0.4)]`} />
+                            {statusInfo.label}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.15em] text-white/80">
+                            <Zap size={10} className="text-yellow-300" />
+                            {isPercentage ? 'Percentage' : 'Fixed'}
+                        </span>
+                    </div>
+
+                    <div className="text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/50 mb-1">
+                            Save up to
+                        </p>
+                        <div className="flex items-baseline justify-center gap-2">
+                            <span className="text-4xl sm:text-5xl font-black text-white tracking-tight drop-shadow-lg">
+                                {displayValue}
                             </span>
+                            <span className="text-2xl font-black text-yellow-300 drop-shadow">OFF</span>
+                        </div>
+                        <p className="mt-2 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                            {coupon.title || 'Special Offer'}
+                        </p>
+                    </div>
+
+                    <div className="relative">
+                        <div className="border-t-2 border-dashed border-white/25" />
+                        <div className="absolute -left-5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-slate-50" />
+                        <div className="absolute -right-5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-slate-50" />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[8px] font-bold uppercase tracking-[0.25em] text-white/50">Code</p>
+                            <p className="truncate font-mono text-sm font-bold tracking-[0.15em] text-white">
+                                {coupon.code || '—'}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            {expiryText && (
+                                <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-semibold text-white/70">
+                                    <Timer size={10} />
+                                    {expiryText}
+                                </span>
+                            )}
+                            <Button
+                                onClick={() => onEdit(coupon.id)}
+                                aria-label="Edit coupon"
+                                className="h-9 w-9 p-0 rounded-xl bg-white/15 text-white hover:bg-white hover:text-orange-600 backdrop-blur-md border border-white/20 transition-colors"
+                            >
+                                <Pencil size={14} />
+                            </Button>
+                            <Button
+                                onClick={() => onDelete(coupon.id)}
+                                aria-label="Delete coupon"
+                                className="h-9 w-9 p-0 rounded-xl bg-red-500/70 text-white hover:bg-red-600 backdrop-blur-md border border-white/10 transition-colors"
+                            >
+                                <Trash2 size={14} />
+                            </Button>
                         </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-white/60 text-[9px] font-black uppercase tracking-tighter">
-                        <Timer size={12} /> {coupon.discountType}
-                    </div>
                 </div>
-
-                <div className="text-center py-2">
-                    <h3 className="text-2xl font-black text-white leading-tight">
-                        {coupon.code || coupon.title || 'Flash Coupon'}
-                    </h3>
-                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">
-                        Value: {displayValue}
-                    </p>
-                </div>
-
-                <div className="flex items-center justify-between mt-auto">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white">
-                            <Sparkles size={16} />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                        <Button
-                            onClick={() => onEdit(coupon.id)}
-                            className="h-10 w-10 p-0 bg-white/20 text-white hover:bg-white hover:text-orange-600 rounded-xl backdrop-blur-md border border-white/20"
-                        >
-                            <Pencil size={16} />
-                        </Button>
-                        <Button
-                            onClick={() => onDelete(coupon.id)}
-                            className="h-10 w-10 p-0 bg-red-500/80 text-white hover:bg-red-600 rounded-xl backdrop-blur-md border border-white/10"
-                        >
-                            <Trash2 size={16} />
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-50 rounded-full" />
-                <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-50 rounded-full" />
             </div>
         </motion.div>
     );
