@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash2, ShieldCheck, Tag, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CURRENCY } from '@/lib/utils';
+import { CURRENCY, stripHtmlText } from '@/lib/utils';
 
 interface CouponProductCardProps {
   product: CouponProduct;
@@ -84,7 +84,7 @@ export function CouponProductCard({ product, onDelete }: CouponProductCardProps)
                 COUPON
               </h2>
               <p className="text-[8px] text-gray-400 font-bold mt-1 max-w-[280px] mx-auto leading-relaxed uppercase tracking-wider line-clamp-2">
-                {product.description || 'This voucher is applicable for all premium services and products across our platform.'}
+                {stripHtmlText(product.description) || 'This voucher is applicable for all premium services and products across our platform.'}
               </p>
             </div>
 

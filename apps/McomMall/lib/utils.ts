@@ -35,6 +35,54 @@ export const isImageUrl = (url: string | null | undefined): boolean => {
 };
 
 /**
+ * Sanitizes a trusted rich-text string into safe HTML that can be rendered
+ * with dangerouslySetInnerHTML. Strips scripts, event handlers, and dangerous
+ * URLs while preserving common formatting tags produced by the rich text editor.
+ */
+export function sanitizeRichText(input: string): string {
+  if (!input) return '';
+  if (typeof document === 'undefined') return input;
+  const doc = document.implementation.createHTMLDocument('');
+  doc.body.innerHTML = input;
+
+  doc.querySelectorAll('script, iframe, object, embed, form').forEach((el) => el.remove());
+  doc.querySelectorAll('*').forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      if (name.startsWith('on')) {
+        el.removeAttribute(attr.name);
+      } else if (name === 'href' || name === 'src') {
+        const value = attr.value.trim().toLowerCase();
+        if (!value.startsWith('http') && !value.startsWith('/') && !value.startsWith('#') && value !== 'mailto:' && !value.startsWith('mailto:') && !value.startsWith('tel:')) {
+          el.removeAttribute(attr.name);
+        }
+      }
+    });
+  });
+
+  return doc.body.innerHTML;
+}
+
+/**
+ * Renders a rich-text description as sanitized HTML via dangerouslySetInnerHTML.
+ */
+export const richTextHTML = (content: string | null | undefined) => ({
+  __html: sanitizeRichText(content || ''),
+});
+
+/**
+ * Strips HTML tags from a rich-text string to render plain text in truncated
+ * card views where markup cannot be displayed (e.g. line-clamp snippets).
+ */
+export function stripHtmlText(content: string | null | undefined): string {
+  if (!content) return '';
+  if (typeof document === 'undefined') return content.replace(/<[^>]*>/g, '');
+  const doc = document.implementation.createHTMLDocument('');
+  doc.body.innerHTML = content;
+  return (doc.body.textContent || '').trim();
+}
+
+/**
  * Robustly discovers the main image for a product by checking all possible fields.
  * Fields checked in order: imageUrl, fileUrls, media, images.
  */

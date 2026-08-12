@@ -15,6 +15,7 @@ interface LocalMallShellProps {
   onNotificationsClick: () => void;
   onSearchClick: () => void;
   onStatusClick: () => void;
+  unreadNotifications?: number;
   children: ReactNode;
 }
 
@@ -28,6 +29,7 @@ export const LocalMallShell: FC<LocalMallShellProps> = ({
   onNotificationsClick,
   onSearchClick,
   onStatusClick,
+  unreadNotifications = 0,
   children,
 }) => {
   const canGoBack = true;
@@ -41,7 +43,7 @@ export const LocalMallShell: FC<LocalMallShellProps> = ({
         boroughName={boroughName}
         canGoBack={canGoBack}
         onBack={onBack}
-        unreadNotifications={3}
+        unreadNotifications={unreadNotifications}
         onNotificationsClick={onNotificationsClick}
         onSearchClick={onSearchClick}
         onStatusClick={onStatusClick}

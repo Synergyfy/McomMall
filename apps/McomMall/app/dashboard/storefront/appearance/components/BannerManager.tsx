@@ -52,9 +52,13 @@ export const BannerManager: React.FC<BannerManagerProps> = ({
 
     try {
       const res = await uploadFile(file);
-      if (type === 'main') setBannerUrl(res.secure_url);
-      if (type === 'promo') setPromoBannerUrl(res.secure_url);
-      if (type === 'seasonal') setSeasonalBannerUrl(res.secure_url);
+      const url = res?.secure_url;
+      if (!url || !/^https?:\/\/.+/i.test(url)) {
+        throw new Error('Upload did not return a valid image URL');
+      }
+      if (type === 'main') setBannerUrl(url);
+      if (type === 'promo') setPromoBannerUrl(url);
+      if (type === 'seasonal') setSeasonalBannerUrl(url);
       toast.success('Banner image uploaded successfully!');
     } catch {
       toast.error('Failed to upload image. Please try again.');

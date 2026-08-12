@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, isBefore, startOfDay } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -100,6 +100,7 @@ export default function OfferForm({
   isPending,
   submitButtonText,
 }: OfferFormProps) {
+  const todayStart = startOfDay(new Date());
   const { data: products, isLoading: isLoadingProducts } = useGetMyProducts();
   const { data: listings, isLoading: isLoadingListings } = useGetUserListings();
   const [openIncludedProducts, setOpenIncludedProducts] =
@@ -238,7 +239,7 @@ export default function OfferForm({
         discountPercentage: formData.discountPercentage
           ? parseFloat(formData.discountPercentage)
           : undefined,
-        freeProductId: formData.freeProductId,
+        freeProductId: formData.freeProductId || undefined,
         bonusPoints: formData.bonusPoints
           ? parseInt(formData.bonusPoints, 10)
           : undefined,
@@ -292,7 +293,7 @@ export default function OfferForm({
           <div className="grid gap-2">
             <Label htmlFor="offerScope">Offer Scope</Label>
             <RadioGroup
-              defaultValue="ALL_LISTINGS"
+              value={formData.offerScope}
               onValueChange={
                 (value: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS') =>
                   handleSelectChange('offerScope', value)
@@ -775,6 +776,7 @@ export default function OfferForm({
                     mode="single"
                     selected={formData.beginDate}
                     onSelect={(date) => handleSelectChange('beginDate', date)}
+                    disabled={(date) => isBefore(date, todayStart)}
                     initialFocus
                   />
                 </PopoverContent>
