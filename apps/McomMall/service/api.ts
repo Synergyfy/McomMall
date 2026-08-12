@@ -15,7 +15,7 @@ const api = axios.create({
 if (MOCK_BYPASS && typeof window !== 'undefined') {
   initMockAuth();
 
-  api.defaults.adapter = (config: any) => {
+  (api.defaults as any).adapter = (config: any) => {
     const method = (config.method || 'get').toUpperCase();
     let url = config.url || '';
 
@@ -48,7 +48,7 @@ if (MOCK_BYPASS && typeof window !== 'undefined') {
       headers: {},
       config: config,
     });
-  } as any;
+  };
 }
 
 // This function sets the bearer token for all subsequent API requests.
