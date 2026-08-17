@@ -1,6 +1,5 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import Image from 'next/image'; // Import next/image
 
 // Reusable UploadBox component
 interface UploadBoxProps {
@@ -115,7 +114,7 @@ const UploadBox: React.FC<UploadBoxProps> = ({
               key={index}
               className="relative w-20 h-20 sm:w-16 sm:h-16 md:w-20 md:h-20"
             >
-              <Image
+              <img
                 src={imageUrls[index] || ''}
                 alt={image.name}
                 width={80} // Adjusted to fit within w-20 (20 * 4 = 80px)

@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { useState } from 'react';
 import { Maximize2, X, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
@@ -72,15 +71,13 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
                 </div>
               )}
               
-              <Image
+              <img
                 src={url}
                 alt={`Gallery image ${index + 1}`}
-                fill
-                className={`object-cover transition-all duration-700 group-hover:scale-110 ${
+                onLoad={() => handleImageLoad(index)}
+                className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 group-hover:scale-110 ${
                   loadedImages[index] ? 'opacity-100' : 'opacity-0'
                 }`}
-                onLoadingComplete={() => handleImageLoad(index)}
-                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
               />
               
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center backdrop-blur-[2px]">
@@ -131,13 +128,10 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
                 exit={{ opacity: 0, scale: 0.9, x: -20 }}
                 className="relative w-full h-full"
               >
-                <Image
+                <img
                   src={media[selectedImageIndex]}
                   alt="Enlarged gallery image"
-                  fill
-                  className="object-contain"
-                  priority
-                  sizes="100vw"
+                  className="absolute inset-0 h-full w-full object-contain"
                 />
               </motion.div>
             </div>

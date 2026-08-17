@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
-import Image from 'next/image';
 import {
   useGetReviewsForUser,
   useGetReviewsForBusinessOwner,
@@ -49,7 +48,7 @@ const ReviewCard: React.FC<{ review: Review; isBusinessOwnerView: boolean }> = (
     >
       <div className="flex items-start space-x-4">
         <div className="flex-shrink-0">
-          <Image
+          <img
             src={avatar}
             alt={name}
             width={50}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import {
   Select,
   SelectContent,
@@ -99,11 +98,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
           {/* Product Image */}
           <div className="aspect-square relative w-full rounded-lg overflow-hidden shadow-lg">
-            <Image
+            <img
               src={firstImageUrl}
               alt={product.title}
-              fill
-              className="object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           </div>
 

@@ -19,7 +19,6 @@ import { CreateCouponProductDto, CouponProduct, UpdateCouponProductDto } from '@
 import { X, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-import Image from 'next/image';
 import {
   Tooltip,
   TooltipContent,
@@ -312,7 +311,7 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
         />
         {imagePreview && (
           <div className="mt-4">
-            <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
+            <img src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
           </div>
         )}
         <FormField
@@ -339,7 +338,7 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
         />
         {logoPreview && (
           <div className="mt-4">
-            <Image src={logoPreview} alt="Logo preview" className="w-32 h-32 object-contain rounded-md" width={128} height={128} />
+            <img src={logoPreview} alt="Logo preview" className="w-32 h-32 object-contain rounded-md" width={128} height={128} />
           </div>
         )}
         <FormField
