@@ -14,7 +14,6 @@ import {
   MapPin,
 } from 'lucide-react';
 import React, { useState, useRef, ChangeEvent, FormEvent, useEffect } from 'react';
-import Image from 'next/image';
 import {
   useGetUserProfile,
   useUpdateUserProfile,
@@ -597,7 +596,7 @@ const MyProfilePage: NextPage = () => {
                         onClick={() => fileInputRef.current?.click()}
                       >
                         {avatarPreview ? (
-                          <Image
+                          <img
                             src={avatarPreview}
                             alt="User Avatar"
                             width="130"

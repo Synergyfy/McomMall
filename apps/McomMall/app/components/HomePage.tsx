@@ -9,10 +9,10 @@ import {
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import HeroImage from '@/public/hero.jpg';
-import Image from 'next/image';
 import { useGetRecentListings } from '@/service/listings/hook';
 import { useGetCategories } from '@/service/taxonomy/hook';
+
+const HeroImage = '/hero.jpg';
 
 // Dynamically import components using absolute path aliases
 const McomFeatureSection = dynamic(() => import('@/app/homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
@@ -200,11 +200,9 @@ export default function HomePage() {
           
           {/* Static high-end cinematic background image */}
           <div className="absolute inset-0 w-full h-full">
-            <Image
+            <img
               src={HeroImage}
-              fill
-              className="object-cover"
-              priority
+              className="absolute inset-0 h-full w-full object-cover"
               alt="McomMall cinematic backdrop"
             />
             {/* Overlay with a sophisticated dark-to-light gradient ensuring perfect text legibility */}
@@ -311,10 +309,9 @@ export default function HomePage() {
                       {/* Background Card */}
                       <div className="absolute w-[85%] h-[210px] md:h-[230px] bg-white border border-slate-200/50 rounded-3xl p-4 shadow-xl transform -rotate-6 -translate-y-8 -translate-x-3 opacity-60 hover:opacity-100 transition-all duration-300 pointer-events-auto">
                         <div className="relative h-24 md:h-28 w-full rounded-2xl overflow-hidden mb-3">
-                          <Image 
+                          <img 
                             src={heroCardsData[currentCopyIndex][0].image}
-                            fill
-                            className="object-cover"
+                            className="absolute inset-0 h-full w-full object-cover"
                             alt={heroCardsData[currentCopyIndex][0].name}
                           />
                           <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/85 text-white text-[8px] font-black uppercase tracking-wider">{heroCardsData[currentCopyIndex][0].type}</span>
@@ -331,10 +328,9 @@ export default function HomePage() {
                       {/* Foreground Card */}
                       <div className="absolute w-[92%] h-[250px] md:h-[270px] bg-white border border-slate-250/70 rounded-3xl p-4 md:p-5 shadow-2xl transform rotate-3 translate-y-4 translate-x-3 hover:rotate-0 transition-all duration-350 z-20 pointer-events-auto">
                         <div className="relative h-32 md:h-36 w-full rounded-2xl overflow-hidden mb-3 md:mb-4">
-                          <Image 
+                          <img 
                             src={heroCardsData[currentCopyIndex][1].image}
-                            fill
-                            className="object-cover"
+                            className="absolute inset-0 h-full w-full object-cover"
                             alt={heroCardsData[currentCopyIndex][1].name}
                           />
                           <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-orange-500 text-white text-[8px] font-black uppercase tracking-wider shadow-md">{heroCardsData[currentCopyIndex][1].type}</span>

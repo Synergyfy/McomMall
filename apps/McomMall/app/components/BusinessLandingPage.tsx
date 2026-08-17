@@ -2,15 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight, ArrowUp, CheckCircle2, Store, TrendingUp,
   Users, Zap, ShieldCheck, BarChart2, CreditCard, Gift, MapPin, Map, BadgeCheck, Search, ChevronDown
 } from 'lucide-react';
-import HeroImage from '@/public/hero.jpg';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const HeroImage = '/hero.jpg';
 
 const Footer = dynamic(() => import('@/components/Footer'));
 
@@ -41,7 +41,7 @@ export default function BusinessLandingPage() {
         <section className="relative min-h-[100svh] flex items-center justify-center w-full overflow-hidden">
           {/* BG */}
           <div className="absolute inset-0">
-            <Image src={HeroImage} fill className="object-cover" priority alt="McomMall Business" />
+            <img src={HeroImage} className="absolute inset-0 h-full w-full object-cover" alt="McomMall Business" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/60 to-black/80" />
           </div>
 

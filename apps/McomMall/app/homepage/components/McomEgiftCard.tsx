@@ -3,7 +3,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import {
@@ -153,7 +152,7 @@ export function McomEgiftCard() {
                   <div
                     className={`aspect-[16/10] overflow-hidden ${card.backgroundStyle}`}
                   >
-                    <Image
+                    <img
                       src={card.imageUrl}
                       alt={card.title}
                       width={400}

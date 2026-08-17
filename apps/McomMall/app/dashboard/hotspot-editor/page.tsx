@@ -3,7 +3,6 @@ import React from 'react';
 import { mockCampaigns } from '@/lib/hotspot-data';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import Image from 'next/image';
 
 const HotspotCampaignsPage = () => {
   return (
@@ -18,13 +17,11 @@ const HotspotCampaignsPage = () => {
         {mockCampaigns.map((campaign) => (
           <div key={campaign.id} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div className="relative h-48 w-full">
-              <Image
+              <img
                 src={campaign.imageUrl}
                 alt={campaign.name}
-                layout="fill"
-                objectFit="cover"
                 onError={(e) => e.currentTarget.src = '/placeholder.svg'} // Fallback image
-              />
+               className="absolute inset-0 h-full w-full object-cover"/>
             </div>
             <div className="p-4">
               <h2 className="text-lg font-semibold mb-2">{campaign.name}</h2>

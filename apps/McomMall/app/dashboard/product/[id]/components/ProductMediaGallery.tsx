@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface ProductMediaGalleryProps {
@@ -22,12 +21,11 @@ export default function ProductMediaGallery({ images, productTitle }: ProductMed
     <div className="flex flex-col gap-4">
       <div className="relative w-full h-[480px] rounded-2xl overflow-hidden shadow-lg bg-gray-100">
         {selectedImage ? (
-          <Image
+          <img
             key={selectedImage}
             src={selectedImage}
             alt={productTitle}
-            fill
-            className="object-cover transition-transform duration-500 hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 hover:scale-105"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -45,7 +43,7 @@ export default function ProductMediaGallery({ images, productTitle }: ProductMed
             )}
             onClick={() => setSelectedImage(url)}
           >
-            <Image
+            <img
               src={url}
               alt={`${productTitle} thumbnail ${index + 1}`}
               width={100}

@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import Image from 'next/image';
 import {
   Select,
   SelectContent,
@@ -214,11 +213,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           {/* Image Gallery */}
           <div className="space-y-4 lg:col-span-2">
             <div className="aspect-square relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
-              <Image
+              <img
                 src={mainImage || 'https://via.placeholder.com/500x500.png?text=No+Image'}
                 alt={product.title}
-                fill
-                className="object-cover transition-transform duration-500 hover:scale-105"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 hover:scale-105"
               />
             </div>
             <div className="grid grid-cols-5 gap-2">
@@ -230,11 +228,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                   }`}
                   onClick={() => setMainImage(url)}
                 >
-                  <Image
+                  <img
                     src={url}
                     alt={`${product.title} thumbnail ${index + 1}`}
-                    fill
-                    className="object-cover"
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
                 </button>
               ))}

@@ -4,13 +4,13 @@ import { Search, MapPin, ArrowRight, Heart, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Winter from '@/public/homepage/WinterSale.png';
-import Summer from '@/public/homepage/SummerBanner.png';
-import Spring from '@/public/homepage/SpringBanner.png';
-import Autumn from '@/public/homepage/AutumnBanner.png';
-import Image from 'next/image';
 import { businessCategories } from '@/lib/business-categories';
 import { useGetRecentListings } from '@/service/listings/hook';
+
+const Winter = '/homepage/WinterSale.png';
+const Summer = '/homepage/SummerBanner.png';
+const Spring = '/homepage/SpringBanner.png';
+const Autumn = '/homepage/AutumnBanner.png';
 
 // Dynamically import components
 const McomFeatureSection = dynamic(() => import('../homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
@@ -187,13 +187,10 @@ export default function HomePage() {
               exit={{ opacity: 0, scale: 1.05 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
             >
-              <Image
+              <img
                 src={backgroundImages[currentImageIndex]}
-                layout="fill"
-                objectFit="cover"
-                priority
                 alt="Seasonal background"
-              />
+               className="absolute inset-0 h-full w-full object-cover"/>
             </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/40" />
@@ -324,7 +321,7 @@ export default function HomePage() {
                       transition={{ duration: 0.3 }}
                       className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow"
                     >
-                      <Image
+                      <img
                         src={`https://source.unsplash.com/random/300x200?sig=${ad.id}`}
                         alt={ad.businessName}
                         width={300}
@@ -398,7 +395,7 @@ export default function HomePage() {
                 className="bg-white rounded-2xl shadow-md overflow-hidden group"
               >
                 <div className="relative">
-                  <Image
+                  <img
                     src={post.image}
                     alt={post.title}
                     width={300}
