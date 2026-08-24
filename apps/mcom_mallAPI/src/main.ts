@@ -18,14 +18,19 @@ async function configureApp(app: any) {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ limit: '50mb', extended: true }));
   const cookieSecret = process.env.COOKIE_SECRET;
-  if (!cookieSecret && process.env.NODE_ENV === 'production') {
-    throw new Error('COOKIE_SECRET environment variable must be set in production!');
+  if (!cookieSecret) {
+    throw new Error('COOKIE_SECRET environment variable must be set!');
   }
-  app.use(cookieParser(cookieSecret || 'mcom-mall-cookie-secret-key-12345'));
+  app.use(cookieParser(cookieSecret));
 
   const allowedOrigins: (string | RegExp)[] = [
     'https://mcommall.vercel.app',
     'https://mcom-mall.vercel.app',
+    'https://mcommall.centralhubsolution.com',
+    'https://mall-admin.centralhubsolution.com',
+    'https://mcomreward.centralhubsolution.com',
+    'https://www.centralhubsolution.com',
+    'https://centralhubsolution.com',
   ];
   if (process.env.NODE_ENV !== 'production') {
     allowedOrigins.push(
