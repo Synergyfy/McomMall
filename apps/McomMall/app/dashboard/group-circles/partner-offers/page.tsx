@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -218,11 +217,10 @@ function PartnerOffersContent() {
                                     >
                                         <Card className="overflow-hidden border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-[2rem] shadow-sm hover:shadow-xl transition-all group">
                                             <div className="relative h-40 w-full overflow-hidden">
-                                                <Image
+                                                <img
                                                     src={campaign.bannerUrl}
                                                     alt={campaign.campaignName}
-                                                    fill
-                                                    className="object-cover"
+                                                    className="absolute inset-0 h-full w-full object-cover"
                                                 />
                                                 <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
                                                 <div className="absolute top-4 right-4">
@@ -309,11 +307,10 @@ function PartnerOffersContent() {
                                 >
                                     <Card className="overflow-hidden border-zinc-200/60 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md rounded-[2rem] hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-500 group flex flex-col h-full">
                                         <div className="relative h-44 w-full overflow-hidden">
-                                            <Image
+                                            <img
                                                 src={campaign.bannerUrl}
                                                 alt={campaign.campaignName}
-                                                fill
-                                                className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                                className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                             <div className="absolute bottom-4 left-4 right-4">

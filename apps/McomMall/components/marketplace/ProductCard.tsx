@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, ShoppingCart, Star, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,11 +39,10 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     return (
       <div className="group flex flex-col sm:flex-row bg-white rounded-xl border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden">
         <div className="relative w-full sm:w-64 h-64 sm:h-auto flex-shrink-0 bg-gray-50 overflow-hidden">
-          <Image
+          <img
             src={product.image}
             alt={product.title}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           <div className="absolute top-3 left-3 flex gap-2 z-10">
             {discountPercentage > 0 && (
@@ -124,11 +122,10 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     <div className="group bg-white hover:shadow-[0_0_10px_rgba(0,0,0,0.1)] transition-all duration-200 overflow-hidden flex flex-col h-[320px] md:h-[380px] relative w-full border border-transparent hover:border-gray-200">
       {/* Image Container - Fixed Height */}
       <div className="relative h-[160px] md:h-[220px] w-full bg-gray-50 overflow-hidden flex-shrink-0">
-        <Image
+        <img
           src={product.image}
           alt={product.title}
-          fill
-          className={cn(
+          className={cn("absolute inset-0 h-full w-full", 
             "object-contain p-2 transition-transform duration-300 group-hover:scale-105",
             isOutOfStock && "grayscale opacity-70"
           )}

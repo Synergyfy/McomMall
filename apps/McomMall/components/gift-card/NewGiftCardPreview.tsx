@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { CreditCard } from "lucide-react";
 import { CURRENCY } from "@/lib/utils";
 
@@ -31,7 +30,7 @@ const NewGiftCardPreview = ({ formData }: NewGiftCardPreviewProps) => {
     <div className="w-full flex flex-col items-center space-y-6">
       <div className="w-full max-w-md h-40 flex items-center justify-center">
         {design.customImage ? (
-          <Image
+          <img
             src={design.customImage}
             alt="Custom design"
             width={160}
@@ -39,7 +38,7 @@ const NewGiftCardPreview = ({ formData }: NewGiftCardPreviewProps) => {
             className="max-h-full w-auto object-contain rounded-lg"
           />
         ) : design.assetUrl ? (
-          <Image
+          <img
             src={design.assetUrl}
             alt="Selected design"
             width={160}

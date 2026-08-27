@@ -11,7 +11,6 @@ import {
   Building2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import Image from 'next/image';
 import { useDeleteListing, useGetUserListings } from '@/service/listings/hook';
 import { UserListing } from '@/service/listings/types';
 import GoogleLogo from '@/app/components/GoogleLogo';
@@ -144,7 +143,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
       <Card className="w-full overflow-hidden">
         <div className="flex flex-col md:flex-row items-start gap-6 p-4">
           {imgSrc ? (
-            <Image
+            <img
               src={imgSrc}
               alt={listing.businessName}
               width={128}

@@ -19,7 +19,6 @@ import { CreateCouponProductDto, CouponProduct, UpdateCouponProductDto } from '@
 import { X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-import Image from 'next/image';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -285,7 +284,7 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
         />
         {imagePreview && (
           <div className="mt-4">
-            <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
+            <img src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
           </div>
         )}
         <FormField

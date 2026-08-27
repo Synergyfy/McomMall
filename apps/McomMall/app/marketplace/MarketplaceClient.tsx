@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   LayoutGrid,
@@ -310,7 +309,7 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
             </Link>
           </div>
           {banner.imageUrl && (
-            <Image src={banner.imageUrl} alt="" fill className="object-cover opacity-20 -z-0" />
+            <img src={banner.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20 -z-0" />
           )}
           <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
         </div>
@@ -322,11 +321,10 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
         <div key={banner.id || index} className="w-full h-full rounded-2xl shadow-none relative overflow-hidden group">
           <Link href={banner.link || '#'} className="block w-full h-full relative">
             {banner.imageUrl ? (
-              <Image
+              <img
                 src={banner.imageUrl}
                 alt={banner.title || "Banner"}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
             ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -341,7 +339,7 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
     return (
       <div key={banner.id || index} className="w-full h-full bg-white rounded-2xl p-6 shadow-none relative overflow-hidden border border-gray-100">
         {banner.imageUrl && (
-          <Image src={banner.imageUrl} alt="" fill className="object-cover opacity-10" />
+          <img src={banner.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-10" />
         )}
         <div className="relative z-10">
           <h3 className="text-xl font-bold mb-2 text-gray-900">{banner.title}</h3>
@@ -436,11 +434,10 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
                     >
                       <div className="w-full h-full relative">
                         {heroSlides[activeSlide].imageUrl && (
-                          <Image
+                          <img
                             src={heroSlides[activeSlide].imageUrl}
                             alt={heroSlides[activeSlide].title || "Hero slide"}
-                            fill
-                            className="object-cover"
+                            className="absolute inset-0 h-full w-full object-cover"
                           />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-10">

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, CheckCircle, Star, TrendingUp } from 'lucide-react';
 
@@ -141,7 +140,7 @@ const LoyaltyProgramSection = () => {
           >
             {/* Image Column */}
             <div className="w-full h-full rounded-2xl overflow-hidden shadow-xl aspect-square lg:aspect-auto">
-              <Image
+              <img
                 src="https://images.unsplash.com/photo-1556740738-b6a63e27c4df?q=80&w=2070&auto=format&fit=crop"
                 alt="Loyalty Program"
                 width={800}

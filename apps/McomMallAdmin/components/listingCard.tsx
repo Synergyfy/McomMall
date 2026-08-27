@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Tooltip,
@@ -118,7 +117,7 @@ export default function ListingCard({
       <Link href={href} className="block">
         <Card className="w-full overflow-hidden shadow-md border rounded-xl hover:shadow-xl transition-shadow duration-300 flex flex-col md:flex-row">
           <div className="relative md:w-1/3">
-            <Image
+            <img
               src={imgUrl}
               alt={altText}
               width={400}
@@ -218,7 +217,7 @@ export default function ListingCard({
           </TooltipProvider>
 
           {/* Listing Image */}
-          <Image
+          <img
             src={imgUrl}
             alt={altText}
             width={400}

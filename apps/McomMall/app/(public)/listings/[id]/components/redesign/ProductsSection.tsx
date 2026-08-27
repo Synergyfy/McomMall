@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import { Product } from '@/service/listings/types';
-import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
@@ -133,15 +132,13 @@ export default function ProductsSection({ products }: ProductsSectionProps) {
 
                 <div className="relative aspect-square overflow-hidden bg-gray-50">
 
-                  <Image
+                  <img
 
                     src={firstImageUrl}
 
                     alt={product.title}
 
-                    fill
-
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
 
                   />
 

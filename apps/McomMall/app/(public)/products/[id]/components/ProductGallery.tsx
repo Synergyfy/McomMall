@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 
 interface ProductGalleryProps {
   images: string[];
@@ -23,12 +22,10 @@ export default function ProductGallery({ images, title }: ProductGalleryProps) {
     <div className="space-y-4">
       {/* Main Image - Increased height for 'large' look */}
       <div className="relative bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm w-full h-[300px] sm:h-[400px] lg:h-[500px]">
-        <Image
+        <img
           src={images[currentImageIndex]}
           alt={title}
-          fill
-          className="object-contain p-2"
-          priority
+          className="absolute inset-0 h-full w-full object-contain p-2"
         />
       </div>
 
@@ -45,11 +42,10 @@ export default function ProductGallery({ images, title }: ProductGalleryProps) {
                   : 'border-transparent opacity-70 hover:opacity-100 hover:border-gray-200'
               }`}
             >
-              <Image
+              <img
                 src={img}
                 alt={`${title} view ${index + 1}`}
-                fill
-                className="object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
               />
             </button>
           ))}

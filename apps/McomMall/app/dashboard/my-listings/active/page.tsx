@@ -11,7 +11,6 @@ import {
   Plus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import Image from 'next/image';
 import { useDeleteListing, useGetUserListings } from '@/service/listings/hook';
 import { UserListing } from '@/service/listings/types';
 import {
@@ -101,11 +100,10 @@ const ListingCard: React.FC<{
         <div className="flex flex-col md:flex-row items-center gap-6 p-5">
           <div className="relative h-24 w-24 md:h-28 md:w-28 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
             {imgSrc ? (
-              <Image
+              <img
                 src={imgSrc}
                 alt={listing.businessName}
-                fill
-                className="object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
                 onError={() => setImgSrc(null)}
               />
             ) : (

@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Product } from '@/service/listings/types';
 import { Cart } from '@/hooks/useCart';
@@ -59,11 +58,10 @@ export default function OrderSummary({
               className="flex items-center space-x-4"
             >
               <div className="relative w-20 h-20">
-                <Image
+                <img
                   src={item.product.imageUrl || '/placeholder.svg'}
                   alt={item.product.title}
-                  layout="fill"
-                  className="object-cover rounded-lg shadow-md"
+                  className="absolute inset-0 h-full w-full object-cover rounded-lg shadow-md"
                 />
               </div>
               <div className="flex-1">
@@ -85,11 +83,10 @@ export default function OrderSummary({
           <>
             <div className="flex items-center space-x-6">
               <div className="relative w-28 h-28">
-                <Image
+                <img
                   src={product.imageUrl || '/placeholder.svg'}
                   alt={product.title}
-                  layout="fill"
-                  className="object-cover rounded-lg shadow-md"
+                  className="absolute inset-0 h-full w-full object-cover rounded-lg shadow-md"
                 />
               </div>
               <div className="flex-1">

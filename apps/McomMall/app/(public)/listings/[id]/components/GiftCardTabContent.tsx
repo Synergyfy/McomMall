@@ -3,7 +3,6 @@
 import { useGetBusinessGiftCards } from '@/service/gift-card/hook';
 import { GiftCardTemplate } from '@/service/gift-card/types';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Gift, Zap, ShieldCheck } from 'lucide-react';
@@ -52,12 +51,11 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
         >
           {/* The "Card" Body */}
           <div className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-500 group-hover:scale-[1.02] group-hover:shadow-orange-500/10 border border-white/20">
-            <Image
+            <img
               src={template.backgroundImageUrl || 'https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&w=800&q=80'}
               alt={template.name}
-              fill
               loading="lazy"
-              className="object-cover transition-transform duration-1000 group-hover:scale-110"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110"
             />
 
             {/* Gradient Overlays */}
