@@ -12,6 +12,7 @@ import {
   MoreThanOrEqual,
   DataSource,
   EntityManager,
+  In,
 } from 'typeorm';
 import { CampaignCashback } from './entities/campaign-cashback.entity';
 import { UserCampaignCashback } from './entities/user-campaign-cashback.entity';
@@ -138,12 +139,19 @@ export class CampaignCashbackService {
 
     const userCampaigns: UserCampaignCashback[] = [];
 
+    // Batch-load existing user campaigns to avoid N+1
+    const campaignIds = eligibleCampaigns.map(c => c.id);
+    const existingUserCampaigns = await this.userCampaignRepository.find({
+      where: { user: { id: user.id }, campaign: { id: In(campaignIds) } },
+      relations: ['campaign', 'wallets'],
+    });
+    const userCampaignMap = new Map(
+      existingUserCampaigns.map(uc => [uc.campaign.id, uc])
+    );
+
     for (const campaign of eligibleCampaigns) {
       // Load userCampaign instance with wallets
-      let userCampaign = await this.userCampaignRepository.findOne({
-        where: { user: { id: user.id }, campaign: { id: campaign.id } },
-        relations: ['campaign', 'wallets'],
-      });
+      let userCampaign = userCampaignMap.get(campaign.id);
 
       if (!userCampaign) {
         // Automatically activate campaign if user is eligible but hasn't accessed it yet

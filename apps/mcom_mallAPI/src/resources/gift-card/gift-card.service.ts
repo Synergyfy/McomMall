@@ -429,12 +429,18 @@ export class GiftCardService {
 
       // Process Cashback
       if (user?.email) {
-        await this.centralIntegrationService.processCashback(
-          user.email,
-          Number(amount),
-          CashbackEvent.GIFT_CARD_PURCHASE,
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            user.email,
+            Number(amount),
+            CashbackEvent.GIFT_CARD_PURCHASE,
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for gift card ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return {
@@ -601,12 +607,18 @@ export class GiftCardService {
 
       // Process Cashback
       if (user?.email) {
-        await this.centralIntegrationService.processCashback(
-          user.email,
-          Number(amount),
-          CashbackEvent.GIFT_CARD_PURCHASE, // Treat reload as purchase for now, or add specific event
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            user.email,
+            Number(amount),
+            CashbackEvent.GIFT_CARD_PURCHASE, // Treat reload as purchase for now, or add specific event
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for gift card reload ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return savedGiftCard;

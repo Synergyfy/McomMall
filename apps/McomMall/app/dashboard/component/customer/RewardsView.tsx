@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Star,
   ChevronRight,
@@ -36,20 +36,52 @@ import { useSelector } from 'react-redux';
 import { cn } from '@/lib/utils';
 import { RootState } from '@/service/store/store';
 import { useCustomerPoints } from '@/context/CustomerPointsContext';
-import {
-  REWARDS_MOCK_DATA,
-  POINTS_HISTORY,
-  POINTS_BREAKDOWN,
-  LOYALTY_MEMBERSHIPS,
-  REDEEMED_REWARDS,
-  EXPIRING_REWARDS,
-  type RewardType,
-  type RewardDetails,
-  type RewardHistoryEntry,
-} from '@/lib/mock-data/rewards-mock-data';
+import { useDiscoverRewards } from '@/hooks/useDiscover';
+import api from '@/service/api';
 
 type RewardsTab = 'my-points' | 'available' | 'redeemed' | 'loyalty' | 'expiring';
 type SubView = 'dashboard' | 'details';
+type RewardType = 'coupon' | 'voucher' | 'qr' | 'event' | 'gift' | 'loyalty' | 'gamification' | 'code';
+
+interface RewardDetails {
+  id: string;
+  title: string;
+  description: string;
+  cost: number;
+  image: string;
+  type?: RewardType;
+  businessName?: string;
+  expiryText: string;
+  tier?: string;
+  brand?: string;
+  code?: string;
+  isUrgent?: boolean;
+  isHot?: boolean;
+  isLocked?: boolean;
+  badgeIcon?: string;
+  rewardType?: string;
+  redeemedDate?: string;
+  redeemedTime?: string;
+  category?: string;
+  usageCondition?: string;
+  isOptedIn?: boolean;
+  longDescription?: string;
+  progress?: number;
+  accumulationRules?: string[];
+  benefits?: string[];
+  [key: string]: any;
+}
+
+interface RewardHistoryEntry {
+  id: string;
+  title: string;
+  date: string;
+  points: number;
+  type: string;
+  iconBg?: string;
+  icon?: string;
+  subtitle?: string;
+}
 
 interface ToastState {
   message: string;
@@ -175,6 +207,71 @@ export const RewardsView: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<RewardDetails | null>(null);
 
+  const { data: apiRewards, loading: rewardsLoading } = useDiscoverRewards({
+    tab: activeTab,
+    limit: 20,
+  });
+
+  // Create rewards lookup map from API data
+  const REWARDS_MOCK_DATA: Record<string, RewardDetails> = React.useMemo(() => {
+    const data: Record<string, RewardDetails> = {};
+    if (apiRewards && Array.isArray(apiRewards)) {
+      apiRewards.forEach((r: any) => {
+        data[r.id] = {
+          id: r.id,
+          title: r.title || 'Reward',
+          description: r.description || '',
+          cost: r.cost || 0,
+          image: r.image || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=600',
+          type: 'loyalty',
+          businessName: r.businessName || r.brand || 'Business',
+          expiryText: r.expiryText || 'Limited time',
+          brand: r.brand,
+          category: r.category,
+          tier: r.tier,
+        };
+      });
+    }
+    return data;
+  }, [apiRewards]);
+
+  const [pointsBreakdown, setPointsBreakdown] = useState({ earned: 0, used: 0, pending: 0 });
+  const [pointsHistory, setPointsHistory] = useState<any[]>([]);
+  const [loyaltyMemberships, setLoyaltyMemberships] = useState<any[]>([]);
+  const [redeemedRewards, setRedeemedRewards] = useState<any[]>([]);
+  const [expiringRewards, setExpiringRewards] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchWalletData = async () => {
+      try {
+        const walletRes = await api.get('/wallet');
+        if (walletRes.data) {
+          setPointsBreakdown({
+            earned: walletRes.data.balance || 0,
+            used: walletRes.data.totalRedeemed || 0,
+            pending: walletRes.data.pendingPoints || 0,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch wallet:', err);
+      }
+    };
+
+    const fetchMembershipData = async () => {
+      try {
+        const membershipRes = await api.get('/membership/my');
+        if (membershipRes.data && Array.isArray(membershipRes.data)) {
+          setLoyaltyMemberships(membershipRes.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch memberships:', err);
+      }
+    };
+
+    fetchWalletData();
+    fetchMembershipData();
+  }, []);
+
   const showToast = useCallback((message: string, type: ToastState['type'] = 'success') => {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 3000);
@@ -244,9 +341,9 @@ export const RewardsView: React.FC = () => {
     switch (activeTab) {
       case 'available': return all.filter(r => !claimedIds.includes(r.id) && !redeemedIds.includes(r.id));
       case 'my-points': return [];
-      case 'redeemed': return REDEEMED_REWARDS;
-      case 'loyalty': return LOYALTY_MEMBERSHIPS;
-      case 'expiring': return getExpiringSorted(EXPIRING_REWARDS);
+      case 'redeemed': return redeemedRewards;
+      case 'loyalty': return loyaltyMemberships;
+      case 'expiring': return getExpiringSorted(expiringRewards);
     }
   }, [activeTab, claimedIds, redeemedIds, getExpiringSorted]);
 
@@ -259,7 +356,7 @@ export const RewardsView: React.FC = () => {
   const [codeInput, setCodeInput] = useState('');
   const [codeResult, setCodeResult] = useState<{ success: boolean; message: string } | null>(null);
   const [scanConfirm, setScanConfirm] = useState<RewardDetails | null>(null);
-  const urgentExpiringCount = getExpiringSorted(EXPIRING_REWARDS).filter(r => r.isUrgent).length;
+  const urgentExpiringCount = getExpiringSorted(expiringRewards).filter(r => r.isUrgent).length;
 
   return (
     <div className="min-h-screen text-[#261812] bg-[#fff8f6] antialiased relative">
@@ -346,11 +443,11 @@ export const RewardsView: React.FC = () => {
                     <p className="text-[10px] font-medium opacity-80">Available</p>
                   </div>
                   <div className="border-l border-white/20 pl-4">
-                    <span className="text-lg font-bold">{LOYALTY_MEMBERSHIPS.length}</span>
+                    <span className="text-lg font-bold">{loyaltyMemberships.length}</span>
                     <p className="text-[10px] font-medium opacity-80">Loyalty</p>
                   </div>
                   <div className="border-l border-white/20 pl-4">
-                    <span className="text-lg font-bold">{EXPIRING_REWARDS.length + Object.values(REWARDS_MOCK_DATA).filter(r => r.cost <= points && !claimedIds.includes(r.id) && !redeemedIds.includes(r.id)).length}</span>
+                    <span className="text-lg font-bold">{expiringRewards.length + Object.values(REWARDS_MOCK_DATA).filter(r => r.cost <= points && !claimedIds.includes(r.id) && !redeemedIds.includes(r.id)).length}</span>
                     <p className="text-[10px] font-medium opacity-80">Redeemable</p>
                   </div>
                 </div>
@@ -361,15 +458,15 @@ export const RewardsView: React.FC = () => {
           {/* --- Points Breakdown --- */}
           <section className="mb-5">
             <PointsBreakdownWidget
-              earned={POINTS_BREAKDOWN.earned}
-              used={POINTS_BREAKDOWN.used}
-              pending={POINTS_BREAKDOWN.pending}
+              earned={pointsBreakdown.earned}
+              used={pointsBreakdown.used}
+              pending={pointsBreakdown.pending}
             />
           </section>
 
           {/* --- Expiry Alerts --- */}
           <section className="mb-5">
-            <ExpiryAlertWidget rewards={getExpiringSorted(EXPIRING_REWARDS)} />
+            <ExpiryAlertWidget rewards={getExpiringSorted(expiringRewards)} />
           </section>
 
           {/* --- Snapshot Widget --- */}
@@ -445,7 +542,7 @@ export const RewardsView: React.FC = () => {
                 {/* Points History */}
                 <div className="space-y-3">
                   <h3 className="font-bold text-[#261812]">Points History</h3>
-                  {POINTS_HISTORY.map(item => (
+                  {pointsHistory.map(item => (
                     <HistoryItem key={item.id} item={item} />
                   ))}
                 </div>
@@ -555,7 +652,7 @@ export const RewardsView: React.FC = () => {
       )}
 
       {/* ===== HISTORY MODAL ===== */}
-      {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} claimedIds={claimedIds} redeemedIds={redeemedIds} />}
+      {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} claimedIds={claimedIds} redeemedIds={redeemedIds} rewards={REWARDS_MOCK_DATA} />}
 
       {/* ===== TRANSFER MODAL ===== */}
       {transferTarget && (
@@ -653,8 +750,8 @@ function HistoryItem({ item }: { item: RewardHistoryEntry }) {
       isPending ? 'border-[#e2bfb0]/30 bg-[#fff8f6]' : 'border-[#e2bfb0]/10',
     )}>
       <div className="flex items-center gap-4">
-        <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center relative', item.iconBg)}>
-          {getRewardIcon(item.icon, 'w-6 h-6')}
+        <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center relative', item.iconBg || 'bg-gray-100')}>
+          {getRewardIcon(item.icon || 'gift', 'w-6 h-6')}
           {isPending && (
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 border-2 border-white rounded-full animate-pulse" />
           )}
@@ -803,11 +900,11 @@ function AvailableCard({
           <img alt={reward.title} className="w-full h-full object-cover" src={reward.image} />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            {getRewardIcon(reward.badgeIcon, 'w-12 h-12 opacity-40')}
+            {getRewardIcon(reward.badgeIcon || 'gift', 'w-12 h-12 opacity-40')}
           </div>
         )}
         <div className="absolute top-3 right-3 flex gap-1">
-          <RewardTypeBadge type={reward.rewardType} />
+          <RewardTypeBadge type={reward.rewardType || 'loyalty'} />
           {reward.isHot && (
             <span className="bg-[#ff9969] text-white px-2.5 py-1 rounded-full text-[8px] font-black uppercase shadow-sm flex items-center gap-1">
               <Zap className="w-3 h-3" />
@@ -892,12 +989,12 @@ function ExpiringCard({ reward, onRedeem, isFavorited, onToggleFav }: { reward: 
             <img alt={reward.title} className="w-full h-full object-cover" src={reward.image} />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              {getRewardIcon(reward.badgeIcon, 'w-8 h-8 opacity-40')}
+              {getRewardIcon(reward.badgeIcon || 'gift', 'w-8 h-8 opacity-40')}
             </div>
           )}
           {isUrgent && <div className="absolute inset-0 bg-[#ba1a1a]/10" />}
           <div className="absolute bottom-1 left-1">
-            <RewardTypeBadge type={reward.rewardType} />
+            <RewardTypeBadge type={reward.rewardType || 'loyalty'} />
           </div>
         </div>
         <div className="flex-1 flex flex-col justify-between min-w-0">
@@ -962,24 +1059,24 @@ function ExpiringCard({ reward, onRedeem, isFavorited, onToggleFav }: { reward: 
 function LoyaltyCard({ reward }: { reward: RewardDetails }) {
   const [showOptOut, setShowOptOut] = useState(false);
   const [optedIn, setOptedIn] = useState(reward.isOptedIn ?? true);
-  const tierColors = {
+  const tierColors: Record<string, { bg: string; text: string; badge: string; dot: string }> = {
     Gold: { bg: 'bg-[#ffdbcc]', text: 'text-[#a23f00]', badge: 'bg-[#a23f00] text-white', dot: 'bg-[#a23f00]' },
     Silver: { bg: 'bg-[#fee3d8]', text: 'text-[#5a4136]', badge: 'bg-[#5a4136] text-white', dot: 'bg-[#5a4136]' },
     Bronze: { bg: 'bg-[#f8ddd2]', text: 'text-[#8e7164]', badge: 'bg-[#8e7164] text-white', dot: 'bg-[#8e7164]' },
   };
-  const tc = tierColors[reward.tier ?? 'Bronze'];
+  const tc = tierColors[reward.tier ?? 'Bronze'] || tierColors.Bronze;
 
   return (
     <div className="bg-white rounded-[20px] p-5 shadow-[0px_4px_20px_rgba(136,115,106,0.08)] border border-[#e2bfb0]/30 flex flex-col gap-4 transition-all active:scale-[0.98]">
       <div className="flex justify-between items-start">
         <div className="flex gap-3">
           <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden', tc.bg)}>
-            {getRewardIcon(reward.badgeIcon, 'w-7 h-7')}
+            {getRewardIcon(reward.badgeIcon || 'trophy', 'w-7 h-7')}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-[#261812]">{reward.title}</h3>
-              <RewardTypeBadge type={reward.rewardType} />
+              <RewardTypeBadge type={reward.rewardType || 'loyalty'} />
             </div>
             <div className="flex items-center gap-1 mt-0.5">
               <Trophy className="w-4 h-4 text-[#97471d]" />
@@ -1092,14 +1189,14 @@ function RedeemedCard({ reward }: { reward: RewardDetails }) {
             'w-12 h-12 rounded-xl flex items-center justify-center',
             isSuccess ? 'bg-[#a23f00]/10' : 'bg-[#8e7164]/10',
           )}>
-            {getRewardIcon(reward.badgeIcon, cn('w-6 h-6', isSuccess ? 'text-[#a23f00]' : 'text-[#8e7164]'))}
+            {getRewardIcon(reward.badgeIcon || 'gift', cn('w-6 h-6', isSuccess ? 'text-[#a23f00]' : 'text-[#8e7164]'))}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-sm text-[#261812]">{reward.title}</h3>
-              <RewardTypeBadge type={reward.rewardType} />
+              <RewardTypeBadge type={reward.rewardType || 'loyalty'} />
             </div>
-            <p className="text-[10px] font-medium text-[#5a4136]">{reward.brand}</p>
+            <p className="text-[10px] font-medium text-[#5a4136]">{reward.brand || 'Brand'}</p>
           </div>
         </div>
         <span className={cn(
@@ -1184,7 +1281,7 @@ function DetailsView({
           <img alt={reward.title} className="w-full h-full object-cover" src={reward.image} />
         ) : (
           <div className="w-full h-full bg-[#f8ddd2] flex items-center justify-center">
-            {getRewardIcon(reward.badgeIcon, 'w-16 h-16 opacity-40')}
+            {getRewardIcon(reward.badgeIcon || 'gift', 'w-16 h-16 opacity-40')}
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
@@ -1204,7 +1301,7 @@ function DetailsView({
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-[#f8ddd2] flex items-center justify-center">
-                {getRewardIcon(reward.badgeIcon, 'w-6 h-6')}
+                {getRewardIcon(reward.badgeIcon || 'gift', 'w-6 h-6')}
               </div>
               <div>
                 <p className="text-xs font-bold text-[#261812]">{reward.brand}</p>
@@ -1437,10 +1534,12 @@ function HistoryModal({
   onClose,
   claimedIds,
   redeemedIds,
+  rewards,
 }: {
   onClose: () => void;
   claimedIds: string[];
   redeemedIds: string[];
+  rewards: Record<string, RewardDetails>;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1466,26 +1565,26 @@ function HistoryModal({
             <span className="text-xs font-extrabold text-emerald-600">+1,240 pts</span>
           </div>
           {claimedIds.map(id => {
-            const item = REWARDS_MOCK_DATA[id];
+            const item = rewards[id];
             if (!item) return null;
             return (
               <div key={id} className="flex justify-between items-center p-4 bg-[#f8ddd2] rounded-2xl">
                 <div>
                   <h4 className="text-xs font-bold text-[#261812]">Claimed {item.title}</h4>
-                  <p className="text-[9px] font-medium text-[#8e7164]">{item.brand}</p>
+                  <p className="text-[9px] font-medium text-[#8e7164]">{item.brand || 'Brand'}</p>
                 </div>
                 <span className="text-xs font-extrabold text-rose-600">-{item.cost} pts</span>
               </div>
             );
           })}
           {redeemedIds.map(id => {
-            const item = REWARDS_MOCK_DATA[id];
+            const item = rewards[id];
             if (!item) return null;
             return (
               <div key={id} className="flex justify-between items-center p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
                 <div>
                   <h4 className="text-xs font-bold text-emerald-700">Scanned {item.title}</h4>
-                  <p className="text-[9px] text-emerald-600/70 font-medium">Used at {item.brand}</p>
+                  <p className="text-[9px] text-emerald-600/70 font-medium">Used at {item.brand || 'Brand'}</p>
                 </div>
                 <span className="text-xs font-extrabold text-emerald-700">Used</span>
               </div>

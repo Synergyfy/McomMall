@@ -123,19 +123,18 @@ export class TerminalCashbackService {
       });
 
       // Sync with Mcom Central
-      await this.centralIntegrationService
-        .processCashback(
+      try {
+        await this.centralIntegrationService.processCashback(
           claim.user.email,
           Number(claim.amount),
           CashbackEvent.TERMINAL_CASHBACK_CLAIM,
           `Terminal Cashback: ${claim.ownerId}`,
-        )
-        .catch((err) =>
-          console.error(
-            'Failed to sync terminal cashback with Central:',
-            err.message,
-          ),
         );
+      } catch (error) {
+        this.logger.error(
+          `Failed to sync terminal cashback with Central: ${error.message}`,
+        );
+      }
     }
 
     return savedClaim;

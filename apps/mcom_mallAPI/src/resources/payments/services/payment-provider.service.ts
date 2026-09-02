@@ -42,12 +42,16 @@ export class PaymentProviderService {
     currency: string,
     metadata?: Record<string, any>,
   ): Promise<Stripe.PaymentIntent> {
-    return this.stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe expects the amount in cents
-      currency,
-      payment_method_types: ['card'],
-      metadata,
-    });
+    try {
+      return await this.stripe.paymentIntents.create({
+        amount: Math.round(amount * 100),
+        currency,
+        payment_method_types: ['card'],
+        metadata,
+      });
+    } catch (error: any) {
+      throw new Error(`Stripe payment intent creation failed: ${error.message}`);
+    }
   }
 
   async createPaypalOrder(
@@ -55,21 +59,25 @@ export class PaymentProviderService {
     currency: string,
     metadata?: Record<string, any>,
   ): Promise<any> {
-    const request: OrderRequest = {
-      intent: CheckoutPaymentIntent.Capture,
-      purchaseUnits: [
-        {
-          amount: {
-            currencyCode: currency,
-            value: amount.toFixed(2),
+    try {
+      const request: OrderRequest = {
+        intent: CheckoutPaymentIntent.Capture,
+        purchaseUnits: [
+          {
+            amount: {
+              currencyCode: currency,
+              value: amount.toFixed(2),
+            },
+            customId: metadata ? JSON.stringify(metadata) : undefined,
           },
-          customId: metadata ? JSON.stringify(metadata) : undefined,
-        },
-      ],
-    };
+        ],
+      };
 
-    const response = await this.ordersController.createOrder({ body: request });
-    return response.result;
+      const response = await this.ordersController.createOrder({ body: request });
+      return response.result;
+    } catch (error: any) {
+      throw new Error(`PayPal order creation failed: ${error.message}`);
+    }
   }
 
   async capturePaypalOrder(orderId: string): Promise<any> {

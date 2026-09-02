@@ -1,9 +1,9 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useGeoContext } from '@/context/GeoContext';
-import { HIGH_STREET_REGISTRY } from '@/lib/mock-data/high-street-data';
+import { useHighStreet } from '@/hooks/useDiscover';
 import { Store, MapPin } from 'lucide-react';
 import GeoBadge from '../badges/GeoBadge';
 
@@ -38,6 +38,23 @@ function createGeoJSONCircle(center: [number, number], radiusInMiles: number, po
 export default function NearbyDiscovery() {
   const { latitude, longitude, nearestHighStreet } = useGeoContext();
   const [popupInfo, setPopupInfo] = useState<any>(null);
+  const { data: highStreetApiData, loading } = useHighStreet();
+
+  const HIGH_STREET_REGISTRY = useMemo(() => {
+    if (!highStreetApiData || !Array.isArray(highStreetApiData)) return [];
+    return highStreetApiData.map((hs: any) => ({
+      id: hs.id,
+      name: hs.name,
+      latitude: hs.latitude,
+      longitude: hs.longitude,
+      radiusMiles: hs.radiusMiles || 0.5,
+      borough: hs.borough,
+      city: hs.city || 'London',
+      country: hs.country || 'UK',
+      status: hs.status || 'active',
+      economicPriority: hs.economicPriority || 'standard',
+    }));
+  }, [highStreetApiData]);
 
   // If user location is not set, default to London center
   const initialViewState = {

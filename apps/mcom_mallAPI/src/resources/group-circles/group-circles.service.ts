@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, In } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Group } from './entities/group.entity';
 import { GroupMember } from './entities/group-member.entity';
@@ -115,8 +115,14 @@ export class GroupCirclesService {
       await manager.save(founderMember);
 
       if (createGroupDto.networkIds && createGroupDto.networkIds.length > 0) {
+        // Batch-load users to avoid N+1
+        const networkUsers = await manager.find(User, {
+          where: { id: In(createGroupDto.networkIds) },
+        });
+        const networkUserMap = new Map(networkUsers.map(u => [u.id, u]));
+        
         for (const userId of createGroupDto.networkIds) {
-          const user = await manager.findOne(User, { where: { id: userId } });
+          const user = networkUserMap.get(userId);
           if (user) {
             const member = manager.create(GroupMember, {
               group: saved,
@@ -133,8 +139,14 @@ export class GroupCirclesService {
         createGroupDto.referredBusinessIds &&
         createGroupDto.referredBusinessIds.length > 0
       ) {
+        // Batch-load users to avoid N+1
+        const referredUsers = await manager.find(User, {
+          where: { id: In(createGroupDto.referredBusinessIds) },
+        });
+        const referredUserMap = new Map(referredUsers.map(u => [u.id, u]));
+        
         for (const userId of createGroupDto.referredBusinessIds) {
-          const user = await manager.findOne(User, { where: { id: userId } });
+          const user = referredUserMap.get(userId);
           if (user) {
             const member = manager.create(GroupMember, {
               group: saved,
@@ -563,12 +575,18 @@ export class GroupCirclesService {
 
       // Process Cashback
       if (user.email) {
-        await this.centralIntegrationService.processCashback(
-          user.email,
-          amount,
-          CashbackEvent.GROUP_CONTRIBUTION_PAYMENT,
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            user.email,
+            amount,
+            CashbackEvent.GROUP_CONTRIBUTION_PAYMENT,
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for group circle ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return updatedMember;

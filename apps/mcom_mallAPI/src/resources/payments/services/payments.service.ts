@@ -216,12 +216,18 @@ export class PaymentsService {
 
     // Process Cashback
     if (user.email) {
-      await this.centralIntegrationService.processCashback(
-        user.email,
-        decimalAmount,
-        CashbackEvent.ORDER_PAYMENT,
-        transactionId,
-      );
+      try {
+        await this.centralIntegrationService.processCashback(
+          user.email,
+          decimalAmount,
+          CashbackEvent.ORDER_PAYMENT,
+          transactionId,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to process cashback for order ${transactionId}: ${error.message}`,
+        );
+      }
     }
 
     return paymentHistory;

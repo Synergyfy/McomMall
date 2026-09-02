@@ -1,4 +1,4 @@
-import { HighStreet, HIGH_STREET_REGISTRY } from "../mock-data/high-street-data";
+import { HighStreet } from "../types/geo";
 
 export type GeographicBadge = "HIGH_STREET" | "HYPERLOCAL" | "NEARBY" | "REMOTE";
 
@@ -35,14 +35,18 @@ export interface NearestHighStreetResult {
 }
 
 /**
- * Finds the nearest High Street from the registry
+ * Finds the nearest High Street from an array of high streets
  */
-export function findNearestHighStreet(lat: number, lon: number): NearestHighStreetResult {
-  let nearest: HighStreet = HIGH_STREET_REGISTRY[0];
+export function findNearestHighStreet(lat: number, lon: number, highStreets: HighStreet[]): NearestHighStreetResult {
+  if (highStreets.length === 0) {
+    throw new Error('No high streets provided');
+  }
+  
+  let nearest: HighStreet = highStreets[0];
   let minDistance = calculateHaversineDistance(lat, lon, nearest.latitude, nearest.longitude);
 
-  for (let i = 1; i < HIGH_STREET_REGISTRY.length; i++) {
-    const hs = HIGH_STREET_REGISTRY[i];
+  for (let i = 1; i < highStreets.length; i++) {
+    const hs = highStreets[i];
     const dist = calculateHaversineDistance(lat, lon, hs.latitude, hs.longitude);
     if (dist < minDistance) {
       minDistance = dist;

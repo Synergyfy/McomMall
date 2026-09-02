@@ -206,8 +206,10 @@ export class AuditsService {
     }
 
     const audits = await this.auditRepository.find(findOptions);
+    // Calculate storefront score once (same for all audits of this user)
+    const storefrontScore = await this.calculateStorefrontScore(userId);
     for (const audit of audits) {
-      audit.storefrontScore = await this.calculateStorefrontScore(userId);
+      audit.storefrontScore = storefrontScore;
     }
     return audits;
   }

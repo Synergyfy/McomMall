@@ -7,6 +7,7 @@ import {
   Compass, X, Scan, Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDiscoverEvents, DiscoverEvent } from '@/hooks/useDiscover';
 
 /* ====== TYPES ====== */
 
@@ -62,114 +63,6 @@ const day = (offset: number) => {
 const fmtDate = (d: Date) =>
   d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
-const MOCK_EVENTS: EventItem[] = [
-  {
-    id: 'e1', title: 'Manhattan Street Food Expo', date: fmtDate(day(1)), dateObj: day(1),
-    time: '12:00 PM', endTime: '8:00 PM', location: 'Manhattan Central Court', borough: 'Manhattan',
-    attendees: 342, description: 'Experience gourmet dishes from the top 15 street food vendors. Exclusive discounts for Mcom members.',
-    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=600', category: 'tasting',
-    lat: 40.7580, lng: -73.9855,
-  },
-  {
-    id: 'e2', title: 'Sneaker Hunt Challenge', date: fmtDate(day(2)), dateObj: day(2),
-    time: '3:00 PM', endTime: '6:00 PM', location: 'Level 2, North Wing', borough: 'Shoreditch',
-    attendees: 189, description: 'Find hidden QR codes throughout the mall. Discover rewards and points in our digital treasure hunt.',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600', category: 'competition',
-    lat: 51.5276, lng: -0.0804,
-  },
-  {
-    id: 'e3', title: 'Artisan Coffee Tasting', date: fmtDate(day(5)), dateObj: day(5),
-    time: '10:00 AM', endTime: '11:30 AM', location: 'The Artisan Grind Cafe', borough: 'Camden Town',
-    attendees: 45, description: 'Learn the secrets of master espresso brewing and bean roasting from award-winning local baristas.',
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=600', category: 'tasting',
-    lat: 51.5390, lng: -0.1426,
-  },
-  {
-    id: 'e4', title: 'Yoga in the Atrium', date: fmtDate(day(0)), dateObj: day(0),
-    time: '8:00 AM', endTime: '9:00 AM', location: 'Central Atrium, Ground Floor', borough: 'Greenwich',
-    attendees: 78, description: 'Start your day with a free sunrise yoga session. Mats provided. All levels welcome.',
-    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=600', category: 'fitness',
-    lat: 51.4826, lng: -0.0077,
-  },
-  {
-    id: 'e5', title: 'Kids Craft Workshop', date: fmtDate(day(3)), dateObj: day(3),
-    time: '11:00 AM', endTime: '1:00 PM', location: 'Kids Zone, Level 3', borough: 'Camden Town',
-    attendees: 34, description: 'Let your little ones explore their creativity with clay modeling, painting, and paper crafts.',
-    image: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?auto=format&fit=crop&q=80&w=600', category: 'kids',
-    lat: 51.5390, lng: -0.1426,
-  },
-  {
-    id: 'e6', title: 'Live Jazz Evening', date: fmtDate(day(6)), dateObj: day(6),
-    time: '7:00 PM', endTime: '10:00 PM', location: 'Rooftop Lounge, Level 8', borough: 'Notting Hill',
-    attendees: 120, description: 'Enjoy smooth jazz under the stars with complimentary welcome drink for Mcom Gold+ members.',
-    image: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=600', category: 'live_music',
-    lat: 51.5090, lng: -0.1981,
-  },
-  {
-    id: 'e7', title: 'Sushi Rolling Masterclass', date: fmtDate(day(4)), dateObj: day(4),
-    time: '2:00 PM', endTime: '4:00 PM', location: 'Sakura Zen Dining', borough: 'Shoreditch',
-    attendees: 24, description: 'Hands-on class with Chef Tanaka. Learn to roll maki, nigiri, and temaki like a pro.',
-    image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&q=80&w=600', category: 'workshop',
-    lat: 51.5276, lng: -0.0804,
-  },
-  {
-    id: 'e8', title: 'Borough Fitness Challenge', date: fmtDate(day(0)), dateObj: day(0),
-    time: '6:00 AM', endTime: '9:00 PM', location: 'Multiple Venues', borough: 'Greenwich',
-    attendees: 256, description: '24-hour fitness challenge across 5 partner gyms. Complete all stations for a special badge.',
-    image: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=600', category: 'fitness',
-    lat: 51.4826, lng: -0.0077,
-  },
-  {
-    id: 'e9', title: 'Tech Startup Meetup', date: fmtDate(day(8)), dateObj: day(8),
-    time: '6:30 PM', endTime: '9:00 PM', location: 'Innovation Hub, Level 4', borough: 'Shoreditch',
-    attendees: 89, description: 'Network with founders, devs, and investors from the Shoreditch tech scene. Guest speaker from Google.',
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=600', category: 'workshop',
-    lat: 51.5276, lng: -0.0804,
-  },
-  {
-    id: 'e10', title: 'Wine & Cheese Pairing', date: fmtDate(day(9)), dateObj: day(9),
-    time: '5:00 PM', endTime: '7:00 PM', location: 'Cellar Room, Lower Ground', borough: 'Notting Hill',
-    attendees: 56, description: 'Sample 8 premium wines paired with artisanal cheeses from local producers.',
-    image: 'https://images.unsplash.com/photo-1556911220-bffb3bed0e5f?auto=format&fit=crop&q=80&w=600', category: 'tasting',
-    lat: 51.5090, lng: -0.1981,
-  },
-  {
-    id: 'e11', title: 'Photography Walk', date: fmtDate(day(7)), dateObj: day(7),
-    time: '9:00 AM', endTime: '11:00 AM', location: 'Main Entrance', borough: 'Brixton',
-    attendees: 32, description: 'Guided photography walk through Brixton market. Capture the vibrant street art and culture.',
-    image: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?auto=format&fit=crop&q=80&w=600', category: 'workshop',
-    lat: 51.4615, lng: -0.1146,
-  },
-  {
-    id: 'e12', title: 'Battle of the Bands', date: fmtDate(day(10)), dateObj: day(10),
-    time: '6:00 PM', endTime: '11:00 PM', location: 'Amphitheatre, Level 1', borough: 'Camden Town',
-    attendees: 450, description: 'Local bands compete for a recording contract. Audience vote counts!',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&q=80&w=600', category: 'live_music',
-    lat: 51.5390, lng: -0.1426,
-  },
-  {
-    id: 'e13', title: 'Pop-up Book Fair', date: fmtDate(day(12)), dateObj: day(12),
-    time: '10:00 AM', endTime: '7:00 PM', location: 'Central Court', borough: 'Greenwich',
-    attendees: 67, description: 'Rare books, author signings, and storytelling sessions for all ages.',
-    image: 'https://images.unsplash.com/photo-1526243741027-444d633d7365?auto=format&fit=crop&q=80&w=600', category: 'kids',
-    lat: 51.4826, lng: -0.0077,
-  },
-  {
-    id: 'e14', title: 'HIIT Bootcamp', date: fmtDate(day(-1)), dateObj: day(-1),
-    time: '7:00 AM', endTime: '8:00 AM', location: 'Rooftop Garden', borough: 'Brixton',
-    attendees: 41, description: 'High-intensity interval training overlooking the city skyline.',
-    image: 'https://images.unsplash.com/photo-1534258936925-c58bed479fcb?auto=format&fit=crop&q=80&w=600', category: 'fitness',
-    lat: 51.4615, lng: -0.1146,
-  },
-  {
-    id: 'e15', title: 'Mcom Gaming Tournament', date: fmtDate(day(14)), dateObj: day(14),
-    time: '12:00 PM', endTime: '8:00 PM', location: 'Gaming Lounge, Level 5', borough: 'Shoreditch',
-    attendees: 200, description: 'FIFA, Street Fighter, and Mario Kart tournaments with prizes from partner stores.',
-    image: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&q=80&w=600', category: 'competition',
-    lat: 51.5276, lng: -0.0804,
-  },
-];
-
 const ITEMS_PER_PAGE = 6;
 
 /* ====== COMPONENT ====== */
@@ -182,6 +75,36 @@ export const EventsView: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; type: string } | null>(null);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
+
+  const { data: apiEvents, loading: eventsLoading } = useDiscoverEvents({
+    tab: activeTab,
+    lat: position?.lat,
+    lng: position?.lng,
+    borough: selectedBorough !== 'All' ? selectedBorough : undefined,
+    joinedIds: joinedEventIds.length > 0 ? joinedEventIds.join(',') : undefined,
+    savedIds: savedEventIds.length > 0 ? savedEventIds.join(',') : undefined,
+    limit: 20,
+  });
+
+  const events = useMemo(() => {
+    if (!apiEvents?.items) return [];
+    return apiEvents.items.map(e => ({
+      id: e.id,
+      title: e.title,
+      date: new Date(e.startDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
+      dateObj: new Date(e.startDate),
+      time: new Date(e.startDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      endTime: e.endDate ? new Date(e.endDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : undefined,
+      location: e.location || e.business?.businessName || 'Location TBD',
+      borough: e.borough || 'Manhattan',
+      attendees: e.attendees || 0,
+      description: e.description || '',
+      image: e.image || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=600',
+      category: (e.category || 'workshop') as EventItem['category'],
+      lat: e.latitude,
+      lng: e.longitude,
+    }));
+  }, [apiEvents]);
 
   /* ====== Geolocation ====== */
   useEffect(() => {
@@ -220,25 +143,25 @@ export const EventsView: React.FC = () => {
 
   /* ====== Filtered events ====== */
   const filteredEvents = useMemo(() => {
-    let events = [...MOCK_EVENTS];
+    let filtered = [...events];
 
     switch (activeTab) {
       case 'live': {
         const todayStr = fmtDate(today);
-        events = events.filter(e => e.date === todayStr);
+        filtered = filtered.filter(e => e.date === todayStr);
         break;
       }
       case 'joined':
-        events = events.filter(e => joinedEventIds.includes(e.id));
+        filtered = filtered.filter(e => joinedEventIds.includes(e.id));
         break;
       case 'borough':
         if (selectedBorough !== 'All') {
-          events = events.filter(e => e.borough === selectedBorough);
+          filtered = filtered.filter(e => e.borough === selectedBorough);
         }
         break;
       case 'nearby': {
         if (position) {
-          events = events
+          filtered = filtered
             .filter(e => e.lat && e.lng)
             .sort((a, b) => {
               const dA = haversine(position.lat, position.lng, a.lat!, a.lng!);
@@ -246,20 +169,20 @@ export const EventsView: React.FC = () => {
               return dA - dB;
             });
         } else {
-          events = events.filter(e => e.lat && e.lng);
+          filtered = filtered.filter(e => e.lat && e.lng);
         }
         break;
       }
       case 'recommended':
-        events = events.sort(() => Math.random() - 0.5).slice(0, 4);
+        filtered = filtered.sort(() => Math.random() - 0.5).slice(0, 4);
         break;
       default:
-        events = events.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+        filtered = filtered.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
         break;
     }
 
-    return events;
-  }, [activeTab, joinedEventIds, selectedBorough, position]);
+    return filtered;
+  }, [activeTab, joinedEventIds, selectedBorough, position, events]);
 
   const visibleEvents = filteredEvents.slice(0, visibleCount);
 
@@ -340,7 +263,7 @@ export const EventsView: React.FC = () => {
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decodedText: string) => {
-            const match = MOCK_EVENTS.find(
+            const match = events.find(
               e => e.id === decodedText || e.title.toLowerCase().replace(/\s+/g, '-') === decodedText.toLowerCase().replace(/\s+/g, '-')
             );
             if (match && mounted) {
@@ -360,10 +283,10 @@ export const EventsView: React.FC = () => {
   }, [showScanner]);
 
   const simulateScan = useCallback(() => {
-    const randomEvent = MOCK_EVENTS[Math.floor(Math.random() * MOCK_EVENTS.length)];
+    const randomEvent = events[Math.floor(Math.random() * events.length)];
     setScannedEvent(randomEvent);
     setScannerStep('result');
-  }, []);
+  }, [events]);
 
   return (
     <div className="space-y-5 pb-6">

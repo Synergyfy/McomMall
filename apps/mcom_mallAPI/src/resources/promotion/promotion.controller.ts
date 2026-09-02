@@ -44,6 +44,14 @@ export class PromotionController {
     return this.promotionService.check(checkPromotionDto, user?.id);
   }
 
+  @Public()
+  @Get('active')
+  @ApiOperation({ summary: 'Get all active promotions for consumers' })
+  @ApiResponse({ status: 200, type: [Promotion] })
+  findActive(@Query('limit') limit?: number) {
+    return this.promotionService.findPublicActive(limit || 20);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

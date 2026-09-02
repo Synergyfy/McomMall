@@ -71,6 +71,7 @@ export class EmailService {
       });
     } catch (error) {
       console.error(`Failed to send OTP email to ${email}:`, error.message);
+      throw error;
     }
 
     return { message: 'OTP sent successfully' };

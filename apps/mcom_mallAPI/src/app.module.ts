@@ -68,6 +68,7 @@ import { AutomationsModule } from './resources/automations/automations.module';
 import { VisibilityModule } from './resources/visibility/visibility.module';
 import { TeamModule } from './resources/team/team.module';
 import { SsoModule } from './resources/sso/sso.module';
+import { DiscoverModule } from './resources/discover/discover.module';
 
 @Module({
   imports: [
@@ -150,6 +151,7 @@ import { SsoModule } from './resources/sso/sso.module';
     CampaignCashbackModule,
     SeasonsModule,
     SsoModule,
+    DiscoverModule,
   ],
   controllers: [AppController],
   providers: [

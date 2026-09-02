@@ -1,10 +1,21 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { promotionalItems } from '@/lib/listing-data';
+import { useMarketplaceProducts } from '@/hooks/useMarketplace';
 
 export default function FlashSalesClient() {
   const [timeLeft, setTimeLeft] = useState({ hours: 1, minutes: 11, seconds: 1 });
+  const { data: productsData, loading } = useMarketplaceProducts({ limit: 10 });
+
+  const promotionalItems = (productsData?.items || []).map(p => ({
+    id: p.id,
+    title: p.title,
+    image: p.media?.[0] || 'https://placehold.co/200x200/png',
+    category: p.category || 'General',
+    price: p.price,
+    discountedPrice: p.salePrice,
+    items_left: p.stock ?? 100,
+  }));
 
   useEffect(() => {
     const countdown = setInterval(() => {
@@ -17,6 +28,29 @@ export default function FlashSalesClient() {
     }, 1000);
     return () => clearInterval(countdown);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-gray-100 pt-28">
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden">
+                  <div className="h-48 bg-gray-200"></div>
+                  <div className="p-4 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-100 pt-28">

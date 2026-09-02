@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
+import { Repository, EntityManager, In } from 'typeorm';
 import { CartService } from '../cart/cart.service';
 import { CouponService } from '../coupon/coupon.service';
 import { Order } from './entities/order.entity';
@@ -209,6 +209,17 @@ export class OrderService {
           directPurchase.productId,
         );
       const partneredServiceIds = partneredServices.map((s) => s.id);
+      
+      // Batch-load all services to avoid N+1
+      const serviceIds = serviceBookings.map(b => b.serviceId);
+      const services = await this.entityManager
+        .getRepository(Service)
+        .find({
+          where: { id: In(serviceIds) },
+          relations: ['business', 'business.user'],
+        });
+      const servicesMap = new Map(services.map(s => [s.id, s]));
+      
       for (const bookingDetail of serviceBookings) {
         if (!partneredServiceIds.includes(bookingDetail.serviceId)) {
           throw new BadRequestException(
@@ -217,12 +228,7 @@ export class OrderService {
         }
 
         // Validate service business status
-        const service = await this.entityManager
-          .getRepository(Service)
-          .findOne({
-            where: { id: bookingDetail.serviceId },
-            relations: ['business', 'business.user'],
-          });
+        const service = servicesMap.get(bookingDetail.serviceId);
         if (service) {
           this.validateBusinessAndOwner(service.business);
         }
@@ -231,11 +237,16 @@ export class OrderService {
 
     let giftCardPurchaseTotal = 0;
     if (hasGiftCardPurchases) {
+      // Batch-load all businesses to avoid N+1
+      const businessIds = giftCardPurchases.map(gc => gc.businessId);
+      const businesses = await this.businessRepository.find({
+        where: { id: In(businessIds) },
+        relations: ['user'],
+      });
+      const businessesMap = new Map(businesses.map(b => [b.id, b]));
+      
       for (const gcPurchase of giftCardPurchases) {
-        const business = await this.businessRepository.findOne({
-          where: { id: gcPurchase.businessId },
-          relations: ['user'],
-        });
+        const business = businessesMap.get(gcPurchase.businessId);
         if (!business) {
           throw new NotFoundException(
             `Business with ID "${gcPurchase.businessId}" not found for gift card purchase.`,
@@ -474,6 +485,30 @@ export class OrderService {
             'A product must be directly purchased to book partnered services.',
           );
         }
+        
+        // Pre-fetch all partnerships to avoid N+1
+        const serviceIds = serviceBookings.map(b => b.serviceId);
+        const partnerships = await this.partnershipRepository.find({
+          where: [
+            {
+              baseProduct: { id: directPurchaseProduct.id },
+              plusService: { id: In(serviceIds) },
+              isActive: true,
+            },
+            {
+              plusProduct: { id: directPurchaseProduct.id },
+              baseService: { id: In(serviceIds) },
+              isActive: true,
+            },
+          ],
+        });
+        const partnershipMap = new Map(
+          partnerships.map(p => [
+            p.plusService?.id || p.baseService?.id,
+            p
+          ])
+        );
+        
         for (const bookingDetail of serviceBookings) {
           const serviceBooking =
             await this.bookingService.createBookingForOrder(
@@ -486,20 +521,7 @@ export class OrderService {
               manager,
             );
 
-          const partnership = await this.partnershipRepository.findOne({
-            where: [
-              {
-                baseProduct: { id: directPurchaseProduct.id },
-                plusService: { id: bookingDetail.serviceId },
-                isActive: true,
-              },
-              {
-                plusProduct: { id: directPurchaseProduct.id },
-                baseService: { id: bookingDetail.serviceId },
-                isActive: true,
-              },
-            ],
-          });
+          const partnership = partnershipMap.get(bookingDetail.serviceId);
           if (!partnership) {
             // This check is a safeguard; the earlier validation should prevent this.
             throw new BadRequestException(
@@ -520,11 +542,16 @@ export class OrderService {
 
       // Process new gift card purchases
       if (hasGiftCardPurchases) {
+        // Batch-load businesses to avoid N+1
+        const gcBusinessIds = giftCardPurchases.map(gc => gc.businessId);
+        const gcBusinesses = await this.businessRepository.find({
+          where: { id: In(gcBusinessIds) },
+          relations: ['user'],
+        });
+        const gcBusinessMap = new Map(gcBusinesses.map(b => [b.id, b]));
+        
         for (const gcPurchase of giftCardPurchases) {
-          const businessForPurchase = await this.businessRepository.findOne({
-            where: { id: gcPurchase.businessId },
-            relations: ['user'],
-          });
+          const businessForPurchase = gcBusinessMap.get(gcPurchase.businessId);
           await this.giftCardService.purchaseGiftCard(
             gcPurchase,
             businessForPurchase,

@@ -371,12 +371,18 @@ export class MembershipService {
 
       // Process Cashback
       if (user.email) {
-        await this.centralIntegrationService.processCashback(
-          user.email,
-          Number(price),
-          CashbackEvent.MALL_MEMBERSHIP_PAYMENT,
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            user.email,
+            Number(price),
+            CashbackEvent.MALL_MEMBERSHIP_PAYMENT,
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for membership ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return savedMembership;

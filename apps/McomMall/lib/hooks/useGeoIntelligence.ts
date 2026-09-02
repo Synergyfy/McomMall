@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { HighStreet } from '../mock-data/high-street-data';
+import { HighStreet } from '../types/geo';
 import { 
-  findNearestHighStreet, 
   classifyBusiness, 
   GeographicBadge 
 } from '../utils/geo-utils';

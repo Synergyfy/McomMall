@@ -388,12 +388,18 @@ export class VoucherService {
 
       // Process Cashback
       if (user.email) {
-        await this.centralIntegrationService.processCashback(
-          user.email,
-          Number(amount),
-          CashbackEvent.VOUCHER_PURCHASE,
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            user.email,
+            Number(amount),
+            CashbackEvent.VOUCHER_PURCHASE,
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for voucher ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return {
@@ -568,12 +574,18 @@ export class VoucherService {
 
       // Process Cashback
       if (user.email) {
-        await this.centralIntegrationService.processCashback(
-          user.email,
-          Number(amount),
-          CashbackEvent.VOUCHER_PURCHASE, // Treat as voucher purchase event for cashback
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            user.email,
+            Number(amount),
+            CashbackEvent.VOUCHER_PURCHASE, // Treat as voucher purchase event for cashback
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for voucher reload ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return savedVoucher;
