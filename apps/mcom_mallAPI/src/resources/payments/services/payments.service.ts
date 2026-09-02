@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   Inject,
@@ -31,6 +32,8 @@ import { ActivityTimerType } from 'src/resources/activity-timer/enums/activity-t
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,

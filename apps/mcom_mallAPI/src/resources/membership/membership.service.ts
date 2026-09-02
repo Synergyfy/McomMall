@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -26,6 +27,8 @@ import { McomCentralService } from '../sso/mcom-central.service';
 
 @Injectable()
 export class MembershipService {
+  private readonly logger = new Logger(MembershipService.name);
+
   private readonly membershipPrices: Map<MembershipTier, number> = new Map([
     [MembershipTier.BASIC, 10],
     [MembershipTier.EXTENDED, 50],

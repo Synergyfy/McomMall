@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   ForbiddenException,
   NotFoundException,
   ConflictException,
@@ -34,6 +35,8 @@ import { GeolocationService } from './geolocation.service';
 
 @Injectable()
 export class GroupCirclesService {
+  private readonly logger = new Logger(GroupCirclesService.name);
+
   constructor(
     @InjectRepository(Group)
     private readonly groupRepository: Repository<Group>,

@@ -66,6 +66,7 @@ describe('GiftCardService (User-Centric)', () => {
   let giftCardRepo: Repository<GiftCard>;
   let transactionRepo: Repository<GiftCardTransaction>;
   let businessRepo: Repository<Business>;
+  let settingsRepo: Repository<GiftCardSettings>;
   let paymentProviderService: PaymentProviderService;
   let giftCardAssetService: GiftCardAssetService;
   let dataSource: DataSource;
@@ -206,6 +207,9 @@ describe('GiftCardService (User-Centric)', () => {
     );
     businessRepo = module.get<Repository<Business>>(
       getRepositoryToken(Business),
+    );
+    settingsRepo = module.get<Repository<GiftCardSettings>>(
+      getRepositoryToken(GiftCardSettings),
     );
     paymentProviderService = module.get<PaymentProviderService>(
       PaymentProviderService,

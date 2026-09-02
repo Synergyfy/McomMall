@@ -84,7 +84,7 @@ describe('Review Moderation (e2e)', () => {
       bizRepo.create({
         businessName: 'Review Biz',
         user: owner,
-        listingType: [ListingType.RETAIL],
+        listingType: [ListingType.PRODUCT],
         status: BusinessStatus.PUBLISHED,
         businessPhone: '111',
         shortDescription: 'Test',

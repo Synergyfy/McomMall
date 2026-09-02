@@ -194,6 +194,8 @@ describe('PaymentsService', () => {
         paymentGateway: 'stripe' as any,
         transactionId: 'txn-123',
         purpose: 'membership' as any,
+        planType: 'basic' as any,
+        isTrial: false,
       };
 
       const result = await service.recordPayment(dto, '1');

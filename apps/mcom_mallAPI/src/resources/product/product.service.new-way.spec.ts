@@ -121,7 +121,7 @@ describe('ProductService (New Way - Frontend Compatibility)', () => {
       stock: 50,
       productStatus: 'publish', // Should be mapped to 'published'
       sizeGuide: { system: 'international', measurements: [] },
-      bussinessId: 'business-id',
+      businessId: 'business-id',
     };
 
     const business = {
@@ -163,7 +163,7 @@ describe('ProductService (New Way - Frontend Compatibility)', () => {
       quantity: 30,
       images: ['img1.jpg'],
       videos: ['vid1.mp4'],
-      bussinessId: 'business-id',
+      businessId: 'business-id',
     };
 
     const business = {

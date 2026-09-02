@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -75,6 +76,8 @@ const generateNanoId = customAlphabet(
 
 @Injectable()
 export class GiftCardService {
+  private readonly logger = new Logger(GiftCardService.name);
+
   constructor(
     @InjectRepository(GiftCard)
     private readonly giftCardRepository: Repository<GiftCard>,

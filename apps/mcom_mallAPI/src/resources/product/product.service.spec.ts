@@ -113,7 +113,7 @@ describe('ProductService', () => {
         description: 'Test Description',
         sku: 'TEST-SKU',
         category: 'Test Category',
-        bussinessId: 'test-business-id',
+        businessId: 'test-business-id',
         media: ['http://example.com/image.jpg'],
       };
       const business = new Business();

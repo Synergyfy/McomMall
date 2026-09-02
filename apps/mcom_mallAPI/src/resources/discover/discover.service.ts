@@ -9,7 +9,7 @@ import { HighStreetService } from '../visibility/high-street.service';
 import { MembershipService } from '../membership/membership.service';
 import { WalletService } from '../wallet/wallet.service';
 
-interface BusinessWithDistance extends Business {
+export interface BusinessWithDistance extends Business {
   distance?: string;
   latitude?: number;
   longitude?: number;

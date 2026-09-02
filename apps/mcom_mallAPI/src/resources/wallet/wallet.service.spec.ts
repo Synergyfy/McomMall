@@ -15,6 +15,7 @@ import { CouponService } from '../coupon/coupon.service';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { VoucherService } from '../voucher/voucher.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { OrderPayment } from '../order/entities/order-payment.entity';
 import { NotFoundException } from '@nestjs/common';
 
 describe('WalletService', () => {

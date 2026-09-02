@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,6 +24,8 @@ import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 
 @Injectable()
 export class TerminalCashbackService {
+  private readonly logger = new Logger(TerminalCashbackService.name);
+
   constructor(
     @InjectRepository(TerminalCashbackClaim)
     private readonly claimRepository: Repository<TerminalCashbackClaim>,
