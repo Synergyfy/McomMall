@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { ActivityTimer } from './entities/activity-timer.entity';
 import { UserActivity } from './entities/user-activity.entity';
 import { User } from '../users/entities/user.entity';
@@ -319,13 +319,16 @@ export class ActivityTimerService {
 
     if (!activities.length) return; // No such task definition
 
+    // Batch-load existing user activities to avoid N+1
+    const activityIds = activities.map(a => a.id);
+    const existingActivities = await this.userActivityRepository.find({
+      where: { user: { id: userId }, activity: { id: In(activityIds) } },
+    });
+    const existingActivityIds = new Set(existingActivities.map(ea => ea.activity.id));
+
     for (const activity of activities) {
       // Check if already completed
-      const existing = await this.userActivityRepository.findOne({
-        where: { user: { id: userId }, activity: { id: activity.id } },
-      });
-
-      if (!existing) {
+      if (!existingActivityIds.has(activity.id)) {
         const completion = this.userActivityRepository.create({
           user,
           activity,
