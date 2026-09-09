@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   ArrowLeft, Heart, Share2, QrCode, UserPlus, Star, Coffee, Calendar, Map,
   List, Compass, Search, ShoppingBag, Dumbbell, Lock, Zap, CheckCircle,
@@ -10,9 +10,18 @@ import {
   Smartphone, ChevronRight, Check, Users, MessageCircle, Link as LinkIcon,
 } from 'lucide-react';
 import { useCustomerPoints } from '@/context/CustomerPointsContext';
-import { BUSINESS_MOCK_DATA, BusinessDetails } from '@/lib/mock-data/business-mock-data';
 import { DiscoverBusinessProfile } from './DiscoverBusinessProfile';
 import { DiscoverFilterPanel } from './DiscoverFilterPanel';
+import {
+  useDiscoverBusinesses,
+  useDiscoverPromotions,
+  useDiscoverEvents,
+  useBoroughCampaigns,
+  useHighStreet,
+  DiscoverBusiness,
+  DiscoverPromotion,
+  DiscoverEvent,
+} from '@/hooks/useDiscover';
 
 type DiscoverMainTab = 'nearby' | 'trending' | 'borough' | 'highstreet' | 'categories' | 'recommended' | 'recently-viewed';
 type DiscoverView = 'home' | 'map' | 'details';
@@ -46,22 +55,6 @@ const QUICK_FILTERS = [
   { id: 'offers-near-me', label: 'Offers Near Me', icon: MapPinned },
 ];
 
-const MOCK_TRENDING = [
-  { id: 't1', name: 'Sakura Zen Dining', desc: 'Now offering seasonal lunch rewards', tag: '#1 Trending', image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&q=80&w=600', category: 'Dining', distance: '0.3 mi' },
-  { id: 't2', name: 'Velocity Sports', desc: 'Join the Sneaker Hunt event this Friday!', tag: 'New Drop', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600', category: 'Fashion', distance: '0.8 mi' },
-  { id: 't3', name: 'Bloom Beauty Bar', desc: 'Weekend glow-up packages available', tag: 'Trending', image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&q=80&w=600', category: 'Beauty', distance: '0.5 mi' },
-];
-
-const MOCK_BOROUGH_CAMPAIGNS = [
-  { id: 'bc1', title: 'Manhattan Summer Festival', desc: 'Live music, food trucks & rewards', spots: '120+', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&q=80&w=600' },
-  { id: 'bc2', title: 'Brooklyn Art Walk', desc: 'Explore local galleries & earn points', spots: '45', image: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&q=80&w=600' },
-];
-
-const MOCK_HIGH_STREET = [
-  { id: 'hs1', name: 'Peckham High Street', desc: '12 active storefronts', deals: '8 live deals', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&q=80&w=600' },
-  { id: 'hs2', name: 'Camden Town', desc: '9 active storefronts', deals: '5 live deals', image: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?auto=format&fit=crop&q=80&w=600' },
-];
-
 const CATEGORIES = [
   { id: 'food-drinks', label: 'Food & Drinks', icon: Utensils, color: 'bg-orange-100 text-orange-700' },
   { id: 'fashion', label: 'Fashion', icon: Shirt, color: 'bg-pink-100 text-pink-700' },
@@ -71,28 +64,6 @@ const CATEGORIES = [
   { id: 'entertainment', label: 'Entertainment', icon: Ticket, color: 'bg-purple-100 text-purple-700' },
   { id: 'services', label: 'Services', icon: Smartphone, color: 'bg-indigo-100 text-indigo-700' },
   { id: 'family', label: 'Family Activities', icon: Users, color: 'bg-amber-100 text-amber-700' },
-];
-
-const RECENTLY_VIEWED = [
-  { id: 'brew-co', name: 'Brew & Co.', category: 'Coffee', time: '10 min ago' },
-  { id: 'iron-soul', name: 'Iron & Soul Gym', category: 'Fitness', time: '1 hour ago' },
-  { id: 'urban-threads', name: 'Urban Threads', category: 'Streetwear', time: '3 hours ago' },
-];
-
-const MOCK_PROMOTIONS = [
-  { id: 'p1', title: '30% Off Full Menu', business: 'The Urban Bistro', value: '30% OFF', expiry: '2 days left' },
-  { id: 'p2', title: 'Buy 1 Get 1 Free', business: 'Morning Brew', value: 'BOGO', expiry: '5 hours left' },
-  { id: 'p3', title: 'Free Smoothie', business: 'Iron & Soul Gym', value: 'FREE', expiry: '1 day left' },
-];
-
-const MOCK_EVENTS_FEED = [
-  { id: 'ef1', title: 'Manhattan Street Food Expo', date: 'Fri, Jun 12', location: 'Central Court', attendees: 342 },
-  { id: 'ef2', title: 'Sneaker Hunt Challenge', date: 'Sat, Jun 13', location: 'Level 2, North Wing', attendees: 189 },
-];
-
-const MOCK_REWARDS_NEARBY = [
-  { id: 'rn1', title: 'Free Croissant', business: 'Brew & Co.', points: 250 },
-  { id: 'rn2', title: 'Free Gym Session', business: 'Iron & Soul', points: 200 },
 ];
 
 type ToastType = 'success' | 'error' | 'info';
@@ -127,6 +98,33 @@ export const DiscoverLocal: React.FC = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showSavedBusinesses, setShowSavedBusinesses] = useState(false);
   const [showFollowedBusinesses, setShowFollowedBusinesses] = useState(false);
+
+  const { data: apiBusinesses, loading: businessesLoading } = useDiscoverBusinesses({
+    tab: activeTab,
+    search: searchQuery || undefined,
+    borough: activeTab === 'borough' ? selectedBorough : undefined,
+    limit: 10,
+  });
+
+  const { data: apiPromotions, loading: promotionsLoading } = useDiscoverPromotions({ limit: 5 });
+  const { data: apiEvents, loading: eventsLoading } = useDiscoverEvents({ tab: 'upcoming', limit: 4 });
+  const { data: apiBoroughCampaigns, loading: campaignsLoading } = useBoroughCampaigns(selectedBorough);
+  const { data: apiHighStreet, loading: highStreetLoading } = useHighStreet(selectedBorough);
+
+  const businesses = apiBusinesses?.items || [];
+  const promotions = apiPromotions?.items || [];
+  const events = apiEvents?.items || [];
+  const boroughCampaigns = apiBoroughCampaigns || [];
+  const highStreet = apiHighStreet || [];
+
+  // Create a lookup map for businesses by ID
+  const businessesMap = React.useMemo(() => {
+    const map: Record<string, any> = {};
+    businesses.forEach((biz: any) => {
+      map[biz.id] = biz;
+    });
+    return map;
+  }, [businesses]);
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     setToast({ message, type });
@@ -183,10 +181,7 @@ export const DiscoverLocal: React.FC = () => {
 
   const ToastIcon = toast?.type === 'success' ? CheckCircle : toast?.type === 'error' ? X : Info;
 
-  const currentBusinessList = Object.values(BUSINESS_MOCK_DATA).filter(biz => {
-    const q = searchQuery.toLowerCase();
-    return !q || biz.name.toLowerCase().includes(q) || biz.category.toLowerCase().includes(q);
-  });
+  const currentBusinessList = businesses;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -198,24 +193,24 @@ export const DiscoverLocal: React.FC = () => {
         onNavigate={navigateToDetails}
         onToggleFav={toggleFavorite}
         points={points}
-        promotions={MOCK_PROMOTIONS}
-        events={MOCK_EVENTS_FEED}
-        rewards={MOCK_REWARDS_NEARBY}
+        promotions={promotions}
+        events={events}
+        rewards={[]}
         onRedeem={handleRedeemPromotion}
         onJoinEvent={handleRegisterEvent}
       />;
-      case 'trending': return <TrendingTabContent items={MOCK_TRENDING} onNavigate={navigateToDetails} />;
+      case 'trending': return <TrendingTabContent items={businesses.slice(0, 3)} onNavigate={navigateToDetails} />;
       case 'borough': return <BoroughTabContent
-        campaigns={MOCK_BOROUGH_CAMPAIGNS}
+        campaigns={boroughCampaigns}
         borough={selectedBorough}
         businesses={currentBusinessList}
         onNavigate={navigateToDetails}
         showToast={showToast}
       />;
-      case 'highstreet': return <HighStreetTabContent streets={MOCK_HIGH_STREET} showToast={showToast} />;
+      case 'highstreet': return <HighStreetTabContent streets={highStreet} showToast={showToast} />;
       case 'categories': return <CategoriesTabContent categories={CATEGORIES} onNavigate={(c) => { showToast(`Browsing ${c}`, 'info'); }} />;
       case 'recommended': return <RecommendedTabContent businesses={currentBusinessList} onNavigate={navigateToDetails} points={points} />;
-      case 'recently-viewed': return <RecentlyViewedTabContent items={RECENTLY_VIEWED} onNavigate={navigateToDetails} />;
+      case 'recently-viewed': return <RecentlyViewedTabContent items={[]} onNavigate={navigateToDetails} />;
     }
   };
 
@@ -334,11 +329,11 @@ export const DiscoverLocal: React.FC = () => {
                     <button key={biz.id} onClick={() => { setSearchQuery(''); setShowSearchSuggestions(false); navigateToDetails(biz.id); }}
                       className="w-full flex items-center gap-4 p-4 hover:bg-[#fff1ec] transition-colors border-b border-[#e2bfb0]/10 last:border-0">
                       <div className="w-12 h-12 rounded-xl bg-[#f8ddd2] overflow-hidden shrink-0">
-                        <img className="w-full h-full object-cover" alt={biz.name} src={biz.heroImage} />
+                        <img className="w-full h-full object-cover" alt={biz.businessName} src={biz.heroImage} />
                       </div>
                       <div className="text-left flex-1 min-w-0">
-                        <p className="text-sm font-bold text-[#261812]">{biz.name}</p>
-                        <p className="text-[10px] text-[#5a4136]">{biz.category} · {biz.distance}</p>
+                        <p className="text-sm font-bold text-[#261812]">{biz.businessName}</p>
+                        <p className="text-[10px] text-[#5a4136]">{biz.category?.name || biz.sector?.name || ''} · {biz.distance || ''}</p>
                       </div>
                       <div className="flex items-center gap-1 text-amber-500 text-xs font-bold shrink-0">
                         <Star className="w-3 h-3 fill-amber-500" />
@@ -564,8 +559,8 @@ export const DiscoverLocal: React.FC = () => {
                 <h3 className="font-extrabold text-[#261812]">Select Offer</h3>
                 <p className="text-xs text-[#5a4136]">Review the offer details before redeeming</p>
                 <div className="bg-[#fff1ec] rounded-2xl p-4 text-left">
-                  <p className="text-sm font-bold text-[#261812]">{BUSINESS_MOCK_DATA[showRedeemFlow]?.flashSaleTitle}</p>
-                  <p className="text-[10px] text-[#5a4136] mt-1">{BUSINESS_MOCK_DATA[showRedeemFlow]?.flashSaleDesc}</p>
+                  <p className="text-sm font-bold text-[#261812]">{businessesMap[showRedeemFlow]?.flashSaleTitle || 'Special Offer'}</p>
+                  <p className="text-[10px] text-[#5a4136] mt-1">{businessesMap[showRedeemFlow]?.flashSaleDesc || 'Limited time offer'}</p>
                 </div>
                 <button onClick={() => setRedeemStep(1)} className="w-full py-3 bg-[#a14000] text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md">Continue</button>
                 <button onClick={() => { setShowRedeemFlow(null); setRedeemStep(0); }} className="w-full py-2 text-[10px] font-bold text-[#5a4136]">Cancel</button>
@@ -769,17 +764,17 @@ export const DiscoverLocal: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {Object.entries(favorites).filter(([, v]) => v).map(([id]) => {
-                    const biz = BUSINESS_MOCK_DATA[id];
+                    const biz = businessesMap[id];
                     if (!biz) return null;
                     return (
                       <div key={id} onClick={() => { setShowSavedBusinesses(false); navigateToDetails(id); }}
                         className="flex items-center gap-4 p-3 bg-white rounded-2xl border border-[#e2bfb0]/30 cursor-pointer hover:bg-[#fff1ec] transition-all active:scale-[0.98]">
                         <div className="w-14 h-14 rounded-xl bg-[#f8ddd2] overflow-hidden shrink-0">
-                          <img className="w-full h-full object-cover" alt={biz.name} src={biz.heroImage} />
+                          <img className="w-full h-full object-cover" alt={biz.name || biz.businessName} src={biz.heroImage || biz.bannerUrl} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-[#261812]">{biz.name}</p>
-                          <p className="text-[10px] text-[#5a4136]">{biz.category} · {biz.distance}</p>
+                          <p className="text-sm font-bold text-[#261812]">{biz.name || biz.businessName}</p>
+                          <p className="text-[10px] text-[#5a4136]">{biz.category || biz.categoryName} · {biz.distance || ''}</p>
                         </div>
                         <Heart className="w-4 h-4 fill-red-500 text-red-500 shrink-0" />
                       </div>
@@ -815,17 +810,17 @@ export const DiscoverLocal: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {Object.entries(followedBusinesses).filter(([, v]) => v).map(([id]) => {
-                    const biz = BUSINESS_MOCK_DATA[id];
+                    const biz = businessesMap[id];
                     if (!biz) return null;
                     return (
                       <div key={id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-[#e2bfb0]/30">
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => { setShowFollowedBusinesses(false); navigateToDetails(id); }}>
                           <div className="w-14 h-14 rounded-xl bg-[#f8ddd2] overflow-hidden shrink-0">
-                            <img className="w-full h-full object-cover" alt={biz.name} src={biz.heroImage} />
+                            <img className="w-full h-full object-cover" alt={biz.name || biz.businessName} src={biz.heroImage || biz.bannerUrl} />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-[#261812]">{biz.name}</p>
-                            <p className="text-[10px] text-[#5a4136]">{biz.category} · {biz.distance}</p>
+                            <p className="text-sm font-bold text-[#261812]">{biz.name || biz.businessName}</p>
+                            <p className="text-[10px] text-[#5a4136]">{biz.category || biz.categoryName} · {biz.distance || ''}</p>
                             <span className="text-[8px] text-emerald-600 font-bold">Active now</span>
                           </div>
                         </div>
@@ -849,9 +844,9 @@ export const DiscoverLocal: React.FC = () => {
 /* ===== TAB CONTENT COMPONENTS ===== */
 
 function NearbyTabContent({ businesses, favorites, hoveredCard, onHover, onNavigate, onToggleFav, points, promotions, events, rewards, onRedeem, onJoinEvent }: {
-  businesses: BusinessDetails[]; favorites: Record<string, boolean>; hoveredCard: string | null; onHover: (id: string | null) => void;
+  businesses: any[]; favorites: Record<string, boolean>; hoveredCard: string | null; onHover: (id: string | null) => void;
   onNavigate: (id: string) => void; onToggleFav: (id: string, e?: React.MouseEvent) => void; points: number;
-  promotions: typeof MOCK_PROMOTIONS; events: typeof MOCK_EVENTS_FEED; rewards: typeof MOCK_REWARDS_NEARBY;
+  promotions: DiscoverPromotion[]; events: DiscoverEvent[]; rewards: any[];
   onRedeem: (id: string, title: string) => void; onJoinEvent: (id: string, title: string) => void;
 }) {
   return (
@@ -873,11 +868,11 @@ function NearbyTabContent({ businesses, favorites, hoveredCard, onHover, onNavig
           {promotions.map(p => (
             <button key={p.id} onClick={() => onRedeem(p.id, p.title)}
               className="flex-shrink-0 w-48 bg-white rounded-2xl p-4 border border-[#e2bfb0]/30 shadow-sm text-left hover:shadow-md transition-all active:scale-95">
-              <span className="text-[9px] font-bold text-[#a14000] bg-[#ff9969]/20 px-2 py-0.5 rounded-full">{p.value}</span>
+              <span className="text-[9px] font-bold text-[#a14000] bg-[#ff9969]/20 px-2 py-0.5 rounded-full">{p.value || 'OFFER'}</span>
               <p className="text-sm font-bold text-[#261812] mt-2">{p.title}</p>
-              <p className="text-[10px] text-[#5a4136] mt-0.5">{p.business}</p>
+              <p className="text-[10px] text-[#5a4136] mt-0.5">{p.business?.businessName || 'Business'}</p>
               <p className="text-[9px] text-red-500 font-semibold mt-2 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {p.expiry}
+                <Clock className="w-3 h-3" /> {p.expiryText || 'Limited time'}
               </p>
             </button>
           ))}
@@ -949,7 +944,7 @@ function NearbyTabContent({ businesses, favorites, hoveredCard, onHover, onNavig
                   </div>
                   <div>
                     <p className="text-xs font-bold text-[#261812]">{e.title}</p>
-                    <p className="text-[9px] text-[#5a4136]">{e.date} · {e.location}</p>
+                    <p className="text-[9px] text-[#5a4136]">{e.startDate ? new Date(e.startDate).toLocaleDateString() : ''} · {e.location}</p>
                     <p className="text-[9px] text-[#8e7164]">{e.attendees} attending</p>
                   </div>
                 </div>
@@ -979,7 +974,7 @@ function NearbyTabContent({ businesses, favorites, hoveredCard, onHover, onNavig
   );
 }
 
-function TrendingTabContent({ items, onNavigate }: { items: typeof MOCK_TRENDING; onNavigate: (id: string) => void }) {
+function TrendingTabContent({ items, onNavigate }: { items: DiscoverBusiness[]; onNavigate: (id: string) => void }) {
   return (
     <div className="space-y-4">
       <div className="bg-gradient-to-r from-[#a14000] to-[#ff6900] text-white p-5 rounded-2xl">
@@ -995,19 +990,19 @@ function TrendingTabContent({ items, onNavigate }: { items: typeof MOCK_TRENDING
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((item, i) => (
+          {items.map((item) => (
             <div key={item.id} onClick={() => onNavigate(item.id)}
               className="bg-white rounded-2xl p-4 border border-[#e2bfb0]/30 flex items-center gap-4 hover:bg-[#fff1ec] transition-all cursor-pointer active:scale-[0.98]">
               <div className="w-12 h-12 rounded-xl bg-[#f8ddd2] overflow-hidden shrink-0">
-                <img className="w-full h-full object-cover" alt={item.name} src={item.image} />
+                <img className="w-full h-full object-cover" alt={item.businessName} src={item.heroImage || ''} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-[#261812]">{item.name}</p>
-                  <span className="text-[9px] font-bold text-[#a14000] bg-[#ff9969]/20 px-2 py-0.5 rounded-full">{item.tag}</span>
+                  <p className="text-sm font-bold text-[#261812]">{item.businessName}</p>
+                  <span className="text-[9px] font-bold text-[#a14000] bg-[#ff9969]/20 px-2 py-0.5 rounded-full">{item.category?.name || 'Trending'}</span>
                 </div>
-                <p className="text-[10px] text-[#5a4136] mt-0.5">{item.desc}</p>
-                <p className="text-[9px] text-[#8e7164] mt-1">{item.category} · {item.distance}</p>
+                <p className="text-[10px] text-[#5a4136] mt-0.5">{item.shortDescription || ''}</p>
+                <p className="text-[9px] text-[#8e7164] mt-1">{item.sector?.name || item.category?.name || ''} · {item.distance || ''}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-[#8e7164] shrink-0" />
             </div>
@@ -1019,7 +1014,7 @@ function TrendingTabContent({ items, onNavigate }: { items: typeof MOCK_TRENDING
 }
 
 function BoroughTabContent({ campaigns, borough, businesses, onNavigate, showToast }: {
-  campaigns: typeof MOCK_BOROUGH_CAMPAIGNS; borough: string; businesses: BusinessDetails[];
+  campaigns: any[]; borough: string; businesses: any[];
   onNavigate: (id: string) => void; showToast: (msg: string, type: ToastType) => void;
 }) {
   return (
@@ -1091,7 +1086,7 @@ function BoroughTabContent({ campaigns, borough, businesses, onNavigate, showToa
   );
 }
 
-function HighStreetTabContent({ streets, showToast }: { streets: typeof MOCK_HIGH_STREET; showToast: (msg: string, type: ToastType) => void }) {
+function HighStreetTabContent({ streets, showToast }: { streets: any[]; showToast: (msg: string, type: ToastType) => void }) {
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-[#a14000] to-[#ff6900] text-white p-5 rounded-2xl">
@@ -1171,7 +1166,7 @@ function CategoriesTabContent({ categories, onNavigate }: { categories: typeof C
   );
 }
 
-function RecommendedTabContent({ businesses, onNavigate, points }: { businesses: BusinessDetails[]; onNavigate: (id: string) => void; points: number }) {
+function RecommendedTabContent({ businesses, onNavigate, points }: { businesses: any[]; onNavigate: (id: string) => void; points: number }) {
   const recommendations = businesses.slice(0, 3);
   return (
     <div className="space-y-6">
@@ -1188,20 +1183,20 @@ function RecommendedTabContent({ businesses, onNavigate, points }: { businesses:
         </div>
       ) : (
         <div className="space-y-3">
-          {recommendations.map((biz, i) => (
+          {recommendations.map((biz: any, i: number) => (
             <div key={biz.id} onClick={() => onNavigate(biz.id)}
               className="bg-white rounded-2xl overflow-hidden border border-[#e2bfb0]/30 shadow-sm cursor-pointer hover:shadow-md transition-all group">
               <div className="flex gap-4 p-4">
                 <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-[#f8ddd2]">
-                  <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={biz.name} src={biz.heroImage} />
+                  <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={biz.name || biz.businessName} src={biz.heroImage || biz.bannerUrl} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-[8px] font-bold text-[#a14000] bg-[#ff9969]/20 px-2 py-0.5 rounded-full uppercase">Match {90 - i * 10}%</span>
                     {i === 0 && <span className="text-[8px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Best Pick</span>}
                   </div>
-                  <p className="text-sm font-bold text-[#261812]">{biz.name}</p>
-                  <p className="text-[10px] text-[#5a4136]">{biz.category} · {biz.distance}</p>
+                  <p className="text-sm font-bold text-[#261812]">{biz.name || biz.businessName}</p>
+                  <p className="text-[10px] text-[#5a4136]">{biz.category || biz.categoryName} · {biz.distance || ''}</p>
                   <p className="text-[9px] text-[#8e7164] mt-1">Based on your {i === 0 ? 'coffee preferences' : i === 1 ? 'fitness activity' : 'browsing history'}</p>
                 </div>
               </div>
@@ -1232,7 +1227,7 @@ function RecommendedTabContent({ businesses, onNavigate, points }: { businesses:
   );
 }
 
-function RecentlyViewedTabContent({ items, onNavigate }: { items: typeof RECENTLY_VIEWED; onNavigate: (id: string) => void }) {
+function RecentlyViewedTabContent({ items, onNavigate }: { items: any[]; onNavigate: (id: string) => void }) {
   return (
     <div className="space-y-4">
       <div className="bg-[#fff1ec] p-5 rounded-2xl border border-[#e2bfb0]/30">

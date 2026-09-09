@@ -2,10 +2,11 @@
 import React, { useState, useEffect, MouseEvent, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { mockCampaigns, Campaign } from '@/lib/hotspot-data';
-import { promotionalItems, PromotionalItem, Hotspot } from '@/lib/listing-data';
+import { PromotionalItem, Hotspot } from '@/lib/listing-data';
 import { useGetServiceById, useUpdateService } from '@/service/services/hook';
 import { UpdateServiceDto } from '@/service/services/types';
 import { useGetBusinessData, useEditListing } from '@/service/listings/hook';
+import { useMarketplaceProducts } from '@/hooks/useMarketplace';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X, Eye, Save } from 'lucide-react';
@@ -31,7 +32,18 @@ const HotspotEditorContent = () => {
 
   const { data: serviceData, isLoading: isLoadingService } = useGetServiceById(itemId, itemType === 'service');
   const { data: listingData, isLoading: isLoadingListing } = useGetBusinessData({ id: itemId, enabled: itemType === 'banner' });
+  const { data: productsData } = useMarketplaceProducts({ limit: 50 });
 
+  const promotionalItems: (PromotionalItem & { hotspots: Hotspot[] })[] = (productsData?.items || []).map(p => ({
+    id: p.id,
+    title: p.title,
+    image: p.media?.[0] || 'https://placehold.co/200x200/png',
+    category: p.category || 'General',
+    price: p.price,
+    discountedPrice: p.salePrice,
+    items_left: p.stock ?? 100,
+    hotspots: [],
+  }));
 
   useEffect(() => {
     let currentItem: EditableItem | undefined;

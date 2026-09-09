@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Heart, Share2, QrCode, UserPlus, Star, Coffee, Calendar, Map,
   ShoppingBag, Dumbbell, Lock, Zap, CheckCircle, Sparkles, X, Award, Info,
   Store, Clock, Phone, Mail, MapPin, MessageCircle, BookOpen,
   ChevronRight, Check, Users, Gift, Tag,
 } from 'lucide-react';
-import { BUSINESS_MOCK_DATA } from '@/lib/mock-data/business-mock-data';
+import api from '@/service/api';
+import { useDiscoverEvents, useDiscoverRewards } from '@/hooks/useDiscover';
 
 type ProfileTab = 'storefront' | 'promotions' | 'events' | 'rewards' | 'reviews' | 'about';
 
@@ -47,10 +48,46 @@ export const DiscoverBusinessProfile: React.FC<DiscoverBusinessProfileProps> = (
   onBack, onToggleFav, onToggleFollow, onRedeem, onJoinEvent, onCollectReward, showToast,
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('storefront');
-  const biz = BUSINESS_MOCK_DATA[businessId];
+  const [biz, setBiz] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const { data: eventsData } = useDiscoverEvents({ tab: 'upcoming', limit: 5 });
+  const { data: rewardsData } = useDiscoverRewards({ tab: 'available', limit: 5 });
+
+  const events = eventsData?.items || [];
+  const rewards = rewardsData?.items || [];
+
+  useEffect(() => {
+    const fetchBusiness = async () => {
+      try {
+        const response = await api.get(`/listings/${businessId}`);
+        setBiz(response.data);
+      } catch (err) {
+        console.error('Failed to fetch business:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBusiness();
+  }, [businessId]);
+
   const isFav = favorites[businessId];
   const isFollowing = followedBusinesses[businessId];
   const isRedeemed = redeemedOffers[businessId];
+
+  if (loading) {
+    return (
+      <div className="animate-in fade-in duration-300 space-y-6 pb-20">
+        <div className="bg-white rounded-2xl p-8 text-center">
+          <div className="animate-pulse space-y-4">
+            <div className="h-48 bg-gray-200 rounded-2xl"></div>
+            <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!biz) return null;
 
@@ -64,7 +101,7 @@ export const DiscoverBusinessProfile: React.FC<DiscoverBusinessProfileProps> = (
           </button>
           <div>
             <p className="text-[10px] text-[#5a4136] uppercase tracking-wider font-semibold">Business Profile</p>
-            <h1 className="text-lg font-bold text-[#261812]">{biz.name}</h1>
+            <h1 className="text-lg font-bold text-[#261812]">{biz.businessName || biz.name}</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -80,17 +117,17 @@ export const DiscoverBusinessProfile: React.FC<DiscoverBusinessProfileProps> = (
 
       {/* Hero */}
       <section className="relative h-48 w-full rounded-2xl overflow-hidden shadow-sm group">
-        <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={biz.name} src={biz.heroImage} />
+        <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={biz.businessName || biz.name} src={biz.heroImage || biz.bannerUrl || 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&q=80&w=600'} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
         <div className="absolute bottom-0 left-0 p-5 text-white">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="bg-amber-500 text-white px-3 py-0.5 rounded-full text-[9px] font-bold uppercase">{biz.statusTag}</span>
+            <span className="bg-amber-500 text-white px-3 py-0.5 rounded-full text-[9px] font-bold uppercase">{biz.statusTag || 'OPEN'}</span>
             <div className="flex items-center px-2 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm">
               <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 mr-1" />
-              <span className="text-[10px] font-bold">{biz.rating}</span>
+              <span className="text-[10px] font-bold">{biz.rating || biz.averageRating || '4.8'}</span>
             </div>
           </div>
-          <p className="text-white/80 text-xs font-medium">{biz.category} · {biz.distance} · Manhattan Central</p>
+          <p className="text-white/80 text-xs font-medium">{biz.category || biz.sector?.name || 'Business'} · {biz.distance || ''} · {biz.borough || 'Manhattan'}</p>
         </div>
       </section>
 
@@ -212,7 +249,7 @@ export const DiscoverBusinessProfile: React.FC<DiscoverBusinessProfileProps> = (
 
 /* ===== TAB CONTENT COMPONENTS ===== */
 
-function StorefrontTab({ biz }: { biz: typeof BUSINESS_MOCK_DATA[string] }) {
+function StorefrontTab({ biz }: { biz: any }) {
   return (
     <div className="space-y-5">
       {/* Hero & Featured Offers */}
@@ -278,7 +315,7 @@ function StorefrontTab({ biz }: { biz: typeof BUSINESS_MOCK_DATA[string] }) {
       {biz.events.length > 0 && (
         <div>
           <h4 className="text-sm font-bold text-[#261812] mb-3">Event Highlights</h4>
-          {biz.events.map((ev, i) => (
+          {biz.events.map((ev: any, i: number) => (
             <div key={i} className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-[#e2bfb0]/30">
               <div className="w-14 h-14 rounded-xl bg-[#ff9969]/20 flex flex-col items-center justify-center text-[#a14000] shrink-0">
                 <span className="text-[8px] font-black uppercase">{ev.date}</span>
@@ -296,7 +333,7 @@ function StorefrontTab({ biz }: { biz: typeof BUSINESS_MOCK_DATA[string] }) {
   );
 }
 
-function PromotionsTab({ biz, isRedeemed, onRedeem }: { biz: typeof BUSINESS_MOCK_DATA[string]; isRedeemed: boolean; onRedeem: () => void }) {
+function PromotionsTab({ biz, isRedeemed, onRedeem }: { biz: any; isRedeemed: boolean; onRedeem: () => void }) {
   return (
     <div className="space-y-4">
       <div className="bg-[#fff1ec] rounded-2xl p-5 relative overflow-hidden">
@@ -326,7 +363,7 @@ function PromotionsTab({ biz, isRedeemed, onRedeem }: { biz: typeof BUSINESS_MOC
 }
 
 function EventsTab({ biz, businessId, registeredEvents, onJoinEvent }: {
-  biz: typeof BUSINESS_MOCK_DATA[string]; businessId: string;
+  biz: any; businessId: string;
   registeredEvents: Record<string, boolean>; onJoinEvent: (eventId: string, title: string) => void;
 }) {
   return (
@@ -338,7 +375,7 @@ function EventsTab({ biz, businessId, registeredEvents, onJoinEvent }: {
           <p className="text-[10px] text-[#8e7164] mt-1">Check back for new events</p>
         </div>
       ) : (
-        biz.events.map((ev, i) => {
+        biz.events.map((ev: any, i: number) => {
           const regKey = `${businessId}-event-${i}`;
           const isRegistered = registeredEvents[regKey];
           return (
@@ -373,7 +410,7 @@ function EventsTab({ biz, businessId, registeredEvents, onJoinEvent }: {
 }
 
 function RewardsTab({ biz, businessId, points, onCollectReward, showToast }: {
-  biz: typeof BUSINESS_MOCK_DATA[string]; businessId: string; points: number;
+  biz: any; businessId: string; points: number;
   onCollectReward: (businessId: string, title: string, cost: number) => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }) {
@@ -392,7 +429,7 @@ function RewardsTab({ biz, businessId, points, onCollectReward, showToast }: {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {biz.rewards.map((reward, i) => (
+          {biz.rewards.map((reward: any, i: number) => (
             <div key={i} className="relative rounded-2xl overflow-hidden shadow-sm aspect-[4/3] group border border-[#e2bfb0]/30">
               <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={reward.title} src={reward.image} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4 flex flex-col justify-end">
@@ -466,7 +503,7 @@ function ReviewsTab() {
   );
 }
 
-function AboutTab({ biz }: { biz: typeof BUSINESS_MOCK_DATA[string] }) {
+function AboutTab({ biz }: { biz: any }) {
   return (
     <div className="space-y-5">
       <div>

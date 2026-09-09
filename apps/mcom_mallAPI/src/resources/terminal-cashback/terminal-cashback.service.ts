@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,6 +24,8 @@ import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 
 @Injectable()
 export class TerminalCashbackService {
+  private readonly logger = new Logger(TerminalCashbackService.name);
+
   constructor(
     @InjectRepository(TerminalCashbackClaim)
     private readonly claimRepository: Repository<TerminalCashbackClaim>,
@@ -123,19 +126,18 @@ export class TerminalCashbackService {
       });
 
       // Sync with Mcom Central
-      await this.centralIntegrationService
-        .processCashback(
+      try {
+        await this.centralIntegrationService.processCashback(
           claim.user.email,
           Number(claim.amount),
           CashbackEvent.TERMINAL_CASHBACK_CLAIM,
           `Terminal Cashback: ${claim.ownerId}`,
-        )
-        .catch((err) =>
-          console.error(
-            'Failed to sync terminal cashback with Central:',
-            err.message,
-          ),
         );
+      } catch (error) {
+        this.logger.error(
+          `Failed to sync terminal cashback with Central: ${error.message}`,
+        );
+      }
     }
 
     return savedClaim;

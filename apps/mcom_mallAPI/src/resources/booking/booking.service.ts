@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
@@ -48,6 +49,8 @@ import {
 
 @Injectable()
 export class BookingService {
+  private readonly logger = new Logger(BookingService.name);
+
   constructor(
     @InjectRepository(BlockedSlot)
     private readonly blockedSlotRepository: Repository<BlockedSlot>,
@@ -1162,12 +1165,18 @@ export class BookingService {
 
       // Process Cashback
       if (booking.user.email) {
-        await this.centralIntegrationService.processCashback(
-          booking.user.email,
-          Number(amount),
-          CashbackEvent.SERVICE_BOOKING_PAYMENT,
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            booking.user.email,
+            Number(amount),
+            CashbackEvent.SERVICE_BOOKING_PAYMENT,
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for booking ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return booking;

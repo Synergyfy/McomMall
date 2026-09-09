@@ -104,7 +104,7 @@ describe('ProductService - Variants', () => {
       description: 'Test Description',
       sku: 'VAR-PROD',
       category: 'Test Category',
-      bussinessId: 'test-business-id',
+      businessId: 'test-business-id',
       media: ['http://example.com/image.jpg'],
       attributes: [
         {
