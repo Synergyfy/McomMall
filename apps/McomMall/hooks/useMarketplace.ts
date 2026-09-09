@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import api from '@/service/api';
 
 export interface MarketplaceProduct {
@@ -129,11 +129,13 @@ export function useMarketplaceProducts(params?: {
   const [data, setData] = useState<PaginatedResponse<MarketplaceProduct> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/product/public', { params });
+      const response = await api.get('/product/public', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -141,7 +143,7 @@ export function useMarketplaceProducts(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
@@ -160,11 +162,13 @@ export function useMarketplaceServices(params?: {
   const [data, setData] = useState<PaginatedResponse<MarketplaceService> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/services/public', { params });
+      const response = await api.get('/services/public', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -172,7 +176,7 @@ export function useMarketplaceServices(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
@@ -189,11 +193,13 @@ export function useMarketplaceGiftCards(params?: {
   const [data, setData] = useState<PaginatedResponse<MarketplaceGiftCard> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/gift-cards/templates/public', { params });
+      const response = await api.get('/gift-cards/templates/public', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -201,7 +207,7 @@ export function useMarketplaceGiftCards(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
@@ -217,11 +223,13 @@ export function useMarketplaceVouchers(params?: {
   const [data, setData] = useState<PaginatedResponse<MarketplaceVoucher> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/vouchers/products/public', { params });
+      const response = await api.get('/vouchers/products/public', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -229,7 +237,7 @@ export function useMarketplaceVouchers(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
@@ -245,11 +253,13 @@ export function useMarketplaceCoupons(params?: {
   const [data, setData] = useState<PaginatedResponse<MarketplaceCoupon> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/coupons/list', { params });
+      const response = await api.get('/coupons/list', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -257,7 +267,7 @@ export function useMarketplaceCoupons(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
@@ -272,11 +282,13 @@ export function usePublicPromotions(params?: {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/promotions/active', { params });
+      const response = await api.get('/promotions/active', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -284,7 +296,7 @@ export function usePublicPromotions(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();

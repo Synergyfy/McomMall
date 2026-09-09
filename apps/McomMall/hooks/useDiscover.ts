@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import api from '@/service/api';
 
 export interface DiscoverBusiness {
@@ -118,11 +118,13 @@ export function useDiscoverBusinesses(params?: {
   const [data, setData] = useState<PaginatedResponse<DiscoverBusiness> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/discover/businesses', { params });
+      const response = await api.get('/discover/businesses', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -130,7 +132,7 @@ export function useDiscoverBusinesses(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
@@ -152,11 +154,13 @@ export function useDiscoverEvents(params?: {
   const [data, setData] = useState<PaginatedResponse<DiscoverEvent> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/discover/events', { params });
+      const response = await api.get('/discover/events', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -164,7 +168,7 @@ export function useDiscoverEvents(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
@@ -179,11 +183,13 @@ export function useDiscoverPromotions(params?: {
   const [data, setData] = useState<PaginatedResponse<DiscoverPromotion> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/discover/promotions', { params });
+      const response = await api.get('/discover/promotions', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -191,7 +197,7 @@ export function useDiscoverPromotions(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
@@ -208,11 +214,13 @@ export function useDiscoverRewards(params?: {
   const [data, setData] = useState<PaginatedResponse<DiscoverReward> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const fetch = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/discover/rewards', { params });
+      const response = await api.get('/discover/rewards', { params: paramsRef.current });
       setData(response.data);
       setError(null);
     } catch (err: any) {
@@ -220,7 +228,7 @@ export function useDiscoverRewards(params?: {
     } finally {
       setLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     fetch();
