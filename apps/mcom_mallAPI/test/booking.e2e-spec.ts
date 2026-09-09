@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { PaymentProviderService } from '../src/resources/payments/services/payment-provider.service';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { UsersService } from '../src/resources/users/users.service';
@@ -28,7 +29,48 @@ import {
  * 4. Escrow Handshake: Mocks the payment initiation and verifies the totalAmount storage.
  */
 
+
+const mockPaymentProviderService = {
+  createStripePaymentIntent: jest.fn().mockResolvedValue({
+    id: 'pi_test_123',
+    client_secret: 'pi_test_123_secret',
+    status: 'succeeded',
+    currency: 'gbp',
+    amount: 1000,
+  }),
+  createPaypalOrder: jest.fn().mockResolvedValue({
+    id: 'ORDER-123',
+    status: 'CREATED',
+    links: [
+      { href: 'https://paypal.com/checkout?token=ORDER-123', rel: 'approve' },
+    ],
+  }),
+  capturePaypalOrder: jest.fn().mockResolvedValue({
+    status: 'COMPLETED',
+    purchase_units: [
+      {
+        payments: {
+          captures: [
+            {
+              amount: { value: '10.00', currency_code: 'GBP' },
+            },
+          ],
+        },
+      },
+    ],
+  }),
+  verifyStripePaymentIntent: jest.fn().mockResolvedValue({
+    ok: true,
+    details: { status: 'succeeded' },
+  }),
+  captureAndVerifyPaypalOrder: jest.fn().mockResolvedValue({
+    ok: true,
+    details: { status: 'COMPLETED' },
+  }),
+};
+
 describe('Booking Lifecycle (e2e)', () => {
+
   let app: INestApplication;
   let customerToken: string;
   let serviceRepo: Repository<Service>;
@@ -39,8 +81,10 @@ describe('Booking Lifecycle (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(MailerService)
+            .overrideProvider(MailerService)
       .useValue({ sendMail: jest.fn().mockResolvedValue({}) })
+      .overrideProvider(PaymentProviderService)
+      .useValue(mockPaymentProviderService)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -161,9 +205,8 @@ describe('Booking Lifecycle (e2e)', () => {
   });
 
   it('should enforce maxBookings capacity (prevent overbooking)', async () => {
-    const startTime = new Date();
-    startTime.setFullYear(2030); // Future
-    const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours
+    const startTime = new Date(2030, 4, 2, 10, 0); // May 2, 2030, 10:00 AM (Thursday)
+const endTime = new Date(2030, 4, 2, 12, 0); // 12:00 PM
 
     const payload = {
       serviceId: testService.id,
@@ -197,11 +240,25 @@ describe('Booking Lifecycle (e2e)', () => {
         isActive: true,
         pricingModel: PricingModel.PER_HOUR,
         pricePerHour: 50,
+        availability: {
+          maxBookingsPerSlot: 1,
+          schedule: [
+            { day: 'MONDAY', enabled: true, startTime: '00:00', endTime: '23:59', maxBookings: 1 },
+            { day: 'TUESDAY', enabled: true, startTime: '00:00', endTime: '23:59', maxBookings: 1 },
+            { day: 'WEDNESDAY', enabled: true, startTime: '00:00', endTime: '23:59', maxBookings: 1 },
+            { day: 'THURSDAY', enabled: true, startTime: '00:00', endTime: '23:59', maxBookings: 1 },
+            { day: 'FRIDAY', enabled: true, startTime: '00:00', endTime: '23:59', maxBookings: 1 },
+            { day: 'SATURDAY', enabled: true, startTime: '00:00', endTime: '23:59', maxBookings: 1 },
+            { day: 'SUNDAY', enabled: true, startTime: '00:00', endTime: '23:59', maxBookings: 1 },
+          ],
+        },
       }),
     );
 
-    const start = new Date(2030, 5, 1, 10, 0); // 10:00
-    const end = new Date(2030, 5, 1, 14, 0); // 14:00 (4 hours)
+    const start = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    while(start.getDay() === 0 || start.getDay() === 6) { start.setDate(start.getDate() + 1); }
+    start.setHours(14, 0, 0, 0);
+    const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
 
     const booking = await request(app.getHttpServer())
       .post('/bookings')
