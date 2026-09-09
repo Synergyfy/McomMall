@@ -411,9 +411,9 @@ function BusinessOnboardingInner() {
   const { mutateAsync: checkEmail } = useCheckEmail();
   const { mutateAsync: addListing } = useAddListing();
 
-  const { data: sectors } = useGetSectors();
-  const { data: categories } = useGetCategoriesBySector(formData.sectorId);
-  const { data: subcategories } = useGetSubCategoriesByCategory(formData.categoryId);
+  const { data: sectors, isLoading: isLoadingSectors, isError: isSectorsError, error: sectorsError, refetch: refetchSectors } = useGetSectors();
+  const { data: categories, isLoading: isLoadingCategories, isError: isCategoriesError, error: categoriesError, refetch: refetchCategories } = useGetCategoriesBySector(formData.sectorId);
+  const { data: subcategories, isLoading: isLoadingSubcategories, isError: isSubcategoriesError, error: subcategoriesError, refetch: refetchSubcategories } = useGetSubCategoriesByCategory(formData.categoryId);
 
   // --- Google Onboarding State ---
   const [isGoogleOnboarding, setIsGoogleOnboarding] = useState(false);
@@ -4998,46 +4998,119 @@ function BusinessOnboardingInner() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sector</label>
-                      <select
-                        value={formData.sectorId}
-                        onChange={(e) => setFormData({ ...formData, sectorId: e.target.value, categoryId: '', subCategoryId: '' })}
-                        className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-orange-300"
-                      >
-                        <option value="">Select a Sector</option>
-                        {sectors?.map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
+                      {isSectorsError ? (
+                        <div className="flex items-center gap-2 p-3 rounded-xl border border-red-200 bg-red-50">
+                          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <span className="text-sm text-red-600 flex-1">
+                            {(sectorsError as Error)?.message || 'Failed to load sectors'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => refetchSectors()}
+                            className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-800 cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Retry
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <select
+                            value={formData.sectorId}
+                            onChange={(e) => setFormData({ ...formData, sectorId: e.target.value, categoryId: '', subCategoryId: '' })}
+                            disabled={isLoadingSectors}
+                            className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                          >
+                            <option value="">{isLoadingSectors ? 'Loading sectors...' : 'Select a Sector'}</option>
+                            {sectors?.map(s => (
+                              <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                          </select>
+                          {isLoadingSectors && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                              <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Primary Category</label>
-                      <select
-                        value={formData.categoryId}
-                        onChange={(e) => setFormData({ ...formData, categoryId: e.target.value, subCategoryId: '' })}
-                        disabled={!formData.sectorId}
-                        className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="">Select a Category</option>
-                        {categories?.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
+                      {isCategoriesError ? (
+                        <div className="flex items-center gap-2 p-3 rounded-xl border border-red-200 bg-red-50">
+                          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <span className="text-sm text-red-600 flex-1">
+                            {(categoriesError as Error)?.message || 'Failed to load categories'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => refetchCategories()}
+                            className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-800 cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Retry
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <select
+                            value={formData.categoryId}
+                            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value, subCategoryId: '' })}
+                            disabled={!formData.sectorId || isLoadingCategories}
+                            className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                          >
+                            <option value="">{!formData.sectorId ? 'Select a sector first' : isLoadingCategories ? 'Loading categories...' : 'Select a Category'}</option>
+                            {categories?.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                          {isLoadingCategories && formData.sectorId && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                              <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Secondary Category (Subcategory)</label>
-                      <select
-                        value={formData.subCategoryId}
-                        onChange={(e) => setFormData({ ...formData, subCategoryId: e.target.value })}
-                        disabled={!formData.categoryId}
-                        className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="">Select a Subcategory</option>
-                        {subcategories?.map(sc => (
-                          <option key={sc.id} value={sc.id}>{sc.name}</option>
-                        ))}
-                      </select>
+                      {isSubcategoriesError ? (
+                        <div className="flex items-center gap-2 p-3 rounded-xl border border-red-200 bg-red-50">
+                          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <span className="text-sm text-red-600 flex-1">
+                            {(subcategoriesError as Error)?.message || 'Failed to load subcategories'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => refetchSubcategories()}
+                            className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-800 cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Retry
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <select
+                            value={formData.subCategoryId}
+                            onChange={(e) => setFormData({ ...formData, subCategoryId: e.target.value })}
+                            disabled={!formData.categoryId || isLoadingSubcategories}
+                            className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                          >
+                            <option value="">{!formData.categoryId ? 'Select a category first' : isLoadingSubcategories ? 'Loading subcategories...' : 'Select a Subcategory'}</option>
+                            {subcategories?.map(sc => (
+                              <option key={sc.id} value={sc.id}>{sc.name}</option>
+                            ))}
+                          </select>
+                          {isLoadingSubcategories && formData.categoryId && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                              <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

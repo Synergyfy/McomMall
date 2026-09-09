@@ -189,7 +189,7 @@ export default function Header() {
                       Dashboard
                     </Link>
                     <Link
-                      href="/wishlist"
+                      href="/dashboard/wishlist"
                       onClick={() => setMobileMenuOpen(false)}
                       className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
                     >
@@ -255,7 +255,7 @@ export default function Header() {
                 </Badge>
               </Button>
             </Link>
-            <Link href="/wishlist">
+            <Link href="/dashboard/wishlist">
               <Button
                 variant="ghost"
                 size="sm"
