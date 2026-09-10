@@ -692,13 +692,16 @@ export const PromotionsView: React.FC = () => {
     showToast(`Found: ${promo.title} at ${promo.businessName}`, 'success');
   }, [showToast]);
 
-  const selectedPromo = PROMOTIONS_MOCK_DATA[selectedPromoId] ?? allPromotions[0];
-  const isSelectedSaved = !!savedIds[selectedPromo.id];
-  const isSelectedRedeemed = redeemedIds.includes(selectedPromo.id);
-  const isSelectedJoined = joinedCampaignIds.includes(selectedPromo.id);
-  const isSelectedUnlocked = unlockedPromoIds.includes(selectedPromo.id);
-  const isCampaignPromo = selectedPromo.campaignName !== undefined;
-  const hasUnlockCondition = selectedPromo.unlockCondition !== undefined;
+  const selectedPromo = PROMOTIONS_MOCK_DATA[selectedPromoId]
+    ?? allPromotions[0]
+    ?? { id: 'flash-1', title: 'Promotion', businessName: '', benefitValue: '', description: '', longDescription: '', locationTag: '', borough: '', distance: '', expiryText: '', expiresAt: undefined, promotionType: 'daily', image: '', badgeIcon: 'local_cafe', isUrgent: false, isHot: false, termsAndConditions: '' };
+
+  const isSelectedSaved = selectedPromo ? !!savedIds[selectedPromo.id] : false;
+  const isSelectedRedeemed = selectedPromo ? redeemedIds.includes(selectedPromo.id) : false;
+  const isSelectedJoined = selectedPromo ? joinedCampaignIds.includes(selectedPromo.id) : false;
+  const isSelectedUnlocked = selectedPromo ? unlockedPromoIds.includes(selectedPromo.id) : false;
+  const isCampaignPromo = selectedPromo ? selectedPromo.campaignName !== undefined : false;
+  const hasUnlockCondition = selectedPromo ? selectedPromo.unlockCondition !== undefined : false;
   const savedCount = Object.keys(savedIds).filter(id => savedIds[id]).length;
   const filteredPromotions = getFilteredPromotions();
 

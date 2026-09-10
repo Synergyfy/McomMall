@@ -259,12 +259,16 @@ export const RewardsView: React.FC = () => {
 
     const fetchMembershipData = async () => {
       try {
+        // /membership/my requires OWNER role - skip for customers
         const membershipRes = await api.get('/membership/my');
         if (membershipRes.data && Array.isArray(membershipRes.data)) {
           setLoyaltyMemberships(membershipRes.data);
         }
       } catch (err) {
-        console.error('Failed to fetch memberships:', err);
+        // Expected 403 for customers - endpoint requires OWNER role
+        if ((err as any).response?.status !== 403) {
+          console.error('Failed to fetch memberships:', err);
+        }
       }
     };
 
@@ -348,10 +352,11 @@ export const RewardsView: React.FC = () => {
   }, [activeTab, claimedIds, redeemedIds, getExpiringSorted]);
 
   const selectedReward = REWARDS_MOCK_DATA[selectedRewardId]
-    ?? REWARDS_MOCK_DATA['coffee-duo'];
+    ?? REWARDS_MOCK_DATA['coffee-duo']
+    ?? { id: 'coffee-duo', title: 'Reward', description: '', cost: 0, image: '', type: 'loyalty', businessName: '', expiryText: '', category: '', tier: '', brand: '' };
 
-  const isSelectedClaimed = claimedIds.includes(selectedReward.id);
-  const isSelectedRedeemed = redeemedIds.includes(selectedReward.id);
+  const isSelectedClaimed = selectedReward ? claimedIds.includes(selectedReward.id) : false;
+  const isSelectedRedeemed = selectedReward ? redeemedIds.includes(selectedReward.id) : false;
 
   const [codeInput, setCodeInput] = useState('');
   const [codeResult, setCodeResult] = useState<{ success: boolean; message: string } | null>(null);
