@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { PaymentsService } from '../services/payments.service';
 import { PaymentProviderService } from '../services/payment-provider.service';
 import { RecordPaymentDto } from '../dto/record-payment.dto';
@@ -6,6 +6,7 @@ import { PauseResumeTrialDto } from '../dto/pause-resume-trial.dto';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreatePaypalOrderDto } from '../dto/create-paypal-order.dto';
 import { CapturePaypalOrderDto } from '../dto/capture-paypal-order.dto';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 
 @Controller('payments')
 export class PaymentsController {
@@ -36,18 +37,21 @@ export class PaymentsController {
   }
 
   @Post('record')
+  @UseGuards(JwtAuthGuard)
   recordPayment(@Body() recordPaymentDto: RecordPaymentDto, @Req() req) {
     const userId = req.user.id;
     return this.paymentsService.recordPayment(recordPaymentDto, userId);
   }
 
   @Get('/status')
+  @UseGuards(JwtAuthGuard)
   getSubscriptionStatus(@Req() req) {
     const userId = req.user.id;
     return this.paymentsService.getSubscriptionStatus(userId);
   }
 
   @Get('/history')
+  @UseGuards(JwtAuthGuard)
   getPaymentHistory(@Req() req) {
     const userId = req.user.id;
     return this.paymentsService.getPaymentHistory(userId);

@@ -183,7 +183,7 @@ export const DiscoverBusinessProfile: React.FC<DiscoverBusinessProfileProps> = (
             <Mail className="w-4 h-4 text-[#a14000]" />
             <div>
               <p className="text-[9px] text-[#5a4136] font-semibold">Email</p>
-              <p className="text-xs font-bold text-[#261812] truncate">hello@{biz.name.toLowerCase().replace(/\s+/g, '')}.com</p>
+              <p className="text-xs font-bold text-[#261812] truncate">hello@{(biz.name ?? 'business').toLowerCase().replace(/\s+/g, '')}.com</p>
             </div>
           </div>
         </div>
@@ -312,7 +312,7 @@ function StorefrontTab({ biz }: { biz: any }) {
       </div>
 
       {/* Event Highlights */}
-      {biz.events.length > 0 && (
+      {(biz.events?.length ?? 0) > 0 && (
         <div>
           <h4 className="text-sm font-bold text-[#261812] mb-3">Event Highlights</h4>
           {biz.events.map((ev: any, i: number) => (
@@ -368,14 +368,14 @@ function EventsTab({ biz, businessId, registeredEvents, onJoinEvent }: {
 }) {
   return (
     <div className="space-y-4">
-      {biz.events.length === 0 ? (
+      {(biz.events?.length ?? 0) === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center border border-[#e2bfb0]/30">
           <Calendar className="w-8 h-8 text-[#8e7164] mx-auto mb-2" />
           <p className="text-xs font-bold text-[#5a4136]">No Upcoming Events</p>
           <p className="text-[10px] text-[#8e7164] mt-1">Check back for new events</p>
         </div>
       ) : (
-        biz.events.map((ev: any, i: number) => {
+        (biz.events ?? []).map((ev: any, i: number) => {
           const regKey = `${businessId}-event-${i}`;
           const isRegistered = registeredEvents[regKey];
           return (
@@ -421,7 +421,7 @@ function RewardsTab({ biz, businessId, points, onCollectReward, showToast }: {
         <h4 className="text-base font-extrabold">Tier Rewards</h4>
         <p className="text-xs text-amber-100 mt-1">Redeem your points for exclusive rewards</p>
       </div>
-      {biz.rewards.length === 0 ? (
+      {(biz.rewards?.length ?? 0) === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center border border-[#e2bfb0]/30">
           <Award className="w-8 h-8 text-[#8e7164] mx-auto mb-2" />
           <p className="text-xs font-bold text-[#5a4136]">No Rewards Available</p>
@@ -429,7 +429,7 @@ function RewardsTab({ biz, businessId, points, onCollectReward, showToast }: {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {biz.rewards.map((reward: any, i: number) => (
+          {(biz.rewards ?? []).map((reward: any, i: number) => (
             <div key={i} className="relative rounded-2xl overflow-hidden shadow-sm aspect-[4/3] group border border-[#e2bfb0]/30">
               <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={reward.title} src={reward.image} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4 flex flex-col justify-end">
@@ -509,7 +509,7 @@ function AboutTab({ biz }: { biz: any }) {
       <div>
         <h4 className="text-sm font-bold text-[#261812] mb-2">About {biz.name}</h4>
         <p className="text-xs text-[#5a4136] leading-relaxed">
-          {biz.name} is a premier {biz.category.toLowerCase()} destination located in Manhattan Central. 
+          {biz.name} is a premier {(biz.category ?? 'business').toLowerCase()} destination located in Manhattan Central. 
           We are committed to providing exceptional service and quality products to our local community. 
           Join our rewards program to earn points and unlock exclusive benefits.
         </p>
@@ -538,7 +538,7 @@ function AboutTab({ biz }: { biz: any }) {
           <Phone className="w-5 h-5 text-[#a14000] mb-2" />
           <p className="text-[10px] text-[#5a4136] font-semibold">Contact</p>
           <p className="text-[10px] font-bold text-[#261812]">+1 (555) 123-4567</p>
-          <p className="text-[9px] text-[#a14000]">hello@{biz.name.toLowerCase().replace(/\s+/g, '')}.com</p>
+          <p className="text-[9px] text-[#a14000]">hello@{(biz.name ?? 'business').toLowerCase().replace(/\s+/g, '')}.com</p>
         </div>
       </div>
       <div className="flex gap-3">

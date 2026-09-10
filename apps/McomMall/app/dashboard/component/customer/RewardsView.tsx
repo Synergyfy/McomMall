@@ -215,8 +215,10 @@ export const RewardsView: React.FC = () => {
   // Create rewards lookup map from API data
   const REWARDS_MOCK_DATA: Record<string, RewardDetails> = React.useMemo(() => {
     const data: Record<string, RewardDetails> = {};
-    if (apiRewards && Array.isArray(apiRewards)) {
-      apiRewards.forEach((r: any) => {
+    const items = apiRewards?.items;
+    if (items && Array.isArray(items)) {
+      items.filter(Boolean).forEach((r: any) => {
+        if (!r?.id) return;
         data[r.id] = {
           id: r.id,
           title: r.title || 'Reward',
@@ -348,6 +350,7 @@ export const RewardsView: React.FC = () => {
       case 'redeemed': return redeemedRewards;
       case 'loyalty': return loyaltyMemberships;
       case 'expiring': return getExpiringSorted(expiringRewards);
+      default: return all;
     }
   }, [activeTab, claimedIds, redeemedIds, getExpiringSorted]);
 

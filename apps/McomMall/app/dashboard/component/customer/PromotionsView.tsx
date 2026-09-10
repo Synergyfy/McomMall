@@ -466,7 +466,8 @@ export const PromotionsView: React.FC = () => {
   const PROMOTIONS_MOCK_DATA: Record<string, PromotionItem> = React.useMemo(() => {
     const data: Record<string, PromotionItem> = {};
     if (apiPromotions && Array.isArray(apiPromotions)) {
-      apiPromotions.forEach((p: any) => {
+      apiPromotions.filter(Boolean).forEach((p: any) => {
+        if (!p?.id) return;
         data[p.id] = {
           id: p.id,
           title: p.name || 'Promotion',
@@ -547,7 +548,7 @@ export const PromotionsView: React.FC = () => {
     window.setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const allPromotions = useMemo(() => Object.values(PROMOTIONS_MOCK_DATA), []);
+  const allPromotions = useMemo(() => Object.values(PROMOTIONS_MOCK_DATA), [PROMOTIONS_MOCK_DATA]);
 
   const knownBoroughs = useMemo(() => {
     const boroughs = new Set<string>();
