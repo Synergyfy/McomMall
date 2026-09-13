@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Product } from '@/service/store/products/types';
+import { richTextHTML } from '@/lib/utils';
 
 interface ProductDetailsAccordionProps {
   product: Product;
@@ -19,7 +20,7 @@ export default function ProductDetailsAccordion({ product }: ProductDetailsAccor
       <AccordionItem value="description">
         <AccordionTrigger className="text-lg font-medium">Description</AccordionTrigger>
         <AccordionContent className="text-base text-gray-600">
-          {product.description}
+          <div className="prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6" dangerouslySetInnerHTML={richTextHTML(product.description)} />
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="specs">

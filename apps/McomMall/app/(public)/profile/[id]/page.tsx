@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useGetUserById } from '@/service/user/hook';
 import { User, ChevronLeft, Mail, Twitter, Facebook, Linkedin, Instagram, Youtube } from 'lucide-react';
@@ -82,11 +81,10 @@ export default function PublicProfilePage() {
                             {/* Profile Picture */}
                             <div className="relative w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg flex-shrink-0 -mt-20 md:-mt-24">
                                 {user.profilePictureUrl ? (
-                                    <Image
+                                    <img
                                         src={user.profilePictureUrl}
                                         alt={displayName}
-                                        fill
-                                        className="object-cover"
+                                        className="absolute inset-0 h-full w-full object-cover"
                                     />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-gray-400">

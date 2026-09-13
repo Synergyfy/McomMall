@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Search, ShoppingBag, Store, Flower2, Utensils, Coffee, Scissors, Wheat, Play, X, Sparkles, MapPin, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -108,12 +107,10 @@ export default function RootLandingPage() {
                 transition={{ duration: 0.8 }}
                 className="absolute inset-0 w-full h-full"
               >
-                <Image
+                <img
                   src={SLIDES[currentSlide].url}
                   alt={SLIDES[currentSlide].alt}
-                  fill
-                  className="object-cover"
-                  priority
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
               </motion.div>
             </AnimatePresence>
@@ -233,11 +230,10 @@ export default function RootLandingPage() {
             className="relative w-full max-w-4xl mx-auto h-48 sm:h-64 md:h-[400px] rounded-3xl overflow-hidden cursor-pointer group shadow-2xl shadow-slate-200/60"
             onClick={() => setIsVideoModalOpen(true)}
           >
-            <Image
+            <img
               src="/images/root_landing_hero.png"
               alt="Video Thumbnail"
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-slate-900/40 group-hover:bg-slate-900/30 transition-colors" />
             <div className="absolute inset-0 flex flex-col items-center justify-center">

@@ -324,6 +324,20 @@ export class PromotionService {
     }));
   }
 
+  async findPublicActive(limit: number = 20): Promise<Promotion[]> {
+    return this.promotionRepository
+      .createQueryBuilder('promotion')
+      .leftJoinAndSelect('promotion.businesses', 'business')
+      .leftJoinAndSelect('promotion.includedProducts', 'includedProduct')
+      .where('promotion.isActive = :isActive', { isActive: true })
+      .andWhere('(promotion.endDate IS NULL OR promotion.endDate > :now)', {
+        now: new Date(),
+      })
+      .orderBy('promotion.created_at', 'DESC')
+      .take(limit)
+      .getMany();
+  }
+
   async participate(
     userId: string,
     promotionId: string,

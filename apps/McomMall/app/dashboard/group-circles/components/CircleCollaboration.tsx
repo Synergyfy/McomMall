@@ -18,7 +18,6 @@ import {
 import { useGetMyCreatedCampaigns } from "@/service/campaigns/hook";
 import { MyCampaign } from "@/service/campaigns/types";
 import { toast } from "sonner";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -125,11 +124,10 @@ export function CircleCollaboration({ circleId, members, myMemberId }: CircleCol
                     filteredCampaigns.map((campaign: any) => (
                         <Card key={campaign.id} className="overflow-hidden border-zinc-200/60 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md rounded-[2rem] hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-500 group flex flex-col">
                             <div className="relative h-44 w-full overflow-hidden">
-                                <Image
+                                <img
                                     src={campaign.campaign_image || "https://placehold.co/600x200?text=Campaign"}
                                     alt={campaign.name || "Campaign"}
-                                    fill
-                                    className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                    className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                 <div className="absolute bottom-4 left-4 right-4">

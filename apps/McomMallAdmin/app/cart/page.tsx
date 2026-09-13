@@ -4,7 +4,6 @@ import { useCart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, Plus, Minus } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 
 export default function CartPage() {
@@ -61,7 +60,7 @@ export default function CartPage() {
               >
                 <div className="flex items-center space-x-4">
                   <Link href={`/products/${item.product.id}`}>
-                    <Image
+                    <img
                       src={
                         item.product.imageUrl ||
                         'https://via.placeholder.com/100'

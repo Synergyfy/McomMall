@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
     Bold,
     Italic,
@@ -33,6 +33,50 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
     const [isUploadingImage, setIsUploadingImage] = React.useState(false);
     const [isUploadingVideo, setIsUploadingVideo] = React.useState(false);
     const [isUploadingDigital, setIsUploadingDigital] = React.useState(false);
+    const editorRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (editorRef.current) {
+            const current = editorRef.current.innerHTML;
+            const next = formData.fullDesc || '';
+            if (current !== next) {
+                editorRef.current.innerHTML = next;
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.fullDesc]);
+
+    const syncEditorValue = () => {
+        if (editorRef.current) {
+            const html = editorRef.current.innerHTML;
+            if (html !== formData.fullDesc) {
+                updateFormData({ fullDesc: html });
+            }
+        }
+    };
+
+    const execCommand = (command: string, value?: string) => {
+        editorRef.current?.focus();
+        document.execCommand(command, false, value);
+        syncEditorValue();
+    };
+
+    const handleAddLink = () => {
+        const url = window.prompt('Enter link URL:');
+        if (url) {
+            execCommand('createLink', url);
+        }
+    };
+
+    const handleEditorKeyDown = (e: React.KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            execCommand('bold');
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+            e.preventDefault();
+            execCommand('italic');
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         updateFormData({ [e.target.id]: e.target.value });
@@ -138,17 +182,54 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                         <p className="text-xs text-gray-500 mb-1">Detailed information about your product features and benefits.</p>
                         <div className="rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#f8f7f5] dark:bg-[#221910] overflow-hidden">
                             <div className="flex flex-wrap items-center gap-1 p-2 border-b border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b]">
-                                <button className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10" type="button"><Bold size={18} /></button>
-                                <button className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10" type="button"><Italic size={18} /></button>
-                                <button className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10" type="button"><List size={18} /></button>
-                                <button className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10" type="button"><LinkIcon size={18} /></button>
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[#1c140d] dark:text-[#ece0d6]"
+                                    type="button"
+                                    title="Bold (Ctrl+B)"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => execCommand('bold')}
+                                ><Bold size={18} /></button>
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[#1c140d] dark:text-[#ece0d6]"
+                                    type="button"
+                                    title="Italic (Ctrl+I)"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => execCommand('italic')}
+                                ><Italic size={18} /></button>
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[#1c140d] dark:text-[#ece0d6]"
+                                    type="button"
+                                    title="Bulleted List"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => execCommand('insertUnorderedList')}
+                                ><List size={18} /></button>
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[#1c140d] dark:text-[#ece0d6]"
+                                    type="button"
+                                    title="Numbered List"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => execCommand('insertOrderedList')}
+                                ><ListOrdered size={18} /></button>
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[#1c140d] dark:text-[#ece0d6]"
+                                    type="button"
+                                    title="Insert Link"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={handleAddLink}
+                                ><LinkIcon size={18} /></button>
                             </div>
-                            <textarea
-                                className="w-full bg-transparent p-3 md:p-4 text-sm min-h-[180px] outline-none"
-                                id="fullDesc"
-                                value={formData.fullDesc || ''}
-                                onChange={handleChange}
-                            ></textarea>
+                            <div
+                                ref={editorRef}
+                                className="w-full p-3 md:p-4 text-sm min-h-[180px] outline-none focus:ring-2 focus:ring-[#f48c25]/20 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+                                contentEditable
+                                suppressContentEditableWarning
+                                role="textbox"
+                                aria-multiline="true"
+                                data-placeholder="Enter your detailed product description..."
+                                onInput={syncEditorValue}
+                                onBlur={syncEditorValue}
+                                onKeyDown={handleEditorKeyDown}
+                            ></div>
                         </div>
                     </div>
                 </div>

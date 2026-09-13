@@ -38,8 +38,8 @@ import {
 import { useSelector } from 'react-redux';
 import { cn } from '@/lib/utils';
 import { RootState } from '@/service/store/store';
+import { usePublicPromotions } from '@/hooks/useMarketplace';
 import {
-  PROMOTIONS_MOCK_DATA,
   PROMOTION_TYPE_CONFIG,
   type PromotionItem,
   type PromotionTypeTag,
@@ -237,7 +237,7 @@ function TermsModal({ onClose, terms }: { onClose: () => void; terms: string }) 
 }
 
 /* ====== QR SCANNER MODAL ====== */
-function QrScannerModal({ onClose, onScanResult }: { onClose: () => void; onScanResult: (promo: PromotionItem) => void }) {
+function QrScannerModal({ onClose, onScanResult, promotions }: { onClose: () => void; onScanResult: (promo: PromotionItem) => void; promotions: Record<string, PromotionItem> }) {
   const [step, setStep] = useState<'scan' | 'result' | 'error'>('scan');
   const [scannedPromo, setScannedPromo] = useState<PromotionItem | null>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
@@ -255,8 +255,8 @@ function QrScannerModal({ onClose, onScanResult }: { onClose: () => void; onScan
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decodedText: string) => {
-            const match = Object.values(PROMOTIONS_MOCK_DATA).find(
-              p => p.redeemCode === decodedText || p.id === decodedText || p.title.toLowerCase().replace(/\s+/g, '-') === decodedText.toLowerCase().replace(/\s+/g, '-')
+            const match = Object.values(promotions).find(
+              (p: any) => p.redeemCode === decodedText || p.id === decodedText || p.title.toLowerCase().replace(/\s+/g, '-') === decodedText.toLowerCase().replace(/\s+/g, '-')
             );
             if (match && mounted) {
               scanner.stop().catch(() => {});
@@ -272,14 +272,14 @@ function QrScannerModal({ onClose, onScanResult }: { onClose: () => void; onScan
     };
     startScanner();
     return () => { mounted = false; if (html5QrCodeRef.current) html5QrCodeRef.current.stop().catch(() => {}); };
-  }, []);
+  }, [promotions]);
 
   const simulateScan = useCallback(() => {
-    const promos = Object.values(PROMOTIONS_MOCK_DATA);
+    const promos = Object.values(promotions);
     const randomPromo = promos[Math.floor(Math.random() * promos.length)];
     setScannedPromo(randomPromo);
     setStep('result');
-  }, []);
+  }, [promotions]);
 
   const simulateError = useCallback(() => {
     setStep('error');
@@ -461,6 +461,37 @@ export const PromotionsView: React.FC = () => {
     }
   }, []);
 
+  const { data: apiPromotions, loading: promotionsLoading } = usePublicPromotions({ limit: 20 });
+
+  const PROMOTIONS_MOCK_DATA: Record<string, PromotionItem> = React.useMemo(() => {
+    const data: Record<string, PromotionItem> = {};
+    if (apiPromotions && Array.isArray(apiPromotions)) {
+      apiPromotions.filter(Boolean).forEach((p: any) => {
+        if (!p?.id) return;
+        data[p.id] = {
+          id: p.id,
+          title: p.name || 'Promotion',
+          businessName: p.businesses?.[0]?.businessName || 'Business',
+          benefitValue: p.promotionType === 'MULTIPLIER' ? `${p.multiplier}x Points` : `+${p.bonusPoints} Points`,
+          description: p.description || '',
+          longDescription: p.description || p.termsAndConditions || '',
+          locationTag: p.businesses?.[0]?.location?.city || '',
+          borough: p.businesses?.[0]?.borough || '',
+          distance: '',
+          expiryText: p.endDate ? `Ends ${new Date(p.endDate).toLocaleDateString()}` : 'Limited time',
+          expiresAt: p.endDate,
+          promotionType: 'daily',
+          image: p.businesses?.[0]?.heroImage || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=600',
+          badgeIcon: 'local_cafe',
+          isUrgent: false,
+          isHot: false,
+          termsAndConditions: p.termsAndConditions || '',
+        };
+      });
+    }
+    return data;
+  }, [apiPromotions]);
+
   const [subView, setSubView] = useState<SubView>('dashboard');
   const [activeTab, setActiveTab] = useState<PromotionsTab>('all');
   const [selectedPromoId, setSelectedPromoId] = useState<string>('flash-1');
@@ -517,7 +548,7 @@ export const PromotionsView: React.FC = () => {
     window.setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const allPromotions = useMemo(() => Object.values(PROMOTIONS_MOCK_DATA), []);
+  const allPromotions = useMemo(() => Object.values(PROMOTIONS_MOCK_DATA), [PROMOTIONS_MOCK_DATA]);
 
   const knownBoroughs = useMemo(() => {
     const boroughs = new Set<string>();
@@ -662,13 +693,16 @@ export const PromotionsView: React.FC = () => {
     showToast(`Found: ${promo.title} at ${promo.businessName}`, 'success');
   }, [showToast]);
 
-  const selectedPromo = PROMOTIONS_MOCK_DATA[selectedPromoId] ?? allPromotions[0];
-  const isSelectedSaved = !!savedIds[selectedPromo.id];
-  const isSelectedRedeemed = redeemedIds.includes(selectedPromo.id);
-  const isSelectedJoined = joinedCampaignIds.includes(selectedPromo.id);
-  const isSelectedUnlocked = unlockedPromoIds.includes(selectedPromo.id);
-  const isCampaignPromo = selectedPromo.campaignName !== undefined;
-  const hasUnlockCondition = selectedPromo.unlockCondition !== undefined;
+  const selectedPromo = PROMOTIONS_MOCK_DATA[selectedPromoId]
+    ?? allPromotions[0]
+    ?? { id: 'flash-1', title: 'Promotion', businessName: '', benefitValue: '', description: '', longDescription: '', locationTag: '', borough: '', distance: '', expiryText: '', expiresAt: undefined, promotionType: 'daily', image: '', badgeIcon: 'local_cafe', isUrgent: false, isHot: false, termsAndConditions: '' };
+
+  const isSelectedSaved = selectedPromo ? !!savedIds[selectedPromo.id] : false;
+  const isSelectedRedeemed = selectedPromo ? redeemedIds.includes(selectedPromo.id) : false;
+  const isSelectedJoined = selectedPromo ? joinedCampaignIds.includes(selectedPromo.id) : false;
+  const isSelectedUnlocked = selectedPromo ? unlockedPromoIds.includes(selectedPromo.id) : false;
+  const isCampaignPromo = selectedPromo ? selectedPromo.campaignName !== undefined : false;
+  const hasUnlockCondition = selectedPromo ? selectedPromo.unlockCondition !== undefined : false;
   const savedCount = Object.keys(savedIds).filter(id => savedIds[id]).length;
   const filteredPromotions = getFilteredPromotions();
 
@@ -1012,6 +1046,7 @@ export const PromotionsView: React.FC = () => {
         <QrScannerModal
           onClose={() => setShowQrScanner(false)}
           onScanResult={handleQrScanResult}
+          promotions={PROMOTIONS_MOCK_DATA}
         />
       )}
 

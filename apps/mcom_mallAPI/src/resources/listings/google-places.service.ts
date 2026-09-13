@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { PlacePhoto } from './listing.interface';
@@ -87,6 +87,7 @@ function normalizePlaceResult(place: any): any {
 
 @Injectable()
 export class GooglePlacesService {
+  private readonly logger = new Logger(GooglePlacesService.name);
   private get apiKey(): string {
     return (
       this.configService.get<string>('GOOGLE_API_KEY') ||
@@ -105,42 +106,50 @@ export class GooglePlacesService {
     queryText: string;
     radius?: number;
   }) {
-    let location = '6.454075,3.394673';
-    // Default radius is 5000 meters (5 km)
-    const radiusMeters = query?.radius ? Math.round(query.radius * 1000) : 5000;
-    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?radius=${radiusMeters}&`;
+    try {
+      let location = '6.454075,3.394673';
+      // Default radius is 5000 meters (5 km)
+      const radiusMeters = query?.radius ? Math.round(query.radius * 1000) : 5000;
+      let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?radius=${radiusMeters}&`;
 
-    if (query) {
-      const { lng, lat, queryText } = query;
+      if (query) {
+        const { lng, lat, queryText } = query;
 
-      if (!queryText && !lat && !lng) {
-        throw new BadRequestException('Pass query in the request');
+        if (!queryText && !lat && !lng) {
+          throw new BadRequestException('Pass query in the request');
+        }
+
+        if (queryText) url = url + `query=${queryText}&`;
+
+        if (!queryText && lat && lng) {
+          location = `${lat},${lng}`;
+          url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?radius=${radiusMeters}&`;
+        }
+        url = url + `location=${location}&`;
       }
 
-      if (queryText) url = url + `query=${queryText}&`;
+      url = url + `key=${this.apiKey}`;
 
-      if (!queryText && lat && lng) {
-        location = `${lat},${lng}`;
-        url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?radius=${radiusMeters}&`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new BadRequestException('Failed to fetch Google Places data');
       }
-      url = url + `location=${location}&`;
+      const data = await response.json();
+
+      // Normalize every result to a consistent schema
+      return {
+        status: data.status,
+        results: Array.isArray(data.results)
+          ? data.results.map(normalizePlaceResult)
+          : [],
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to fetch Google Places businesses: ${error.message}`,
+        error.stack,
+      );
+      throw error;
     }
-
-    url = url + `key=${this.apiKey}`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new BadRequestException('Failed to fetch Google Places data');
-    }
-    const data = await response.json();
-
-    // Normalize every result to a consistent schema
-    return {
-      status: data.status,
-      results: Array.isArray(data.results)
-        ? data.results.map(normalizePlaceResult)
-        : [],
-    };
   }
 
   async fetchGoogleBusiness({ place_id }: { place_id: string }) {
@@ -151,8 +160,11 @@ export class GooglePlacesService {
       const raw = response.data?.result ?? response.data ?? {};
       // Normalize the detail result to the same consistent schema
       return { result: normalizePlaceResult(raw) };
-    } catch (error) {
-      console.error('Error fetching Google Business details:', error);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to fetch Google Business details for ${place_id}: ${error.message}`,
+        error.stack,
+      );
       throw new Error('Failed to fetch business details.');
     }
   }
@@ -171,7 +183,11 @@ export class GooglePlacesService {
         this.httpService.get(photoUrl, { responseType: 'stream' }),
       );
       return response;
-    } catch (error) {
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to fetch Google Place photo: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }

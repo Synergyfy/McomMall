@@ -15,8 +15,8 @@ import RecentActivities from '../RecentActivities';
 import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { usePublicPromotions } from '@/hooks/useMarketplace';
 import {
-  PROMOTIONS_MOCK_DATA,
   type PromotionItem,
 } from '@/lib/mock-data/promotions-mock-data';
 
@@ -146,6 +146,33 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   const [scratchPrize, setScratchPrize] = useState('');
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<any>(null);
+
+  const { data: apiPromotions, loading: promotionsLoading } = usePublicPromotions({ limit: 5 });
+
+  const PROMOTIONS_MOCK_DATA: Record<string, PromotionItem> = React.useMemo(() => {
+    const data: Record<string, PromotionItem> = {};
+    if (apiPromotions && Array.isArray(apiPromotions)) {
+      apiPromotions.forEach((p: any) => {
+        data[p.id] = {
+          id: p.id,
+          title: p.name || 'Promotion',
+          businessName: p.businesses?.[0]?.businessName || 'Business',
+          benefitValue: p.promotionType === 'MULTIPLIER' ? `${p.multiplier}x Points` : `+${p.bonusPoints} Points`,
+          description: p.description || '',
+          longDescription: p.description || '',
+          locationTag: p.businesses?.[0]?.location?.city || '',
+          borough: p.businesses?.[0]?.borough || '',
+          distance: '',
+          expiryText: p.endDate ? `Ends ${new Date(p.endDate).toLocaleDateString()}` : 'Limited time',
+          expiresAt: p.endDate,
+          promotionType: 'daily',
+          image: p.businesses?.[0]?.heroImage || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=600',
+          badgeIcon: 'local_cafe',
+        };
+      });
+    }
+    return data;
+  }, [apiPromotions]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsRefreshing(false), 3000);

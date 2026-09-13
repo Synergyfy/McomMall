@@ -3,7 +3,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Zap, Fuel, Gauge, CheckCircle } from 'lucide-react';
-import Image from 'next/image';
 import { CURRENCY } from '@/lib/utils';
 
 const listings = [
@@ -62,7 +61,7 @@ export default function TrendingListings() {
           {listings.map((listing) => (
             <Card key={listing.id} className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <div className="relative">
-                <Image
+                <img
                   src={listing.image}
                   alt={listing.title}
                   width={400}

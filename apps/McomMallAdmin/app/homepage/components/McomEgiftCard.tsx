@@ -3,7 +3,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -137,7 +136,7 @@ export function McomEgiftCard() {
                 <div
                   className={`aspect-[16/10] overflow-hidden ${card.backgroundStyle}`}
                 >
-                  <Image
+                  <img
                     src={card.imageUrl}
                     alt={card.title}
                     width={400}

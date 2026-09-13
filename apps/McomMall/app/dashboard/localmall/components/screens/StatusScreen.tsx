@@ -128,7 +128,7 @@ export const StatusScreen: FC<StatusScreenProps> = ({
             </div>
           </div>
           <button 
-            onClick={() => onNavigate('support')}
+            onClick={() => onNavigate('id-verification')}
             className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 duration-150"
           >
             Submit ID Verification Documents <ChevronRight className="w-4 h-4" />

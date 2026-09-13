@@ -158,7 +158,7 @@ export const NotificationsCenterScreen: FC<NotificationsCenterScreenProps> = ({
   }, []);
 
   const handleMarkAllSeen = async () => {
-    const unreadIds = notifications.filter((n: any) => !n.isSeen).map((n: any) => n.id);
+    const unreadIds = notifications.filter((n: any) => !n.seen).map((n: any) => n.id);
     if (unreadIds.length === 0) return;
 
     try {
@@ -176,7 +176,7 @@ export const NotificationsCenterScreen: FC<NotificationsCenterScreenProps> = ({
           <h2 className="text-xl font-black text-gray-900 tracking-tight">Notification Center</h2>
           <p className="text-xs text-gray-400 mt-1">Review active system alerts and local campaign triggers.</p>
         </div>
-        {notifications.some((n: any) => !n.isSeen) && (
+        {notifications.some((n: any) => !n.seen) && (
           <button 
             onClick={handleMarkAllSeen}
             className="text-[10px] font-bold text-orange-600 uppercase tracking-widest hover:underline"
@@ -196,13 +196,13 @@ export const NotificationsCenterScreen: FC<NotificationsCenterScreenProps> = ({
             <div 
               key={n.id} 
               className={`p-4 rounded-3xl border shadow-sm flex items-start gap-3 transition-colors ${
-                n.isSeen 
+                n.seen 
                   ? 'bg-white border-gray-100 text-gray-500' 
                   : 'bg-orange-50/20 border-orange-100 text-gray-900'
               }`}
             >
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                n.isSeen ? 'bg-gray-50 border-gray-150 text-gray-450' : 'bg-orange-100 border-orange-200 text-orange-600'
+                n.seen ? 'bg-gray-50 border-gray-150 text-gray-450' : 'bg-orange-100 border-orange-200 text-orange-600'
               }`}>
                 <Bell className="w-4 h-4" />
               </div>

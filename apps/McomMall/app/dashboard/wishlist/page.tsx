@@ -30,7 +30,6 @@ import {
   Wrench
 } from 'lucide-react';
 import { useGetWishlist, useRemoveFromWishlist } from '@/service/wishlist/hook';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -186,11 +185,10 @@ const WishlistPage = () => {
                         <TableCell className="py-8 px-10">
                           <div className="flex items-center gap-6">
                             <div className="relative h-24 w-24 rounded-[1.5rem] overflow-hidden ring-1 ring-gray-100 dark:ring-zinc-800 shadow-xl group-hover:scale-105 transition-transform duration-500">
-                              <Image
+                              <img
                                 src={getProductMainImage(displayProduct) || '/placeholder.svg'}
                                 alt={title || 'Product Image'}
-                                fill
-                                className="object-cover"
+                                className="absolute inset-0 h-full w-full object-cover"
                               />
                               <div className="absolute top-0 right-0 bg-white/90 backdrop-blur-sm p-1 rounded-bl-xl shadow-sm">
                                 {isService ? <Wrench size={12} className="text-blue-500" /> : <Package size={12} className="text-orange-500" />}

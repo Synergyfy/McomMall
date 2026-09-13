@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -67,6 +67,27 @@ export default function VoucherCreatorWizard() {
   // Preview view toggle (mobile vs poster)
   const [previewView, setPreviewView] = useState<'mobile' | 'poster'>('mobile');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Earliest selectable expiry date (today, in local time)
+  const todayISO = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  }, []);
+
+  const expiryInputRef = useRef<HTMLInputElement>(null);
+
+  // Open the native date picker when clicking anywhere in the field,
+  // not only on the calendar icon.
+  const handleExpiryClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    if (typeof (input as any).showPicker === 'function') {
+      try {
+        (input as any).showPicker();
+      } catch {
+        // Picker may already be open or unsupported in this browser.
+      }
+    }
+  };
 
   // --- LAYOUT DATA ---
   const VOUCHER_TYPES: VoucherTypeItem[] = [
@@ -175,6 +196,10 @@ export default function VoucherCreatorWizard() {
 
   // Launch Payload handler
   const handleLaunch = async () => {
+    if (expiryDate && expiryDate < todayISO) {
+      toast.error('Expiry date cannot be earlier than today.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const payload = {
@@ -360,8 +385,11 @@ export default function VoucherCreatorWizard() {
                     <label className="block text-xs font-bold text-[#5a4136] uppercase tracking-wider mb-2">Expiry Date</label>
                     <div className="relative">
                       <input
+                        ref={expiryInputRef}
                         type="date"
                         value={expiryDate}
+                        min={todayISO}
+                        onClick={handleExpiryClick}
                         onChange={(e) => setExpiryDate(e.target.value)}
                         className="w-full bg-[#f8f9ff] border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-slate-800"
                       />

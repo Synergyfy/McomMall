@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { InHouseBusiness } from '@/service/listings/types';
 import { 
   MapPin, 
@@ -29,12 +28,10 @@ export default function HeroSection({ listing }: HeroSectionProps) {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="absolute inset-0"
       >
-        <Image
+        <img
           src={listing.bannerUrl || 'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=80'}
           alt={listing.bannerAltText || listing.businessName}
-          fill
-          className="object-cover opacity-60"
-          priority
+          className="absolute inset-0 h-full w-full object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#FDFDFD] via-black/20 to-black/40" />
       </motion.div>
@@ -69,11 +66,10 @@ export default function HeroSection({ listing }: HeroSectionProps) {
             >
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] bg-white p-2 shadow-2xl border-4 border-white overflow-hidden">
                 <div className="relative w-full h-full rounded-[2rem] overflow-hidden bg-gray-50">
-                   <Image
+                   <img
                     src={listing.logoUrl || 'https://via.placeholder.com/200?text=Logo'}
                     alt={listing.logoAltText || listing.businessName}
-                    fill
-                    className="object-cover"
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
                 </div>
               </div>

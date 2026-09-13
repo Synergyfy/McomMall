@@ -123,7 +123,7 @@ export default function UserNav({ align = 'end', variant = 'dark' }: UserNavProp
           <Link href="/dashboard">Dashboard</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/wishlist">My Wishlist</Link>
+          <Link href="/dashboard/wishlist">My Wishlist</Link>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
       </DropdownMenuContent>

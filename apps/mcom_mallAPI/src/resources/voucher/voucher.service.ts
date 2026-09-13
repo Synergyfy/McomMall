@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ConflictException,
@@ -48,6 +49,8 @@ import { DigitalValueType } from '../digital-value/digital-value.enums';
 
 @Injectable()
 export class VoucherService {
+  private readonly logger = new Logger(VoucherService.name);
+
   constructor(
     @InjectRepository(Voucher)
     private readonly voucherRepository: Repository<Voucher>,
@@ -388,12 +391,18 @@ export class VoucherService {
 
       // Process Cashback
       if (user.email) {
-        await this.centralIntegrationService.processCashback(
-          user.email,
-          Number(amount),
-          CashbackEvent.VOUCHER_PURCHASE,
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            user.email,
+            Number(amount),
+            CashbackEvent.VOUCHER_PURCHASE,
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for voucher ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return {
@@ -568,12 +577,18 @@ export class VoucherService {
 
       // Process Cashback
       if (user.email) {
-        await this.centralIntegrationService.processCashback(
-          user.email,
-          Number(amount),
-          CashbackEvent.VOUCHER_PURCHASE, // Treat as voucher purchase event for cashback
-          transactionId,
-        );
+        try {
+          await this.centralIntegrationService.processCashback(
+            user.email,
+            Number(amount),
+            CashbackEvent.VOUCHER_PURCHASE, // Treat as voucher purchase event for cashback
+            transactionId,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to process cashback for voucher reload ${transactionId}: ${error.message}`,
+          );
+        }
       }
 
       return savedVoucher;

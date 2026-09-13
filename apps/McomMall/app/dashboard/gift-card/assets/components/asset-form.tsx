@@ -10,7 +10,6 @@ import { useGetAssetCategories } from '@/service/gift-card/asset-category-hook';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import axios from 'axios';
-import Image from 'next/image';
 
 interface AssetFormProps {
   asset: GiftCardAsset | null;
@@ -145,7 +144,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ asset, onClose }) => {
             <Input id="file" type="file" accept="image/gif" onChange={handleFileChange} disabled={isLoading} />
             {preview && (
               <div className="mt-4">
-                <Image src={preview} alt="GIF Preview" width={200} height={200} className="rounded-md" />
+                <img src={preview} alt="GIF Preview" width={200} height={200} className="rounded-md" />
               </div>
             )}
           </div>

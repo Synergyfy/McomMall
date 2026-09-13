@@ -3,7 +3,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -234,13 +233,10 @@ export default function SpringExhibitionPage() {
     <div className="bg-emerald-950 text-stone-100 font-sans">
       {/* 1. Hero Section */}
       <section className="relative h-screen min-h-[600px] flex items-center justify-center text-center overflow-hidden">
-        <Image
+        <img
           src="https://images.unsplash.com/photo-1470240731273-7821a6eeb6bd?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Spring city lights at night"
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-50"
-          priority
+          className="absolute inset-0 h-full w-full z-0 opacity-50 object-cover"
         />
         <FloatingPetals />
         <div className="absolute inset-0 bg-gradient-to-t from-emerald-950 via-emerald-950/60 to-transparent z-10"></div>
@@ -344,7 +340,7 @@ export default function SpringExhibitionPage() {
             transition={{ duration: 0.7 }}
             className="h-80 lg:h-full rounded-xl overflow-hidden"
           >
-            <Image
+            <img
               src="https://images.unsplash.com/photo-1712612452350-d02d6d2dcf2a?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="Digital marketplace illustration"
               width={800}
@@ -461,12 +457,10 @@ export default function SpringExhibitionPage() {
                 <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                   <div className="p-1">
                     <Card className="relative overflow-hidden bg-stone-100 text-stone-900 border-pink-200 h-[400px] group">
-                      <Image
+                      <img
                         src={benefit.image}
                         alt={benefit.title}
-                        layout="fill"
-                        objectFit="cover"
-                        className="z-0 transition-transform duration-500 group-hover:scale-110"
+                        className="absolute inset-0 h-full w-full z-0 transition-transform duration-500 group-hover:scale-110 object-cover"
                       />
                       <div className="absolute bottom-0 left-0 right-0 p-6 z-10 bg-gradient-to-t from-emerald-800/90 to-lime-600/20 transition-all duration-500 ease-in-out h-1/2 group-hover:h-full flex flex-col justify-end">
                         <div className="flex items-center gap-3 mb-2">
@@ -593,12 +587,10 @@ export default function SpringExhibitionPage() {
 
       {/* 8. Closing Section */}
       <section className="relative py-24 px-6 text-center">
-        <Image
+        <img
           src="https://source.unsplash.com/random/1920x1080/?spring,flowers,blossom"
           alt="Spring flowers landscape"
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-40"
+          className="absolute inset-0 h-full w-full z-0 opacity-40 object-cover"
         />
         <div className="absolute inset-0 bg-emerald-950/70 z-10"></div>
         <motion.div

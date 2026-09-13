@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { PlayCircle } from 'lucide-react';
 
 interface LazyYouTubeVideoProps {
@@ -30,13 +29,10 @@ export default function LazyYouTubeVideo({ videoId, title }: LazyYouTubeVideoPro
         ></iframe>
       ) : (
         <div onClick={handleLoad} className="cursor-pointer h-full w-full">
-          <Image
+          <img
             src={thumbnailUrl}
-            alt={`Thumbnail for ${title}`}
-            layout="fill"
-            objectFit="cover"
-            unoptimized // Thumbnails from YouTube are already optimized
-          />
+            alt={`Thumbnail for ${title}`} // Thumbnails from YouTube are already optimized
+           className="absolute inset-0 h-full w-full object-cover"/>
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
             <PlayCircle className="h-16 w-16 text-white/80 transition-transform hover:scale-110" />
           </div>

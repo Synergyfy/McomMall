@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Upload, Camera, Check, AlertCircle, Loader2, Wallet, Clock, X } from "lucide-react";
@@ -343,11 +342,10 @@ export default function ClaimPage() {
 
               {previewUrl ? (
                 <div className="relative w-full h-56 rounded-xl overflow-hidden shadow-inner">
-                  <Image
+                  <img
                     src={previewUrl}
                     alt="Receipt Preview"
-                    fill
-                    className="object-cover"
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20">
                     <span className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full font-bold">

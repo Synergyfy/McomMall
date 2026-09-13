@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   Inject,
@@ -31,6 +32,8 @@ import { ActivityTimerType } from 'src/resources/activity-timer/enums/activity-t
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -216,12 +219,18 @@ export class PaymentsService {
 
     // Process Cashback
     if (user.email) {
-      await this.centralIntegrationService.processCashback(
-        user.email,
-        decimalAmount,
-        CashbackEvent.ORDER_PAYMENT,
-        transactionId,
-      );
+      try {
+        await this.centralIntegrationService.processCashback(
+          user.email,
+          decimalAmount,
+          CashbackEvent.ORDER_PAYMENT,
+          transactionId,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to process cashback for order ${transactionId}: ${error.message}`,
+        );
+      }
     }
 
     return paymentHistory;

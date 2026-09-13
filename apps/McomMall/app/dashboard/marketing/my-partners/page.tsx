@@ -116,7 +116,7 @@ const getStatusUi = (status: PartnershipStatus) => {
   }
 };
 
-const EmptyState = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
+const EmptyState = ({ icon, title, description, onDiscover }: { icon: React.ReactNode, title: string, description: string, onDiscover: () => void }) => (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -127,7 +127,7 @@ const EmptyState = ({ icon, title, description }: { icon: React.ReactNode, title
         </div>
         <h3 className="text-xl md:text-2xl font-bold text-slate-800 mb-2">{title}</h3>
         <p className="text-slate-500 max-w-sm leading-relaxed text-sm md:text-base">{description}</p>
-        <Button className="mt-8 bg-orange-600 hover:bg-orange-700 text-white px-8 rounded-full transition-all hover:shadow-lg active:scale-95">
+        <Button onClick={onDiscover} className="mt-8 bg-orange-600 hover:bg-orange-700 text-white px-8 rounded-full transition-all hover:shadow-lg active:scale-95">
             Discover Partners
         </Button>
     </motion.div>
@@ -654,7 +654,7 @@ export default function MyPartnersPage() {
                                 ))}
                                 {(!partners || partners.length === 0) && !isLoadingPartners && (
                                     <div key="no-partners" className="col-span-full">
-                                        <EmptyState icon={<Users size={64} />} title="Connect with Owners" description="You haven't established any partnerships yet. Start by discovering owners in your area." />
+                                        <EmptyState icon={<Users size={64} />} title="Connect with Owners" description="You haven't established any partnerships yet. Start by discovering owners in your area." onDiscover={() => setSearchDialogOpen(true)} />
                                     </div>
                                 )}
                             </div>
@@ -676,7 +676,7 @@ export default function MyPartnersPage() {
                                         ))}
                                         {(!receivedRequests || receivedRequests.length === 0) && !isLoadingReceived && (
                                             <div className="col-span-full">
-                                                <EmptyState icon={<GitPullRequest size={64} />} title="No Incoming Requests" description="Your inbox is clear. New owner-to-owner partnership requests will appear here." />
+                                                <EmptyState icon={<GitPullRequest size={64} />} title="No Incoming Requests" description="Your inbox is clear. New owner-to-owner partnership requests will appear here." onDiscover={() => setSearchDialogOpen(true)} />
                                             </div>
                                         )}
                                     </div>
@@ -689,7 +689,7 @@ export default function MyPartnersPage() {
                                         ))}
                                         {(!receivedItemRequests || receivedItemRequests.length === 0) && !isLoadingReceivedItems && (
                                             <div className="col-span-full">
-                                                <EmptyState icon={<Layers size={64} />} title="No Item Proposals" description="Partner items proposed for cross-selling with your products or services will show up here." />
+                                                <EmptyState icon={<Layers size={64} />} title="No Item Proposals" description="Partner items proposed for cross-selling with your products or services will show up here." onDiscover={() => setSearchDialogOpen(true)} />
                                             </div>
                                         )}
                                     </div>
@@ -713,7 +713,7 @@ export default function MyPartnersPage() {
                                         ))}
                                         {(!sentRequests || sentRequests.length === 0) && !isLoadingSent && (
                                             <div className="col-span-full">
-                                                <EmptyState icon={<Send size={64} />} title="Start the Conversation" description="Reach out to businesses that complement yours to establish owner partnerships." />
+                                                <EmptyState icon={<Send size={64} />} title="Start the Conversation" description="Reach out to businesses that complement yours to establish owner partnerships." onDiscover={() => setSearchDialogOpen(true)} />
                                             </div>
                                         )}
                                     </div>
@@ -726,7 +726,7 @@ export default function MyPartnersPage() {
                                         ))}
                                         {(!sentItemRequests || sentItemRequests.length === 0) && !isLoadingSentItems && (
                                             <div className="col-span-full">
-                                                <EmptyState icon={<PlusCircle size={64} />} title="Expand Your reach" description="Propose cross-selling links between your items and your active partners' items." />
+                                                <EmptyState icon={<PlusCircle size={64} />} title="Expand Your reach" description="Propose cross-selling links between your items and your active partners' items." onDiscover={() => setSearchDialogOpen(true)} />
                                             </div>
                                         )}
                                     </div>

@@ -3,7 +3,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -182,13 +181,10 @@ export default function SeasonalPage({ theme }: { theme: SeasonalTheme }) {
     <div className={`${theme.bgColor} text-white font-sans`}>
       {/* 1. Hero Section */}
       <section className="relative h-screen min-h-[600px] flex items-center justify-center text-center overflow-hidden">
-        <Image
+        <img
           src={theme.bannerImage}
           alt={`${theme.name} banner`}
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-50"
-          priority
+          className="absolute inset-0 h-full w-full z-0 opacity-50 object-cover"
         />
         <Animation />
         <div className={`absolute inset-0 bg-gradient-to-t from-${theme.bgColor} via-${theme.bgColor}/60 to-transparent z-10`}></div>
@@ -278,7 +274,7 @@ export default function SeasonalPage({ theme }: { theme: SeasonalTheme }) {
             transition={{ duration: 0.7 }}
             className="h-80 lg:h-full rounded-xl overflow-hidden"
           >
-            <Image
+            <img
               src={theme.bannerImage}
               alt="Digital marketplace illustration"
               width={800}
@@ -374,7 +370,7 @@ export default function SeasonalPage({ theme }: { theme: SeasonalTheme }) {
                 <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                   <div className="p-1">
                     <Card className={`overflow-hidden ${theme.bgColor} border-${theme.bgColor}/80`}>
-                      <Image
+                      <img
                         src={benefit.image}
                         alt={benefit.title}
                         width={400}
@@ -492,12 +488,10 @@ export default function SeasonalPage({ theme }: { theme: SeasonalTheme }) {
 
       {/* 8. Closing Section */}
       <section className="relative py-24 px-6 text-center">
-        <Image
+        <img
           src={theme.bannerImage}
           alt={`${theme.name} landscape`}
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-40"
+          className="absolute inset-0 h-full w-full z-0 opacity-40 object-cover"
         />
         <div className={`absolute inset-0 ${theme.bgColor}/70 z-10`}></div>
         <motion.div

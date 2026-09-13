@@ -23,6 +23,7 @@ import PlusItemsSection from '@/components/marketplace/PlusItemsSection';
 import UnifiedReviewSection from '@/components/UnifiedReviewSection';
 import { useGetProductPlusItems } from '@/service/partnerships/hooks';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { richTextHTML } from '@/lib/utils';
 
 export default function ProductPage() {
   const params = useParams();
@@ -405,9 +406,10 @@ export default function ProductPage() {
               </div>
 
               <h2 className="text-xl font-bold text-gray-900 mb-4">Description</h2>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {product.description}
-              </p>
+              <div
+                className="text-gray-700 leading-relaxed prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-orange-600 [&_a]:underline"
+                dangerouslySetInnerHTML={richTextHTML(product.description)}
+              />
             </div>
 
             {/* Product Facts */}

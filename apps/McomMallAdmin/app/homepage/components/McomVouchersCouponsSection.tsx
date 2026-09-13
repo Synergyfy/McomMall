@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { Ticket, Percent, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -23,11 +22,10 @@ export function McomVouchersCouponsSection() {
           {/* Left Card: MCOMVOUCHERS */}
           <div className="relative overflow-hidden rounded-xl bg-white shadow-lg">
             <div className="relative h-60 w-full overflow-hidden bg-gray-200">
-              <Image
+              <img
                 src="https://images.unsplash.com/photo-1617992477211-dfab5866182b?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                 alt="Mockup of MCOMVOUCHER"
-                fill
-                className="object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-black/20" />
             </div>
@@ -61,11 +59,10 @@ export function McomVouchersCouponsSection() {
           {/* Right Card: MCOMCOUPONS */}
           <div className="relative overflow-hidden rounded-xl bg-white shadow-lg">
             <div className="relative h-60 w-full overflow-hidden bg-gray-200">
-              <Image
+              <img
                 src="https://images.unsplash.com/photo-1706759755964-b0aa57a58c5a?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                 alt="Graphical representation of coupon benefits"
-                fill
-                className="object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-black/20" />
             </div>

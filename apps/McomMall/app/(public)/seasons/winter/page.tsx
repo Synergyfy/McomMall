@@ -3,7 +3,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -211,13 +210,10 @@ export default function WinterExhibitionPage() {
     <div className="bg-slate-900 text-white font-sans">
       {/* 1. Hero Section */}
       <section className="relative h-screen min-h-[600px] flex items-center justify-center text-center overflow-hidden">
-        <Image
+        <img
           src="https://images.unsplash.com/photo-1445543949571-ffc3e0e2f55e?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Winter city lights at night"
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-50"
-          priority
+          className="absolute inset-0 h-full w-full z-0 opacity-50 object-cover"
         />
         <FallingSnow />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent z-10"></div>
@@ -321,7 +317,7 @@ export default function WinterExhibitionPage() {
             transition={{ duration: 0.7 }}
             className="h-80 lg:h-full rounded-xl overflow-hidden"
           >
-            <Image
+            <img
               src="https://images.unsplash.com/photo-1576562331281-d09e46af9854?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="Digital marketplace illustration"
               width={800}
@@ -439,12 +435,10 @@ export default function WinterExhibitionPage() {
                 <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                   <div className="p-1">
                     <Card className="relative overflow-hidden bg-white text-slate-900 border-blue-200 h-[400px] group">
-                      <Image
+                      <img
                         src={benefit.image}
                         alt={benefit.title}
-                        layout="fill"
-                        objectFit="cover"
-                        className="z-0 transition-transform duration-500 group-hover:scale-110"
+                        className="absolute inset-0 h-full w-full z-0 transition-transform duration-500 group-hover:scale-110 object-cover"
                       />
                       <div className="absolute bottom-0 left-0 right-0 p-6 z-10 bg-gradient-to-t from-blue-700/90 to-blue-500/20 transition-all duration-500 ease-in-out h-1/2 group-hover:h-full flex flex-col justify-end">
                         <div className="flex items-center gap-3 mb-2">
@@ -571,12 +565,10 @@ export default function WinterExhibitionPage() {
 
       {/* 8. Closing Section */}
       <section className="relative py-24 px-6 text-center">
-        <Image
+        <img
           src="https://source.unsplash.com/random/1920x1080/?snowy,winter,landscape"
           alt="Snowy winter landscape"
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-40"
+          className="absolute inset-0 h-full w-full z-0 opacity-40 object-cover"
         />
         <div className="absolute inset-0 bg-slate-900/70 z-10"></div>
         <motion.div

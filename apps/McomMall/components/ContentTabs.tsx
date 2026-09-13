@@ -1,6 +1,5 @@
 // app/components/listing-detail/ContentTabs.tsx
 'use client';
-import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import LocationSection from './locationSection';
@@ -100,14 +99,13 @@ function ProductPage({
               className="border rounded-lg p-4 flex flex-col transition-shadow hover:shadow-lg"
             >
               <div className="relative w-full h-32 mb-2">
-                <Image
+                <img
                   src={
                     firstImageUrl ||
                     'https://plus.unsplash.com/premium_photo-1664392147011-2a720f214e01?q=80&w=878&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
                   }
                   alt={product.title}
-                  layout="fill"
-                  className="object-cover rounded-md"
+                  className="absolute inset-0 h-full w-full object-cover rounded-md"
                 />
                 <Button
                   size="icon"
@@ -234,11 +232,10 @@ function ServicePage({
               className="border rounded-lg p-4 flex flex-col transition-shadow hover:shadow-lg"
             >
               <div className="relative w-full h-32 mb-2">
-                <Image
+                <img
                   src={firstImageUrl || `https://source.unsplash.com/random/400x300?service&sig=${service.id}`}
                   alt={service.name}
-                  layout="fill"
-                  className="object-cover rounded-md"
+                  className="absolute inset-0 h-full w-full object-cover rounded-md"
                 />
               </div>
               <div className="flex-grow">

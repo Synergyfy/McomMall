@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useGetBusinessVoucherProducts } from '@/service/hooks/useVoucherService';
 import { VoucherProduct, Voucher } from '@/service/vouchers/types';
 import { Button } from '@/components/ui/button';
-import { CURRENCY } from '@/lib/utils';
+import { CURRENCY, stripHtmlText } from '@/lib/utils';
 import VoucherPurchaseModal from './VoucherPurchaseModal';
 import VoucherPaymentSuccessModal from '@/components/VoucherPaymentSuccessModal';
 import { motion } from 'framer-motion';
@@ -72,7 +72,7 @@ export default function VoucherTabContent({
                    <div>
                       <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.3em] mb-3 block">Official Voucher</span>
                       <h3 className="text-2xl font-black text-gray-900 leading-tight">{product.name}</h3>
-                      <p className="text-gray-500 text-xs font-bold mt-2 max-w-[200px]">{product.description || 'Valid for all services and products.'}</p>
+                      <p className="text-gray-500 text-xs font-bold mt-2 max-w-[200px]">{stripHtmlText(product.description) || 'Valid for all services and products.'}</p>
                    </div>
                    <div className="p-4 bg-white rounded-3xl shadow-sm border border-gray-100 group-hover:scale-110 transition-transform">
                       <Tag className="text-[#f58220]" size={24} />

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Order } from '../order/entities/order.entity';
 import { Promotion } from './entities/promotion.entity';
@@ -52,11 +52,16 @@ export class PromotionEngineService {
     await queryRunner.startTransaction();
 
     try {
+      // Batch-load all products to avoid N+1
+      const productIds = order.items.map(i => i.product.id);
+      const products = await this.productRepository.find({
+        where: { id: In(productIds) },
+        relations: ['business', 'business.user'],
+      });
+      const productsMap = new Map(products.map(p => [p.id, p]));
+
       for (const item of order.items) {
-        const product = await this.productRepository.findOne({
-          where: { id: item.product.id },
-          relations: ['business', 'business.user'],
-        });
+        const product = productsMap.get(item.product.id);
 
         if (!product) {
           this.logger.error(
@@ -66,7 +71,7 @@ export class PromotionEngineService {
         }
 
         this.logger.log(
-          `Loaded product ${product.id} with business ${product.business?.id}`,
+          `Loaded product ${product.id} with business ${product.business?.id}`
         );
 
         for (const participation of participations) {

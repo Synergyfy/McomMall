@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, ArrowRight, Package, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { stripHtmlText } from '@/lib/utils';
 
 interface ProductPlusItemsProps {
   items: any[];
@@ -45,7 +46,7 @@ export default function ProductPlusItems({ items, onAddToCart }: ProductPlusItem
                         {item.title || item.name}
                      </h4>
                   </div>
-                  <p className="text-xs text-slate-500 line-clamp-2 mt-1">{item.description}</p>
+                  <p className="text-xs text-slate-500 line-clamp-2 mt-1">{stripHtmlText(item.description)}</p>
                 </div>
                 
                 <div className="flex items-center justify-between mt-3">

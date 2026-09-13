@@ -10,7 +10,6 @@ import ServiceSafetyCard from '@/app/(public)/services/[id]/components/ServiceSa
 import { useMarketplaceContext } from '@/context/MarketplaceContext';
 import NewGiftCardFlow from '@/components/gift-card/NewGiftCardFlow';
 import { GiftCardTemplate, GiftCard } from '@/service/gift-card/types';
-import Image from 'next/image';
 import GiftCardCard from '@/components/marketplace/GiftCardCard';
 import { PromotionalItem } from '@/lib/listing-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";

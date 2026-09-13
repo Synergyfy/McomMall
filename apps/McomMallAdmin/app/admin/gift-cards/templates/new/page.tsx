@@ -17,7 +17,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import Image from "next/image";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import GiftCardPreview from '@/components/gift-card/gift-card-preview';
@@ -296,7 +295,7 @@ const CreateGiftCardTemplatePage = () => {
                 <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isPending || isUploading} />
                 {imagePreview && (
                   <div className="mt-4">
-                    <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
+                    <img src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
                   </div>
                 )}
                 {errors.imageUrl && <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>}
@@ -308,7 +307,7 @@ const CreateGiftCardTemplatePage = () => {
                 {logoPreview && (
                   <div className="mt-4 flex justify-center p-4 bg-slate-50 rounded-xl border border-dashed">
                     <div className="relative h-20 w-20">
-                      <Image src={logoPreview} alt="Logo preview" fill className="object-contain" />
+                      <img src={logoPreview} alt="Logo preview" className="absolute inset-0 h-full w-full object-contain" />
                     </div>
                   </div>
                 )}

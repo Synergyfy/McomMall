@@ -112,13 +112,16 @@ export default function StorefrontAppearancePage() {
 
   const handleSave = async () => {
     try {
-      // 1. Save main banner to backend listing entity
+      // 1. Save main banner to backend listing entity.
+      //    Only send bannerUrl when it is a valid http(s) URL — the backend
+      //    validates it with @IsUrl() and rejects empty strings.
+      const payload: any = {};
+      if (bannerUrl && /^https?:\/\/.+/i.test(bannerUrl)) {
+        payload.bannerUrl = bannerUrl;
+      }
       await editListing({
         listingId: listing.id,
-        payload: {
-          ...listing,
-          bannerUrl: bannerUrl,
-        } as any,
+        payload,
       });
 
       // 2. Persist other styling & config variables to localStorage

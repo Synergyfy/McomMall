@@ -10,7 +10,6 @@ import { useCart } from '@/hooks/useCart';
 import { Product } from '@/service/listings/types';
 import { Building2, Mail, Phone, Globe, MapPin, CheckCircle, User, ChevronLeft, Gift } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import ProductCard from '@/components/marketplace/ProductCard';
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import { PromotionalItem } from '@/lib/listing-data';
@@ -73,11 +72,10 @@ const BusinessStorefrontPage = () => {
             {/* Banner */}
             {business.bannerUrl ? (
               <div className="relative w-full h-64 md:h-80 bg-gray-900">
-                <Image
+                <img
                   src={business.bannerUrl}
                   alt={business.bannerAltText || business.businessName}
-                  fill
-                  className="object-cover opacity-80"
+                  className="absolute inset-0 h-full w-full object-cover opacity-80"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
               </div>
@@ -92,7 +90,7 @@ const BusinessStorefrontPage = () => {
                 {/* Logo */}
                 <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-[2rem] overflow-hidden bg-white border-4 border-white shadow-2xl flex-shrink-0 -mt-20 md:-mt-24 ring-4 ring-orange-500/20">
                   {business.logoUrl ? (
-                    <Image src={business.logoUrl} alt={business.logoAltText || business.businessName} fill className="object-cover" />
+                    <img src={business.logoUrl} alt={business.logoAltText || business.businessName} className="absolute inset-0 h-full w-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-orange-200 bg-orange-50">
                       <Building2 size={64} />

@@ -2,11 +2,11 @@
 import React, { useState, useEffect, MouseEvent, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { mockCampaigns, Campaign } from '@/lib/hotspot-data';
-import { promotionalItems, PromotionalItem, Hotspot } from '@/lib/listing-data';
+import { PromotionalItem, Hotspot } from '@/lib/listing-data';
 import { useGetServiceById, useUpdateService } from '@/service/services/hook';
 import { UpdateServiceDto } from '@/service/services/types';
 import { useGetBusinessData, useEditListing } from '@/service/listings/hook';
-import Image from 'next/image';
+import { useMarketplaceProducts } from '@/hooks/useMarketplace';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X, Eye, Save } from 'lucide-react';
@@ -32,7 +32,18 @@ const HotspotEditorContent = () => {
 
   const { data: serviceData, isLoading: isLoadingService } = useGetServiceById(itemId, itemType === 'service');
   const { data: listingData, isLoading: isLoadingListing } = useGetBusinessData({ id: itemId, enabled: itemType === 'banner' });
+  const { data: productsData } = useMarketplaceProducts({ limit: 50 });
 
+  const promotionalItems: (PromotionalItem & { hotspots: Hotspot[] })[] = (productsData?.items || []).map(p => ({
+    id: p.id,
+    title: p.title,
+    image: p.media?.[0] || 'https://placehold.co/200x200/png',
+    category: p.category || 'General',
+    price: p.price,
+    discountedPrice: p.salePrice,
+    items_left: p.stock ?? 100,
+    hotspots: [],
+  }));
 
   useEffect(() => {
     let currentItem: EditableItem | undefined;
@@ -218,13 +229,11 @@ const HotspotEditorContent = () => {
           onClick={handleImageClick}
           style={{ cursor: 'crosshair' }}
         >
-          <Image
+          <img
             src={item.imageUrl}
             alt={item.name}
-            layout="fill"
-            objectFit="contain"
             onError={(e) => e.currentTarget.src = '/placeholder.svg'}
-          />
+           className="absolute inset-0 h-full w-full object-contain"/>
           {item.hotspots.map(hotspot => (
             <div
               key={hotspot.id}
@@ -273,13 +282,11 @@ const HotspotEditorContent = () => {
       {isPreviewing && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setIsPreviewing(false)}>
           <div className="relative w-full max-w-5xl aspect-video" onClick={e => e.stopPropagation()}>
-            <Image
+            <img
                 src={item.imageUrl}
                 alt={item.name}
-                layout="fill"
-                objectFit="contain"
                 onError={(e) => e.currentTarget.src = '/placeholder.svg'}
-            />
+             className="absolute inset-0 h-full w-full object-contain"/>
             {item.hotspots.map(hotspot => (
               <a
                 key={hotspot.id}

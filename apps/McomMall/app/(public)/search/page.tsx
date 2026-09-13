@@ -7,7 +7,6 @@ import { useSearch } from '@/service/search/hook';
 import { useGetInHouseBusiness, useGetGoogleListings } from '@/service/listings/hook';
 import { Product, Service } from '@/service/search/types';
 import { CURRENCY } from '@/lib/utils';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { toast } from 'sonner';
@@ -386,12 +385,10 @@ const SearchResultsPage = () => {
                       onClick={() => handleCardClick(item)}
                     >
                       <div className="relative h-48 w-full bg-gray-50 border-b border-gray-50">
-                        <Image
+                        <img
                           src={getImageUrl(item)}
                           alt={'title' in item ? item.title : item.name}
-                          layout="fill"
-                          objectFit="cover"
-                          className="group-hover:scale-103 transition-transform duration-300"
+                          className="absolute inset-0 h-full w-full group-hover:scale-103 transition-transform duration-300 object-cover"
                         />
                       </div>
                       <div className="p-4 flex flex-col flex-grow">
