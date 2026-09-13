@@ -8,6 +8,7 @@ import { User } from '../users/entities/user.entity';
 import { Order } from '../order/entities/order.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
+import { Withdrawal } from './entities/withdrawal.entity';
 import { GiftCardModule } from '../gift-card/gift-card.module';
 import { VoucherModule } from '../voucher/voucher.module';
 import { BookingModule } from '../booking/booking.module';
@@ -15,7 +16,13 @@ import { CouponModule } from '../coupon/coupon.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Wallet, User, Order, WalletTransaction]),
+    TypeOrmModule.forFeature([
+      Wallet,
+      User,
+      Order,
+      WalletTransaction,
+      Withdrawal,
+    ]),
     forwardRef(() => OrderModule),
     forwardRef(() => GiftCardModule),
     forwardRef(() => VoucherModule),

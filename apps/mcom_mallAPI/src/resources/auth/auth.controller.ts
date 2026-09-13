@@ -1,6 +1,17 @@
-import { Controller, Post, Body, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto, RefreshAuthDto, LogoutAuthDto } from './dto/create-auth.dto';
+import {
+  CreateAuthDto,
+  RefreshAuthDto,
+  LogoutAuthDto,
+} from './dto/create-auth.dto';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { ResetPasswordDto } from '../email/dto/reset-password.dto';
@@ -93,15 +104,22 @@ export class AuthController {
       const user = await this.userService.findCurrentUser(authData.email);
 
       // Check subscription using Mcom Solutions user ID (Business owners only)
-      if (user.role?.toLowerCase() === UserRole.OWNER || user.role === UserRole.OWNER) {
+      if (
+        user.role?.toLowerCase() === UserRole.OWNER ||
+        user.role === UserRole.OWNER
+      ) {
         if (!user.centralUserId) {
           throw new ForbiddenException(
             'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
           );
         }
-        const subscription = await this.mcomCentralService.getUserPackages(user.centralUserId);
+        const subscription = await this.mcomCentralService.getUserPackages(
+          user.centralUserId,
+        );
         if (!subscription || !subscription.isActive || !subscription.tierId) {
-          throw new ForbiddenException('Active subscription required. Please subscribe at Mcom Solutions.');
+          throw new ForbiddenException(
+            'Active subscription required. Please subscribe at Mcom Solutions.',
+          );
         }
       }
 

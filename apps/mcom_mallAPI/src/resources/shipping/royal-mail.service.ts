@@ -24,7 +24,7 @@ export class RoyalMailService {
   ) {}
 
   /**
-   * Get OAuth2 Token from Royal Mail
+   * Get an OAuth2 Token from Royal Mail
    */
   private async getAccessToken(): Promise<string> {
     if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
@@ -68,6 +68,68 @@ export class RoyalMailService {
       throw new InternalServerErrorException(
         'Royal Mail Authentication Failed',
       );
+    }
+  }
+
+  /**
+   * Query the Royal Mail price calculator for a parcel.
+   * Returns the price in GBP (e.g. 6.99) or null when the API is unavailable.
+   */
+  async getPriceQuote(params: {
+    weightKg: number;
+    serviceCode: string;
+    destinationPostcode?: string;
+    lengthCm?: number;
+    widthCm?: number;
+    heightCm?: number;
+  }): Promise<number | null> {
+    const clientId = this.configService.get<string>('ROYAL_MAIL_CLIENT_ID');
+    const clientSecret = this.configService.get<string>(
+      'ROYAL_MAIL_CLIENT_SECRET',
+    );
+    if (!clientId || !clientSecret) {
+      return null;
+    }
+
+    try {
+      const token = await this.getAccessToken();
+      const response = await lastValueFrom(
+        this.httpService.post(
+          `${this.shippingBaseUrl}/pricing/price`,
+          {
+            weight: Math.max(1, params.weightKg * 1000), // grams
+            service_code: params.serviceCode,
+            length: params.lengthCm,
+            width: params.widthCm,
+            height: params.heightCm,
+            destination: {
+              postal_code: params.destinationPostcode,
+              country_code: 'GB',
+            },
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'X-IBM-Client-Id': clientId,
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      );
+
+      const price = response.data?.price?.amount;
+      if (typeof price !== 'number') {
+        return null;
+      }
+      // Royal Mail pricing API returns pence.
+      return Math.round((price / 100) * 100) / 100;
+    } catch (error) {
+      this.logger.warn(
+        `Royal Mail price quote failed, falling back to configured rates: ${
+          error.response?.data?.errors?.[0]?.message || error.message
+        }`,
+      );
+      return null;
     }
   }
 

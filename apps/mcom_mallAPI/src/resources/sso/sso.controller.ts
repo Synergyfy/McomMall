@@ -14,7 +14,12 @@ import {
 import { SsoService } from './sso.service';
 import { McomCentralService } from './mcom-central.service';
 import { Public } from '../../common/decorators/public.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Response } from 'express';
 import { CallbackQueryDto } from './dto/callback-query.dto';
 import { SsoCallbackDto } from './dto/sso-callback.dto';
@@ -134,7 +139,9 @@ export class SsoController {
   @ApiResponse({ status: 401, description: 'Token exchange failed' })
   async handleCodeCallback(@Body() dto: SsoCallbackDto) {
     try {
-      this.logger.log(`SSO code callback: exchanging code for user (redirect_uri=${dto.redirect_uri})`);
+      this.logger.log(
+        `SSO code callback: exchanging code for user (redirect_uri=${dto.redirect_uri})`,
+      );
       const result = await this.ssoService.handleCallbackFromCode(
         dto.code,
         dto.redirect_uri,
@@ -154,7 +161,10 @@ export class SsoController {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'sso_callback_failed';
-      this.logger.error(`SSO code callback failed: ${message}`, error instanceof Error ? error.stack : undefined);
+      this.logger.error(
+        `SSO code callback failed: ${message}`,
+        error instanceof Error ? error.stack : undefined,
+      );
 
       if (error instanceof ForbiddenException) {
         throw new ForbiddenException('subscription_required');

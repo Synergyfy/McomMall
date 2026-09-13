@@ -263,7 +263,9 @@ export class PaymentsService {
           });
           if (userWithRelations) {
             const activityTasks =
-              await this.activityTimerService.getUserActiveTasks(userWithRelations);
+              await this.activityTimerService.getUserActiveTasks(
+                userWithRelations,
+              );
 
             // Find TRIAL composite task or just check all tasks
             for (const group of activityTasks) {

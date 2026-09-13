@@ -1,4 +1,12 @@
-import { Controller, Get, UseGuards, Req, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Query,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -9,6 +17,7 @@ import { CouponService } from './coupon.service';
 import { CouponStatsDto } from './dto/coupon-stats.dto';
 import { CouponChartDataDto } from './dto/coupon-chart-data.dto';
 import { CouponTransactionHistoryDto } from './dto/coupon-transaction-history.dto';
+import { RedeemCouponManualDto } from './dto/redeem-coupon-manual.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -22,6 +31,23 @@ import { AuthenticatedRequest } from '../../common/types';
 @Roles(UserRole.OWNER, UserRole.ADMIN)
 export class BusinessCouponController {
   constructor(private readonly couponService: CouponService) {}
+
+  @Post('redeem/manual')
+  @ApiOperation({ summary: 'Manually redeem a coupon by code or barcode scan' })
+  redeemManual(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: RedeemCouponManualDto,
+  ) {
+    return this.couponService.redeemManual(dto.code, req.user.id);
+  }
+
+  @Get('sold')
+  @ApiOperation({
+    summary: 'Get list of redeemed / claimed coupons for merchant',
+  })
+  getSoldCoupons(@Req() req: AuthenticatedRequest) {
+    return this.couponService.getTransactionHistoryForOwner(req.user.id);
+  }
 
   @Get('stats')
   @ApiOperation({ summary: 'Get dashboard stats for coupons' })

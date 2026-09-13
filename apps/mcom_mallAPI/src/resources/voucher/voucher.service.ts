@@ -137,6 +137,19 @@ export class VoucherService {
     });
   }
 
+  async findVoucherProductById(productId: string): Promise<VoucherProduct> {
+    const product = await this.voucherProductRepository.findOne({
+      where: { id: productId },
+      relations: ['user'],
+    });
+    if (!product) {
+      throw new NotFoundException(
+        `Voucher product with ID ${productId} not found`,
+      );
+    }
+    return product;
+  }
+
   async findActiveVoucherProductsByBusiness(
     businessId: string,
   ): Promise<VoucherProduct[]> {
@@ -835,6 +848,114 @@ export class VoucherService {
   }
 
   // --- Statistics and History ---
+
+  async findAllVouchers(ownerId: string, query: VoucherHistoryQueryDto) {
+    const qb = this.voucherRepository
+      .createQueryBuilder('voucher')
+      .leftJoinAndSelect('voucher.buyer', 'buyer')
+      .leftJoinAndSelect('voucher.recipient', 'recipient')
+      .leftJoinAndSelect('voucher.voucherProduct', 'voucherProduct')
+      .where('voucher.ownerId = :ownerId', { ownerId })
+      .orderBy('voucher.createdAt', query.order ?? 'DESC')
+      .skip(query.skip ?? 0)
+      .take(query.take ?? 50);
+
+    if (query.startDate) {
+      qb.andWhere('voucher.createdAt >= :startDate', {
+        startDate: query.startDate,
+      });
+    }
+
+    if (query.endDate) {
+      qb.andWhere('voucher.createdAt <= :endDate', {
+        endDate: query.endDate,
+      });
+    }
+
+    const [vouchers, total] = await qb.getManyAndCount();
+
+    const items = vouchers.map((voucher) => ({
+      id: voucher.id,
+      code: voucher.code,
+      status: voucher.status,
+      initialValue: voucher.initialValue,
+      balance: voucher.balance,
+      createdAt: voucher.createdAt,
+      expiresAt: voucher.expiresAt,
+      buyer: voucher.buyer
+        ? {
+            id: voucher.buyer.id,
+            name: voucher.buyer.name,
+            email: voucher.buyer.email,
+          }
+        : null,
+      recipient: voucher.recipient
+        ? { id: voucher.recipient.id, name: voucher.recipient.name }
+        : null,
+      product: voucher.voucherProduct
+        ? {
+            id: voucher.voucherProduct.id,
+            name: voucher.voucherProduct.name,
+          }
+        : null,
+    }));
+
+    const pageMeta = new PageMetaDto({
+      pageOptionsDto: query,
+      itemCount: vouchers.length,
+      totalItems: total,
+    });
+
+    return new PageDto(items, pageMeta);
+  }
+
+  async getVoucherProductAnalytics(productId: string): Promise<any> {
+    const product = await this.voucherProductRepository.findOne({
+      where: { id: productId },
+      relations: ['vouchers'],
+    });
+    if (!product) {
+      throw new NotFoundException(
+        `Voucher product with ID ${productId} not found`,
+      );
+    }
+
+    const vouchers = product.vouchers ?? [];
+    const totalSold = vouchers.length;
+    const totalRedeemed = vouchers.filter(
+      (voucher) => voucher.status === 'redeemed',
+    ).length;
+    const totalValue = vouchers.reduce(
+      (sum, voucher) => sum + Number(voucher.initialValue ?? 0),
+      0,
+    );
+    const redeemedValue = vouchers.reduce(
+      (sum, voucher) =>
+        sum +
+        (Number(voucher.initialValue ?? 0) - Number(voucher.balance ?? 0)),
+      0,
+    );
+    const redemptionRate =
+      totalSold > 0 ? Math.round((totalRedeemed / totalSold) * 100) : 0;
+
+    return {
+      product: {
+        id: product.id,
+        name: product.name,
+        value: product.value,
+        valueType: product.valueType,
+      },
+      metrics: {
+        totalSold,
+        totalRedeemed,
+        redemptionRate,
+        totalValue,
+        redeemedValue,
+        outstandingValue: totalValue - redeemedValue,
+      },
+      recentTransactions: vouchers.slice(0, 20),
+    };
+  }
 
   async getSummaryStatistics(
     ownerId: string,

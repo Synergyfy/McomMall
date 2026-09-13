@@ -122,12 +122,17 @@ export class ListingsController {
       },
     },
   })
-  findAllForUser(@Request() req, @Query() pagination: PaginationDto) {
+  findAllForUser(
+    @Request() req,
+    @Query() pagination: PaginationDto,
+    @Query('status') status?: string,
+  ) {
     const userId = req.user.id;
     return this.listingsService.findAllForUser(
       userId,
       pagination.page,
       pagination.limit,
+      status,
     );
   }
 

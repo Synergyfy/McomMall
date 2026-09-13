@@ -47,20 +47,16 @@ export class PaymentProviderService {
 
   constructor(private configService: ConfigService) {
     const stripeKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    if (!stripeKey && process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'STRIPE_SECRET_KEY is required in production environment',
-      );
+    if (!stripeKey) {
+      throw new Error('STRIPE_SECRET_KEY is required');
     }
-    this.stripe = new Stripe(stripeKey || 'dummy_stripe_secret_key_dev');
+    this.stripe = new Stripe(stripeKey);
 
     const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
     const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');
 
-    if ((!clientId || !clientSecret) && process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are required in production environment',
-      );
+    if (!clientId || !clientSecret) {
+      throw new Error('PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are required');
     }
 
     const usesSandboxPaypal = clientId?.startsWith('sb-') ?? false;
@@ -81,8 +77,8 @@ export class PaymentProviderService {
           ? Environment.Production
           : Environment.Sandbox,
       clientCredentialsAuthCredentials: {
-        oAuthClientId: clientId || '',
-        oAuthClientSecret: clientSecret || '',
+        oAuthClientId: clientId,
+        oAuthClientSecret: clientSecret,
       },
     });
     this.ordersController = new OrdersController(client);

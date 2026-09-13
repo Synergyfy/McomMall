@@ -19,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { CheckBalanceResponseDto } from './dto/check-balance-response.dto';
+import { CheckBalancePinDto } from './dto/check-balance-pin.dto';
 import { InitiatePurchaseDto } from './dto/initiate-purchase.dto';
 import { VerifyPurchaseDto } from './dto/verify-purchase.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -35,6 +36,24 @@ import { GiftCardTemplate } from './entities/gift-card-template.entity';
 @Controller('gift-cards')
 export class GiftCardConsumerController {
   constructor(private readonly giftCardService: GiftCardService) {}
+
+  @Public()
+  @Get('themes')
+  @ApiOperation({ summary: 'Get available email gift card design themes' })
+  async getThemes(@Query('category') category?: string) {
+    return this.giftCardService.findAllThemes(category);
+  }
+
+  @Public()
+  @Post('check-balance')
+  @ApiOperation({
+    summary: 'Check gift card balance with code and optional PIN',
+  })
+  async checkBalanceWithPin(
+    @Body() dto: CheckBalancePinDto,
+  ): Promise<CheckBalanceResponseDto> {
+    return this.giftCardService.checkBalanceWithPin(dto.code, dto.pin);
+  }
 
   @Post('purchase')
   @UseGuards(JwtAuthGuard)

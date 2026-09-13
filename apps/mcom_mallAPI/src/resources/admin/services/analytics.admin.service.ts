@@ -6,11 +6,13 @@ import { Order } from 'src/resources/order/entities/order.entity';
 import { ServiceBooking } from 'src/resources/booking/entities/service-booking.entity';
 import { MembershipPayment } from 'src/resources/membership/entities/membership-payment.entity';
 import { Business } from 'src/resources/listings/entities/listing.entity';
+import { Activity } from 'src/resources/activities/entities/activity.entity';
 import {
   AdminAnalyticsResponseDto,
   MetricDto,
   AnalyticsChartPointDto,
   TopItemDto,
+  FunnelItemDto,
 } from '../dto/analytics.dto';
 
 @Injectable()
@@ -24,6 +26,8 @@ export class AdminAnalyticsService {
     private membershipRepository: Repository<MembershipPayment>,
     @InjectRepository(Business)
     private businessRepository: Repository<Business>,
+    @InjectRepository(Activity)
+    private activityRepository: Repository<Activity>,
   ) {}
 
   async getAnalytics(
@@ -79,29 +83,113 @@ export class AdminAnalyticsService {
       true,
     );
 
-    // 3. Revenue Chart (Last 7 Days always for the chart in the UI)
+    // 3. Visitors Metric (distinct users with recorded activity)
+    const [currentVisitors, prevVisitors] = await Promise.all([
+      this.countDistinctActiveUsers(startDate),
+      this.countDistinctActiveUsers(prevStartDate, startDate),
+    ]);
+    const visitorsMetric = this.calculateMetric(currentVisitors, prevVisitors);
+
+    // 4. Conversion Rate (orders placed / distinct active users)
+    const currentOrders = await this.orderRepository.count({
+      where: { created_at: MoreThan(startDate) },
+    });
+    const prevOrders = await this.orderRepository.count({
+      where: { created_at: Between(prevStartDate, startDate) },
+    });
+    const conversionMetric = this.calculatePercentageMetric(
+      currentOrders,
+      Math.max(currentVisitors, 1),
+      prevOrders,
+      Math.max(prevVisitors, 1),
+    );
+
+    // 5. Revenue Chart (Last 7 Days always for the chart in the UI)
     const chartStartDate = new Date(
       new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
     );
-    const revenueChart = await this.getRevenueChartData(chartStartDate);
+    const [revenueChart, visitorChart] = await Promise.all([
+      this.getRevenueChartData(chartStartDate),
+      this.getVisitorChartData(chartStartDate),
+    ]);
 
-    // 4. Top Categories (This Month)
+    // 6. Top Categories (This Month)
     const topCategories = await this.getTopCategories();
 
-    // 5. Top Businesses (This Month)
+    // 7. Top Businesses (This Month)
     const topBusinesses = await this.getTopBusinesses();
 
+    // 8. Conversion Funnel (visitors -> signups -> orders -> paid orders)
+    const paidOrders = await this.countPaidOrders(startDate);
+    const conversionFunnel = this.buildConversionFunnel(
+      currentVisitors,
+      currentSignups,
+      currentOrders,
+      paidOrders,
+    );
+
     return {
-      visitors: { value: '0', change: '0%', changeType: 'up' }, // Not tracked yet
+      visitors: visitorsMetric,
       signups: signupsMetric,
       revenue: revenueMetric,
-      conversionRate: { value: '0%', change: '0%', changeType: 'up' }, // Not tracked yet
-      visitorChart: [], // Not tracked yet
+      conversionRate: conversionMetric,
+      visitorChart,
       revenueChart,
       topCategories,
       topBusinesses,
-      conversionFunnel: [], // Not tracked yet
+      conversionFunnel,
     };
+  }
+
+  private async countDistinctActiveUsers(
+    start: Date,
+    end?: Date,
+  ): Promise<number> {
+    const qb = this.activityRepository
+      .createQueryBuilder('a')
+      .select('COUNT(DISTINCT a."userId")', 'count')
+      .where('a."created_at" >= :start', { start });
+    if (end) {
+      qb.andWhere('a."created_at" < :end', { end });
+    }
+    const row = await qb.getRawOne();
+    return Number(row?.count || 0);
+  }
+
+  private async countPaidOrders(start: Date): Promise<number> {
+    const row = await this.orderRepository
+      .createQueryBuilder('o')
+      .select('COUNT(DISTINCT o.id)', 'count')
+      .leftJoin('o.payment', 'p')
+      .where('o.created_at >= :start', { start })
+      .getRawOne();
+    return Number(row?.count || 0);
+  }
+
+  private buildConversionFunnel(
+    visitors: number,
+    signups: number,
+    orders: number,
+    paidOrders: number,
+  ): FunnelItemDto[] {
+    const visitorsPct = 100;
+    const signupsPct = visitors > 0 ? (signups / visitors) * 100 : 0;
+    const ordersPct = visitors > 0 ? (orders / visitors) * 100 : 0;
+    const paidPct = visitors > 0 ? (paidOrders / visitors) * 100 : 0;
+    return [
+      { stage: 'Visitors', value: visitors, pct: visitorsPct },
+      {
+        stage: 'Signups',
+        value: signups,
+        pct: Math.round(signupsPct * 10) / 10,
+      },
+      { stage: 'Orders', value: orders, pct: Math.round(ordersPct * 10) / 10 },
+      {
+        stage: 'Paid Orders',
+        value: paidOrders,
+        pct: Math.round(paidPct * 10) / 10,
+      },
+    ];
   }
 
   private calculateMetric(
@@ -115,6 +203,23 @@ export class AdminAnalyticsService {
       : current.toLocaleString();
     return {
       value: valueStr,
+      change: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
+      changeType: change >= 0 ? 'up' : 'down',
+    };
+  }
+
+  private calculatePercentageMetric(
+    current: number,
+    currentBase: number,
+    prev: number,
+    prevBase: number,
+  ): MetricDto {
+    const currentRate = currentBase > 0 ? (current / currentBase) * 100 : 0;
+    const prevRate = prevBase > 0 ? (prev / prevBase) * 100 : 0;
+    const change =
+      prevRate === 0 ? 100 : ((currentRate - prevRate) / prevRate) * 100;
+    return {
+      value: `${currentRate.toFixed(1)}%`,
       change: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
       changeType: change >= 0 ? 'up' : 'down',
     };
@@ -164,6 +269,26 @@ export class AdminAnalyticsService {
     }));
   }
 
+  private async getVisitorChartData(
+    start: Date,
+  ): Promise<AnalyticsChartPointDto[]> {
+    const visitorData = await this.activityRepository
+      .createQueryBuilder('a')
+      .select(
+        'DATE(a.created_at) as date, COUNT(DISTINCT a."userId") as visitors',
+      )
+      .where('a.created_at > :start', { start })
+      .groupBy('DATE(a.created_at)')
+      .orderBy('DATE(a.created_at)', 'ASC')
+      .getRawMany();
+
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return visitorData.map((d) => ({
+      day: days[new Date(d.date).getDay()],
+      value: Number(d.visitors),
+    }));
+  }
+
   private async getTopCategories(): Promise<TopItemDto[]> {
     const data = await this.orderRepository
       .createQueryBuilder('o')
@@ -183,8 +308,16 @@ export class AdminAnalyticsService {
       .limit(5)
       .getRawMany();
 
-    const prevMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
-    const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const prevMonthStart = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() - 1,
+      1,
+    );
+    const currentMonthStart = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    );
 
     const prevData = await this.orderRepository
       .createQueryBuilder('o')
@@ -192,14 +325,19 @@ export class AdminAnalyticsService {
       .leftJoin('oi.product', 'p')
       .select('p.category', 'name')
       .addSelect('SUM(oi.price * oi.quantity)', 'value')
-      .where('o.created_at >= :prevMonthStart AND o.created_at < :currentMonthStart', {
-        prevMonthStart,
-        currentMonthStart,
-      })
+      .where(
+        'o.created_at >= :prevMonthStart AND o.created_at < :currentMonthStart',
+        {
+          prevMonthStart,
+          currentMonthStart,
+        },
+      )
       .groupBy('p.category')
       .getRawMany();
 
-    const prevMap = new Map(prevData.map((pd) => [pd.name, Number(pd.value) || 0]));
+    const prevMap = new Map(
+      prevData.map((pd) => [pd.name, Number(pd.value) || 0]),
+    );
 
     return data.map((d) => {
       const currentVal = Number(d.value) || 0;
@@ -219,29 +357,63 @@ export class AdminAnalyticsService {
   }
 
   private async getTopBusinesses(): Promise<TopItemDto[]> {
-    const data = await this.orderRepository
-      .createQueryBuilder('o')
-      .leftJoin('o.items', 'oi')
-      .leftJoin('oi.product', 'p')
-      .leftJoin('p.business', 'b')
-      .select('b.businessName', 'name')
-      .addSelect('SUM(oi.price * oi.quantity)', 'value')
-      .where('o.created_at > :monthStart', {
-        monthStart: new Date(
-          new Date().getFullYear(),
-          new Date().getMonth(),
-          1,
-        ),
-      })
-      .groupBy('b.businessName')
-      .orderBy('value', 'DESC')
-      .limit(5)
-      .getRawMany();
+    const monthStart = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    );
+    const prevMonthStart = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() - 1,
+      1,
+    );
 
-    return data.map((d) => ({
-      name: d.name || 'Unknown',
-      value: `£${Number(d.value).toLocaleString()}`,
-      change: '+0%', // Placeholder
-    }));
+    const [data, prevData] = await Promise.all([
+      this.orderRepository
+        .createQueryBuilder('o')
+        .leftJoin('o.items', 'oi')
+        .leftJoin('oi.product', 'p')
+        .leftJoin('p.business', 'b')
+        .select('b.businessName', 'name')
+        .addSelect('SUM(oi.price * oi.quantity)', 'value')
+        .where('o.created_at > :monthStart', { monthStart })
+        .groupBy('b.businessName')
+        .orderBy('value', 'DESC')
+        .limit(5)
+        .getRawMany(),
+      this.orderRepository
+        .createQueryBuilder('o')
+        .leftJoin('o.items', 'oi')
+        .leftJoin('oi.product', 'p')
+        .leftJoin('p.business', 'b')
+        .select('b.businessName', 'name')
+        .addSelect('SUM(oi.price * oi.quantity)', 'value')
+        .where(
+          'o.created_at >= :prevMonthStart AND o.created_at < :monthStart',
+          { prevMonthStart, monthStart },
+        )
+        .groupBy('b.businessName')
+        .getRawMany(),
+    ]);
+
+    const prevMap = new Map(
+      prevData.map((pd) => [pd.name, Number(pd.value) || 0]),
+    );
+
+    return data.map((d) => {
+      const currentVal = Number(d.value) || 0;
+      const prevVal = prevMap.get(d.name) || 0;
+      let pctChange = 0;
+      if (prevVal > 0) {
+        pctChange = Math.round(((currentVal - prevVal) / prevVal) * 100);
+      } else if (currentVal > 0) {
+        pctChange = 100;
+      }
+      return {
+        name: d.name || 'Unknown',
+        value: `£${currentVal.toLocaleString()}`,
+        change: pctChange >= 0 ? `+${pctChange}%` : `${pctChange}%`,
+      };
+    });
   }
 }

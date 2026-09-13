@@ -74,4 +74,11 @@ endpoint.log
 pnpm-lock.yaml.lock
 
 # Reports
-REPORTS/
+REPORTS/
+
+# Todo tracker
+todo-tracker/
+
+# Agent Rules Directory
+.agent/
+

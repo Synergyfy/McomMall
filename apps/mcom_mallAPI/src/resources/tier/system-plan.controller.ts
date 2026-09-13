@@ -26,11 +26,22 @@ export class SystemPlanController {
   @Post()
   @ApiOperation({
     summary: 'Create a plan (MCOM Solution Admin)',
-    description: 'Creates a new subscription plan. Only authorized MCOM Solution requests can perform this action.',
+    description:
+      'Creates a new subscription plan. Only authorized MCOM Solution requests can perform this action.',
   })
-  @ApiResponse({ status: 201, description: 'Plan created successfully.', type: Tier })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing API key.' })
-  @ApiResponse({ status: 409, description: 'Conflict. Plan with this name already exists.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Plan created successfully.',
+    type: Tier,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Invalid or missing API key.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict. Plan with this name already exists.',
+  })
   create(@Body() createTierDto: CreateTierDto) {
     return this.tierService.create(createTierDto);
   }
@@ -50,7 +61,11 @@ export class SystemPlanController {
     summary: 'Get a plan by ID',
     description: 'Retrieves details of a specific plan by its unique ID.',
   })
-  @ApiResponse({ status: 200, description: 'Return the plan details.', type: Tier })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the plan details.',
+    type: Tier,
+  })
   @ApiResponse({ status: 404, description: 'Plan not found.' })
   findOne(@Param('id') id: string) {
     return this.tierService.findOne(id);
@@ -59,12 +74,23 @@ export class SystemPlanController {
   @Patch(':id')
   @ApiOperation({
     summary: 'Update a plan (MCOM Solution Admin)',
-    description: 'Updates an existing plan. Only authorized MCOM Solution requests can perform this action.',
+    description:
+      'Updates an existing plan. Only authorized MCOM Solution requests can perform this action.',
   })
-  @ApiResponse({ status: 200, description: 'Plan updated successfully.', type: Tier })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing API key.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Plan updated successfully.',
+    type: Tier,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Invalid or missing API key.',
+  })
   @ApiResponse({ status: 404, description: 'Plan not found.' })
-  @ApiResponse({ status: 409, description: 'Conflict. Plan with this name already exists.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict. Plan with this name already exists.',
+  })
   update(@Param('id') id: string, @Body() updateTierDto: UpdateTierDto) {
     return this.tierService.update(id, updateTierDto);
   }
@@ -72,10 +98,14 @@ export class SystemPlanController {
   @Delete(':id')
   @ApiOperation({
     summary: 'Delete a plan (MCOM Solution Admin)',
-    description: 'Deletes a plan. Only authorized MCOM Solution requests can perform this action.',
+    description:
+      'Deletes a plan. Only authorized MCOM Solution requests can perform this action.',
   })
   @ApiResponse({ status: 200, description: 'Plan deleted successfully.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing API key.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Invalid or missing API key.',
+  })
   @ApiResponse({ status: 404, description: 'Plan not found.' })
   remove(@Param('id') id: string) {
     return this.tierService.remove(id);

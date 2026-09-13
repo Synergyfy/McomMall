@@ -471,11 +471,15 @@ export class GoogleBusinessService {
         throw new BadRequestException('Invalid or expired Google ID token');
       }
     } else if (process.env.NODE_ENV === 'production') {
-      throw new BadRequestException('Google ID token (idToken) is required for production login.');
+      throw new BadRequestException(
+        'Google ID token (idToken) is required for production login.',
+      );
     }
 
     if (!email) {
-      throw new BadRequestException('Valid email address or verified ID token is required.');
+      throw new BadRequestException(
+        'Valid email address or verified ID token is required.',
+      );
     }
 
     const user = await this.userRepository.findOne({ where: { email } });

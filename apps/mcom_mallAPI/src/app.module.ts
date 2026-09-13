@@ -9,6 +9,7 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { ConfigModule } from '@nestjs/config';
 import commissionConfig from './config/commission.config';
+import { envValidationSchema } from './config/env.validation';
 import { AuthModule } from './resources/auth/auth.module';
 import { ListingsModule } from './resources/listings/listings.module';
 import { ClaimModule } from './resources/claim/claim.module';
@@ -69,12 +70,28 @@ import { VisibilityModule } from './resources/visibility/visibility.module';
 import { TeamModule } from './resources/team/team.module';
 import { SsoModule } from './resources/sso/sso.module';
 import { DiscoverModule } from './resources/discover/discover.module';
+import { HotspotModule } from './resources/hotspot/hotspot.module';
+import { CustomerDirectoryModule } from './resources/customer-directory/customer-directory.module';
+import { LoyaltyModule } from './resources/loyalty/loyalty.module';
+import { ToolsModule } from './resources/tools/tools.module';
+import { SettingsModule } from './resources/settings/settings.module';
+import { FlashSalesModule } from './resources/flash-sales/flash-sales.module';
+import { QuizModule } from './resources/quiz/quiz.module';
+import { CustomerModule } from './resources/customer/customer.module';
 
 @Module({
   imports: [
+    FlashSalesModule,
+    QuizModule,
+    CustomerModule,
     QrCodesModule,
     InterestSignalsModule,
     AutomationsModule,
+    HotspotModule,
+    CustomerDirectoryModule,
+    LoyaltyModule,
+    ToolsModule,
+    SettingsModule,
     VisibilityModule,
     EventsModule,
     RotatorsModule,
@@ -104,11 +121,7 @@ import { DiscoverModule } from './resources/discover/discover.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],
-      validationSchema: require('joi').object({
-        NODE_ENV: require('joi').string().valid('development', 'production', 'test', 'staging').default('development'),
-        PORT: require('joi').number().default(3000),
-        COOKIE_SECRET: require('joi').string().default('mcom-mall-cookie-secret-key-12345'),
-      }),
+      validationSchema: envValidationSchema,
       validationOptions: {
         allowUnknown: true,
         abortEarly: false,

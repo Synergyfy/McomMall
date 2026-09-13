@@ -32,6 +32,7 @@ import {
 } from './entities/group-circle-message.entity';
 import { UsersService } from '../users/users.service';
 import { GeolocationService } from './geolocation.service';
+import { Promotion } from '../promotion/entities/promotion.entity';
 
 @Injectable()
 export class GroupCirclesService {
@@ -46,6 +47,8 @@ export class GroupCirclesService {
     private readonly groupTransactionRepository: Repository<GroupTransaction>,
     @InjectRepository(GroupCircleMessage)
     private readonly messageRepository: Repository<GroupCircleMessage>,
+    @InjectRepository(Promotion)
+    private readonly promotionRepository: Repository<Promotion>,
     private readonly dataSource: DataSource,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
@@ -56,6 +59,37 @@ export class GroupCirclesService {
 
   async getReferredBusinesses(user: User): Promise<any[]> {
     return this.usersService.getReferredBusinesses(user.id);
+  }
+
+  async getPartnerOffers(user: User, limit = 50): Promise<any[]> {
+    const promotions = await this.promotionRepository
+      .createQueryBuilder('promotion')
+      .leftJoinAndSelect('promotion.businesses', 'business')
+      .leftJoinAndSelect('business.user', 'owner')
+      .where('promotion.isActive = :isActive', { isActive: true })
+      .andWhere('promotion.endDate > :now', { now: new Date() })
+      .andWhere('business.user.id != :userId', { userId: user.id })
+      .orderBy('promotion.created_at', 'DESC')
+      .take(limit)
+      .getMany();
+
+    return promotions
+      .filter((promotion) => (promotion.businesses ?? []).length > 0)
+      .map((promotion) => {
+        const business = promotion.businesses[0];
+        return {
+          id: promotion.id,
+          businessName: business.businessName,
+          campaignName: promotion.name,
+          description:
+            promotion.description ?? promotion.termsAndConditions ?? '',
+          bannerUrl: business.bannerUrl ?? business.logoUrl ?? null,
+          rewards: [promotion.name],
+          participants: promotion.participants?.length ?? 0,
+          endsAt: promotion.endDate,
+          promotionType: promotion.promotionType,
+        };
+      });
   }
 
   private formatGroupCircle(group: Group) {

@@ -77,6 +77,17 @@ export class CampaignController {
     return this.campaignService.findOne(id);
   }
 
+  @Get(':id/stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get ad campaign performance stats',
+    description: 'Requires authentication.',
+  })
+  getCampaignStats(@Param('id', ParseUUIDPipe) id: string) {
+    return this.campaignService.getCampaignStats(id);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

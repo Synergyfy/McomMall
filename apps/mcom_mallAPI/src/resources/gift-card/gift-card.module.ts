@@ -15,6 +15,7 @@ import { Order } from '../order/entities/order.entity';
 import { OrderPayment } from '../order/entities/order-payment.entity';
 import { GiftCardAsset } from './entities/gift-card-asset.entity';
 import { AssetCategory } from './entities/asset-category.entity';
+import { GiftCardTheme } from './entities/gift-card-theme.entity';
 import { WalletModule } from '../wallet/wallet.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { GiftCardService } from './gift-card.service';
@@ -38,6 +39,7 @@ import { DigitalValueModule } from '../digital-value/digital-value.module';
       OrderPayment,
       GiftCardAsset,
       AssetCategory,
+      GiftCardTheme,
       User,
     ]),
     forwardRef(() => WalletModule),

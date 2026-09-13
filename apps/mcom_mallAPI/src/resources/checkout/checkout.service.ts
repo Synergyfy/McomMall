@@ -23,6 +23,10 @@ import { RedeemGiftCardDto } from '../gift-card/dto/redeem-gift-card.dto';
 import { CouponService } from '../coupon/coupon.service';
 import { DiscountType } from '../coupon/coupon.enum';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
+import {
+  ShippingItemInput,
+  ShippingPricingService,
+} from '../shipping/shipping-pricing.service';
 
 @Injectable()
 export class CheckoutService {
@@ -46,6 +50,7 @@ export class CheckoutService {
     private readonly dataSource: DataSource,
     private readonly productService: ProductService,
     private readonly couponService: CouponService,
+    private readonly shippingPricingService: ShippingPricingService,
   ) {}
 
   async initiateCheckout(
@@ -111,16 +116,27 @@ export class CheckoutService {
 
     const totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
 
-    // Dynamic Shipping Fee Calculation
+    // Dynamic Shipping Fee Calculation (Royal Mail pricing API with DB fallback)
     let estimatedShippingFee = 0;
-    if (carrierCode === 'royalmail') {
-      estimatedShippingFee = totalAfterCoupon >= 50 ? 0 : 4.50; // Royal Mail Tracked 48 with free shipping threshold
-    } else if (carrierCode === 'royalmail_express' || carrierCode === 'express') {
-      estimatedShippingFee = 6.99;
-    } else if (carrierCode === 'dpd' || carrierCode === 'evri') {
-      estimatedShippingFee = 5.49;
-    } else if (carrierCode) {
-      estimatedShippingFee = 3.99;
+    if (carrierCode) {
+      const shippingItems: ShippingItemInput[] = orderItems.map((item) => ({
+        quantity: item.quantity,
+        weightKg: item.product.weight,
+        lengthCm: item.product.length,
+        widthCm: item.product.width,
+        heightCm: item.product.height,
+      }));
+      const shippingQuote = await this.shippingPricingService.getShippingFee(
+        carrierCode,
+        shippingItems,
+        shippingAddress?.postalCode,
+      );
+      estimatedShippingFee = shippingQuote.fee;
+
+      // Apply free shipping threshold for Royal Mail Tracked 48
+      if (carrierCode === 'royalmail' && totalAfterCoupon >= 50) {
+        estimatedShippingFee = 0;
+      }
     }
 
     // Apply gift card if provided
@@ -238,7 +254,9 @@ export class CheckoutService {
       });
 
       if (!lockedOrder || lockedOrder.status !== OrderStatus.PENDING) {
-        throw new BadRequestException('Pending order not found or already processed.');
+        throw new BadRequestException(
+          'Pending order not found or already processed.',
+        );
       }
 
       // Redeem gift card
@@ -268,7 +286,11 @@ export class CheckoutService {
 
       // Redeem Coupon
       if (lockedOrder.couponCode && lockedOrder.couponDiscountApplied > 0) {
-        await this.couponService.redeem(lockedOrder.couponCode, user, lockedOrder);
+        await this.couponService.redeem(
+          lockedOrder.couponCode,
+          user,
+          lockedOrder,
+        );
       }
 
       lockedOrder.status = OrderStatus.COMPLETED;

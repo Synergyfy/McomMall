@@ -8,10 +8,17 @@ import { PaymentsModule } from '../payments/payments.module';
 import { MembershipPayment } from './entities/membership-payment.entity';
 import { Tier } from '../tier/entities/tier.entity';
 import { SsoModule } from '../sso/sso.module';
+import { MembershipCredit } from './entities/membership-credit.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Membership, User, MembershipPayment, Tier]),
+    TypeOrmModule.forFeature([
+      Membership,
+      User,
+      MembershipPayment,
+      Tier,
+      MembershipCredit,
+    ]),
     forwardRef(() => PaymentsModule),
     forwardRef(() => SsoModule),
   ],
