@@ -28,6 +28,8 @@ import { OrderService } from '../order/order.service';
 import { CreditEarningDto } from './dto/credit-earning.dto';
 import { BookingService } from '../booking/booking.service';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
+import { Withdrawal, WithdrawalStatus } from './entities/withdrawal.entity';
+import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 
 @Injectable()
 export class WalletService {
@@ -36,6 +38,8 @@ export class WalletService {
     private readonly walletRepository: Repository<Wallet>,
     @InjectRepository(WalletTransaction)
     private readonly walletTransactionRepository: Repository<WalletTransaction>,
+    @InjectRepository(Withdrawal)
+    private readonly withdrawalRepository: Repository<Withdrawal>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @Inject(forwardRef(() => OrderService))
@@ -505,5 +509,65 @@ export class WalletService {
     });
 
     return transactionRepo.save(transaction);
+  }
+
+  async requestWithdrawal(
+    dto: RequestWithdrawalDto,
+    userId: string,
+  ): Promise<Withdrawal> {
+    if (dto.amount < 10) {
+      throw new BadRequestException('Minimum withdrawal amount is 10 GBP');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const walletRepo = manager.getRepository(Wallet);
+      const withdrawalRepo = manager.getRepository(Withdrawal);
+
+      const wallet = await walletRepo.findOne({
+        where: { user: { id: userId } },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!wallet) {
+        throw new NotFoundException('Wallet not found');
+      }
+
+      if (Number(wallet.earningsBalance) < dto.amount) {
+        throw new BadRequestException(
+          'Insufficient earnings balance for this withdrawal',
+        );
+      }
+
+      wallet.earningsBalance = Number(wallet.earningsBalance) - dto.amount;
+      const savedWallet = await walletRepo.save(wallet);
+
+      const withdrawal = withdrawalRepo.create({
+        userId,
+        amount: dto.amount,
+        paymentMethod: dto.paymentMethod,
+        accountDetails: dto.accountDetails,
+        status: WithdrawalStatus.PENDING,
+        note: 'Withdrawal requested',
+      });
+      const savedWithdrawal = await withdrawalRepo.save(withdrawal);
+
+      await this.createTransaction(
+        savedWallet,
+        dto.amount,
+        WalletTransactionType.WITHDRAWAL,
+        `Withdrawal request ${savedWithdrawal.id}`,
+        savedWallet.earningsBalance,
+        manager,
+      );
+
+      return savedWithdrawal;
+    });
+  }
+
+  async getWithdrawalHistory(userId: string): Promise<Withdrawal[]> {
+    return this.withdrawalRepository.find({
+      where: { userId },
+      order: { created_at: 'DESC' },
+    });
   }
 }

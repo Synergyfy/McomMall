@@ -371,7 +371,11 @@ export class CouponService {
 
       if (order?.id) {
         const existingLog = await logRepo.findOne({
-          where: { coupon: { code }, orderId: order.id, status: RedemptionStatus.REDEEMED },
+          where: {
+            coupon: { code },
+            orderId: order.id,
+            status: RedemptionStatus.REDEEMED,
+          },
         });
         if (existingLog) return existingLog;
       }
@@ -417,7 +421,11 @@ export class CouponService {
 
       if (order?.id) {
         const existingLog = await logRepo.findOne({
-          where: { coupon: { code: payload.code }, orderId: order.id, status: RedemptionStatus.REDEEMED },
+          where: {
+            coupon: { code: payload.code },
+            orderId: order.id,
+            status: RedemptionStatus.REDEEMED,
+          },
         });
         if (existingLog) return;
       }
@@ -524,10 +532,10 @@ export class CouponService {
       .innerJoin('log.coupon', 'coupon')
       .where('coupon.businessId IN (:...businessIds)', { businessIds })
       .andWhere('log.status = :status', { status: RedemptionStatus.REDEEMED })
-      .select("SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)", 'month')
+      .select('SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)', 'month')
       .addSelect('COUNT(log.id)', 'redemptions')
-      .groupBy("SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)")
-      .orderBy("month", 'ASC')
+      .groupBy('SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)')
+      .orderBy('month', 'ASC')
       .getRawMany();
 
     const data = rawResults.map((r) => ({
@@ -575,7 +583,9 @@ export class CouponService {
       amount: Number(log.coupon?.discountValue || 0),
       createdAt: log.timestamp,
       customerName: log.user
-        ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() || log.user.fullName || 'N/A'
+        ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() ||
+          log.user.fullName ||
+          'N/A'
         : 'N/A',
       customerEmail: log.user?.email || 'N/A',
       couponCode: log.coupon?.code || '',
@@ -669,5 +679,37 @@ export class CouponService {
     });
 
     return new PageDto(items, pageMetaDto);
+  }
+
+  async redeemManual(
+    code: string,
+    userId: string,
+  ): Promise<{ success: boolean; message: string; coupon: Coupon }> {
+    const coupon = await this.couponRepository.findOne({
+      where: { code },
+      relations: ['business'],
+    });
+
+    if (!coupon) {
+      throw new NotFoundException(`Coupon with code ${code} not found.`);
+    }
+
+    if (coupon.status !== CouponStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Coupon is inactive or not currently active.',
+      );
+    }
+
+    const redemptionLog = this.redemptionLogRepository.create({
+      coupon,
+      user: { id: userId } as any,
+    });
+    await this.redemptionLogRepository.save(redemptionLog);
+
+    return {
+      success: true,
+      message: `Coupon ${code} redeemed successfully.`,
+      coupon,
+    };
   }
 }

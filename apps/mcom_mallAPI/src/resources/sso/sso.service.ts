@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -26,7 +31,7 @@ export class SsoService {
     private readonly userService: UsersService,
     private readonly dataSource: DataSource,
     private readonly mcomCentralService: McomCentralService,
-  ) { }
+  ) {}
 
   private getMcomSolutionsBackendUrl(): string {
     return process.env.MCOM_SOLUTIONS_BACKEND_URL || 'http://localhost:3010';
@@ -169,9 +174,7 @@ export class SsoService {
     });
 
     if (!response.ok) {
-      this.logger.warn(
-        `SSO logout returned ${response.status} (non-fatal)`,
-      );
+      this.logger.warn(`SSO logout returned ${response.status} (non-fatal)`);
     }
 
     return { success: true };
@@ -209,7 +212,11 @@ export class SsoService {
     }
 
     // --- Subscription gate: check if business user has an active MCOM Mall package ---
-    let userPackages: { tierId: string | null; isActive: boolean; packages: any[] } | null = null;
+    let userPackages: {
+      tierId: string | null;
+      isActive: boolean;
+      packages: any[];
+    } | null = null;
     const isOwnerRole =
       centralUser.role?.toLowerCase() === 'owner' ||
       centralUser.role?.toLowerCase() === 'business';
@@ -229,9 +236,8 @@ export class SsoService {
       } else if (centralUserId) {
         // Fallback: query MCOM Solutions for package data
         try {
-          userPackages = await this.mcomCentralService.getUserPackages(
-            centralUserId,
-          );
+          userPackages =
+            await this.mcomCentralService.getUserPackages(centralUserId);
         } catch (err) {
           this.logger.warn(
             `Could not verify subscription for user ${centralUserId}: ${err instanceof Error ? err.message : err}`,
@@ -323,7 +329,9 @@ export class SsoService {
       name: `${localUser.firstName} ${localUser.lastName}`,
       role: localUser.role,
       email: localUser.email,
-      packageInfo: userPackages?.tierId ? { planType: userPackages.tierId } : null,
+      packageInfo: userPackages?.tierId
+        ? { planType: userPackages.tierId }
+        : null,
     };
   }
 

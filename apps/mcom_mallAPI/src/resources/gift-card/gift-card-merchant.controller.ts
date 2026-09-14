@@ -29,6 +29,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { BulkCreateGiftCardDto } from './dto/bulk-create-gift-card.dto';
 import { BulkImportGiftCardsDto } from './dto/bulk-import-gift-cards.dto';
+import { CreateGiftCardThemeDto } from './dto/create-gift-card-theme.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { GiftCard } from './entities/gift-card.entity';
@@ -43,6 +44,12 @@ import { GiftCardTransactionHistoryDto } from './dto/gift-card-transaction-histo
 @Controller('merchant/gift-cards')
 export class GiftCardMerchantController {
   constructor(private readonly giftCardService: GiftCardService) {}
+
+  @Post('themes')
+  @ApiOperation({ summary: 'Create a custom email gift card theme' })
+  createTheme(@CurrentUser() user: User, @Body() dto: CreateGiftCardThemeDto) {
+    return this.giftCardService.createTheme(dto, user.id);
+  }
 
   // --- Settings Management ---
   @Get('settings')

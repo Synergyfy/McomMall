@@ -39,6 +39,10 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
+import {
+  ShippingItemInput,
+  ShippingPricingService,
+} from '../shipping/shipping-pricing.service';
 
 import { Service } from '../services/entities/service.entity';
 
@@ -86,6 +90,7 @@ export class OrderService {
     private readonly eventEmitter: EventEmitter2,
     @Inject(forwardRef(() => ProductService))
     private readonly productService: ProductService,
+    private readonly shippingPricingService: ShippingPricingService,
   ) {}
 
   private validateBusinessAndOwner(business: Business) {
@@ -299,16 +304,51 @@ export class OrderService {
 
     const totalAfterDiscounts = totalBeforeRedemption - couponAmountToApply;
 
-    // Dynamic Shipping Fee Calculation
+    // Dynamic Shipping Fee Calculation (Royal Mail pricing API with DB fallback)
+    const shippingItems: ShippingItemInput[] = [];
+    if (isDirectPurchase && directPurchaseProduct) {
+      shippingItems.push({
+        quantity: directPurchase.quantity,
+        weightKg: directPurchaseProduct.weight,
+        lengthCm: directPurchaseProduct.length,
+        widthCm: directPurchaseProduct.width,
+        heightCm: directPurchaseProduct.height,
+      });
+    } else if (isCartCheckout) {
+      for (const cartItem of cart.items) {
+        shippingItems.push({
+          quantity: cartItem.quantity,
+          weightKg: cartItem.product.weight,
+          lengthCm: cartItem.product.length,
+          widthCm: cartItem.product.width,
+          heightCm: cartItem.product.height,
+        });
+      }
+    }
+
+    let shippingAddress: ShippingAddress | null = null;
+    if (shippingAddressId) {
+      shippingAddress = await this.shippingAddressRepository.findOne({
+        where: { id: shippingAddressId, user: { id: userId } },
+      });
+      if (!shippingAddress) {
+        throw new NotFoundException('Shipping address not found');
+      }
+    }
+
     let estimatedShippingFee = 0;
-    if (carrierCode === 'royalmail') {
-      estimatedShippingFee = totalAfterDiscounts >= 50 ? 0 : 4.50; // Tracked 48 with free shipping over £50
-    } else if (carrierCode === 'royalmail_express' || carrierCode === 'express') {
-      estimatedShippingFee = 6.99; // Tracked 24 / Express
-    } else if (carrierCode === 'dpd' || carrierCode === 'evri') {
-      estimatedShippingFee = 5.49; // Courier partner rate
-    } else if (carrierCode) {
-      estimatedShippingFee = 3.99; // Standard shipping fallback
+    if (carrierCode) {
+      const shippingQuote = await this.shippingPricingService.getShippingFee(
+        carrierCode,
+        shippingItems,
+        shippingAddress?.postalCode,
+      );
+      estimatedShippingFee = shippingQuote.fee;
+
+      // Apply free shipping threshold for Royal Mail Tracked 48
+      if (carrierCode === 'royalmail' && totalAfterDiscounts >= 50) {
+        estimatedShippingFee = 0;
+      }
     }
 
     const totalWithShipping = totalAfterDiscounts + estimatedShippingFee;
@@ -383,16 +423,6 @@ export class OrderService {
 
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException('User not found');
-
-    let shippingAddress: ShippingAddress | null = null;
-    if (shippingAddressId) {
-      shippingAddress = await this.shippingAddressRepository.findOne({
-        where: { id: shippingAddressId, user: { id: userId } },
-      });
-      if (!shippingAddress) {
-        throw new NotFoundException('Shipping address not found');
-      }
-    }
 
     let offer: Offer | null = null;
     if (createCheckoutDto.offerId) {

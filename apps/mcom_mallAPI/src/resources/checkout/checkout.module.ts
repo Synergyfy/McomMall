@@ -15,6 +15,7 @@ import { GiftCardModule } from '../gift-card/gift-card.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { CouponModule } from '../coupon/coupon.module';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
+import { ShippingModule } from '../shipping/shipping.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ShippingAddress } from '../shipping-address/entities/shipping-address.e
     GiftCardModule,
     PaymentsModule,
     CouponModule,
+    ShippingModule,
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],

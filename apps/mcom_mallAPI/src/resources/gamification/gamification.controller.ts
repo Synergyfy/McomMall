@@ -46,6 +46,15 @@ export class GamificationController {
     return this.gamificationService.findAllForBusiness(user.id);
   }
 
+  @Get('summary')
+  @Roles(UserRole.OWNER)
+  @ApiOperation({
+    summary: 'Get aggregated gamification dashboard summary',
+  })
+  async getSummary(@CurrentUser() user: User) {
+    return this.gamificationService.getSummary(user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a gamification campaign by ID' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {

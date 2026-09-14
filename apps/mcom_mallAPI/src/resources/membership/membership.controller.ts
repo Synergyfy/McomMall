@@ -1,10 +1,11 @@
-import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Param } from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiParam,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -17,6 +18,11 @@ import { InitiateMembershipPaymentDto } from './dto/initiate-membership-payment.
 import { VerifyMembershipPaymentDto } from './dto/verify-membership-payment.dto';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { JoinTrialDto } from './dto/join-trial.dto';
+import { MembershipCredit } from './entities/membership-credit.entity';
+import {
+  CreateMembershipCreditDto,
+  UpdateMembershipCreditStatusDto,
+} from './dto/membership-credit.dto';
 
 @ApiTags('Membership')
 @ApiBearerAuth()
@@ -143,5 +149,54 @@ export class MembershipController {
     @CurrentUser() user: User,
   ): Promise<Membership> {
     return this.membershipService.joinTrial(joinTrialDto.tierId, user);
+  }
+
+  @Get('credits')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'List the current user membership credits' })
+  @ApiResponse({
+    status: 200,
+    description: 'Membership credits retrieved successfully',
+    type: [MembershipCredit],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  getCredits(@CurrentUser() user: User) {
+    return this.membershipService.getCredits(user);
+  }
+
+  @Post('credits')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a new membership credit' })
+  @ApiResponse({
+    status: 201,
+    description: 'Membership credit created successfully',
+    type: MembershipCredit,
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  createCredit(
+    @CurrentUser() user: User,
+    @Body() dto: CreateMembershipCreditDto,
+  ) {
+    return this.membershipService.createCredit(user, dto);
+  }
+
+  @Post('credits/:id/status')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update a membership credit status' })
+  @ApiParam({ name: 'id', description: 'Membership credit UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Membership credit status updated successfully',
+    type: MembershipCredit,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Membership credit not found.' })
+  updateCreditStatus(
+    @CurrentUser() user: User,
+    @Param('id') creditId: string,
+    @Body() dto: UpdateMembershipCreditStatusDto,
+  ) {
+    return this.membershipService.updateCreditStatus(user, creditId, dto);
   }
 }

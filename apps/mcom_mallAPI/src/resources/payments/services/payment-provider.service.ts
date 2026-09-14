@@ -1,4 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import {
@@ -8,29 +14,71 @@ import {
   CheckoutPaymentIntent,
   OrdersController,
   PaymentsController,
+  Refund,
+  RefundStatus,
 } from '@paypal/paypal-server-sdk';
+
+export interface PaypalPayoutBatch {
+  batch_header: {
+    payout_batch_id: string;
+    batch_status: string;
+  };
+}
+
+function isPaypalPayoutBatch(payload: unknown): payload is PaypalPayoutBatch {
+  if (typeof payload !== 'object' || payload === null) {
+    return false;
+  }
+  const header = (payload as { batch_header?: unknown }).batch_header;
+  return (
+    typeof header === 'object' &&
+    header !== null &&
+    typeof (header as { payout_batch_id?: unknown }).payout_batch_id ===
+      'string'
+  );
+}
 
 @Injectable()
 export class PaymentProviderService {
+  private readonly logger = new Logger(PaymentProviderService.name);
   private stripe: Stripe;
   private ordersController: OrdersController;
   private paymentsController: PaymentsController;
 
   constructor(private configService: ConfigService) {
     const stripeKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    if (!stripeKey && process.env.NODE_ENV === 'production') {
-      throw new Error('STRIPE_SECRET_KEY is required in production environment');
+    if (!stripeKey) {
+      throw new Error('STRIPE_SECRET_KEY is required');
     }
-    this.stripe = new Stripe(stripeKey || 'dummy_stripe_secret_key_dev');
+    this.stripe = new Stripe(stripeKey);
 
     const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
     const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');
 
+    if (!clientId || !clientSecret) {
+      throw new Error('PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are required');
+    }
+
+    const usesSandboxPaypal = clientId?.startsWith('sb-') ?? false;
+    if (process.env.NODE_ENV === 'production' && usesSandboxPaypal) {
+      throw new Error(
+        'PAYPAL_CLIENT_ID appears to be a sandbox credential. Production environment cannot use sandbox PayPal credentials.',
+      );
+    }
+    if (usesSandboxPaypal) {
+      this.logger.warn(
+        'PayPal client credentials appear to be sandbox/test credentials.',
+      );
+    }
+
     const client = new Client({
-      environment: process.env.NODE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+      environment:
+        process.env.NODE_ENV === 'production'
+          ? Environment.Production
+          : Environment.Sandbox,
       clientCredentialsAuthCredentials: {
-        oAuthClientId: clientId || '',
-        oAuthClientSecret: clientSecret || '',
+        oAuthClientId: clientId,
+        oAuthClientSecret: clientSecret,
       },
     });
     this.ordersController = new OrdersController(client);
@@ -195,19 +243,21 @@ export class PaymentProviderService {
     amount: number,
     currency: string,
     receiverEmail: string,
-  ): Promise<any> {
+  ): Promise<PaypalPayoutBatch> {
     const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
     const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');
 
     if (!clientId || !clientSecret) {
-      return { batch_header: { payout_batch_id: `payout_sim_${Date.now()}`, batch_status: 'PENDING' } };
+      throw new ServiceUnavailableException(
+        'PayPal Payouts is not configured. PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET must be set.',
+      );
     }
 
-    // Call PayPal REST API endpoint for Payouts
     const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://api-m.paypal.com' 
-      : 'https://api-m.sandbox.paypal.com';
+    const baseUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://api-m.paypal.com'
+        : 'https://api-m.sandbox.paypal.com';
 
     const response = await fetch(`${baseUrl}/v1/payments/payouts`, {
       method: 'POST',
@@ -217,7 +267,7 @@ export class PaymentProviderService {
       },
       body: JSON.stringify({
         sender_batch_header: {
-          sender_batch_id: `batch_${Date.now()}`,
+          sender_batch_id: randomUUID(),
           email_subject: 'You have a payout from Mcom Mall',
         },
         items: [
@@ -230,10 +280,31 @@ export class PaymentProviderService {
         ],
       }),
     });
-    return response.json();
+
+    const payload: unknown = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new ServiceUnavailableException(
+        `PayPal payout failed (${response.status}): ${
+          JSON.stringify(payload) || response.statusText
+        }`,
+      );
+    }
+
+    if (!isPaypalPayoutBatch(payload)) {
+      throw new ServiceUnavailableException(
+        'PayPal payout response is missing payout_batch_id.',
+      );
+    }
+
+    return payload;
   }
 
-  async refundPaypalOrder(captureId: string, amount?: number, currency = 'GBP'): Promise<any> {
+  async refundPaypalOrder(
+    captureId: string,
+    amount?: number,
+    currency = 'GBP',
+  ): Promise<Refund> {
     try {
       const response = await this.paymentsController.refundCapturedPayment({
         captureId,
@@ -246,12 +317,21 @@ export class PaymentProviderService {
             }
           : {},
       });
-      return response.result;
-    } catch (error: any) {
-      if (!this.configService.get<string>('PAYPAL_CLIENT_ID')) {
-        return { id: `refund_sim_${Date.now()}`, status: 'COMPLETED' };
+      const result = response.result;
+      if (result?.status === RefundStatus.Failed) {
+        throw new ServiceUnavailableException(
+          `PayPal refund failed: ${result.id} status ${result.status}`,
+        );
       }
-      throw error;
+      return result;
+    } catch (error: unknown) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      throw new ServiceUnavailableException(
+        `PayPal refund failed for capture ${captureId}: ${message}`,
+      );
     }
   }
 }

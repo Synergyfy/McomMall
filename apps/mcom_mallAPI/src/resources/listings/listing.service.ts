@@ -235,10 +235,14 @@ export class ListingsService {
     }
   }
 
-  async findAllForUser(userId: string, page = 1, limit = 10) {
+  async findAllForUser(userId: string, page = 1, limit = 10, status?: string) {
     const skip = (page - 1) * limit;
+    const whereCondition: any = { user: { id: userId } };
+    if (status) {
+      whereCondition.status = status;
+    }
     const [data, total] = await this.businessRepository.findAndCount({
-      where: { user: { id: userId } },
+      where: whereCondition,
       relations: [
         'sector',
         'category',

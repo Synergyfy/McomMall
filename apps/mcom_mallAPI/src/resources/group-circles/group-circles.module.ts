@@ -8,6 +8,7 @@ import { GroupMember } from './entities/group-member.entity';
 import { GroupWallet } from './entities/group-wallet.entity';
 import { GroupTransaction } from './entities/group-transaction.entity';
 import { GroupCircleMessage } from './entities/group-circle-message.entity';
+import { Promotion } from '../promotion/entities/promotion.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { UsersModule } from '../users/users.module';
@@ -21,6 +22,7 @@ import { GeolocationService } from './geolocation.service';
       GroupWallet,
       GroupTransaction,
       GroupCircleMessage,
+      Promotion,
     ]),
     HttpModule,
     PaymentsModule,

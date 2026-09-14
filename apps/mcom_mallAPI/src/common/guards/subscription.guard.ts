@@ -57,7 +57,10 @@ export class SubscriptionGuard implements CanActivate {
     // Check cache
     const cacheKey = centralUserId;
     const cached = SubscriptionGuard.cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < SubscriptionGuard.CACHE_TTL_MS) {
+    if (
+      cached &&
+      Date.now() - cached.timestamp < SubscriptionGuard.CACHE_TTL_MS
+    ) {
       if (!cached.result) {
         throw new ForbiddenException('No active MCOM Mall subscription');
       }

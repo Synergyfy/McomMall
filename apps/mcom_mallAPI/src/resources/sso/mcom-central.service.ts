@@ -54,8 +54,9 @@ export class McomCentralService {
       const hasActiveMall = Array.isArray(userData.packages)
         ? userData.packages.some(
             (pkg: any) =>
-              ((pkg.platformName || pkg.platform)?.toLowerCase() === 'mcom mall' ||
-               (pkg.platformName || pkg.platform)?.toLowerCase() === 'mall') &&
+              ((pkg.platformName || pkg.platform)?.toLowerCase() ===
+                'mcom mall' ||
+                (pkg.platformName || pkg.platform)?.toLowerCase() === 'mall') &&
               pkg.status === 'active',
           )
         : false;
@@ -93,10 +94,7 @@ export class McomCentralService {
       const body = await response.json();
       return body.data || body;
     } catch (error) {
-      this.logger.error(
-        'Failed to fetch membership from MCOM Central:',
-        error,
-      );
+      this.logger.error('Failed to fetch membership from MCOM Central:', error);
       return null;
     }
   }
@@ -127,9 +125,11 @@ export class McomCentralService {
     }
   }
 
-  async getUserPackages(
-    userId: string,
-  ): Promise<{ tierId: string | null; isActive: boolean; packages: any[] } | null> {
+  async getUserPackages(userId: string): Promise<{
+    tierId: string | null;
+    isActive: boolean;
+    packages: any[];
+  } | null> {
     try {
       const headers = this.getHmacHeaders();
       const response = await fetch(
@@ -155,7 +155,8 @@ export class McomCentralService {
       const mallPackage = Array.isArray(packages)
         ? packages.find(
             (pkg: any) =>
-              (pkg.platformName || pkg.platform)?.toLowerCase() === 'mcom mall' ||
+              (pkg.platformName || pkg.platform)?.toLowerCase() ===
+                'mcom mall' ||
               (pkg.platformName || pkg.platform)?.toLowerCase() === 'mall',
           )
         : null;
@@ -175,9 +176,7 @@ export class McomCentralService {
         userData.membershipStatus || userData.businessProfile?.membershipStatus;
       if (membershipStatus && membershipStatus.toLowerCase() === 'active') {
         const tierId =
-          userData.tierId ||
-          userData.businessProfile?.membershipLevel ||
-          null;
+          userData.tierId || userData.businessProfile?.membershipLevel || null;
         return { tierId, isActive: true, packages };
       }
 

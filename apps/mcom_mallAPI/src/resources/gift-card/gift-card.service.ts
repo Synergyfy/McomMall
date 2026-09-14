@@ -23,6 +23,8 @@ import {
   GiftCardTransactionType,
 } from './entities/gift-card-transaction.entity';
 import { GiftCardTemplate } from './entities/gift-card-template.entity';
+import { GiftCardTheme } from './entities/gift-card-theme.entity';
+import { CreateGiftCardThemeDto } from './dto/create-gift-card-theme.dto';
 import { PurchaseGiftCardDto } from './dto/purchase-gift-card.dto';
 import { CheckBalanceResponseDto } from './dto/check-balance-response.dto';
 import { RedeemGiftCardDto } from './dto/redeem-gift-card.dto';
@@ -95,6 +97,8 @@ export class GiftCardService {
     private readonly orderPaymentRepository: Repository<OrderPayment>,
     @InjectRepository(GiftCardAsset)
     private readonly giftCardAssetRepository: Repository<GiftCardAsset>,
+    @InjectRepository(GiftCardTheme)
+    private readonly themeRepository: Repository<GiftCardTheme>,
     private readonly giftCardAssetService: GiftCardAssetService,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
@@ -1677,5 +1681,63 @@ export class GiftCardService {
     }
 
     return template;
+  }
+
+  async findAllThemes(
+    category?: string,
+    ownerId?: string,
+  ): Promise<GiftCardTheme[]> {
+    const query = this.themeRepository.createQueryBuilder('theme');
+    if (ownerId) {
+      query.where('(theme.isPublic = true OR theme.ownerId = :ownerId)', {
+        ownerId,
+      });
+    } else {
+      query.where('theme.isPublic = true');
+    }
+    if (category) {
+      query.andWhere('theme.category = :category', { category });
+    }
+    return query.orderBy('theme.created_at', 'DESC').getMany();
+  }
+
+  async createTheme(
+    dto: CreateGiftCardThemeDto,
+    ownerId?: string,
+  ): Promise<GiftCardTheme> {
+    const theme = this.themeRepository.create({
+      ...dto,
+      ownerId: ownerId ?? null,
+      isPublic: ownerId ? (dto.isPublic ?? false) : true,
+    });
+    return this.themeRepository.save(theme);
+  }
+
+  async checkBalanceWithPin(
+    code: string,
+    pin?: string,
+  ): Promise<CheckBalanceResponseDto> {
+    const giftCard = await this.giftCardRepository.findOne({
+      where: { code },
+    });
+
+    if (!giftCard) {
+      throw new NotFoundException(`Gift card with code ${code} was not found.`);
+    }
+
+    const isExpired = giftCard.expiryDate
+      ? new Date() > new Date(giftCard.expiryDate)
+      : false;
+
+    if (!giftCard.isActive || isExpired) {
+      throw new BadRequestException('Gift card is inactive or has expired.');
+    }
+
+    return {
+      initialBalance: Number(giftCard.initialBalance),
+      currentBalance: Number(giftCard.currentBalance),
+      currency: giftCard.currency,
+      expiryDate: giftCard.expiryDate ?? null,
+    };
   }
 }

@@ -24,6 +24,14 @@ import { MembershipPayment } from './entities/membership-payment.entity';
 import { Tier } from '../tier/entities/tier.entity';
 import { TierType } from '../tier/enums/tier-type.enum';
 import { McomCentralService } from '../sso/mcom-central.service';
+import {
+  MembershipCredit,
+  MembershipCreditStatus,
+} from './entities/membership-credit.entity';
+import {
+  CreateMembershipCreditDto,
+  UpdateMembershipCreditStatusDto,
+} from './dto/membership-credit.dto';
 
 @Injectable()
 export class MembershipService {
@@ -44,6 +52,8 @@ export class MembershipService {
     private readonly paymentRepository: Repository<MembershipPayment>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
+    @InjectRepository(MembershipCredit)
+    private readonly creditRepository: Repository<MembershipCredit>,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly mcomCentralService: McomCentralService,
@@ -65,9 +75,8 @@ export class MembershipService {
       );
     }
 
-    const userPackages = await this.mcomCentralService.getUserPackages(
-      centralUserId,
-    );
+    const userPackages =
+      await this.mcomCentralService.getUserPackages(centralUserId);
 
     if (!userPackages) {
       return null;
@@ -510,5 +519,51 @@ export class MembershipService {
 
       return savedMembership;
     });
+  }
+
+  async getCredits(user: User): Promise<MembershipCredit[]> {
+    return this.creditRepository.find({
+      where: { userId: user.id },
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async createCredit(
+    user: User,
+    dto: CreateMembershipCreditDto,
+  ): Promise<MembershipCredit> {
+    const credit = this.creditRepository.create({
+      userId: user.id,
+      type: dto.type,
+      amount: dto.amount,
+      title: dto.title,
+      businessId: dto.businessId,
+      expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
+      note: dto.note,
+      status: MembershipCreditStatus.AVAILABLE,
+    });
+    return this.creditRepository.save(credit);
+  }
+
+  async updateCreditStatus(
+    user: User,
+    creditId: string,
+    dto: UpdateMembershipCreditStatusDto,
+  ): Promise<MembershipCredit> {
+    const credit = await this.creditRepository.findOne({
+      where: { id: creditId, userId: user.id },
+    });
+    if (!credit) {
+      throw new NotFoundException(
+        `Membership credit with ID "${creditId}" not found`,
+      );
+    }
+
+    credit.status = dto.status;
+    credit.note = dto.note ?? credit.note;
+    if (dto.status === MembershipCreditStatus.REDEEMED) {
+      credit.redeemedAt = new Date();
+    }
+    return this.creditRepository.save(credit);
   }
 }

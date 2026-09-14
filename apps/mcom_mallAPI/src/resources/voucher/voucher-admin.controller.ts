@@ -40,15 +40,25 @@ export class VoucherAdminController {
   }
 
   // This is a placeholder for a more advanced query/reporting endpoint.
-  // In a real application, this would have pagination and filtering.
   @Get('all')
-  @ApiOperation({ summary: 'Get all vouchers' })
-  async getAllVouchers() {
-    // For simplicity, this is not implemented in the service,
-    // as it would require more complex querying.
-    // In a real implementation, you'd call:
-    // return this.voucherService.findAllVouchers(queryOptions);
-    return { message: 'Endpoint for all vouchers, implementation pending.' };
+  @ApiOperation({
+    summary: 'Get all vouchers owned by the current user',
+  })
+  async getAllVouchers(
+    @CurrentUser() user: User,
+    @Query() query: VoucherHistoryQueryDto,
+  ) {
+    return this.voucherService.findAllVouchers(user.id, query);
+  }
+
+  @Get('products/:productId/analytics')
+  @ApiOperation({
+    summary: 'Get analytics for a specific voucher product',
+  })
+  async getVoucherProductAnalytics(
+    @Param('productId', ParseUUIDPipe) productId: string,
+  ) {
+    return this.voucherService.getVoucherProductAnalytics(productId);
   }
 
   @Get('summary-statistics')

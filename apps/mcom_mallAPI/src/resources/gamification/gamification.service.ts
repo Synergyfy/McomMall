@@ -59,6 +59,27 @@ export class GamificationService {
     });
   }
 
+  async getSummary(userId: string): Promise<any> {
+    const games = await this.findAllForBusiness(userId);
+    const totalPoints = games
+      .filter((game) => game.rewardType === 'points')
+      .reduce((sum, game) => sum + Number(game.rewardValue ?? 0), 0);
+
+    return {
+      totalGames: games.length,
+      activeGames: games.filter((game) => game.status === 'active').length,
+      totalParticipants: games.reduce(
+        (sum, game) => sum + game.totalParticipants,
+        0,
+      ),
+      gamesPlayed: games.reduce((sum, game) => sum + game.gamesPlayed, 0),
+      rewardsIssued: games.reduce((sum, game) => sum + game.rewardsIssued, 0),
+      rewardsClaimed: games.reduce((sum, game) => sum + game.rewardsClaimed, 0),
+      totalPoints,
+      games,
+    };
+  }
+
   async findOne(id: string): Promise<Gamification> {
     const gamification = await this.gamificationRepository.findOne({
       where: { id },

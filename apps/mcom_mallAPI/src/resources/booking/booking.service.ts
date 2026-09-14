@@ -23,7 +23,10 @@ import { ListingType, BusinessStatus } from '../listings/listing.enum';
 import { NotificationType } from '../notification/notification.enum';
 import { NotificationService } from '../notification/notification.service';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
-import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import {
+  PaypalPayoutBatch,
+  PaymentProviderService,
+} from '../payments/services/payment-provider.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import { Service } from '../services/entities/service.entity';
@@ -32,6 +35,7 @@ import { WalletService } from '../wallet/wallet.service';
 import { EmailService } from '../email/email.service';
 import { BlockSlotDto } from './dto/block-slot.dto';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
+import { IntegrationSetting } from '../settings/entities/integration-setting.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { InitiateBookingPaymentDto } from './dto/initiate-booking-payment.dto';
 import { PriceModifierDto } from './dto/price-modifier.dto';
@@ -381,8 +385,12 @@ export class BookingService {
   }
 
   /**
-   * Creates a new booking with a dedicated payment transaction.
-   * This method is for standalone bookings.
+   * Creates a new booking without charging the customer.
+   *
+   * The booking is created in PENDING status and must be paid for through
+   * `initiatePayment` (create the payment intent) followed by `verifyPayment`
+   * (confirm funds were captured) before it can transition to CONFIRMED.
+   * No synthetic `ServicePayment` record is written here.
    */
   async create(
     createBookingDto: CreateBookingDto,
@@ -395,38 +403,7 @@ export class BookingService {
         transactionalEntityManager,
       );
 
-      const service = await transactionalEntityManager.findOne(Service, {
-        where: { id: createBookingDto.serviceId },
-        relations: ['business'],
-      });
-
-      const priceModifier = await transactionalEntityManager.findOne(
-        PriceModifier,
-        {
-          where: {
-            business: { id: service.business.id },
-            startTime: LessThan(new Date(createBookingDto.endTime)),
-            endTime: MoreThan(new Date(createBookingDto.startTime)),
-          },
-        },
-      );
-      const priceMultiplier = priceModifier ? priceModifier.priceMultiplier : 1;
-
-      const basePrice = Number(service?.fixedPrice || service?.basePrice || service?.pricePerHour || service?.pricePerUnit || 100);
-      const calculatedAmount = Number((basePrice * priceMultiplier).toFixed(2));
-      const transactionId = `tx_bk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
-      const payment = transactionalEntityManager.create(ServicePayment, {
-        user: { id: userId },
-        amount: calculatedAmount,
-        currency: 'gbp',
-        paymentMethod: PaymentMethod.STRIPE,
-        transactionId,
-      });
-      await transactionalEntityManager.save(payment);
-
-      booking.payment = payment;
-      return transactionalEntityManager.save(booking);
+      return booking;
     });
   }
 
@@ -1227,26 +1204,50 @@ export class BookingService {
         if (!booking.payoutProcessed && !booking.refundProcessed) {
           const transactionRepo = manager.getRepository(BookingTransaction);
 
-          let transferResult;
-          if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
-            // Assuming business user has a stripeAccountId property, defaulting to mock for now
-            const stripeAccountId = 'mock_acct_id';
-            transferResult =
-              await this.paymentProviderService.createStripeTransfer(
-                booking.providerAmount,
-                'gbp',
-                stripeAccountId,
-                { bookingId: booking.id },
+          let transferResult: { id: string } | PaypalPayoutBatch | undefined;
+          try {
+            if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
+              const integrationSetting = await manager.findOne(
+                IntegrationSetting,
+                { where: { businessId: booking.service.business.id } },
               );
-            booking.transferId = transferResult.id;
-          } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
-            transferResult =
-              await this.paymentProviderService.createPaypalPayout(
-                booking.providerAmount,
-                'gbp',
-                booking.service.business.user.email,
-              );
-            booking.transferId = transferResult.batch_header.payout_batch_id;
+              const stripeAccountId =
+                integrationSetting?.stripeConnected === true
+                  ? integrationSetting.stripeAccountId
+                  : undefined;
+
+              if (!stripeAccountId) {
+                this.logger.error(
+                  `Escrow payout skipped for booking ${booking.id}: business ${booking.service.business.id} has no connected Stripe account.`,
+                );
+              } else {
+                const transfer =
+                  await this.paymentProviderService.createStripeTransfer(
+                    booking.providerAmount,
+                    'gbp',
+                    stripeAccountId,
+                    { bookingId: booking.id },
+                  );
+                booking.transferId = transfer.id;
+                transferResult = transfer;
+              }
+            } else if (
+              booking.payment?.paymentMethod === PaymentMethod.PAYPAL
+            ) {
+              const payout =
+                await this.paymentProviderService.createPaypalPayout(
+                  booking.providerAmount,
+                  'gbp',
+                  booking.service.business.user.email,
+                );
+              booking.transferId = payout.batch_header.payout_batch_id;
+              transferResult = payout;
+            }
+          } catch (error: unknown) {
+            this.logger.error(
+              `Escrow payout failed for booking ${booking.id}:`,
+              error instanceof Error ? error.stack : String(error),
+            );
           }
 
           if (transferResult) {

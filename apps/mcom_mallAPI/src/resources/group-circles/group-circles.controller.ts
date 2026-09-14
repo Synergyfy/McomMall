@@ -96,6 +96,18 @@ export class GroupCirclesController {
     return this.groupCirclesService.getReferredBusinesses(user);
   }
 
+  @Get('partner-offers')
+  @Roles(UserRole.OWNER)
+  @ApiOperation({
+    summary: 'List marketplace partner offers available to adopt',
+  })
+  getPartnerOffers(
+    @CurrentUser() user: User,
+    @Query('limit') limit: number = 50,
+  ): Promise<any[]> {
+    return this.groupCirclesService.getPartnerOffers(user, limit);
+  }
+
   @Get(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Find a specific group circle by ID' })

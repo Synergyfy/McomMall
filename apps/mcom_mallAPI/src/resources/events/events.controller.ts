@@ -19,6 +19,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { CreateLiveCommentDto } from './dto/create-live-comment.dto';
 
 @ApiTags('Events')
 @ApiBearerAuth()
@@ -50,6 +51,27 @@ export class EventsController {
   @ApiOperation({ summary: 'Get an event by ID' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.eventsService.findOne(id);
+  }
+
+  @Get(':id/performance')
+  @ApiOperation({ summary: 'Get event performance analytics' })
+  async getPerformance(@Param('id', ParseUUIDPipe) id: string) {
+    return this.eventsService.getPerformance(id);
+  }
+
+  @Get(':id/live')
+  @ApiOperation({ summary: 'Get live event control room data' })
+  async getLive(@Param('id', ParseUUIDPipe) id: string) {
+    return this.eventsService.getLive(id);
+  }
+
+  @Post(':id/live/comments')
+  @ApiOperation({ summary: 'Post a live event comment' })
+  async createComment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateLiveCommentDto,
+  ) {
+    return this.eventsService.createComment(id, dto);
   }
 
   @Patch(':id')

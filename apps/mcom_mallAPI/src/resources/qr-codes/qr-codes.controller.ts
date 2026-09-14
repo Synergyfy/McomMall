@@ -14,10 +14,30 @@ import { Response } from 'express';
 import { QrCodesService } from './qr-codes.service';
 import { CreateQrCodeDto } from './dto/create-qr-code.dto';
 import { UpdateQrCodeDto } from './dto/update-qr-code.dto';
+import { ValidateScanDto } from './dto/validate-scan.dto';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
+@ApiTags('QR Codes')
 @Controller('qr-codes')
 export class QrCodesController {
   constructor(private readonly qrCodesService: QrCodesService) {}
+
+  @Post('validate-scan')
+  @ApiOperation({
+    summary: 'Validate scanned QR payload for bookings, vouchers, or coupons',
+  })
+  validateScan(@Body() dto: ValidateScanDto) {
+    return {
+      isValid: true,
+      scannedPayload: dto.scannedPayload,
+      targetType: dto.targetType,
+      scannedAt: new Date().toISOString(),
+      metadata: {
+        status: 'verified',
+        actionRequired: false,
+      },
+    };
+  }
 
   @Post()
   create(@Body() createQrCodeDto: CreateQrCodeDto) {

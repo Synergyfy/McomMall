@@ -89,6 +89,20 @@ export class VoucherBusinessController {
     return this.voucherService.findVoucherProductsForUser(userId);
   }
 
+  @Get('products/:id')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get a single voucher product by ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the voucher product.',
+    type: VoucherProduct,
+  })
+  async getVoucherProductById(@Param('id', ParseUUIDPipe) id: string) {
+    return this.voucherService.findVoucherProductById(id);
+  }
+
   @Get('sold')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all vouchers sold by the business' })
