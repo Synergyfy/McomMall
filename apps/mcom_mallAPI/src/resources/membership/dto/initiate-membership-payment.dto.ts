@@ -26,6 +26,14 @@ export class InitiateMembershipPaymentDto {
   @IsOptional()
   tierId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Plan variant id (new plans model). Takes precedence over tierId.',
+  })
+  @IsString()
+  @IsOptional()
+  planVariantId?: string;
+
   @ApiProperty({
     description: 'Plan type (monthly or annual).',
     enum: PlanType,
@@ -43,4 +51,30 @@ export class InitiateMembershipPaymentDto {
   @IsEnum(PaymentMethod)
   @IsNotEmpty()
   paymentProvider: PaymentMethod;
+
+  @ApiPropertyOptional({
+    description:
+      'Deterministic idempotency key for MCOM Wallet holds. Reuse the same key on retries to prevent duplicate holds.',
+  })
+  @IsString()
+  @IsOptional()
+  idempotencyKey?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'PayPal return URL (frontend) the user lands on after approving the payment on paypal.com. Only used for PayPal via MCOM Solutions.',
+    example: 'https://mall.example.com/pricing?paypal=return',
+  })
+  @IsString()
+  @IsOptional()
+  returnUrl?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'PayPal cancel URL (frontend) the user lands on after cancelling on paypal.com. Only used for PayPal via MCOM Solutions.',
+    example: 'https://mall.example.com/pricing?paypal=cancelled',
+  })
+  @IsString()
+  @IsOptional()
+  cancelUrl?: string;
 }

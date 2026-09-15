@@ -83,7 +83,7 @@ const MembershipClient = () => {
       { tier },
       {
         onSuccess: (data) => {
-          setClientSecret(data.clientSecret);
+          setClientSecret(data.clientSecret ?? null);
         },
         onError: (error: ApiError) => {
           const errorMessage =

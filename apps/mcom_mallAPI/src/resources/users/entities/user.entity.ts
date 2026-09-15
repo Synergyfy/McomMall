@@ -154,6 +154,9 @@ export class User extends AbstractBaseEntity {
   @Column({ nullable: true })
   centralUserId: string;
 
+  @Column({ type: 'text', nullable: true })
+  centralRefreshToken: string | null;
+
   @Column({ type: 'int', default: 100 })
   trustScore: number;
 

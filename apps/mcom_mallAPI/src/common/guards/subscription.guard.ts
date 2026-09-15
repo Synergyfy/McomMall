@@ -4,9 +4,12 @@ import {
   ExecutionContext,
   ForbiddenException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { McomCentralService } from '../../resources/sso/mcom-central.service';
+import { MembershipService } from '../../resources/membership/membership.service';
 
 const SUBSCRIPTION_KEY = 'requireSubscription';
 
@@ -22,6 +25,8 @@ export class SubscriptionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly mcomCentralService: McomCentralService,
+    @Inject(forwardRef(() => MembershipService))
+    private readonly membershipService: MembershipService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -68,12 +73,35 @@ export class SubscriptionGuard implements CanActivate {
     }
 
     // Query Mcom Solutions
-    const packages = await this.mcomCentralService.getUserPackages(centralUserId);
+    const packages =
+      await this.mcomCentralService.getUserPackages(centralUserId);
 
     // If MCOM Central is unreachable (packages is null), fail open to avoid blocking users
     // Only block if we successfully queried and found no active subscription
-    const isActive = packages?.isActive === true;
+    let isActive = packages?.isActive === true;
     const centralReachable = packages !== null;
+
+    // DB is the source of truth for mall entitlement: a local row only exists
+    // after a verified central-wallet payment, admin grant, or trial. It wins
+    // over a silent central — money always moves on Solutions regardless.
+    if (!isActive) {
+      try {
+        const local = await this.membershipService.findActiveWithTier(
+          user.id ?? user.userId,
+        );
+        if (
+          local?.isActive &&
+          local.expiresAt &&
+          new Date(local.expiresAt).getTime() > Date.now()
+        ) {
+          isActive = true;
+        }
+      } catch (e) {
+        this.logger.warn(
+          `Local membership check failed for user ${centralUserId}, falling back to central result`,
+        );
+      }
+    }
 
     // Update cache
     SubscriptionGuard.cache.set(cacheKey, {

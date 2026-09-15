@@ -25,6 +25,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ProductModule } from '../product/product.module';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 import { ShippingModule } from '../shipping/shipping.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ShippingModule } from '../shipping/shipping.module';
     forwardRef(() => WalletModule),
     forwardRef(() => ProductModule),
     ShippingModule,
+    forwardRef(() => PaymentsModule),
   ],
   controllers: [OrderController],
   providers: [OrderService],

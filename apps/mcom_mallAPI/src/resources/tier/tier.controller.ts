@@ -23,12 +23,16 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
 import { Tier } from './entities/tier.entity';
 import { Public } from '../../common/decorators/public.decorator';
+import { PlansService } from '../plans/services/plans.service';
 
 @ApiTags('Tier')
 @ApiBearerAuth()
 @Controller('tiers')
 export class TierController {
-  constructor(private readonly tierService: TierService) {}
+  constructor(
+    private readonly tierService: TierService,
+    private readonly plansService: PlansService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -56,28 +60,37 @@ export class TierController {
   @Public()
   @Get()
   @ApiOperation({
-    summary: 'Get all tiers',
-    description: 'Retrieves a list of all available subscription tiers.',
+    summary: 'Get all tiers / plans',
+    description:
+      'Retrieves a list of all available subscription plans and variants.',
   })
-  @ApiResponse({ status: 200, description: 'Return all tiers.', type: [Tier] })
-  findAll() {
+  @ApiResponse({ status: 200, description: 'Return all tiers/plans.' })
+  async findAll() {
+    const plans = await this.plansService.findAll();
+    if (plans && plans.length > 0) {
+      return plans;
+    }
     return this.tierService.findAll();
   }
 
   @Public()
   @Get(':id')
   @ApiOperation({
-    summary: 'Get a tier by ID',
-    description: 'Retrieves details of a specific tier by its unique ID.',
+    summary: 'Get a tier / plan by ID',
+    description:
+      'Retrieves details of a specific tier or plan by its unique ID.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Return the tier details.',
-    type: Tier,
+    description: 'Return the tier / plan details.',
   })
-  @ApiResponse({ status: 404, description: 'Tier not found.' })
-  findOne(@Param('id') id: string) {
-    return this.tierService.findOne(id);
+  @ApiResponse({ status: 404, description: 'Tier / plan not found.' })
+  async findOne(@Param('id') id: string) {
+    try {
+      return await this.plansService.findOne(id);
+    } catch {
+      return this.tierService.findOne(id);
+    }
   }
 
   @Patch(':id')

@@ -80,7 +80,7 @@ export default function AdminSignInPage() {
   };
 
   const validateEmail = (email: string) => {
-    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,63}$/;
     return emailRegex.test(email) ? '' : 'Please enter a valid email address.';
   };
 

@@ -1,61 +1,91 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import PricingCheckoutClient from './PricingCheckoutClient';
-import { Tier } from '@/service/tiers/types';
-import TiersList from '@/app/dashboard/my-subscription/components/TiersList';
+import PlansList from '@/components/PlansList';
+import {
+  Plan,
+  PlanVariant,
+  formatPlanPrice,
+  getActivePrice,
+  getPriceAmount,
+  getTierLabel,
+  getVariantDurationLabel,
+} from '@/service/plans/types';
 import { PlanType } from '@/service/payments/types';
 
 export default function PricingPageClient() {
-  const [selectedTier, setSelectedTier] = useState<{ name: string; price: string; tierId: string; planType: PlanType } | null>(null);
+  const [selected, setSelected] = useState<{
+    name: string;
+    price: string;
+    planVariantId?: string;
+    tierId?: string;
+    planType?: string;
+  } | null>(null);
   const [isTrial, setIsTrial] = useState(false);
 
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
-  const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
-      let price = 0;
-      let planType: PlanType = PlanType.MONTHLY;
+  // PayPal return/cancel lands here with the purchase encoded in the URL
+  // (the PayPal redirect reloads the app, losing in-memory selection).
+  // Restoring selection mounts the checkout, which completes/cancels the
+  // payment from the token PayPal appended.
+  const paypalState = searchParams.get('paypal');
+  const urlPlanName = searchParams.get('planName');
+  const urlPlanPrice = searchParams.get('planPrice');
+  const urlPlanVariantId = searchParams.get('planVariantId');
+  const urlTierId = searchParams.get('tierId');
+  const urlPlanType = searchParams.get('planType');
 
-      switch(cycle) {
-        case 'monthly':
-          price = tier.monthly_price;
-          planType = PlanType.MONTHLY;
-          break;
-        case 'quarterly':
-          price = tier.quaterly_price;
-          planType = PlanType.QUARTERLY;
-          break;
-        case 'annual':
-          price = tier.annual_price;
-          planType = PlanType.ANNUAL;
-          break;
-      }
-
-      const priceString = new Intl.NumberFormat('en-GB', {
-           style: 'currency', currency: 'GBP'
-      }).format(Number(price));
-
-      setSelectedTier({
-          name: `${tier.name} (${cycle})`,
-          price: priceString,
-          tierId: tier.id,
-          planType
+  useEffect(() => {
+    if (
+      !selected &&
+      (paypalState === 'return' || paypalState === 'cancelled') &&
+      urlPlanName &&
+      urlPlanPrice &&
+      (urlPlanVariantId || urlTierId)
+    ) {
+      setSelected({
+        name: urlPlanName,
+        price: urlPlanPrice,
+        planVariantId: urlPlanVariantId ?? undefined,
+        tierId: urlTierId ?? undefined,
+        planType: urlPlanType ?? undefined,
       });
-      setIsTrial(false);
+    }
+  }, [
+    selected,
+    paypalState,
+    urlPlanName,
+    urlPlanPrice,
+    urlPlanVariantId,
+    urlTierId,
+    urlPlanType,
+  ]);
+
+  const handleSelectPlan = (plan: Plan, variant: PlanVariant) => {
+    const tierLabel = getTierLabel(variant.tierLevel.name);
+    setSelected({
+      name: `${plan.name} · ${tierLabel} (${getVariantDurationLabel(variant)})`,
+      price: formatPlanPrice(getPriceAmount(getActivePrice(variant))),
+      planVariantId: variant.id,
+    });
+    setIsTrial(false);
   };
 
-  if (selectedTier) {
+  if (selected) {
     return (
       <PricingCheckoutClient
-        planName={selectedTier.name}
-        planPrice={selectedTier.price}
+        planName={selected.name}
+        planPrice={selected.price}
         isTrial={isTrial}
         isPayg={false}
         listingId={listingId}
-        tierId={selectedTier.tierId}
-        planType={selectedTier.planType}
+        planVariantId={selected.planVariantId}
+        tierId={selected.tierId}
+        planType={selected.planType as PlanType | undefined}
       />
     );
   }
@@ -102,7 +132,7 @@ export default function PricingPageClient() {
         <h3 className="text-xl md:text-2xl font-medium text-center mb-6">
             Select your plan
         </h3>
-        <TiersList onSelectTier={handleSelectTier} />
+        <PlansList onSelectPlan={handleSelectPlan} />
       </section>
     </div>
   );

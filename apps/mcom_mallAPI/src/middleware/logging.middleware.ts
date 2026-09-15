@@ -8,6 +8,7 @@ export class LoggingMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const { method, originalUrl, body, ip } = req;
     const userAgent = req.get('user-agent') || '';
+    const start = Date.now();
 
     this.logger.log(
       `Incoming Request: ${method} ${originalUrl} - ${userAgent} ${ip}`,
@@ -16,6 +17,13 @@ export class LoggingMiddleware implements NestMiddleware {
     if (body && typeof body === 'object' && Object.keys(body).length > 0) {
       this.logger.debug(`Request Body: ${JSON.stringify(body)}`);
     }
+
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      this.logger.log(
+        `Completed Request: ${method} ${originalUrl} -> ${res.statusCode} (${duration}ms)`,
+      );
+    });
 
     next();
   }

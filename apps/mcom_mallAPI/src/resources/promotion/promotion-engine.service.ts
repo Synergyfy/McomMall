@@ -53,12 +53,12 @@ export class PromotionEngineService {
 
     try {
       // Batch-load all products to avoid N+1
-      const productIds = order.items.map(i => i.product.id);
+      const productIds = order.items.map((i) => i.product.id);
       const products = await this.productRepository.find({
         where: { id: In(productIds) },
         relations: ['business', 'business.user'],
       });
-      const productsMap = new Map(products.map(p => [p.id, p]));
+      const productsMap = new Map(products.map((p) => [p.id, p]));
 
       for (const item of order.items) {
         const product = productsMap.get(item.product.id);
@@ -71,7 +71,7 @@ export class PromotionEngineService {
         }
 
         this.logger.log(
-          `Loaded product ${product.id} with business ${product.business?.id}`
+          `Loaded product ${product.id} with business ${product.business?.id}`,
         );
 
         for (const participation of participations) {

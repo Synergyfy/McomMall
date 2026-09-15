@@ -19,6 +19,7 @@ import { ActivatedRegion } from '../localmall/entities/activated-region.entity';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { McomCentralService } from './mcom-central.service';
+import { encryptToken } from './token-crypto';
 
 @Injectable()
 export class SsoService {
@@ -306,6 +307,21 @@ export class SsoService {
     if (centralUserId && localUser.centralUserId !== centralUserId) {
       localUser.centralUserId = centralUserId;
       await this.userRepository.save(localUser);
+    }
+
+    // Store the Solutions SSO refresh token (encrypted at rest) so the mall
+    // can proxy user-scoped Solutions calls (embedded wallet card top-ups).
+    // Skipped when TOKEN_ENCRYPTION_KEY is unconfigured — debits unaffected.
+    if (typeof tokenData.refreshToken === 'string' && tokenData.refreshToken) {
+      const encrypted = encryptToken(tokenData.refreshToken);
+      if (encrypted && localUser.centralRefreshToken !== encrypted) {
+        localUser.centralRefreshToken = encrypted;
+        await this.userRepository.save(localUser);
+      } else if (!encrypted) {
+        this.logger.warn(
+          'TOKEN_ENCRYPTION_KEY is not configured — Solutions refresh token not stored; embedded card top-up unavailable.',
+        );
+      }
     }
 
     if (localUser.role === UserRole.OWNER) {

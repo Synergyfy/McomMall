@@ -30,7 +30,12 @@ export class DiscoverService {
     private readonly walletService: WalletService,
   ) {}
 
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -64,7 +69,15 @@ export class DiscoverService {
   }
 
   async getBusinesses(userId: string | undefined, query: any) {
-    const { lat, lng, search, tab = 'nearby', page = 1, limit = 10, borough } = query;
+    const {
+      lat,
+      lng,
+      search,
+      tab = 'nearby',
+      page = 1,
+      limit = 10,
+      borough,
+    } = query;
 
     const qb = this.businessRepository
       .createQueryBuilder('business')
@@ -99,15 +112,24 @@ export class DiscoverService {
         const bizLng = business.location?.longitude;
         if (bizLat && bizLng) {
           const distanceKm = this.calculateDistance(lat, lng, bizLat, bizLng);
-          return { ...business, distance: this.formatDistance(distanceKm), latitude: bizLat, longitude: bizLng };
+          return {
+            ...business,
+            distance: this.formatDistance(distanceKm),
+            latitude: bizLat,
+            longitude: bizLng,
+          };
         }
         return { ...business, distance: 'Unknown' };
       });
 
       if (tab === 'nearby') {
         businessesWithDistance.sort((a, b) => {
-          const distA = a.distance ? parseFloat(a.distance.replace(' km', '')) : 999;
-          const distB = b.distance ? parseFloat(b.distance.replace(' km', '')) : 999;
+          const distA = a.distance
+            ? parseFloat(a.distance.replace(' km', ''))
+            : 999;
+          const distB = b.distance
+            ? parseFloat(b.distance.replace(' km', ''))
+            : 999;
           return distA - distB;
         });
       }
@@ -126,7 +148,16 @@ export class DiscoverService {
   }
 
   async getEvents(userId: string | undefined, query: any) {
-    const { tab = 'upcoming', lat, lng, borough, page = 1, limit = 6, joinedIds, savedIds } = query;
+    const {
+      tab = 'upcoming',
+      lat,
+      lng,
+      borough,
+      page = 1,
+      limit = 6,
+      joinedIds,
+      savedIds,
+    } = query;
 
     const qb = this.eventRepository
       .createQueryBuilder('event')
@@ -151,7 +182,16 @@ export class DiscoverService {
           const ids = joinedIds.split(',').filter(Boolean);
           qb.andWhere('event.id IN (:...ids)', { ids });
         } else {
-          return { items: [], meta: { totalItems: 0, itemCount: 0, itemsPerPage: limit, totalPages: 0, currentPage: page } };
+          return {
+            items: [],
+            meta: {
+              totalItems: 0,
+              itemCount: 0,
+              itemsPerPage: limit,
+              totalPages: 0,
+              currentPage: page,
+            },
+          };
         }
         break;
       case 'recommended':
@@ -181,7 +221,12 @@ export class DiscoverService {
         const eventLat = event.business?.location?.latitude;
         const eventLng = event.business?.location?.longitude;
         if (eventLat && eventLng) {
-          const distanceKm = this.calculateDistance(lat, lng, eventLat, eventLng);
+          const distanceKm = this.calculateDistance(
+            lat,
+            lng,
+            eventLat,
+            eventLng,
+          );
           return { ...event, distance: this.formatDistance(distanceKm) };
         }
         return { ...event, distance: 'Unknown' };
@@ -189,8 +234,12 @@ export class DiscoverService {
 
       if (tab === 'nearby') {
         eventsWithDistance.sort((a, b) => {
-          const distA = a.distance ? parseFloat(a.distance.replace(' km', '')) : 999;
-          const distB = b.distance ? parseFloat(b.distance.replace(' km', '')) : 999;
+          const distA = a.distance
+            ? parseFloat(a.distance.replace(' km', ''))
+            : 999;
+          const distB = b.distance
+            ? parseFloat(b.distance.replace(' km', ''))
+            : 999;
           return distA - distB;
         });
       }
@@ -230,7 +279,13 @@ export class DiscoverService {
 
     return {
       items: promotions,
-      meta: { totalItems: promotions.length, itemCount: promotions.length, itemsPerPage: limit, totalPages: 1, currentPage: 1 },
+      meta: {
+        totalItems: promotions.length,
+        itemCount: promotions.length,
+        itemsPerPage: limit,
+        totalPages: 1,
+        currentPage: 1,
+      },
     };
   }
 
@@ -238,7 +293,16 @@ export class DiscoverService {
     const { tab = 'available', page = 1, limit = 10 } = query;
 
     if (!userId) {
-      return { items: [], meta: { totalItems: 0, itemCount: 0, itemsPerPage: limit, totalPages: 0, currentPage: page } };
+      return {
+        items: [],
+        meta: {
+          totalItems: 0,
+          itemCount: 0,
+          itemsPerPage: limit,
+          totalPages: 0,
+          currentPage: page,
+        },
+      };
     }
 
     try {
@@ -261,16 +325,40 @@ export class DiscoverService {
       if (tab === 'loyalty') {
         return {
           items: [],
-          meta: { totalItems: 0, itemCount: 0, itemsPerPage: limit, totalPages: 0, currentPage: page },
+          meta: {
+            totalItems: 0,
+            itemCount: 0,
+            itemsPerPage: limit,
+            totalPages: 0,
+            currentPage: page,
+          },
         };
       }
 
       if (tab === 'expiring') {
-        return { items: [], meta: { totalItems: 0, itemCount: 0, itemsPerPage: limit, totalPages: 0, currentPage: page } };
+        return {
+          items: [],
+          meta: {
+            totalItems: 0,
+            itemCount: 0,
+            itemsPerPage: limit,
+            totalPages: 0,
+            currentPage: page,
+          },
+        };
       }
 
       if (tab === 'redeemed') {
-        return { items: [], meta: { totalItems: 0, itemCount: 0, itemsPerPage: limit, totalPages: 0, currentPage: page } };
+        return {
+          items: [],
+          meta: {
+            totalItems: 0,
+            itemCount: 0,
+            itemsPerPage: limit,
+            totalPages: 0,
+            currentPage: page,
+          },
+        };
       }
 
       // available
@@ -284,10 +372,25 @@ export class DiscoverService {
 
       return {
         items: promotions,
-        meta: { totalItems: promotions.length, itemCount: promotions.length, itemsPerPage: limit, totalPages: 1, currentPage: page },
+        meta: {
+          totalItems: promotions.length,
+          itemCount: promotions.length,
+          itemsPerPage: limit,
+          totalPages: 1,
+          currentPage: page,
+        },
       };
     } catch (error) {
-      return { items: [], meta: { totalItems: 0, itemCount: 0, itemsPerPage: limit, totalPages: 0, currentPage: page } };
+      return {
+        items: [],
+        meta: {
+          totalItems: 0,
+          itemCount: 0,
+          itemsPerPage: limit,
+          totalPages: 0,
+          currentPage: page,
+        },
+      };
     }
   }
 

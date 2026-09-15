@@ -97,11 +97,10 @@ const GroupsClient = () => {
   if (groupsError)
     return <div>Error loading groups: {groupsError.message}</div>;
 
-  const canAccessGroups =
-    membership &&
-    membership.status === 'active' &&
-    (membership.tier.name.toUpperCase() === 'EXTENDED' ||
-      membership.tier.name.toUpperCase() === 'PROFESSIONAL');
+  const canAccessGroups = Boolean(
+    membership?.isActive &&
+      membership?.tier?.configuration?.featureFlags?.allowGroupCreation,
+  );
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
@@ -125,9 +124,9 @@ const GroupsClient = () => {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Upgrade Required</AlertTitle>
           <AlertDescription>
-            You need an EXTENDED or PROFESSIONAL membership to access groups.
+            Your current plan does not include group creation.
             Please{' '}
-            <Link href="/dashboard/marketing/membership" className="underline font-semibold">
+            <Link href="/dashboard/membership-audits/membership" className="underline font-semibold">
               upgrade your plan
             </Link>
             .

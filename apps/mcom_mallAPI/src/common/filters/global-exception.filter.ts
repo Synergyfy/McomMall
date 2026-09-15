@@ -36,6 +36,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         `Unhandled Exception: ${exception.message}`,
         exception.stack,
       );
+    } else {
+      const req = host.switchToHttp().getRequest();
+      this.logger.warn(
+        `HTTP ${status} (${req?.method} ${req?.url}): ${message}`,
+      );
     }
 
     response.status(status).json({

@@ -5,9 +5,10 @@ import { TierController } from './tier.controller';
 import { SystemPlanController } from './system-plan.controller';
 import { Tier } from './entities/tier.entity';
 import { SeasonsModule } from '../seasons/seasons.module';
+import { PlansModule } from '../plans/plans.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Tier]), SeasonsModule],
+  imports: [TypeOrmModule.forFeature([Tier]), SeasonsModule, PlansModule],
   controllers: [TierController, SystemPlanController],
   providers: [TierService],
   exports: [TierService],

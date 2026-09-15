@@ -38,14 +38,23 @@ class PaymentDto {
 
   @ApiProperty({
     description:
-      'The transaction ID from the payment provider (Stripe/PayPal).',
+      'The transaction ID from the payment provider (Stripe/PayPal). Optional for mcom_wallet — the backend debits centrally.',
   })
   @IsString()
-  transactionId: string;
+  @IsOptional()
+  transactionId?: string;
 
   @ApiProperty({ description: 'The total amount paid.', example: 14.5 })
   @IsNumber()
   amount: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Deterministic idempotency key for MCOM Wallet debits. Reuse the same key on retries to prevent double charges.',
+  })
+  @IsString()
+  @IsOptional()
+  idempotencyKey?: string;
 }
 
 class DirectPurchaseDto {

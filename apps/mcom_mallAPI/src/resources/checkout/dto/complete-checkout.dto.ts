@@ -33,6 +33,14 @@ export class CompleteCheckoutDto {
   transactionId?: string;
 
   @ApiPropertyOptional({
+    description:
+      'The MCOM Wallet hold ID to capture (returned by initiate when paying with MCOM Wallet).',
+  })
+  @IsOptional()
+  @IsString()
+  holdId?: string;
+
+  @ApiPropertyOptional({
     description: 'The ID of the User Campaign Cashback to use for payment.',
   })
   @IsUUID()

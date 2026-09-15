@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Clock, Info, XCircle, ArrowRight, Sparkles } from 'lucide-react';
 import React from 'react';
 import { redirectToMcomSolutionsSubscription } from '@/service/auth/hook';
+import PlanVariantLabel from './PlanVariantLabel';
 
 interface CurrentPlanCardProps {
   subscription: Membership;
@@ -76,9 +77,13 @@ export default function CurrentPlanCard({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div className="flex items-center space-x-2">
             <Badge variant="outline">Plan</Badge>
-            <span className="font-semibold text-gray-700">
-              {subscription.tier?.name || 'Unknown Tier'}
-            </span>
+            {subscription.planVariantId ? (
+              <PlanVariantLabel planVariantId={subscription.planVariantId} />
+            ) : (
+              <span className="font-semibold text-gray-700">
+                {subscription.tier?.name || 'Unknown Tier'}
+              </span>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <Badge variant="outline">Cycle</Badge>

@@ -140,13 +140,13 @@ export class CampaignCashbackService {
     const userCampaigns: UserCampaignCashback[] = [];
 
     // Batch-load existing user campaigns to avoid N+1
-    const campaignIds = eligibleCampaigns.map(c => c.id);
+    const campaignIds = eligibleCampaigns.map((c) => c.id);
     const existingUserCampaigns = await this.userCampaignRepository.find({
       where: { user: { id: user.id }, campaign: { id: In(campaignIds) } },
       relations: ['campaign', 'wallets'],
     });
     const userCampaignMap = new Map(
-      existingUserCampaigns.map(uc => [uc.campaign.id, uc])
+      existingUserCampaigns.map((uc) => [uc.campaign.id, uc]),
     );
 
     for (const campaign of eligibleCampaigns) {

@@ -4,63 +4,50 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useGetMyMembership } from '@/service/membership/hooks';
 import CurrentPlanCard from './CurrentPlanCard';
-import TiersList from './TiersList';
+import PlansList from '@/components/PlansList';
 import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
-import { Tier } from '@/service/tiers/types';
-import { PlanType } from '@/service/payments/types';
-import { useRouter } from 'next/navigation';
+import {
+  Plan,
+  PlanVariant,
+  formatPlanPrice,
+  getActivePrice,
+  getPriceAmount,
+  getTierLabel,
+  getVariantDurationLabel,
+} from '@/service/plans/types';
 import { redirectToMcomSolutionsSubscription } from '@/service/auth/hook';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Lock, Sparkles } from 'lucide-react';
 
 export default function MySubscriptionPageClient() {
-  const router = useRouter();
   const { data: subscriptionStatus, isLoading } = useGetMyMembership();
-  const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'quarterly' | 'annual' } | null>(null);
+  const [selected, setSelected] = useState<{
+    plan: Plan;
+    variant: PlanVariant;
+  } | null>(null);
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
-  const handleSelectTier = async (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
-    setSelectedTier({ tier, cycle });
-  };
-
-  const mapCycleToPlanType = (cycle: string): PlanType => {
-    switch (cycle) {
-      case 'monthly': return PlanType.MONTHLY;
-      case 'quarterly': return PlanType.QUARTERLY;
-      case 'annual': return PlanType.ANNUAL;
-      default: return PlanType.MONTHLY;
-    }
+  const handleSelectPlan = (plan: Plan, variant: PlanVariant) => {
+    setSelected({ plan, variant });
   };
 
   const hasActivePlan = subscriptionStatus?.isActive || subscriptionStatus?.status === 'active' || subscriptionStatus?.status === 'paid';
 
-  if (selectedTier) {
-    let price: number = 0;
-    switch (selectedTier.cycle) {
-      case 'monthly':
-        price = selectedTier.tier.monthly_price;
-        break;
-      case 'quarterly':
-        price = selectedTier.tier.quaterly_price;
-        break;
-      case 'annual':
-        price = selectedTier.tier.annual_price;
-        break;
-    }
-
-    const priceString = `£${price.toFixed(2)}`;
-    const planType = mapCycleToPlanType(selectedTier.cycle);
+  if (selected) {
+    const tierLabel = getTierLabel(selected.variant.tierLevel.name);
+    const priceString = formatPlanPrice(
+      getPriceAmount(getActivePrice(selected.variant)),
+    );
 
     return (
       <PricingCheckoutClient
-        planName={`${selectedTier.tier.name} (${selectedTier.cycle})`}
+        planName={`${selected.plan.name} · ${tierLabel} (${getVariantDurationLabel(selected.variant)})`}
         planPrice={priceString}
         isTrial={false}
         isPayg={false}
         listingId={listingId}
-        tierId={selectedTier.tier.id}
-        planType={planType}
+        planVariantId={selected.variant.id}
       />
     );
   }
@@ -116,7 +103,7 @@ export default function MySubscriptionPageClient() {
           <h3 className="text-xl md:text-2xl font-medium text-center mb-6">
             Change your plan
           </h3>
-          <TiersList onSelectTier={handleSelectTier} />
+          <PlansList onSelectPlan={handleSelectPlan} />
         </section>
       )}
     </div>

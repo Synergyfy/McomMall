@@ -19,6 +19,7 @@ import {
   Megaphone,
   CreditCard,
   History,
+  Layers,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -200,6 +201,7 @@ export const adminMenuItems: MenuItem[] = [
   { title: 'Ad Campaign', href: '/admin/ad-campaign', icon: Megaphone },
   { title: 'Coupons', href: '/admin/coupons', icon: ShoppingCart },
   { title: 'Subscriptions', href: '/admin/subscriptions-overview', icon: CreditCard },
+  { title: 'Plans', href: '/admin/plans', icon: Layers },
   {
     title: 'Settings',
     href: '/admin/settings',

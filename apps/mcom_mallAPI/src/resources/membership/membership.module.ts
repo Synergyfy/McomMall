@@ -9,6 +9,7 @@ import { MembershipPayment } from './entities/membership-payment.entity';
 import { Tier } from '../tier/entities/tier.entity';
 import { SsoModule } from '../sso/sso.module';
 import { MembershipCredit } from './entities/membership-credit.entity';
+import { PlansModule } from '../plans/plans.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MembershipCredit } from './entities/membership-credit.entity';
     ]),
     forwardRef(() => PaymentsModule),
     forwardRef(() => SsoModule),
+    PlansModule,
   ],
   controllers: [MembershipController],
   providers: [MembershipService],

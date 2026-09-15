@@ -6,6 +6,7 @@ import { Order } from './order.entity';
 export enum PaymentMethod {
   STRIPE = 'stripe',
   PAYPAL = 'paypal',
+  MCOM_WALLET = 'mcom_wallet',
 }
 
 @Entity('order_payments')

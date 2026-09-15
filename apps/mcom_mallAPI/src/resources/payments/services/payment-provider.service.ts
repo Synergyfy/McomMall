@@ -98,7 +98,9 @@ export class PaymentProviderService {
         metadata,
       });
     } catch (error: any) {
-      throw new Error(`Stripe payment intent creation failed: ${error.message}`);
+      throw new Error(
+        `Stripe payment intent creation failed: ${error.message}`,
+      );
     }
   }
 
@@ -121,7 +123,9 @@ export class PaymentProviderService {
         ],
       };
 
-      const response = await this.ordersController.createOrder({ body: request });
+      const response = await this.ordersController.createOrder({
+        body: request,
+      });
       return response.result;
     } catch (error: any) {
       throw new Error(`PayPal order creation failed: ${error.message}`);

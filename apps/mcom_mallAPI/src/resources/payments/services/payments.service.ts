@@ -21,6 +21,7 @@ import { CentralIntegrationService } from './central-integration.service';
 import { CashbackEvent } from '../../../common/enums/cashback-event.enum';
 import { PaymentPurpose } from '../enums/payment-purpose.enum';
 import { MembershipService } from 'src/resources/membership/membership.service';
+import { PlansService } from 'src/resources/plans/services/plans.service';
 import { PlanType as MembershipPlanType } from 'src/resources/membership/dto/initiate-membership-payment.dto';
 import { PaymentMethod } from 'src/resources/order/entities/order-payment.entity';
 import { Tier } from '../../tier/entities/tier.entity';
@@ -45,6 +46,7 @@ export class PaymentsService {
     private readonly centralIntegrationService: CentralIntegrationService,
     @Inject(forwardRef(() => MembershipService))
     private readonly membershipService: MembershipService,
+    private readonly plansService: PlansService,
     private readonly activityTimerService: ActivityTimerService,
   ) {}
 
@@ -54,7 +56,15 @@ export class PaymentsService {
       purpose: dto.purpose || PaymentPurpose.MEMBERSHIP,
     };
 
-    if (dto.tierId) {
+    if (dto.planVariantId) {
+      const { price } = await this.plansService.resolveActivePrice(
+        dto.planVariantId,
+      );
+      amount = Number(price.amount);
+      metadata.planVariantId = dto.planVariantId;
+      metadata.priceId = price.id;
+      metadata.planType = dto.planType || PlanType.MONTHLY;
+    } else if (dto.tierId) {
       const tier = await this.tierRepository.findOne({
         where: { id: dto.tierId },
       });
@@ -87,7 +97,15 @@ export class PaymentsService {
       purpose: dto.purpose || PaymentPurpose.MEMBERSHIP,
     };
 
-    if (dto.tierId) {
+    if (dto.planVariantId) {
+      const { price } = await this.plansService.resolveActivePrice(
+        dto.planVariantId,
+      );
+      amount = Number(price.amount);
+      metadata.planVariantId = dto.planVariantId;
+      metadata.priceId = price.id;
+      metadata.planType = dto.planType || PlanType.MONTHLY;
+    } else if (dto.tierId) {
       const tier = await this.tierRepository.findOne({
         where: { id: dto.tierId },
       });
@@ -127,7 +145,12 @@ export class PaymentsService {
       transactionId,
       purpose,
       tierId,
+      planVariantId,
     } = recordPaymentDto;
+    const walletHoldId =
+      paymentGateway === PaymentGateway.MCOM_WALLET
+        ? recordPaymentDto.holdId || transactionId
+        : undefined;
 
     // Convert amount to decimal if it's not already
     // Idempotency check: return existing payment history if transactionId already recorded
@@ -150,30 +173,59 @@ export class PaymentsService {
     }
 
     const normalizedCurrency = (currency || 'gbp').toLowerCase();
-    // Verify with provider to mirror order checkout semantics
-    if (paymentGateway === PaymentGateway.STRIPE) {
-      const verification =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          decimalAmount,
-          normalizedCurrency,
-        );
-      if (!verification.ok) {
+    // Verify with provider to mirror order checkout semantics.
+    // MCOM Wallet holds are captured inside verifyAndCreateMembership, so
+    // there is no provider intent to verify here. Centrally-processed
+    // (viaSolutions) card/PayPal payments were created and verified by MCOM
+    // Solutions (their Stripe/PayPal accounts) — the mall cannot retrieve
+    // those intents with its own keys, so verification is delegated to
+    // verifyAndCreateMembership's Solutions confirm/capture below.
+    const skipProviderVerification =
+      recordPaymentDto.viaSolutions === true &&
+      purpose === PaymentPurpose.MEMBERSHIP &&
+      (paymentGateway === PaymentGateway.STRIPE ||
+        paymentGateway === PaymentGateway.PAYPAL);
+    if (paymentGateway === PaymentGateway.MCOM_WALLET) {
+      if (!walletHoldId) {
         throw new BadRequestException(
-          `Stripe verification failed: ${verification.reason || 'unknown reason'}`,
+          'A wallet hold ID is required for MCOM Wallet payments.',
         );
       }
+    } else if (paymentGateway === PaymentGateway.STRIPE) {
+      if (skipProviderVerification) {
+        this.logger.log(
+          `Skipping mall-side Stripe verification for centrally-processed membership payment ${transactionId}`,
+        );
+      } else {
+        const verification =
+          await this.paymentProviderService.verifyStripePaymentIntent(
+            transactionId,
+            decimalAmount,
+            normalizedCurrency,
+          );
+        if (!verification.ok) {
+          throw new BadRequestException(
+            `Stripe verification failed: ${verification.reason || 'unknown reason'}`,
+          );
+        }
+      }
     } else if (paymentGateway === PaymentGateway.PAYPAL) {
-      const verification =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          decimalAmount,
-          normalizedCurrency,
+      if (skipProviderVerification) {
+        this.logger.log(
+          `Skipping mall-side PayPal verification for centrally-processed membership payment ${transactionId}`,
         );
-      if (!verification.ok) {
-        throw new BadRequestException(
-          `PayPal verification failed: ${verification.reason || 'unknown reason'}`,
-        );
+      } else {
+        const verification =
+          await this.paymentProviderService.captureAndVerifyPaypalOrder(
+            transactionId,
+            decimalAmount,
+            normalizedCurrency,
+          );
+        if (!verification.ok) {
+          throw new BadRequestException(
+            `PayPal verification failed: ${verification.reason || 'unknown reason'}`,
+          );
+        }
       }
     }
 
@@ -187,12 +239,13 @@ export class PaymentsService {
       paymentGateway,
       purpose,
       tierId,
+      planVariantId: planVariantId ?? null,
     });
 
     await this.paymentHistoryRepository.save(paymentHistory);
 
     // If purpose is MEMBERSHIP, create/update membership
-    if (purpose === PaymentPurpose.MEMBERSHIP && tierId) {
+    if (purpose === PaymentPurpose.MEMBERSHIP && (tierId || planVariantId)) {
       // Map planType
       let mPlanType = MembershipPlanType.MONTHLY;
       if (planType === PlanType.ANNUAL) mPlanType = MembershipPlanType.ANNUAL;
@@ -202,14 +255,18 @@ export class PaymentsService {
       const pMethod =
         paymentGateway === PaymentGateway.STRIPE
           ? PaymentMethod.STRIPE
-          : PaymentMethod.PAYPAL;
+          : paymentGateway === PaymentGateway.MCOM_WALLET
+            ? PaymentMethod.MCOM_WALLET
+            : PaymentMethod.PAYPAL;
 
       await this.membershipService.verifyAndCreateMembership(
         {
           paymentProvider: pMethod,
-          transactionId,
+          transactionId: walletHoldId || transactionId,
+          holdId: walletHoldId,
           purchaseDetails: {
             tierId,
+            planVariantId,
             planType: mPlanType,
           },
         },
