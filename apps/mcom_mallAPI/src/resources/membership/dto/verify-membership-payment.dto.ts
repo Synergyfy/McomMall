@@ -28,6 +28,14 @@ class MembershipPurchaseDetailsDto {
   @IsOptional()
   tierId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Plan variant id (new plans model). Takes precedence over tierId.',
+  })
+  @IsString()
+  @IsOptional()
+  planVariantId?: string;
+
   @ApiProperty({
     description: 'Plan type (monthly or annual).',
     enum: PlanType,
@@ -49,12 +57,20 @@ export class VerifyMembershipPaymentDto {
 
   @ApiProperty({
     description:
-      'The payment identifier from the provider (e.g., Stripe PaymentIntent ID, PayPal Order ID).',
+      'The payment identifier from the provider (e.g., Stripe PaymentIntent ID, PayPal Order ID). For mcom_wallet, the hold ID (or omit when holdId is provided).',
     example: 'pi_1J2j3k4L5m6n7o8p9q0r',
   })
   @IsString()
-  @IsNotEmpty()
-  transactionId: string;
+  @IsOptional()
+  transactionId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'The MCOM Wallet hold ID to capture (returned by initiate-payment when paying with MCOM Wallet).',
+  })
+  @IsString()
+  @IsOptional()
+  holdId?: string;
 
   @ApiProperty({
     description: 'The original details of the membership purchase initiation.',

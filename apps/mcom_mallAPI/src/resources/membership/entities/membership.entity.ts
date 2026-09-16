@@ -22,6 +22,21 @@ export class Membership extends AbstractBaseEntity {
   @Column({ name: 'tier_id', nullable: true })
   tierId: string;
 
+  @ApiProperty({
+    nullable: true,
+    description:
+      'Purchased plan variant (new plans model). Null for legacy tier purchases.',
+  })
+  @Column({ name: 'plan_variant_id', type: 'uuid', nullable: true })
+  planVariantId: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: 'Price snapshot locked in at purchase (plan_prices id).',
+  })
+  @Column({ name: 'price_id', type: 'uuid', nullable: true })
+  priceId: string | null;
+
   @ApiProperty({ example: true })
   @Column({ default: true })
   isActive: boolean;

@@ -115,7 +115,12 @@ const CreateGroupClient = () => {
     return <div>Loading membership status...</div>;
   }
 
-  if (membership?.tier?.name?.toUpperCase() !== 'PROFESSIONAL') {
+  const canCreateGroup = Boolean(
+    membership?.isActive &&
+      membership?.tier?.configuration?.featureFlags?.allowGroupCreation,
+  );
+
+  if (!canCreateGroup) {
     return (
       <div className="container mx-auto p-4 md:p-8 text-center">
         <Card className="max-w-md mx-auto">
@@ -124,10 +129,10 @@ const CreateGroupClient = () => {
           </CardHeader>
           <CardContent>
             <p className="mb-4">
-              You need to be a Professional member to create a group.
+              Your current membership plan does not include group creation.
             </p>
             <Button asChild>
-              <Link href="/dashboard/marketing/membership">
+              <Link href="/dashboard/membership-audits/membership">
                 Upgrade Membership
               </Link>
             </Button>

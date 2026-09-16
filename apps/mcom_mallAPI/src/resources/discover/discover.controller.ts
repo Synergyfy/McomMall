@@ -1,16 +1,11 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { DiscoverService } from './discover.service';
-import { DiscoverQueryDto, EventsQueryDto, RewardsQueryDto } from './dto/discover-query.dto';
+import {
+  DiscoverQueryDto,
+  EventsQueryDto,
+  RewardsQueryDto,
+} from './dto/discover-query.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -24,7 +19,10 @@ export class DiscoverController {
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @Get('home')
-  @ApiOperation({ summary: 'Get Discover home feed data (businesses, promotions, events, rewards)' })
+  @ApiOperation({
+    summary:
+      'Get Discover home feed data (businesses, promotions, events, rewards)',
+  })
   async getHomeFeed(
     @CurrentUser() user: User,
     @Query() query: DiscoverQueryDto,
@@ -47,10 +45,7 @@ export class DiscoverController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get('events')
   @ApiOperation({ summary: 'Get events for Discover' })
-  async getEvents(
-    @CurrentUser() user: User,
-    @Query() query: EventsQueryDto,
-  ) {
+  async getEvents(@CurrentUser() user: User, @Query() query: EventsQueryDto) {
     return this.discoverService.getEvents(user?.id, query);
   }
 
@@ -69,10 +64,7 @@ export class DiscoverController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get('rewards')
   @ApiOperation({ summary: 'Get rewards for Discover' })
-  async getRewards(
-    @CurrentUser() user: User,
-    @Query() query: RewardsQueryDto,
-  ) {
+  async getRewards(@CurrentUser() user: User, @Query() query: RewardsQueryDto) {
     return this.discoverService.getRewards(user?.id, query);
   }
 

@@ -13,7 +13,7 @@ import { CouponService } from '../coupon/coupon.service';
 import { Order } from './entities/order.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
-import { OrderPayment } from './entities/order-payment.entity';
+import { OrderPayment, PaymentMethod } from './entities/order-payment.entity';
 import { Product } from '../product/entities/product.entity';
 import { PromotionEngineService } from '../promotion/promotion-engine.service';
 import { NotificationService } from '../notification/notification.service';
@@ -45,6 +45,8 @@ import {
 } from '../shipping/shipping-pricing.service';
 
 import { Service } from '../services/entities/service.entity';
+import { McomWalletService } from '../payments/services/mcom-wallet.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class OrderService {
@@ -91,6 +93,8 @@ export class OrderService {
     @Inject(forwardRef(() => ProductService))
     private readonly productService: ProductService,
     private readonly shippingPricingService: ShippingPricingService,
+    @Inject(forwardRef(() => McomWalletService))
+    private readonly mcomWalletService: McomWalletService,
   ) {}
 
   private validateBusinessAndOwner(business: Business) {
@@ -214,17 +218,15 @@ export class OrderService {
           directPurchase.productId,
         );
       const partneredServiceIds = partneredServices.map((s) => s.id);
-      
+
       // Batch-load all services to avoid N+1
-      const serviceIds = serviceBookings.map(b => b.serviceId);
-      const services = await this.entityManager
-        .getRepository(Service)
-        .find({
-          where: { id: In(serviceIds) },
-          relations: ['business', 'business.user'],
-        });
-      const servicesMap = new Map(services.map(s => [s.id, s]));
-      
+      const serviceIds = serviceBookings.map((b) => b.serviceId);
+      const services = await this.entityManager.getRepository(Service).find({
+        where: { id: In(serviceIds) },
+        relations: ['business', 'business.user'],
+      });
+      const servicesMap = new Map(services.map((s) => [s.id, s]));
+
       for (const bookingDetail of serviceBookings) {
         if (!partneredServiceIds.includes(bookingDetail.serviceId)) {
           throw new BadRequestException(
@@ -243,13 +245,13 @@ export class OrderService {
     let giftCardPurchaseTotal = 0;
     if (hasGiftCardPurchases) {
       // Batch-load all businesses to avoid N+1
-      const businessIds = giftCardPurchases.map(gc => gc.businessId);
+      const businessIds = giftCardPurchases.map((gc) => gc.businessId);
       const businesses = await this.businessRepository.find({
         where: { id: In(businessIds) },
         relations: ['user'],
       });
-      const businessesMap = new Map(businesses.map(b => [b.id, b]));
-      
+      const businessesMap = new Map(businesses.map((b) => [b.id, b]));
+
       for (const gcPurchase of giftCardPurchases) {
         const business = businessesMap.get(gcPurchase.businessId);
         if (!business) {
@@ -424,6 +426,8 @@ export class OrderService {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException('User not found');
 
+    // Validate offer BEFORE any central debit so a bad offerId can never
+    // strand a successful debit outside the compensating-refund window.
     let offer: Offer | null = null;
     if (createCheckoutDto.offerId) {
       offer = await this.offerRepository.findOneBy({
@@ -432,199 +436,279 @@ export class OrderService {
       if (!offer) throw new NotFoundException('Offer not found');
     }
 
-    return this.entityManager.transaction(async (manager) => {
-      const orderPayment = manager.create(OrderPayment, {
-        ...createCheckoutDto.payment,
-        user,
-        amount: finalAmount,
-        currency: 'gbp',
-      });
-      const savedPayment = await manager.save(orderPayment);
-
-      const orderData: Partial<Order> = {
-        user,
-        items: [],
-        total: finalAmount,
-        payment: savedPayment,
-        shippingAddress,
-        carrierCode,
-        estimatedShippingFee,
-      };
-      if (offer) {
-        orderData.appliedOffer = offer;
-        orderData.pointsUsedToRedeem = offer.points;
-      }
-      const savedOrder = await manager.save(Order, orderData);
-
-      if (createCheckoutDto.giftCardCode && giftCardAmountToApply > 0) {
-        await this.giftCardService.redeem(
-          {
-            code: createCheckoutDto.giftCardCode,
-            amount: giftCardAmountToApply,
-          },
-          savedOrder,
-          businessContextId || undefined,
-          manager,
+    // --- MCOM Wallet (centralized) payment path: replaces Stripe/PayPal ---
+    const walletRequested =
+      createCheckoutDto.payment.paymentMethod === PaymentMethod.MCOM_WALLET;
+    let walletTransactionId: string | null = null;
+    let walletIdempotencyKey: string | null = null;
+    if (walletRequested && finalAmount > 0) {
+      if (!this.mcomWalletService.isEnabled()) {
+        throw new BadRequestException(
+          'MCOM Wallet payments are currently disabled.',
         );
       }
-
-      if (createCheckoutDto.voucherCode && voucherAmountToApply > 0) {
-        await this.voucherService.redeemForOrder(
-          { code: createCheckoutDto.voucherCode, amount: voucherAmountToApply },
-          savedOrder,
-          manager,
+      const centralUserId = user.centralUserId;
+      if (!centralUserId) {
+        throw new BadRequestException(
+          'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-
-      if (createCheckoutDto.couponCode && couponAmountToApply > 0) {
-        await this.couponService.redeemForOrder(
-          { code: createCheckoutDto.couponCode, amount: couponAmountToApply },
-          savedOrder,
-          manager,
-        );
-      }
-
-      // Process product items
-      if (isDirectPurchase) {
-        const orderItem = manager.create(OrderItem, {
-          order: savedOrder,
-          product: directPurchaseProduct,
-          quantity: directPurchase.quantity,
-          price: directPurchaseProduct.price,
+      walletIdempotencyKey =
+        createCheckoutDto.payment.idempotencyKey ||
+        this.mcomWalletService.buildKey('purchase', userId, randomUUID());
+      try {
+        const receipt = await this.mcomWalletService.debit({
+          userId: centralUserId,
+          amount: Number(finalAmount.toFixed(2)),
+          category: 'PURCHASE',
+          description: 'MCOM Mall order',
+          reference: `mall-order-${userId}`,
+          metadata: { platform: 'mcom-mall', mallUserId: userId },
+          idempotencyKey: walletIdempotencyKey,
         });
-        await manager.save(orderItem);
-        savedOrder.items.push(orderItem);
-      } else if (isCartCheckout) {
-        for (const cartItem of cart.items) {
+        walletTransactionId = receipt.transactionId;
+      } catch (err: any) {
+        throw this.mcomWalletService.toHttpException(err);
+      }
+    }
+
+    return this.entityManager
+      .transaction(async (manager) => {
+        const orderPayment = manager.create(OrderPayment, {
+          paymentMethod: createCheckoutDto.payment.paymentMethod,
+          transactionId:
+            walletTransactionId ||
+            createCheckoutDto.payment.transactionId ||
+            walletIdempotencyKey ||
+            randomUUID(),
+          user,
+          amount: finalAmount,
+          currency: walletRequested ? 'MCOM' : 'gbp',
+        });
+        const savedPayment = await manager.save(orderPayment);
+
+        const orderData: Partial<Order> = {
+          user,
+          items: [],
+          total: finalAmount,
+          payment: savedPayment,
+          shippingAddress,
+          carrierCode,
+          estimatedShippingFee,
+        };
+        if (offer) {
+          orderData.appliedOffer = offer;
+          orderData.pointsUsedToRedeem = offer.points;
+        }
+        const savedOrder = await manager.save(Order, orderData);
+
+        if (createCheckoutDto.giftCardCode && giftCardAmountToApply > 0) {
+          await this.giftCardService.redeem(
+            {
+              code: createCheckoutDto.giftCardCode,
+              amount: giftCardAmountToApply,
+            },
+            savedOrder,
+            businessContextId || undefined,
+            manager,
+          );
+        }
+
+        if (createCheckoutDto.voucherCode && voucherAmountToApply > 0) {
+          await this.voucherService.redeemForOrder(
+            {
+              code: createCheckoutDto.voucherCode,
+              amount: voucherAmountToApply,
+            },
+            savedOrder,
+            manager,
+          );
+        }
+
+        if (createCheckoutDto.couponCode && couponAmountToApply > 0) {
+          await this.couponService.redeemForOrder(
+            { code: createCheckoutDto.couponCode, amount: couponAmountToApply },
+            savedOrder,
+            manager,
+          );
+        }
+
+        // Process product items
+        if (isDirectPurchase) {
           const orderItem = manager.create(OrderItem, {
             order: savedOrder,
-            product: cartItem.product,
-            quantity: cartItem.quantity,
-            price: cartItem.product.price,
+            product: directPurchaseProduct,
+            quantity: directPurchase.quantity,
+            price: directPurchaseProduct.price,
           });
           await manager.save(orderItem);
           savedOrder.items.push(orderItem);
+        } else if (isCartCheckout) {
+          for (const cartItem of cart.items) {
+            const orderItem = manager.create(OrderItem, {
+              order: savedOrder,
+              product: cartItem.product,
+              quantity: cartItem.quantity,
+              price: cartItem.product.price,
+            });
+            await manager.save(orderItem);
+            savedOrder.items.push(orderItem);
+          }
         }
-      }
 
-      // Process service bookings
-      if (serviceBookings && serviceBookings.length > 0) {
-        if (!directPurchaseProduct) {
-          // This should ideally not be reached due to earlier checks
-          throw new BadRequestException(
-            'A product must be directly purchased to book partnered services.',
-          );
-        }
-        
-        // Pre-fetch all partnerships to avoid N+1
-        const serviceIds = serviceBookings.map(b => b.serviceId);
-        const partnerships = await this.partnershipRepository.find({
-          where: [
-            {
-              baseProduct: { id: directPurchaseProduct.id },
-              plusService: { id: In(serviceIds) },
-              isActive: true,
-            },
-            {
-              plusProduct: { id: directPurchaseProduct.id },
-              baseService: { id: In(serviceIds) },
-              isActive: true,
-            },
-          ],
-        });
-        const partnershipMap = new Map(
-          partnerships.map(p => [
-            p.plusService?.id || p.baseService?.id,
-            p
-          ])
-        );
-        
-        for (const bookingDetail of serviceBookings) {
-          const serviceBooking =
-            await this.bookingService.createBookingForOrder(
-              {
-                serviceId: bookingDetail.serviceId,
-                startTime: bookingDetail.startTime,
-                endTime: bookingDetail.endTime,
-              },
-              userId,
-              manager,
-            );
-
-          const partnership = partnershipMap.get(bookingDetail.serviceId);
-          if (!partnership) {
-            // This check is a safeguard; the earlier validation should prevent this.
+        // Process service bookings
+        if (serviceBookings && serviceBookings.length > 0) {
+          if (!directPurchaseProduct) {
+            // This should ideally not be reached due to earlier checks
             throw new BadRequestException(
-              `Could not find an active partnership for product ${directPurchaseProduct.id} and service ${bookingDetail.serviceId}.`,
+              'A product must be directly purchased to book partnered services.',
             );
           }
 
-          const productServiceBooking =
-            this.productServiceBookingRepository.create({
-              order: savedOrder,
-              serviceBooking,
-              product: directPurchaseProduct,
-              partnership,
-            });
-          await manager.save(productServiceBooking);
-        }
-      }
+          // Pre-fetch all partnerships to avoid N+1
+          const serviceIds = serviceBookings.map((b) => b.serviceId);
+          const partnerships = await this.partnershipRepository.find({
+            where: [
+              {
+                baseProduct: { id: directPurchaseProduct.id },
+                plusService: { id: In(serviceIds) },
+                isActive: true,
+              },
+              {
+                plusProduct: { id: directPurchaseProduct.id },
+                baseService: { id: In(serviceIds) },
+                isActive: true,
+              },
+            ],
+          });
+          const partnershipMap = new Map(
+            partnerships.map((p) => [
+              p.plusService?.id || p.baseService?.id,
+              p,
+            ]),
+          );
 
-      // Process new gift card purchases
-      if (hasGiftCardPurchases) {
-        // Batch-load businesses to avoid N+1
-        const gcBusinessIds = giftCardPurchases.map(gc => gc.businessId);
-        const gcBusinesses = await this.businessRepository.find({
-          where: { id: In(gcBusinessIds) },
-          relations: ['user'],
-        });
-        const gcBusinessMap = new Map(gcBusinesses.map(b => [b.id, b]));
-        
-        for (const gcPurchase of giftCardPurchases) {
-          const businessForPurchase = gcBusinessMap.get(gcPurchase.businessId);
-          await this.giftCardService.purchaseGiftCard(
-            gcPurchase,
-            businessForPurchase,
+          for (const bookingDetail of serviceBookings) {
+            const serviceBooking =
+              await this.bookingService.createBookingForOrder(
+                {
+                  serviceId: bookingDetail.serviceId,
+                  startTime: bookingDetail.startTime,
+                  endTime: bookingDetail.endTime,
+                },
+                userId,
+                manager,
+              );
+
+            const partnership = partnershipMap.get(bookingDetail.serviceId);
+            if (!partnership) {
+              // This check is a safeguard; the earlier validation should prevent this.
+              throw new BadRequestException(
+                `Could not find an active partnership for product ${directPurchaseProduct.id} and service ${bookingDetail.serviceId}.`,
+              );
+            }
+
+            const productServiceBooking =
+              this.productServiceBookingRepository.create({
+                order: savedOrder,
+                serviceBooking,
+                product: directPurchaseProduct,
+                partnership,
+              });
+            await manager.save(productServiceBooking);
+          }
+        }
+
+        // Process new gift card purchases
+        if (hasGiftCardPurchases) {
+          // Batch-load businesses to avoid N+1
+          const gcBusinessIds = giftCardPurchases.map((gc) => gc.businessId);
+          const gcBusinesses = await this.businessRepository.find({
+            where: { id: In(gcBusinessIds) },
+            relations: ['user'],
+          });
+          const gcBusinessMap = new Map(gcBusinesses.map((b) => [b.id, b]));
+
+          for (const gcPurchase of giftCardPurchases) {
+            const businessForPurchase = gcBusinessMap.get(
+              gcPurchase.businessId,
+            );
+            await this.giftCardService.purchaseGiftCard(
+              gcPurchase,
+              businessForPurchase,
+              savedOrder,
+            );
+          }
+        }
+
+        if (offer) {
+          await this.pointsService.redeemPointsForOrder(
             savedOrder,
+            user,
+            offer,
+            manager,
           );
         }
-      }
 
-      if (offer) {
-        await this.pointsService.redeemPointsForOrder(
-          savedOrder,
-          user,
-          offer,
-          manager,
-        );
-      }
-
-      if (isDirectPurchase || isCartCheckout) {
-        await this.promotionEngineService.processPurchase(user, savedOrder);
-      }
-
-      if (isCartCheckout) {
-        await this.cartService.clearCart(userId);
-      }
-
-      // Credit earnings to all business owners involved in the order
-      for (const [ownerId, amount] of earningsPerOwner.entries()) {
-        if (amount > 0) {
-          await this.walletService.creditEarning({
-            userId: ownerId,
-            amount: amount,
-            type: WalletTransactionType.EARNING_ORDER,
-            description: `Earnings from order #${savedOrder.id}`,
-          });
+        if (isDirectPurchase || isCartCheckout) {
+          await this.promotionEngineService.processPurchase(user, savedOrder);
         }
-      }
 
-      this.eventEmitter.emit('ORDER_PAID', {
-        orderId: savedOrder.id,
+        if (isCartCheckout) {
+          await this.cartService.clearCart(userId);
+        }
+
+        // Credit earnings to all business owners involved in the order
+        for (const [ownerId, amount] of earningsPerOwner.entries()) {
+          if (amount > 0) {
+            await this.walletService.creditEarning({
+              userId: ownerId,
+              amount: amount,
+              type: WalletTransactionType.EARNING_ORDER,
+              description: `Earnings from order #${savedOrder.id}`,
+            });
+          }
+        }
+
+        this.eventEmitter.emit('ORDER_PAID', {
+          orderId: savedOrder.id,
+        });
+
+        return savedOrder;
+      })
+      .catch(async (dbErr) => {
+        // Compensating refund: order records failed AFTER a successful central
+        // debit — credit the wallet back so the user is never charged for a
+        // failed order. Same-amount credit with a derived key; central treats
+        // a repeated key as the same receipt (safe retry).
+        if (walletTransactionId && walletIdempotencyKey) {
+          try {
+            const centralUserId = user.centralUserId;
+            if (centralUserId) {
+              await this.mcomWalletService.credit({
+                userId: centralUserId,
+                amount: Number(finalAmount.toFixed(2)),
+                category: 'REFUND',
+                description: 'MCOM Mall order failed — auto refund',
+                reference: `mall-order-failed-${userId}`,
+                metadata: { platform: 'mcom-mall', mallUserId: userId },
+                idempotencyKey: this.mcomWalletService.buildKey(
+                  'refund',
+                  walletIdempotencyKey,
+                ),
+              });
+            }
+          } catch (refundErr) {
+            // Surface the original DB error; refund failure is logged centrally.
+
+            console.error(
+              '[order.checkout] compensating wallet refund failed',
+              refundErr,
+            );
+          }
+        }
+        throw dbErr;
       });
-
-      return savedOrder;
-    });
   }
 
   async getOrdersForCustomer(

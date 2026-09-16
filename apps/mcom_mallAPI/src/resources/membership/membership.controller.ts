@@ -50,7 +50,7 @@ export class MembershipController {
   @ApiOperation({
     summary: 'Initiate a payment for a membership',
     description:
-      'Starts the payment process for a membership tier subscription. Supports Stripe and PayPal. Returns a client secret (Stripe) or Order ID (PayPal) to complete the transaction on the frontend.',
+      'Starts the payment process for a membership plan. MCOM Wallet (mcom_wallet) reserves funds centrally and returns a holdId to capture via verify-payment. Stripe and PayPal are processed centrally by MCOM Solutions (their Stripe/PayPal accounts): stripe returns a clientSecret for Elements, paypal returns an orderId plus an approvalUrl to redirect the buyer to.',
   })
   @ApiResponse({
     status: 201,
@@ -60,11 +60,26 @@ export class MembershipController {
       properties: {
         clientSecret: {
           type: 'string',
-          description: 'The client secret from Stripe (if provider is Stripe).',
+          description:
+            'The client secret from MCOM Solutions Stripe (if provider is Stripe). Confirm it with Solutions publishable key.',
         },
         orderId: {
           type: 'string',
           description: 'The order ID from PayPal (if provider is PayPal).',
+        },
+        approvalUrl: {
+          type: 'string',
+          description:
+            'PayPal approval URL to redirect the buyer to (if provider is PayPal).',
+        },
+        holdId: {
+          type: 'string',
+          description:
+            'The hold ID from MCOM Wallet (if provider is mcom_wallet). Pass it to verify-payment to capture.',
+        },
+        expiresAt: {
+          type: 'string',
+          description: 'When the MCOM Wallet hold expires.',
         },
         provider: {
           type: 'string',
@@ -81,7 +96,8 @@ export class MembershipController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({
     status: 409,
-    description: 'Conflict. User already has an active membership.',
+    description:
+      'Conflict. Only returned when the payment itself was already recorded.',
   })
   initiatePayment(
     @Body() initiateDto: InitiateMembershipPaymentDto,
@@ -89,6 +105,9 @@ export class MembershipController {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
   }> {
     return this.membershipService.initiateMembershipPayment(initiateDto, user);
@@ -99,7 +118,7 @@ export class MembershipController {
   @ApiOperation({
     summary: 'Verify a payment and create the membership',
     description:
-      'Verifies the payment with the provider (Stripe/PayPal) and creates the membership record linked to the purchased Tier. Must be called after successful frontend payment.',
+      'Verifies the payment (MCOM Wallet hold capture, or MCOM Solutions Stripe/PayPal confirm for centrally-processed payments) and creates the membership record linked to the purchased plan. Must be called after successful frontend payment.',
   })
   @ApiResponse({
     status: 201,
@@ -113,7 +132,8 @@ export class MembershipController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({
     status: 409,
-    description: 'Conflict. User already has an active membership.',
+    description:
+      'Conflict. Only returned when the payment itself was already recorded; paying again replaces the active membership.',
   })
   verifyPayment(
     @Body() verifyDto: VerifyMembershipPaymentDto,

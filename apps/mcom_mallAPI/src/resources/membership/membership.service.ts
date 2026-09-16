@@ -5,13 +5,19 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Membership } from './entities/membership.entity';
 import { MembershipTier } from './membership-tier.enum';
-import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { McomWalletService } from '../payments/services/mcom-wallet.service';
+import {
+  SolutionsBillingCycle,
+  SolutionsPaymentProxyService,
+} from '../payments/services/solutions-payment-proxy.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import {
@@ -32,6 +38,10 @@ import {
   CreateMembershipCreditDto,
   UpdateMembershipCreditStatusDto,
 } from './dto/membership-credit.dto';
+import { PlansService } from '../plans/services/plans.service';
+import { PlanExpiryService } from '../plans/services/plan-expiry.service';
+import { PlanTier } from '../plans/enums/plan-tier.enum';
+import { PlanVariant } from '../plans/entities/plan-variant.entity';
 
 @Injectable()
 export class MembershipService {
@@ -54,13 +64,34 @@ export class MembershipService {
     private readonly tierRepository: Repository<Tier>,
     @InjectRepository(MembershipCredit)
     private readonly creditRepository: Repository<MembershipCredit>,
-    private readonly paymentProviderService: PaymentProviderService,
+    @Inject(forwardRef(() => McomWalletService))
+    private readonly mcomWalletService: McomWalletService,
+    private readonly solutionsPaymentProxy: SolutionsPaymentProxyService,
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly mcomCentralService: McomCentralService,
+    private readonly plansService: PlansService,
+    private readonly planExpiryService: PlanExpiryService,
     private readonly dataSource: DataSource,
   ) {}
 
   async findOne(user: User): Promise<any> {
+    // Source of truth: the local membership row. It only ever exists after a
+    // verified payment (central wallet capture), admin grant, or trial.
+    // Money itself always moves on the MCOM Solutions wallet server — the DB
+    // decides entitlement, never funds.
+    try {
+      const local = await this.findActiveWithTier(user.id);
+      if (
+        local?.isActive &&
+        local.expiresAt &&
+        new Date(local.expiresAt).getTime() > Date.now()
+      ) {
+        return await this.toLocalMembershipDto(local);
+      }
+    } catch {
+      // Never let a local read break the central fallback path below.
+    }
+
     let centralUserId = user.centralUserId;
     if (!centralUserId) {
       const dbUser = await this.userRepository.findOne({
@@ -94,6 +125,20 @@ export class MembershipService {
       return null;
     }
 
+    // Attach the local variant purchase snapshot when present so storefronts
+    // can display plan + tier names (resolved via public GET /plans).
+    // Never allowed to break the central-SSO read path.
+    let planVariantId: string | null = null;
+    let priceId: string | null = null;
+    try {
+      const localMembership = await this.findActiveWithTier(user.id);
+      planVariantId = localMembership?.planVariantId ?? null;
+      priceId = localMembership?.priceId ?? null;
+    } catch {
+      planVariantId = null;
+      priceId = null;
+    }
+
     return {
       id: `subscription-${user.id}`,
       isActive: true,
@@ -109,6 +154,8 @@ export class MembershipService {
         configuration: tier.configuration,
         isActive: tier.isActive,
       },
+      planVariantId,
+      priceId,
       planType: null,
       startDate: null,
       expiresAt: null,
@@ -116,6 +163,74 @@ export class MembershipService {
       isTrial: false,
       trialDuration: 0,
       packages: userPackages.packages,
+    };
+  }
+
+  /**
+   * Maps a local membership row to the same shape as the central-SSO
+   * response so every consumer (badge, membership page, billing) works
+   * unchanged regardless of where the subscription originated.
+   */
+  private async toLocalMembershipDto(membership: Membership): Promise<any> {
+    let tier: any = null;
+    if (membership.tier) {
+      tier = {
+        id: membership.tier.id,
+        name: membership.tier.name,
+        description: membership.tier.description,
+        monthlyPrice: membership.tier.monthlyPrice,
+        quarterlyPrice: membership.tier.quarterlyPrice,
+        annualPrice: membership.tier.annualPrice,
+        features: membership.tier.features,
+        configuration: membership.tier.configuration,
+        isActive: membership.tier.isActive,
+      };
+    } else if (membership.planVariantId) {
+      // Variant purchases carry no legacy Tier row — synthesize a display
+      // tier from the variant's level + plan so badges/pages show a real
+      // name instead of "Free". Quotas/flags pass through so privilege
+      // displays work even before GET /plans resolves.
+      try {
+        const { variant } = await this.plansService.resolveActivePrice(
+          membership.planVariantId,
+        );
+        const level = variant.tierLevel?.name;
+        const label =
+          level === PlanTier.PRO_PLUS
+            ? 'Pro+'
+            : level === PlanTier.PRO
+              ? 'Pro'
+              : 'Standard';
+        tier = {
+          id: null,
+          name: `${variant.plan?.name ?? 'Plan'} · ${label}`,
+          description: variant.plan?.description ?? null,
+          monthlyPrice: null,
+          quarterlyPrice: null,
+          annualPrice: null,
+          features: variant.features ?? [],
+          configuration: variant.configuration ?? null,
+          isActive: true,
+        };
+      } catch {
+        tier = { id: null, name: 'Membership' };
+      }
+    }
+
+    return {
+      id: membership.id,
+      isActive: true,
+      tierId: membership.tierId ?? tier?.id ?? null,
+      tier,
+      planVariantId: membership.planVariantId ?? null,
+      priceId: membership.priceId ?? null,
+      planType: membership.planType ?? null,
+      startDate: membership.startDate ?? null,
+      expiresAt: membership.expiresAt ?? null,
+      endDate: membership.endDate ?? membership.expiresAt ?? null,
+      isTrial: membership.isTrial ?? false,
+      trialDuration: membership.trialDuration ?? 0,
+      packages: [],
     };
   }
 
@@ -182,6 +297,37 @@ export class MembershipService {
       }
     }
 
+    if (membership && !membership.tier && membership.planVariantId) {
+      try {
+        const { variant } = await this.plansService.resolveActivePrice(
+          membership.planVariantId,
+        );
+        const level = variant.tierLevel?.name;
+        const label =
+          level === PlanTier.PRO_PLUS
+            ? 'Pro+'
+            : level === PlanTier.PRO
+              ? 'Pro'
+              : 'Standard';
+        membership.tier = {
+          id: null,
+          name: `${variant.plan?.name ?? 'Plan'} · ${label}`,
+          description: variant.plan?.description ?? null,
+          monthlyPrice: null,
+          quarterlyPrice: null,
+          annualPrice: null,
+          features: variant.features ?? [],
+          configuration: variant.configuration ?? null,
+          isActive: true,
+        } as any;
+      } catch (err) {
+        console.warn(
+          `[MembershipService] Could not resolve plan variant ${membership.planVariantId}:`,
+          err,
+        );
+      }
+    }
+
     if (membership) {
       await this.ensureDates(membership);
     }
@@ -203,21 +349,24 @@ export class MembershipService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
   }> {
-    const existingMembership = await this.membershipRepository.findOne({
-      where: { user: { id: user.id }, isActive: true },
-    });
-
-    if (existingMembership) {
-      // Allow upgrade if needed, but for now strict conflict
-      throw new ConflictException('User already has an active membership.');
-    }
+    // Repurchase is allowed: paying for another (or the same) plan replaces
+    // the active membership once the new payment verifies. No conflict here —
+    // unverified initiates (Stripe intents, PayPal orders, wallet holds)
+    // simply expire on the provider side.
 
     let price = 0;
-    const currency = 'GBP';
 
-    if (initiateDto.tierId) {
+    if (initiateDto.planVariantId) {
+      const { price: activePrice } = await this.plansService.resolveActivePrice(
+        initiateDto.planVariantId,
+      );
+      price = Number(activePrice.amount);
+    } else if (initiateDto.tierId) {
       const tier = await this.tierRepository.findOne({
         where: { id: initiateDto.tierId },
       });
@@ -236,53 +385,164 @@ export class MembershipService {
       price = this.getMembershipPrice(initiateDto.tier);
     }
 
-    if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          price,
-          currency,
+    if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
+      // Centralized wallet path: reserve funds now, capture on verify.
+      if (!this.mcomWalletService.isEnabled()) {
+        throw new BadRequestException(
+          'MCOM Wallet payments are currently disabled.',
         );
+      }
+      let centralUserId = user.centralUserId;
+      if (!centralUserId) {
+        const dbUser = await this.userRepository.findOne({
+          where: { id: user.id },
+        });
+        centralUserId = dbUser?.centralUserId;
+      }
+      if (!centralUserId) {
+        throw new BadRequestException(
+          'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+        );
+      }
+      const scope =
+        initiateDto.planVariantId ||
+        initiateDto.tierId ||
+        initiateDto.tier ||
+        'membership';
+      const planType = initiateDto.planType || PlanType.MONTHLY;
+      try {
+        const hold = await this.mcomWalletService.placeHold({
+          userId: centralUserId,
+          amount: Number(Number(price).toFixed(2)),
+          reference: `mall-membership-${user.id}`,
+          metadata: {
+            platform: 'mcom-mall',
+            mallUserId: user.id,
+            planVariantId: initiateDto.planVariantId,
+            tierId: initiateDto.tierId,
+            planType,
+          },
+          idempotencyKey:
+            initiateDto.idempotencyKey ||
+            this.mcomWalletService.buildKey(
+              'sub-hold',
+              user.id,
+              String(scope),
+              planType,
+            ),
+        });
+        return {
+          holdId: hold.holdId,
+          expiresAt: hold.expiresAt,
+          provider: PaymentMethod.MCOM_WALLET,
+        };
+      } catch (err: any) {
+        throw this.mcomWalletService.toHttpException(err);
+      }
+    }
+
+    if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
+      // Card money moves on MCOM Solutions (their Stripe account): the mall
+      // forwards the plan reference, Solutions prices it from /system/plans
+      // and returns a clientSecret the browser confirms with Solutions' key.
+      const { externalPlanId, billingCycle } =
+        await this.resolveSolutionsPlan(initiateDto);
+      const initiated = await this.solutionsPaymentProxy.stripeInitiate(
+        user.id,
+        externalPlanId,
+        billingCycle,
+      );
       return {
-        clientSecret: paymentIntent.client_secret,
+        clientSecret: initiated.clientSecret,
         provider: PaymentMethod.STRIPE,
       };
     } else if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
-      // If we had a planId logic for PayPal Subscriptions, we would use createSubscription here.
-      // But adhering to current createOrder logic for one-time payments (or initial payment):
-      const order = await this.paymentProviderService.createPaypalOrder(
-        price,
-        currency,
+      // Same centralized routing for PayPal: Solutions creates the order
+      // (their PayPal account) and the browser approves on paypal.com.
+      const { externalPlanId, billingCycle } =
+        await this.resolveSolutionsPlan(initiateDto);
+      const initiated = await this.solutionsPaymentProxy.paypalInitiate(
+        user.id,
+        externalPlanId,
+        billingCycle,
+        initiateDto.returnUrl,
+        initiateDto.cancelUrl,
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      return {
+        orderId: initiated.orderId,
+        approvalUrl: initiated.approvalUrl,
+        provider: PaymentMethod.PAYPAL,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
+  }
+
+  /**
+   * Resolves the plan reference MCOM Solutions needs to price a centralized
+   * card/PayPal payment. Solutions' connector reads the plan back from
+   * GET /system/plans/:id (legacy tiers + synthesized plan variants).
+   * Legacy tier-enum purchases carry no plan id, so they cannot be priced
+   * centrally — callers must pick a real plan.
+   */
+  private async resolveSolutionsPlan(planRef: {
+    planVariantId?: string;
+    tierId?: string;
+    planType?: PlanType;
+  }): Promise<{
+    externalPlanId: string;
+    billingCycle: SolutionsBillingCycle;
+  }> {
+    if (planRef.planVariantId) {
+      const { variant } = await this.plansService.resolveActivePrice(
+        planRef.planVariantId,
+      );
+      const level = variant.tierLevel?.name;
+      // Variants are one-off purchases; map to the closest named cycle for
+      // Solutions' ledger (the charged amount is identical either way).
+      const billingCycle: SolutionsBillingCycle =
+        level === PlanTier.PRO_PLUS ? 'annual' : 'quarterly';
+      return { externalPlanId: planRef.planVariantId, billingCycle };
+    }
+    if (planRef.tierId) {
+      const planType = planRef.planType || PlanType.MONTHLY;
+      return {
+        externalPlanId: planRef.tierId,
+        billingCycle: planType as SolutionsBillingCycle,
+      };
+    }
+    throw new BadRequestException(
+      'Card and PayPal payments require a plan (planVariantId or tierId).',
+    );
   }
 
   async verifyAndCreateMembership(
     verifyDto: VerifyMembershipPaymentDto,
     user: User,
   ): Promise<Membership> {
-    const { paymentProvider, transactionId, purchaseDetails } = verifyDto;
+    const { paymentProvider, purchaseDetails } = verifyDto;
+    let transactionId = verifyDto.transactionId;
+    const holdId = verifyDto.holdId || transactionId;
     const {
       tier: tierEnum,
       tierId,
+      planVariantId,
       planType = PlanType.MONTHLY,
     } = purchaseDetails;
 
-    const existingMembership = await this.membershipRepository.findOne({
-      where: { user: { id: user.id }, isActive: true },
-    });
-
-    if (existingMembership) {
-      throw new ConflictException('User already has an active membership.');
-    }
-
     let price = 0;
     let tierEntity: Tier | null = null;
-    const currency = 'GBP';
+    let purchasedVariant: PlanVariant | null = null;
+    let priceSnapshotId: string | null = null;
+    let currency = 'GBP';
 
-    if (tierId) {
+    if (planVariantId) {
+      const resolved =
+        await this.plansService.resolveActivePrice(planVariantId);
+      purchasedVariant = resolved.variant;
+      priceSnapshotId = resolved.price.id;
+      price = Number(resolved.price.amount);
+    } else if (tierId) {
       tierEntity = await this.tierRepository.findOne({
         where: { id: tierId },
         relations: ['season'],
@@ -302,20 +562,76 @@ export class MembershipService {
 
     let verificationResult;
 
-    if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          price,
-          currency,
+    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+      // Centralized wallet path: convert the pre-authorization hold from
+      // initiate-payment into a real SUBSCRIPTION debit. Uncaptured holds
+      // auto-expire (~24h) as a backstop.
+      if (!holdId) {
+        throw new BadRequestException(
+          'A wallet hold ID is required for MCOM Wallet membership payments.',
         );
+      }
+      let centralUserId = user.centralUserId;
+      if (!centralUserId) {
+        const dbUser = await this.userRepository.findOne({
+          where: { id: user.id },
+        });
+        centralUserId = dbUser?.centralUserId;
+      }
+      if (!centralUserId) {
+        throw new BadRequestException(
+          'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+        );
+      }
+      try {
+        const captured = await this.mcomWalletService.captureHold({
+          holdId,
+          amount: Number(Number(price).toFixed(2)),
+          reference: `mall-membership-${user.id}`,
+          // Scoped per hold (not per plan): retries of the same purchase
+          // replay safely, while a new purchase can never collide with a
+          // previous capture's key on the central ledger.
+          idempotencyKey: this.mcomWalletService.buildKey(
+            'sub-capture',
+            holdId,
+          ),
+        });
+        transactionId = captured.transactionId;
+        currency = 'MCOM';
+        verificationResult = { ok: true as boolean, details: captured };
+      } catch (err: any) {
+        throw this.mcomWalletService.toHttpException(err);
+      }
+    } else if (paymentProvider === PaymentMethod.STRIPE) {
+      // Centralized card path: Solutions created the PaymentIntent (their
+      // Stripe account) and already verified it succeeded server-side in
+      // confirm — including amount vs the same plan price. Trust success.
+      if (!transactionId) {
+        throw new BadRequestException(
+          'A Stripe payment reference is required.',
+        );
+      }
+      const { externalPlanId, billingCycle } = await this.resolveSolutionsPlan({
+        planVariantId,
+        tierId,
+        planType,
+      });
+      const confirmed = await this.solutionsPaymentProxy.stripeConfirm(
+        user.id,
+        externalPlanId,
+        billingCycle,
+        transactionId,
+      );
+      verificationResult = { ok: confirmed.ok, details: confirmed.details };
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          price,
-          currency,
-        );
+      // Centralized PayPal path: Solutions captures the order (their PayPal
+      // account) and validates amount/currency against the plan price.
+      if (!transactionId) {
+        throw new BadRequestException('A PayPal order ID is required.');
+      }
+      const confirmed =
+        await this.solutionsPaymentProxy.paypalCapture(transactionId);
+      verificationResult = { ok: confirmed.ok, details: confirmed.details };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -339,15 +655,20 @@ export class MembershipService {
       if (existingPayment?.membership) {
         return existingPayment.membership;
       }
-
-      const newPayment = paymentRepo.create({
-        user,
-        amount: price,
-        currency,
-        paymentMethod: paymentProvider,
-        transactionId,
-      });
-      const savedPayment = await paymentRepo.save(newPayment);
+      // A previous attempt may have saved the payment row but failed before
+      // the membership row (transactionId is unique) — reuse it instead of
+      // inserting a duplicate.
+      const savedPayment =
+        existingPayment ??
+        (await paymentRepo.save(
+          paymentRepo.create({
+            user,
+            amount: price,
+            currency,
+            paymentMethod: paymentProvider,
+            transactionId,
+          }),
+        ));
 
       let startDate = new Date();
       let expiresAt = new Date();
@@ -355,6 +676,15 @@ export class MembershipService {
       if (tierEntity?.type === TierType.SEASONAL && tierEntity.season) {
         startDate = new Date(tierEntity.season.startDate);
         expiresAt = new Date(tierEntity.season.endDate);
+      } else if (purchasedVariant) {
+        const level = purchasedVariant.tierLevel.name;
+        if (level === PlanTier.PRO_PLUS) {
+          expiresAt = this.planExpiryService.proPlusExpiry(startDate);
+        } else if (level === PlanTier.PRO) {
+          expiresAt = this.planExpiryService.proExpiry(startDate);
+        } else {
+          expiresAt = this.planExpiryService.standardExpiry(startDate);
+        }
       } else {
         // Add 1 month or 1 year
         if (planType === PlanType.ANNUAL) {
@@ -364,17 +694,30 @@ export class MembershipService {
         }
       }
 
-      const membership = membershipRepo.create({
-        tierType: tierEnum, // keep legacy if present
-        tier: tierEntity,
-        user,
-        startDate,
-        expiresAt,
-        endDate: expiresAt,
-        isActive: true,
-        planType,
-        payment: savedPayment,
+      // Replace semantics: memberships.userId is a one-to-one (unique), so a
+      // user can only ever have ONE membership row. A new purchase updates the
+      // existing row in place (or inserts when none exists) — inserting a
+      // second row violates REL_187d573e43b2c2aa3960df20b7.
+      // trialDuration is intentionally left untouched so joinTrial's
+      // one-trial-ever check keeps working after a trial->paid upgrade.
+      const prior = await membershipRepo.findOne({
+        where: { user: { id: user.id } },
+        order: { created_at: 'DESC' },
       });
+
+      const membership = prior ?? membershipRepo.create();
+      membership.tierType = tierEnum;
+      membership.tier = tierEntity;
+      membership.planVariantId = purchasedVariant ? purchasedVariant.id : null;
+      membership.priceId = priceSnapshotId;
+      membership.user = user;
+      membership.startDate = startDate;
+      membership.expiresAt = expiresAt;
+      membership.endDate = expiresAt;
+      membership.isActive = true;
+      membership.isTrial = false;
+      membership.planType = planType;
+      membership.payment = savedPayment;
 
       const savedMembership = await membershipRepo.save(membership);
 
@@ -415,11 +758,17 @@ export class MembershipService {
       throw new ConflictException('User already has an active membership.');
     }
 
-    // If we want strict "one trial per user ever", we'd check if any previous membership had isTrial=true
+    // Strict "one trial per user ever": the single membership row is updated
+    // in place on purchase, so a trial->paid user keeps trialDuration as the
+    // marker (isTrial itself is cleared on paid purchase).
     const trialUsage = await this.membershipRepository.findOne({
-      where: { user: { id: user.id }, isTrial: true },
+      where: { user: { id: user.id } },
+      order: { created_at: 'DESC' },
     });
-    if (trialUsage) {
+    if (
+      trialUsage &&
+      (trialUsage.isTrial || (trialUsage.trialDuration ?? 0) > 0)
+    ) {
       throw new ForbiddenException('User has already used their trial period.');
     }
 
@@ -427,36 +776,53 @@ export class MembershipService {
       where: { id: tierId },
       relations: ['season'],
     });
-    if (!tier) throw new NotFoundException('Tier not found');
+
+    let purchasedVariant: PlanVariant | null = null;
+    let trialDurationDays = 14;
+
+    if (!tier) {
+      try {
+        const resolved = await this.plansService.resolveActivePrice(tierId);
+        purchasedVariant = resolved.variant;
+        trialDurationDays = purchasedVariant.tierLevel?.durationDays || 14;
+      } catch {
+        throw new NotFoundException('Plan or Tier not found');
+      }
+    } else {
+      trialDurationDays = tier.trialDuration || 14;
+    }
 
     return this.dataSource.transaction(async (manager) => {
       const membershipRepo = manager.getRepository(Membership);
       const userRepo = manager.getRepository(User);
 
-      // Use the tier's trial duration, default to 14 days if not set
-      const trialDurationDays = tier.trialDuration || 14;
-
       let startDate = new Date();
       let expiresAt = new Date();
 
-      if (tier.type === TierType.SEASONAL && tier.season) {
+      if (tier && tier.type === TierType.SEASONAL && tier.season) {
         startDate = new Date(tier.season.startDate);
         expiresAt = new Date(tier.season.endDate);
       } else {
         expiresAt.setDate(expiresAt.getDate() + trialDurationDays);
       }
 
-      const membership = membershipRepo.create({
-        tier,
-        user,
-        startDate,
-        expiresAt,
-        endDate: expiresAt,
-        isActive: true,
-        isTrial: true,
-        trialDuration: trialDurationDays,
-        planType: PlanType.MONTHLY, // Default to monthly after trial usually
+      const priorTrial = await membershipRepo.findOne({
+        where: { user: { id: user.id } },
+        order: { created_at: 'DESC' },
       });
+      // Single membership row per user (one-to-one): update in place so a
+      // trial after an expired paid plan doesn't violate the unique user FK.
+      const membership = priorTrial ?? membershipRepo.create();
+      membership.tier = tier;
+      membership.planVariantId = purchasedVariant ? purchasedVariant.id : null;
+      membership.user = user;
+      membership.startDate = startDate;
+      membership.expiresAt = expiresAt;
+      membership.endDate = expiresAt;
+      membership.isActive = true;
+      membership.isTrial = true;
+      membership.trialDuration = trialDurationDays;
+      membership.planType = PlanType.MONTHLY; // Default to monthly after trial usually
 
       const savedMembership = await membershipRepo.save(membership);
       user.membership = savedMembership;
@@ -477,17 +843,6 @@ export class MembershipService {
     });
     if (!tier) throw new NotFoundException('Tier not found');
 
-    // Check for existing active membership
-    const existingMembership = await this.membershipRepository.findOne({
-      where: { user: { id: user.id }, isActive: true },
-    });
-    if (existingMembership) {
-      // In a real scenario we might extend it, or upgrade it.
-      // For now, we will expire the old one and create new one (Upgrade/Replace behavior).
-      existingMembership.isActive = false;
-      await this.membershipRepository.save(existingMembership);
-    }
-
     return this.dataSource.transaction(async (manager) => {
       const membershipRepo = manager.getRepository(Membership);
       const userRepo = manager.getRepository(User);
@@ -502,16 +857,22 @@ export class MembershipService {
         expiresAt.setDate(expiresAt.getDate() + durationDays);
       }
 
-      const membership = membershipRepo.create({
-        tier,
-        user,
-        startDate,
-        expiresAt,
-        endDate: expiresAt,
-        isActive: true,
-        planType: PlanType.MONTHLY, // Default
-        // We could add a note or flag about source if entity supported it
+      // Single membership row per user (one-to-one): update in place instead
+      // of deactivating + inserting (the insert violates the unique user FK).
+      const priorGrant = await membershipRepo.findOne({
+        where: { user: { id: user.id } },
+        order: { created_at: 'DESC' },
       });
+      const membership = priorGrant ?? membershipRepo.create();
+      membership.tier = tier;
+      membership.user = user;
+      membership.startDate = startDate;
+      membership.expiresAt = expiresAt;
+      membership.endDate = expiresAt;
+      membership.isActive = true;
+      membership.isTrial = false;
+      membership.planType = PlanType.MONTHLY; // Default
+      // We could add a note or flag about source if entity supported it
 
       const savedMembership = await membershipRepo.save(membership);
       user.membership = savedMembership;

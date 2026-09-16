@@ -109,7 +109,9 @@ export class GooglePlacesService {
     try {
       let location = '6.454075,3.394673';
       // Default radius is 5000 meters (5 km)
-      const radiusMeters = query?.radius ? Math.round(query.radius * 1000) : 5000;
+      const radiusMeters = query?.radius
+        ? Math.round(query.radius * 1000)
+        : 5000;
       let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?radius=${radiusMeters}&`;
 
       if (query) {

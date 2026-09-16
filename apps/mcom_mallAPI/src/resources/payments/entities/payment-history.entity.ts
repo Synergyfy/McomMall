@@ -36,6 +36,9 @@ export class PaymentHistory extends AbstractBaseEntity {
   @Column({ nullable: true })
   tierId: string;
 
+  @Column({ name: 'plan_variant_id', type: 'uuid', nullable: true })
+  planVariantId: string | null;
+
   @Column({ type: 'enum', enum: PaymentGateway })
   paymentGateway: PaymentGateway;
 }

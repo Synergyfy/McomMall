@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PlanType } from '../enums/plan-type.enum';
 import { PaygOption } from '../enums/payg-option.enum';
 import { PaymentGateway } from '../enums/payment-gateway.enum';
@@ -22,8 +23,8 @@ export class RecordPaymentDto {
   currency?: string; // default to 'gbp' if not provided
 
   @IsEnum(PlanType)
-  @IsNotEmpty()
-  planType: PlanType;
+  @IsOptional()
+  planType?: PlanType = PlanType.MONTHLY;
 
   @IsEnum(PaygOption)
   @IsOptional()
@@ -39,7 +40,11 @@ export class RecordPaymentDto {
 
   @IsString()
   @IsNotEmpty()
-  transactionId: string; // Stripe intent id or PayPal order id
+  transactionId: string; // Stripe intent id, PayPal order id, or MCOM Wallet hold id
+
+  @IsString()
+  @IsOptional()
+  holdId?: string; // MCOM Wallet hold id to capture (defaults to transactionId)
 
   @IsEnum(PaymentPurpose)
   @IsOptional()
@@ -48,4 +53,22 @@ export class RecordPaymentDto {
   @IsString()
   @IsOptional()
   tierId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Plan variant id (new plans model). Takes precedence over tierId.',
+    example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+  })
+  @IsString()
+  @IsOptional()
+  planVariantId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Set when the Stripe/PayPal payment was processed centrally by MCOM Solutions (their Stripe/PayPal accounts). Skips mall-side provider verification — Solutions already verified the payment in confirm/capture before the membership is recorded.',
+    example: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  viaSolutions?: boolean;
 }

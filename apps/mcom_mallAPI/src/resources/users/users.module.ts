@@ -16,6 +16,7 @@ import { ProvisionModule } from '../provision/provision.module';
 import { MembershipModule } from '../membership/membership.module';
 import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 import { TierModule } from '../tier/tier.module';
+import { PlansModule } from '../plans/plans.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { TierModule } from '../tier/tier.module';
     forwardRef(() => MembershipModule),
     ActivityTimerModule,
     TierModule,
+    PlansModule,
   ],
   controllers: [UsersController],
   providers: [UsersService, HashService],

@@ -19,7 +19,16 @@ export const useGetMyMembership = () => {
 };
 
 export const useInitiateMembershipPayment = () => {
-  return useMutation<{ clientSecret: string }, Error, CreateMembershipDto>({
+  return useMutation<
+    {
+      clientSecret?: string;
+      holdId?: string;
+      expiresAt?: string;
+      provider?: string;
+    },
+    Error,
+    CreateMembershipDto
+  >({
     mutationFn: initiateMembershipPayment,
   });
 };

@@ -156,8 +156,8 @@ export class GroupCirclesService {
         const networkUsers = await manager.find(User, {
           where: { id: In(createGroupDto.networkIds) },
         });
-        const networkUserMap = new Map(networkUsers.map(u => [u.id, u]));
-        
+        const networkUserMap = new Map(networkUsers.map((u) => [u.id, u]));
+
         for (const userId of createGroupDto.networkIds) {
           const user = networkUserMap.get(userId);
           if (user) {
@@ -180,8 +180,8 @@ export class GroupCirclesService {
         const referredUsers = await manager.find(User, {
           where: { id: In(createGroupDto.referredBusinessIds) },
         });
-        const referredUserMap = new Map(referredUsers.map(u => [u.id, u]));
-        
+        const referredUserMap = new Map(referredUsers.map((u) => [u.id, u]));
+
         for (const userId of createGroupDto.referredBusinessIds) {
           const user = referredUserMap.get(userId);
           if (user) {

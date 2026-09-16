@@ -1,4 +1,11 @@
-import { IsOptional, IsNumber, IsString, Min, Max, IsEnum } from 'class-validator';
+import {
+  IsOptional,
+  IsNumber,
+  IsString,
+  Min,
+  Max,
+  IsEnum,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -13,7 +20,10 @@ export enum DiscoverTab {
 }
 
 export class DiscoverQueryDto {
-  @ApiPropertyOptional({ description: 'Tab to fetch data for', enum: DiscoverTab })
+  @ApiPropertyOptional({
+    description: 'Tab to fetch data for',
+    enum: DiscoverTab,
+  })
   @IsOptional()
   @IsEnum(DiscoverTab)
   tab?: DiscoverTab;

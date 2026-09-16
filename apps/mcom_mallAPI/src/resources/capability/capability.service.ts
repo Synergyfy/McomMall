@@ -15,6 +15,7 @@ import { GiftCardService } from '../gift-card/gift-card.service';
 import { CouponService } from '../coupon/coupon.service';
 import { PromotionService } from '../promotion/promotion.service';
 import { TierService } from '../tier/tier.service';
+import { PlansService } from '../plans/services/plans.service';
 
 export enum ActionType {
   REQUIRE_TIER = 'REQUIRE_TIER',
@@ -54,14 +55,34 @@ export class CapabilityService {
     private readonly promotionService: PromotionService,
     @Inject(forwardRef(() => TierService))
     private readonly tierService: TierService,
+    @Inject(forwardRef(() => PlansService))
+    private readonly plansService: PlansService,
   ) {}
 
   async getEffectiveConfig(userId: string): Promise<TierConfig | null> {
     // 1. Try Membership (Paid/Assigned)
     const membership = await this.membershipService.findActiveWithTier(userId);
-    if (membership && membership.tier && membership.isActive) {
-      if (!membership.expiresAt || new Date() <= membership.expiresAt) {
-        return membership.tier.configuration;
+    if (membership && membership.isActive) {
+      const isExpired =
+        membership.expiresAt && new Date() > new Date(membership.expiresAt);
+      if (!isExpired) {
+        if (membership.planVariantId) {
+          try {
+            const { variant } = await this.plansService.resolveActivePrice(
+              membership.planVariantId,
+            );
+            if (variant?.configuration) {
+              return variant.configuration as TierConfig;
+            }
+          } catch (e) {
+            this.logger.warn(
+              `Failed to resolve variant configuration for membership variant ${membership.planVariantId}: ${e.message}`,
+            );
+          }
+        }
+        if (membership.tier?.configuration) {
+          return membership.tier.configuration as TierConfig;
+        }
       }
     }
 

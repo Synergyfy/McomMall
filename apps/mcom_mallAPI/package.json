@@ -25,7 +25,9 @@
     "migration:generate": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d src/database/data-source.ts",
     "migration:run": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
     "migration:revert": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
-    "seed:taxonomy": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/taxonomy.seed.ts"
+    "seed:taxonomy": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/taxonomy.seed.ts",
+    "seed:admin": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/admin.seed.ts",
+    "seed:plans": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/plans.seed.ts"
   },
   "dependencies": {
     "@googleapis/mybusinessaccountmanagement": "^5.0.1",

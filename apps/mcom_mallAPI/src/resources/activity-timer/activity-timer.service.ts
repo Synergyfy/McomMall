@@ -320,11 +320,13 @@ export class ActivityTimerService {
     if (!activities.length) return; // No such task definition
 
     // Batch-load existing user activities to avoid N+1
-    const activityIds = activities.map(a => a.id);
+    const activityIds = activities.map((a) => a.id);
     const existingActivities = await this.userActivityRepository.find({
       where: { user: { id: userId }, activity: { id: In(activityIds) } },
     });
-    const existingActivityIds = new Set(existingActivities.map(ea => ea.activity.id));
+    const existingActivityIds = new Set(
+      existingActivities.map((ea) => ea.activity.id),
+    );
 
     for (const activity of activities) {
       // Check if already completed

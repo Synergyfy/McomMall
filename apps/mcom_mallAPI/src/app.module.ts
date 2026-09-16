@@ -8,6 +8,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { ConfigModule } from '@nestjs/config';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config();
 import commissionConfig from './config/commission.config';
 import { envValidationSchema } from './config/env.validation';
 import { AuthModule } from './resources/auth/auth.module';
@@ -43,6 +48,7 @@ import { GroupCirclesModule } from './resources/group-circles/group-circles.modu
 import { SearchModule } from './resources/search/search.module';
 import { DisputeModule } from './resources/dispute/dispute.module';
 import { TierModule } from './resources/tier/tier.module';
+import { PlansModule } from './resources/plans/plans.module';
 import { TaxonomyModule } from './resources/taxonomy/taxonomy.module';
 import { MoneyEngineModule } from './resources/money-engine/money-engine.module';
 import { MarketplaceModule } from './resources/marketplace/marketplace.module';
@@ -105,6 +111,7 @@ import { CustomerModule } from './resources/customer/customer.module';
     MoneyEngineModule,
     TaxonomyModule,
     TierModule,
+    PlansModule,
     DisputeModule,
     SearchModule,
     GroupCirclesModule,
@@ -120,6 +127,11 @@ import { CustomerModule } from './resources/customer/customer.module';
     HelpRequestsModule,
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [
+        path.resolve(__dirname, '../../.env'),
+        path.resolve(process.cwd(), 'apps/mcom_mallAPI/.env'),
+        '.env',
+      ],
       load: [commissionConfig],
       validationSchema: envValidationSchema,
       validationOptions: {

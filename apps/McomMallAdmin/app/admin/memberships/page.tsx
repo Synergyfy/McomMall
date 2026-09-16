@@ -66,6 +66,9 @@ export default function MembershipsPage() {
                     <p className="text-slate-500">Manage business subscription tiers and benefits</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button asChild variant="outline">
+                        <Link href="/admin/plans">Manage Plans</Link>
+                    </Button>
                     <Button asChild className="bg-slate-900 hover:bg-slate-800">
                         <Link href="/admin/tiers">Manage Tiers</Link>
                     </Button>

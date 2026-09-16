@@ -8,6 +8,10 @@ export interface Membership {
   expiresAt: string;
   tier: Tier;
 
+  // New plans model purchase snapshot (resolved via public GET /plans)
+  planVariantId?: string | null;
+  priceId?: string | null;
+
   // Legacy/Optional fields (in case backend still sends them or for backward compat during migration)
   userId?: string;
   tierId?: string;
