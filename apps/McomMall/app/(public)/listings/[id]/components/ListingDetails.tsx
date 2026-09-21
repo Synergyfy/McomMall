@@ -311,11 +311,11 @@ export default function ClientListingDetail({
       <div
         ref={navRef}
         className={`z-40 transition-all duration-300 sticky top-16 border-b ${isNavSticky
-            ? 'bg-white/80 backdrop-blur-md shadow-md py-2'
-            : 'bg-white py-4'
+          ? 'bg-white/80 backdrop-blur-md shadow-md py-2'
+          : 'bg-white py-4'
           }`}
       >
-        <div className="max-w-[1600px] mx-auto px-8">
+        <div className="max-w-400 mx-auto px-8">
           <div className="flex items-center justify-center md:justify-start gap-1 md:gap-8 overflow-x-auto hide-scrollbar py-2">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -332,8 +332,8 @@ export default function ClientListingDetail({
                   type="button"
                   onClick={() => handleTabChange(item.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${isActive
-                      ? 'bg-[#f58220] text-white shadow-lg shadow-orange-500/20'
-                      : 'text-gray-500 hover:text-[#f58220] hover:bg-orange-50'
+                    ? 'bg-[#f58220] text-white shadow-lg shadow-orange-500/20'
+                    : 'text-gray-500 hover:text-[#f58220] hover:bg-orange-50'
                     }`}
                 >
                   <Icon size={16} />

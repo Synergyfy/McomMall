@@ -122,7 +122,7 @@ export default function GiftCardPage() {
                     <div className="lg:col-span-2 space-y-8">
                         {/* Marketplace Style Gift Card Visual */}
                         <div className="flex justify-center items-center bg-gray-100/50 rounded-2xl p-8 border border-gray-100 w-full">
-                            <div className="w-full max-w-[380px] pointer-events-none">
+                            <div className="w-full max-w-95 pointer-events-none">
                                 <GiftCardCard giftCard={promotionalItemFormat} viewMode="grid" hidePrice={true} />
                             </div>
                         </div>
