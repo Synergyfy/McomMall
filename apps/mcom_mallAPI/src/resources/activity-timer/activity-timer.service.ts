@@ -131,7 +131,7 @@ export class ActivityTimerService {
       .orderBy('ActivityTimer.createdAt', 'DESC')
       .getMany();
 
-    const userTierId = fullUser?.membership?.tierId;
+    const userTierId = fullUser?.membership?.planVariantId;
 
     const eligibleActivities = allActivities.filter((activity) => {
       // 1. Inclusion Check

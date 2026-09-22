@@ -6,7 +6,6 @@ import { Membership } from './entities/membership.entity';
 import { User } from '../users/entities/user.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { MembershipPayment } from './entities/membership-payment.entity';
-import { Tier } from '../tier/entities/tier.entity';
 import { SsoModule } from '../sso/sso.module';
 import { MembershipCredit } from './entities/membership-credit.entity';
 import { PlansModule } from '../plans/plans.module';
@@ -17,7 +16,6 @@ import { PlansModule } from '../plans/plans.module';
       Membership,
       User,
       MembershipPayment,
-      Tier,
       MembershipCredit,
     ]),
     forwardRef(() => PaymentsModule),

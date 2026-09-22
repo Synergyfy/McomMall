@@ -15,7 +15,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { ActivityTimerType } from '@/app/admin/types/activity-timer';
-import { useGetTiers } from '@/service/tiers/hook';
+import { useGetPlans } from '@/service/plans/hook';
 import {
     Tooltip,
     TooltipContent,
@@ -25,7 +25,7 @@ import {
 
 export default function ActivityTimerListPage() {
     const { data: definitions, isLoading } = useGetActivityTimerDefinitions();
-    const { data: tiers } = useGetTiers();
+    const { data: plans } = useGetPlans();
 
     return (
         <div className="space-y-6 max-w-6xl mx-auto">
@@ -102,11 +102,11 @@ export default function ActivityTimerListPage() {
                                                                         </TooltipTrigger>
                                                                         <TooltipContent>
                                                                             <div className="text-xs">
-                                                                                <p className="font-semibold mb-1">Included Tiers:</p>
+                                                                                <p className="font-semibold mb-1">Included Plans:</p>
                                                                                 <ul className="list-disc pl-3">
                                                                                     {def.includedTierIds.map(id => {
-                                                                                        const tier = tiers?.find((t: any) => t.id === id);
-                                                                                        return <li key={id}>{tier?.name || 'Unknown Tier'}</li>
+                                                                                        const plan = plans?.find((p: any) => p.id === id);
+                                                                                        return <li key={id}>{plan?.name || 'Unknown Plan'}</li>
                                                                                     })}
                                                                                 </ul>
                                                                             </div>
@@ -123,15 +123,15 @@ export default function ActivityTimerListPage() {
                                                         <TooltipProvider>
                                                             <Tooltip>
                                                                 <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-2">
-                                                                    {def.excludedTierIds.length} Tier(s)
+                                                                    {def.excludedTierIds.length} Plan(s)
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
                                                                     <div className="text-xs">
-                                                                        <p className="font-semibold mb-1">Excluded Tiers:</p>
+                                                                        <p className="font-semibold mb-1">Excluded Plans:</p>
                                                                         <ul className="list-disc pl-3">
                                                                             {def.excludedTierIds.map(id => {
-                                                                                const tier = tiers?.find((t: any) => t.id === id);
-                                                                                return <li key={id}>{tier?.name || 'Unknown Tier'}</li>
+                                                                                const plan = plans?.find((p: any) => p.id === id);
+                                                                                return <li key={id}>{plan?.name || 'Unknown Plan'}</li>
                                                                             })}
                                                                         </ul>
                                                                     </div>

@@ -27,8 +27,6 @@ import {
 import { VerifyMembershipPaymentDto } from './dto/verify-membership-payment.dto';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { MembershipPayment } from './entities/membership-payment.entity';
-import { Tier } from '../tier/entities/tier.entity';
-import { TierType } from '../tier/enums/tier-type.enum';
 import { McomCentralService } from '../sso/mcom-central.service';
 import {
   MembershipCredit,
@@ -60,8 +58,6 @@ export class MembershipService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(MembershipPayment)
     private readonly paymentRepository: Repository<MembershipPayment>,
-    @InjectRepository(Tier)
-    private readonly tierRepository: Repository<Tier>,
     @InjectRepository(MembershipCredit)
     private readonly creditRepository: Repository<MembershipCredit>,
     @Inject(forwardRef(() => McomWalletService))
@@ -117,12 +113,42 @@ export class MembershipService {
       return null;
     }
 
-    const tier = await this.tierRepository.findOne({
-      where: { id: userPackages.tierId },
-    });
+    let displayTier: any = {
+      id: userPackages.tierId,
+      name: 'Central Membership',
+      description: null,
+      monthlyPrice: null,
+      quarterlyPrice: null,
+      annualPrice: null,
+      features: [],
+      configuration: null,
+      isActive: true,
+    };
 
-    if (!tier) {
-      return null;
+    try {
+      const { variant } = await this.plansService.resolveActivePrice(
+        userPackages.tierId,
+      );
+      const level = variant.tierLevel?.name;
+      const label =
+        level === PlanTier.PRO_PLUS
+          ? 'Pro+'
+          : level === PlanTier.PRO
+            ? 'Pro'
+            : 'Standard';
+      displayTier = {
+        id: variant.id,
+        name: `${variant.plan?.name ?? 'Plan'} · ${label}`,
+        description: variant.plan?.description ?? null,
+        monthlyPrice: null,
+        quarterlyPrice: null,
+        annualPrice: null,
+        features: variant.features ?? [],
+        configuration: variant.configuration ?? null,
+        isActive: true,
+      };
+    } catch {
+      // Fallback display tier retained
     }
 
     // Attach the local variant purchase snapshot when present so storefronts
@@ -142,18 +168,8 @@ export class MembershipService {
     return {
       id: `subscription-${user.id}`,
       isActive: true,
-      tierId: tier.id,
-      tier: {
-        id: tier.id,
-        name: tier.name,
-        description: tier.description,
-        monthlyPrice: tier.monthlyPrice,
-        quarterlyPrice: tier.quarterlyPrice,
-        annualPrice: tier.annualPrice,
-        features: tier.features,
-        configuration: tier.configuration,
-        isActive: tier.isActive,
-      },
+      tierId: displayTier.id,
+      tier: displayTier,
       planVariantId,
       priceId,
       planType: null,
@@ -173,23 +189,7 @@ export class MembershipService {
    */
   private async toLocalMembershipDto(membership: Membership): Promise<any> {
     let tier: any = null;
-    if (membership.tier) {
-      tier = {
-        id: membership.tier.id,
-        name: membership.tier.name,
-        description: membership.tier.description,
-        monthlyPrice: membership.tier.monthlyPrice,
-        quarterlyPrice: membership.tier.quarterlyPrice,
-        annualPrice: membership.tier.annualPrice,
-        features: membership.tier.features,
-        configuration: membership.tier.configuration,
-        isActive: membership.tier.isActive,
-      };
-    } else if (membership.planVariantId) {
-      // Variant purchases carry no legacy Tier row — synthesize a display
-      // tier from the variant's level + plan so badges/pages show a real
-      // name instead of "Free". Quotas/flags pass through so privilege
-      // displays work even before GET /plans resolves.
+    if (membership.planVariantId) {
       try {
         const { variant } = await this.plansService.resolveActivePrice(
           membership.planVariantId,
@@ -202,7 +202,7 @@ export class MembershipService {
               ? 'Pro'
               : 'Standard';
         tier = {
-          id: null,
+          id: variant.id,
           name: `${variant.plan?.name ?? 'Plan'} · ${label}`,
           description: variant.plan?.description ?? null,
           monthlyPrice: null,
@@ -213,14 +213,16 @@ export class MembershipService {
           isActive: true,
         };
       } catch {
-        tier = { id: null, name: 'Membership' };
+        tier = { id: membership.planVariantId, name: 'Membership' };
       }
+    } else {
+      tier = { id: null, name: 'Membership' };
     }
 
     return {
       id: membership.id,
       isActive: true,
-      tierId: membership.tierId ?? tier?.id ?? null,
+      tierId: membership.planVariantId ?? null,
       tier,
       planVariantId: membership.planVariantId ?? null,
       priceId: membership.priceId ?? null,
@@ -241,14 +243,7 @@ export class MembershipService {
       changed = true;
     }
     if (!membership.endDate) {
-      if (
-        membership.tier?.type === TierType.SEASONAL &&
-        membership.tier.season
-      ) {
-        membership.endDate = membership.tier.season.endDate;
-      } else {
-        membership.endDate = membership.expiresAt;
-      }
+      membership.endDate = membership.expiresAt;
       changed = true;
     }
 
@@ -260,73 +255,8 @@ export class MembershipService {
   async findActiveWithTier(userId: string): Promise<Membership> {
     const membership = await this.membershipRepository.findOne({
       where: { user: { id: userId }, isActive: true },
-      relations: ['tier', 'tier.season'],
+      relations: ['planVariant', 'planVariant.tierLevel', 'planVariant.plan'],
     });
-
-    if (membership && !membership.tier && membership.tierType) {
-      console.log(
-        `[MembershipService] Self-healing initiated for user ${userId} with tierType ${membership.tierType}`,
-      );
-
-      const legacyTierMap: Record<string, string> = {
-        basic: 'Basic',
-        extended: 'Extended',
-        professional: 'Professional',
-      };
-
-      const targetName =
-        legacyTierMap[membership.tierType] || membership.tierType;
-
-      const tier = await this.tierRepository.findOne({
-        where: { name: targetName },
-      });
-
-      if (tier) {
-        console.log(
-          `[MembershipService] Found matching tier: ${tier.name} (${tier.id})`,
-        );
-        membership.tier = tier;
-        membership.tierId = tier.id;
-        await this.ensureDates(membership);
-        await this.membershipRepository.save(membership);
-        console.log(`[MembershipService] Membership updated with tier link.`);
-      } else {
-        console.warn(
-          `[MembershipService] Could not find tier with name: ${targetName}`,
-        );
-      }
-    }
-
-    if (membership && !membership.tier && membership.planVariantId) {
-      try {
-        const { variant } = await this.plansService.resolveActivePrice(
-          membership.planVariantId,
-        );
-        const level = variant.tierLevel?.name;
-        const label =
-          level === PlanTier.PRO_PLUS
-            ? 'Pro+'
-            : level === PlanTier.PRO
-              ? 'Pro'
-              : 'Standard';
-        membership.tier = {
-          id: null,
-          name: `${variant.plan?.name ?? 'Plan'} · ${label}`,
-          description: variant.plan?.description ?? null,
-          monthlyPrice: null,
-          quarterlyPrice: null,
-          annualPrice: null,
-          features: variant.features ?? [],
-          configuration: variant.configuration ?? null,
-          isActive: true,
-        } as any;
-      } catch (err) {
-        console.warn(
-          `[MembershipService] Could not resolve plan variant ${membership.planVariantId}:`,
-          err,
-        );
-      }
-    }
 
     if (membership) {
       await this.ensureDates(membership);
@@ -361,26 +291,13 @@ export class MembershipService {
 
     let price = 0;
 
-    if (initiateDto.planVariantId) {
+    const variantId = initiateDto.planVariantId || initiateDto.tierId;
+    if (variantId) {
       const { price: activePrice } = await this.plansService.resolveActivePrice(
-        initiateDto.planVariantId,
+        variantId,
       );
       price = Number(activePrice.amount);
-    } else if (initiateDto.tierId) {
-      const tier = await this.tierRepository.findOne({
-        where: { id: initiateDto.tierId },
-      });
-      if (!tier) throw new NotFoundException('Tier not found');
-
-      const planType = initiateDto.planType || PlanType.MONTHLY;
-      if (planType === PlanType.ANNUAL) {
-        price = tier.annualPrice;
-      } else if (planType === PlanType.QUARTERLY) {
-        price = tier.quarterlyPrice;
-      } else {
-        price = tier.monthlyPrice;
-      }
-    } else {
+    } else if (initiateDto.tier) {
       // Legacy Enum Support
       price = this.getMembershipPrice(initiateDto.tier);
     }
@@ -493,26 +410,18 @@ export class MembershipService {
     externalPlanId: string;
     billingCycle: SolutionsBillingCycle;
   }> {
-    if (planRef.planVariantId) {
-      const { variant } = await this.plansService.resolveActivePrice(
-        planRef.planVariantId,
-      );
+    const variantId = planRef.planVariantId || planRef.tierId;
+    if (variantId) {
+      const { variant } = await this.plansService.resolveActivePrice(variantId);
       const level = variant.tierLevel?.name;
       // Variants are one-off purchases; map to the closest named cycle for
       // Solutions' ledger (the charged amount is identical either way).
       const billingCycle: SolutionsBillingCycle =
         level === PlanTier.PRO_PLUS ? 'annual' : 'quarterly';
-      return { externalPlanId: planRef.planVariantId, billingCycle };
-    }
-    if (planRef.tierId) {
-      const planType = planRef.planType || PlanType.MONTHLY;
-      return {
-        externalPlanId: planRef.tierId,
-        billingCycle: planType as SolutionsBillingCycle,
-      };
+      return { externalPlanId: variantId, billingCycle };
     }
     throw new BadRequestException(
-      'Card and PayPal payments require a plan (planVariantId or tierId).',
+      'Card and PayPal payments require a valid plan variant id.',
     );
   }
 
@@ -531,32 +440,18 @@ export class MembershipService {
     } = purchaseDetails;
 
     let price = 0;
-    let tierEntity: Tier | null = null;
     let purchasedVariant: PlanVariant | null = null;
     let priceSnapshotId: string | null = null;
     let currency = 'GBP';
 
-    if (planVariantId) {
+    const targetVariantId = planVariantId || tierId;
+    if (targetVariantId) {
       const resolved =
-        await this.plansService.resolveActivePrice(planVariantId);
+        await this.plansService.resolveActivePrice(targetVariantId);
       purchasedVariant = resolved.variant;
       priceSnapshotId = resolved.price.id;
       price = Number(resolved.price.amount);
-    } else if (tierId) {
-      tierEntity = await this.tierRepository.findOne({
-        where: { id: tierId },
-        relations: ['season'],
-      });
-      if (!tierEntity) throw new NotFoundException('Tier not found');
-
-      if (planType === PlanType.ANNUAL) {
-        price = tierEntity.annualPrice;
-      } else if (planType === PlanType.QUARTERLY) {
-        price = tierEntity.quarterlyPrice;
-      } else {
-        price = tierEntity.monthlyPrice;
-      }
-    } else {
+    } else if (tierEnum) {
       price = this.getMembershipPrice(tierEnum);
     }
 
@@ -673,11 +568,8 @@ export class MembershipService {
       let startDate = new Date();
       let expiresAt = new Date();
 
-      if (tierEntity?.type === TierType.SEASONAL && tierEntity.season) {
-        startDate = new Date(tierEntity.season.startDate);
-        expiresAt = new Date(tierEntity.season.endDate);
-      } else if (purchasedVariant) {
-        const level = purchasedVariant.tierLevel.name;
+      if (purchasedVariant) {
+        const level = purchasedVariant.tierLevel?.name;
         if (level === PlanTier.PRO_PLUS) {
           expiresAt = this.planExpiryService.proPlusExpiry(startDate);
         } else if (level === PlanTier.PRO) {
@@ -706,8 +598,7 @@ export class MembershipService {
       });
 
       const membership = prior ?? membershipRepo.create();
-      membership.tierType = tierEnum;
-      membership.tier = tierEntity;
+      membership.planVariant = purchasedVariant ?? undefined;
       membership.planVariantId = purchasedVariant ? purchasedVariant.id : null;
       membership.priceId = priceSnapshotId;
       membership.user = user;
@@ -772,24 +663,15 @@ export class MembershipService {
       throw new ForbiddenException('User has already used their trial period.');
     }
 
-    const tier = await this.tierRepository.findOne({
-      where: { id: tierId },
-      relations: ['season'],
-    });
-
     let purchasedVariant: PlanVariant | null = null;
     let trialDurationDays = 14;
 
-    if (!tier) {
-      try {
-        const resolved = await this.plansService.resolveActivePrice(tierId);
-        purchasedVariant = resolved.variant;
-        trialDurationDays = purchasedVariant.tierLevel?.durationDays || 14;
-      } catch {
-        throw new NotFoundException('Plan or Tier not found');
-      }
-    } else {
-      trialDurationDays = tier.trialDuration || 14;
+    try {
+      const resolved = await this.plansService.resolveActivePrice(tierId);
+      purchasedVariant = resolved.variant;
+      trialDurationDays = purchasedVariant.tierLevel?.durationDays || 14;
+    } catch {
+      throw new NotFoundException('Plan variant not found');
     }
 
     return this.dataSource.transaction(async (manager) => {
@@ -798,13 +680,7 @@ export class MembershipService {
 
       let startDate = new Date();
       let expiresAt = new Date();
-
-      if (tier && tier.type === TierType.SEASONAL && tier.season) {
-        startDate = new Date(tier.season.startDate);
-        expiresAt = new Date(tier.season.endDate);
-      } else {
-        expiresAt.setDate(expiresAt.getDate() + trialDurationDays);
-      }
+      expiresAt.setDate(expiresAt.getDate() + trialDurationDays);
 
       const priorTrial = await membershipRepo.findOne({
         where: { user: { id: user.id } },
@@ -813,8 +689,8 @@ export class MembershipService {
       // Single membership row per user (one-to-one): update in place so a
       // trial after an expired paid plan doesn't violate the unique user FK.
       const membership = priorTrial ?? membershipRepo.create();
-      membership.tier = tier;
-      membership.planVariantId = purchasedVariant ? purchasedVariant.id : null;
+      membership.planVariant = purchasedVariant;
+      membership.planVariantId = purchasedVariant.id;
       membership.user = user;
       membership.startDate = startDate;
       membership.expiresAt = expiresAt;
@@ -834,14 +710,16 @@ export class MembershipService {
 
   async grantAccess(
     user: User,
-    tierId: string,
+    planVariantId: string,
     durationDays: number,
   ): Promise<Membership> {
-    const tier = await this.tierRepository.findOne({
-      where: { id: tierId },
-      relations: ['season'],
-    });
-    if (!tier) throw new NotFoundException('Tier not found');
+    let variant: PlanVariant;
+    try {
+      const resolved = await this.plansService.resolveActivePrice(planVariantId);
+      variant = resolved.variant;
+    } catch {
+      throw new NotFoundException('Plan variant not found');
+    }
 
     return this.dataSource.transaction(async (manager) => {
       const membershipRepo = manager.getRepository(Membership);
@@ -849,22 +727,15 @@ export class MembershipService {
 
       let startDate = new Date();
       let expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + durationDays);
 
-      if (tier.type === TierType.SEASONAL && tier.season) {
-        startDate = new Date(tier.season.startDate);
-        expiresAt = new Date(tier.season.endDate);
-      } else {
-        expiresAt.setDate(expiresAt.getDate() + durationDays);
-      }
-
-      // Single membership row per user (one-to-one): update in place instead
-      // of deactivating + inserting (the insert violates the unique user FK).
       const priorGrant = await membershipRepo.findOne({
         where: { user: { id: user.id } },
         order: { created_at: 'DESC' },
       });
       const membership = priorGrant ?? membershipRepo.create();
-      membership.tier = tier;
+      membership.planVariant = variant;
+      membership.planVariantId = variant.id;
       membership.user = user;
       membership.startDate = startDate;
       membership.expiresAt = expiresAt;
@@ -872,7 +743,6 @@ export class MembershipService {
       membership.isActive = true;
       membership.isTrial = false;
       membership.planType = PlanType.MONTHLY; // Default
-      // We could add a note or flag about source if entity supported it
 
       const savedMembership = await membershipRepo.save(membership);
       user.membership = savedMembership;

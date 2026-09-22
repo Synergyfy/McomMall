@@ -5,7 +5,6 @@ import { CashbackController } from './controllers/cashback.controller';
 import { PaymentsService } from './services/payments.service';
 import { PaymentHistory } from './entities/payment-history.entity';
 import { User } from '../users/entities/user.entity';
-import { Tier } from '../tier/entities/tier.entity';
 import { PaymentProviderService } from './services/payment-provider.service';
 import { McomWalletService } from './services/mcom-wallet.service';
 import { WalletTopUpProxyService } from './services/wallet-topup-proxy.service';
@@ -17,7 +16,7 @@ import { PlansModule } from '../plans/plans.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PaymentHistory, User, Tier]),
+    TypeOrmModule.forFeature([PaymentHistory, User]),
     forwardRef(() => MembershipModule),
     ActivityTimerModule,
     PlansModule,

@@ -10,15 +10,14 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { TierService } from './tier.service';
-import { CreateTierDto } from './dto/create-tier.dto';
-import { UpdateTierDto } from './dto/update-tier.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { McomSolutionAuthGuard } from '../../common/guards/mcom-solution-auth.guard';
-import { Public } from '../../common/decorators/public.decorator';
-import { Tier } from './entities/tier.entity';
-import { PlansService } from '../plans/services/plans.service';
-import { PlanTier } from '../plans/enums/plan-tier.enum';
+import { McomSolutionAuthGuard } from '../../../common/guards/mcom-solution-auth.guard';
+import { Public } from '../../../common/decorators/public.decorator';
+import { PlansService } from '../services/plans.service';
+import { PlanTier } from '../enums/plan-tier.enum';
+import { CreatePlanDto } from '../dto/create-plan.dto';
+import { UpdatePlanDto } from '../dto/update-plan.dto';
+import { Plan } from '../entities/plan.entity';
 
 @ApiTags('MCOM Solution - Plans')
 @Public()
@@ -27,10 +26,7 @@ import { PlanTier } from '../plans/enums/plan-tier.enum';
 export class SystemPlanController {
   private readonly logger = new Logger(SystemPlanController.name);
 
-  constructor(
-    private readonly tierService: TierService,
-    private readonly plansService: PlansService,
-  ) {}
+  constructor(private readonly plansService: PlansService) {}
 
   @Post()
   @ApiOperation({
@@ -41,7 +37,7 @@ export class SystemPlanController {
   @ApiResponse({
     status: 201,
     description: 'Plan created successfully.',
-    type: Tier,
+    type: Plan,
   })
   @ApiResponse({
     status: 401,
@@ -49,10 +45,10 @@ export class SystemPlanController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Conflict. Plan with this name already exists.',
+    description: 'Conflict. Plan with this slug already exists.',
   })
-  create(@Body() createTierDto: CreateTierDto) {
-    return this.tierService.create(createTierDto);
+  create(@Body() dto: CreatePlanDto) {
+    return this.plansService.create(dto);
   }
 
   @Get('schema')
@@ -140,7 +136,7 @@ export class SystemPlanController {
   async findAll() {
     const plans = await this.plansService.findAll();
     this.logger.log(
-      `[GET /system/plans] Returning ${plans?.length ?? 0} plans:\n${JSON.stringify(plans, null, 2)}`,
+      `[GET /system/plans] Returning ${plans?.length ?? 0} plans`,
     );
     return plans;
   }
@@ -149,7 +145,7 @@ export class SystemPlanController {
   @ApiOperation({
     summary: 'Get a plan by ID',
     description:
-      'Retrieves details of a specific plan by its unique ID (or legacy tier ID / variant ID).',
+      'Retrieves details of a specific plan by its unique ID (or variant ID).',
   })
   @ApiResponse({
     status: 200,
@@ -159,30 +155,13 @@ export class SystemPlanController {
   async findOne(@Param('id') id: string) {
     try {
       const plan = await this.plansService.findOne(id);
-      this.logger.log(
-        `[GET /system/plans/${id}] Returning plan:\n${JSON.stringify(plan, null, 2)}`,
-      );
       return plan;
     } catch {
       try {
         const variantPlan = await this.findVariantAsPlan(id);
-        this.logger.log(
-          `[GET /system/plans/${id}] Returning synthesized variant-as-plan:\n${JSON.stringify(variantPlan, null, 2)}`,
-        );
         return variantPlan;
       } catch {
-        try {
-          const tier = await this.tierService.findOne(id);
-          this.logger.log(
-            `[GET /system/plans/${id}] Returning legacy tier:\n${JSON.stringify(tier, null, 2)}`,
-          );
-          return tier;
-        } catch (tierError) {
-          if (tierError instanceof NotFoundException) {
-            throw new NotFoundException(`Plan with ID ${id} not found`);
-          }
-          throw tierError;
-        }
+        throw new NotFoundException(`Plan with ID ${id} not found`);
       }
     }
   }
@@ -190,8 +169,7 @@ export class SystemPlanController {
   /**
    * Synthesizes a plan-variant into the legacy plan shape MCOM Solutions'
    * connector expects. Variants are one-off purchases (no recurring price),
-   * so the active one-off amount is mirrored across all billing cycles —
-   * whichever cycle Solutions requests resolves to the correct charge.
+   * so the active one-off amount is mirrored across all billing cycles.
    */
   private async findVariantAsPlan(id: string) {
     const { variant, price } = await this.plansService.resolveActivePrice(id);
@@ -235,19 +213,15 @@ export class SystemPlanController {
   @ApiResponse({
     status: 200,
     description: 'Plan updated successfully.',
-    type: Tier,
+    type: Plan,
   })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized. Invalid or missing API key.',
   })
   @ApiResponse({ status: 404, description: 'Plan not found.' })
-  @ApiResponse({
-    status: 409,
-    description: 'Conflict. Plan with this name already exists.',
-  })
-  update(@Param('id') id: string, @Body() updateTierDto: UpdateTierDto) {
-    return this.tierService.update(id, updateTierDto);
+  update(@Param('id') id: string, @Body() updatePlanDto: UpdatePlanDto) {
+    return this.plansService.update(id, updatePlanDto);
   }
 
   @Delete(':id')
@@ -263,6 +237,6 @@ export class SystemPlanController {
   })
   @ApiResponse({ status: 404, description: 'Plan not found.' })
   remove(@Param('id') id: string) {
-    return this.tierService.remove(id);
+    return this.plansService.remove(id);
   }
 }

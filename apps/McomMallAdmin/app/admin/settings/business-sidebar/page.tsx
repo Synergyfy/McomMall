@@ -32,10 +32,10 @@ import {
 } from "@/components/ui/accordion";
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useGetTiers, useUpdateTier } from '@/service/tiers/hook';
+import { useGetPlans, useUpdatePlanVariant } from '@/service/plans/hook';
 import { useGetAdminBusinesses, useUpdateBusiness } from '@/service/admin/hook';
 import { AdminBusiness } from '@/service/admin/types';
-import { Tier } from '@/app/admin/types/tier';
+import { Plan, PlanVariant } from '@/app/admin/types/plan';
 
 // Types
 type SubNavItem = {
@@ -389,66 +389,76 @@ function SidebarPermissionsGrid({
   );
 }
 
-function TierConfigTab() {
-  const { data: tiers, isLoading } = useGetTiers();
-  const updateTierMutation = useUpdateTier();
+function PlanConfigTab() {
+  const { data: plans, isLoading } = useGetPlans();
+  const updateVariantMutation = useUpdatePlanVariant();
 
-  if (isLoading) return <div className="p-8 text-center text-slate-500">Loading tiers...</div>;
+  if (isLoading) return <div className="p-8 text-center text-slate-500">Loading plans...</div>;
 
-  const handleToggle = (tier: Tier, navId: string, checked: boolean) => {
-    const currentDisabled = tier.configuration.disabledNavIds || [];
+  const handleToggle = (variant: any, navId: string, checked: boolean) => {
+    const currentDisabled = (variant?.configuration as any)?.disabledNavIds || [];
     const newDisabled = checked
-      ? currentDisabled.filter(id => id !== navId)
+      ? currentDisabled.filter((id: string) => id !== navId)
       : [...currentDisabled, navId];
 
-    updateTierMutation.mutate({
-      id: tier.id,
+    updateVariantMutation.mutate({
+      variantId: variant.id,
       data: {
         configuration: {
-          ...tier.configuration,
+          ...((variant?.configuration as any) || {}),
           disabledNavIds: newDisabled
-        }
+        } as any
       }
     });
   };
 
+  const allVariants = plans?.flatMap(plan => 
+    (plan.variants || []).map(v => ({
+      ...v,
+      displayName: `${plan.name} - ${v.tierLevel?.name || 'Variant'}`
+    }))
+  ) || [];
+
   return (
     <div className="space-y-4">
       <Accordion type="multiple" className="space-y-4">
-        {tiers?.map((tier: Tier) => (
-          <AccordionItem
-            key={tier.id}
-            value={tier.id}
-            className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm"
-          >
-            <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-50/50 transition-all group">
-              <div className="flex items-center justify-between w-full pr-4 text-left">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="h-5 w-5 text-orange-600" />
+        {allVariants.map((variant) => {
+          const disabledNavIds = (variant.configuration as any)?.disabledNavIds || [];
+          return (
+            <AccordionItem
+              key={variant.id}
+              value={variant.id}
+              className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm"
+            >
+              <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-50/50 transition-all group">
+                <div className="flex items-center justify-between w-full pr-4 text-left">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors">
+                        {variant.displayName}
+                      </span>
+                      <span className="text-xs text-slate-500 line-clamp-1">Custom navigation permissions for this plan variant</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors">
-                      {tier.name}
-                    </span>
-                    <span className="text-xs text-slate-500 line-clamp-1">{tier.description}</span>
-                  </div>
+                  <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-slate-200">
+                    {disabledNavIds.length} hidden
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-slate-200">
-                  {tier.configuration.disabledNavIds?.length || 0} hidden
-                </Badge>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6 pt-2 border-t border-slate-100">
-              <div className="pt-4">
-                <SidebarPermissionsGrid
-                  disabledNavIds={tier.configuration.disabledNavIds || []}
-                  onToggle={(id, checked) => handleToggle(tier, id, checked)}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 pt-2 border-t border-slate-100">
+                <div className="pt-4">
+                  <SidebarPermissionsGrid
+                    disabledNavIds={disabledNavIds}
+                    onToggle={(id, checked) => handleToggle(variant, id, checked)}
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
       </Accordion>
     </div>
   );
@@ -642,8 +652,8 @@ export default function BusinessSidebarManager() {
           <TabsTrigger value="global" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm transition-all">
             Global Layout
           </TabsTrigger>
-          <TabsTrigger value="tiers" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm transition-all">
-            Tier Permissions
+          <TabsTrigger value="plans" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm transition-all">
+            Plan Permissions
           </TabsTrigger>
           <TabsTrigger value="businesses" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm transition-all">
             Business Overrides
@@ -723,8 +733,8 @@ export default function BusinessSidebarManager() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="tiers">
-          <TierConfigTab />
+        <TabsContent value="plans">
+          <PlanConfigTab />
         </TabsContent>
 
         <TabsContent value="businesses">

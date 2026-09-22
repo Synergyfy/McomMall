@@ -24,7 +24,6 @@ import { MembershipService } from 'src/resources/membership/membership.service';
 import { PlansService } from 'src/resources/plans/services/plans.service';
 import { PlanType as MembershipPlanType } from 'src/resources/membership/dto/initiate-membership-payment.dto';
 import { PaymentMethod } from 'src/resources/order/entities/order-payment.entity';
-import { Tier } from '../../tier/entities/tier.entity';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreatePaypalOrderDto } from '../dto/create-paypal-order.dto';
 import { PlanType } from '../enums/plan-type.enum';
@@ -40,8 +39,6 @@ export class PaymentsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(PaymentHistory)
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
-    @InjectRepository(Tier)
-    private readonly tierRepository: Repository<Tier>,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
     @Inject(forwardRef(() => MembershipService))
@@ -56,33 +53,16 @@ export class PaymentsService {
       purpose: dto.purpose || PaymentPurpose.MEMBERSHIP,
     };
 
-    if (dto.planVariantId) {
-      const { price } = await this.plansService.resolveActivePrice(
-        dto.planVariantId,
-      );
+    const variantId = dto.planVariantId || dto.tierId;
+    if (variantId) {
+      const { price } = await this.plansService.resolveActivePrice(variantId);
       amount = Number(price.amount);
-      metadata.planVariantId = dto.planVariantId;
+      metadata.planVariantId = variantId;
       metadata.priceId = price.id;
       metadata.planType = dto.planType || PlanType.MONTHLY;
-    } else if (dto.tierId) {
-      const tier = await this.tierRepository.findOne({
-        where: { id: dto.tierId },
-      });
-      if (!tier) throw new NotFoundException('Tier not found');
-
-      metadata.tierId = dto.tierId;
-      metadata.planType = dto.planType || PlanType.MONTHLY;
-
-      if (dto.planType === PlanType.ANNUAL) {
-        amount = Number(tier.annualPrice);
-      } else if (dto.planType === PlanType.QUARTERLY) {
-        amount = Number(tier.quarterlyPrice);
-      } else {
-        amount = Number(tier.monthlyPrice);
-      }
     }
 
-    if (!amount) throw new BadRequestException('Amount or tierId is required');
+    if (!amount) throw new BadRequestException('Amount or planVariantId is required');
 
     return this.paymentProviderService.createStripePaymentIntent(
       amount,
@@ -97,33 +77,16 @@ export class PaymentsService {
       purpose: dto.purpose || PaymentPurpose.MEMBERSHIP,
     };
 
-    if (dto.planVariantId) {
-      const { price } = await this.plansService.resolveActivePrice(
-        dto.planVariantId,
-      );
+    const variantId = dto.planVariantId || dto.tierId;
+    if (variantId) {
+      const { price } = await this.plansService.resolveActivePrice(variantId);
       amount = Number(price.amount);
-      metadata.planVariantId = dto.planVariantId;
+      metadata.planVariantId = variantId;
       metadata.priceId = price.id;
       metadata.planType = dto.planType || PlanType.MONTHLY;
-    } else if (dto.tierId) {
-      const tier = await this.tierRepository.findOne({
-        where: { id: dto.tierId },
-      });
-      if (!tier) throw new NotFoundException('Tier not found');
-
-      metadata.tierId = dto.tierId;
-      metadata.planType = dto.planType || PlanType.MONTHLY;
-
-      if (dto.planType === PlanType.ANNUAL) {
-        amount = Number(tier.annualPrice);
-      } else if (dto.planType === PlanType.QUARTERLY) {
-        amount = Number(tier.quarterlyPrice);
-      } else {
-        amount = Number(tier.monthlyPrice);
-      }
     }
 
-    if (!amount) throw new BadRequestException('Amount or tierId is required');
+    if (!amount) throw new BadRequestException('Amount or planVariantId is required');
 
     return this.paymentProviderService.createPaypalOrder(
       amount,
@@ -316,7 +279,7 @@ export class PaymentsService {
           // Need user object with relations for activityTimerService
           const userWithRelations = await this.userRepository.findOne({
             where: { id: userId },
-            relations: ['membership', 'membership.tier'],
+            relations: ['membership'],
           });
           if (userWithRelations) {
             const activityTasks =

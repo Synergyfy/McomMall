@@ -168,7 +168,8 @@ export class MembershipController {
     @Body() joinTrialDto: JoinTrialDto,
     @CurrentUser() user: User,
   ): Promise<Membership> {
-    return this.membershipService.joinTrial(joinTrialDto.tierId, user);
+    const variantId = joinTrialDto.planVariantId || joinTrialDto.tierId;
+    return this.membershipService.joinTrial(variantId!, user);
   }
 
   @Get('credits')

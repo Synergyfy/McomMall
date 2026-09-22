@@ -47,7 +47,6 @@ import { AuditsModule } from './resources/audits/audits.module';
 import { GroupCirclesModule } from './resources/group-circles/group-circles.module';
 import { SearchModule } from './resources/search/search.module';
 import { DisputeModule } from './resources/dispute/dispute.module';
-import { TierModule } from './resources/tier/tier.module';
 import { PlansModule } from './resources/plans/plans.module';
 import { TaxonomyModule } from './resources/taxonomy/taxonomy.module';
 import { MoneyEngineModule } from './resources/money-engine/money-engine.module';
@@ -132,7 +131,6 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     MarketplaceModule,
     MoneyEngineModule,
     TaxonomyModule,
-    TierModule,
     PlansModule,
     DisputeModule,
     SearchModule,

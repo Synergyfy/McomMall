@@ -23,7 +23,6 @@ import { Wallet } from '../wallet/entities/wallet.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 import { ProvisionService } from '../provision/provision.service';
 import { ActivityTimerService } from '../activity-timer/activity-timer.service';
-import { TierService } from '../tier/tier.service';
 import { MembershipService } from '../membership/membership.service';
 import { PlansService } from '../plans/services/plans.service';
 
@@ -49,7 +48,6 @@ export class UsersService {
     private readonly dataSource: DataSource,
     private readonly provisionService: ProvisionService,
     private readonly activityTimerService: ActivityTimerService,
-    private readonly tierService: TierService,
     private readonly membershipService: MembershipService,
     private readonly plansService: PlansService,
   ) {}
@@ -145,29 +143,21 @@ export class UsersService {
     // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
     if (createdUser.role === UserRole.OWNER) {
       try {
-        // Automatic Trial / Plan Assignment
-        const trialTier = await this.tierService.findTrialTier();
-        if (trialTier) {
-          await this.membershipService.joinTrial(trialTier.id, createdUser);
+        // Automatic Plan Assignment
+        const plans = await this.plansService.findAll();
+        const firstVariant = plans[0]?.variants?.[0];
+        if (firstVariant) {
+          await this.membershipService.joinTrial(
+            firstVariant.id,
+            createdUser,
+          );
           console.log(
-            `[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Owner ${createdUser.id}`,
+            `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Owner ${createdUser.id}`,
           );
         } else {
-          const plans = await this.plansService.findAll();
-          const firstVariant = plans[0]?.variants?.[0];
-          if (firstVariant) {
-            await this.membershipService.joinTrial(
-              firstVariant.id,
-              createdUser,
-            );
-            console.log(
-              `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Owner ${createdUser.id}`,
-            );
-          } else {
-            console.log(
-              `[UsersService] No active Trial Tier or Plan Variant found for auto-assignment.`,
-            );
-          }
+          console.log(
+            `[UsersService] No active Plan Variant found for auto-assignment.`,
+          );
         }
 
         await this.activityTimerService.getUserActiveTasks(createdUser);
@@ -232,25 +222,17 @@ export class UsersService {
       // We catch errors here to strictly not block user creation if timer service fails,
       // though ideally it should succeed.
       try {
-        // Automatic Trial / Plan Assignment
-        const trialTier = await this.tierService.findTrialTier();
-        if (trialTier) {
-          await this.membershipService.joinTrial(trialTier.id, createdUser);
-          console.log(
-            `[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Admin-Created Owner ${createdUser.id}`,
+        // Automatic Plan Assignment
+        const plans = await this.plansService.findAll();
+        const firstVariant = plans[0]?.variants?.[0];
+        if (firstVariant) {
+          await this.membershipService.joinTrial(
+            firstVariant.id,
+            createdUser,
           );
-        } else {
-          const plans = await this.plansService.findAll();
-          const firstVariant = plans[0]?.variants?.[0];
-          if (firstVariant) {
-            await this.membershipService.joinTrial(
-              firstVariant.id,
-              createdUser,
-            );
-            console.log(
-              `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Admin-Created Owner ${createdUser.id}`,
-            );
-          }
+          console.log(
+            `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Admin-Created Owner ${createdUser.id}`,
+          );
         }
 
         await this.activityTimerService.getUserActiveTasks(createdUser);

@@ -1,4 +1,4 @@
-export interface TierQuotas {
+export interface CapabilityQuotas {
   maxListings: number; // Total listings (product + service) -1 for unlimited
   allowProductListing: boolean;
   allowServiceListing: boolean;
@@ -11,7 +11,7 @@ export interface TierQuotas {
   featuredListingAllowance: number;
 }
 
-export interface TierFeatureFlags {
+export interface CapabilityFeatureFlags {
   priorityInSearch: boolean;
   advancedAnalytics: boolean;
   dedicatedSupport: boolean;
@@ -19,8 +19,13 @@ export interface TierFeatureFlags {
   allowGroupCreation: boolean;
 }
 
-export interface TierConfig {
-  quotas: TierQuotas;
-  featureFlags: TierFeatureFlags;
-  trialDurationDays?: number; // Optional override for trial duration (default 30)
+export interface CapabilityConfig {
+  quotas: CapabilityQuotas;
+  featureFlags: CapabilityFeatureFlags;
+  trialDurationDays?: number;
 }
+
+// Backwards-compatible aliases
+export type TierQuotas = CapabilityQuotas;
+export type TierFeatureFlags = CapabilityFeatureFlags;
+export type TierConfig = CapabilityConfig;

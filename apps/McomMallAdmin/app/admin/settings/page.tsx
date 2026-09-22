@@ -56,20 +56,17 @@ export default function SettingsPage() {
                 <TabsContent value="membership" className="mt-6">
                     <Card className="border-0 shadow-sm">
                         <CardHeader>
-                            <CardTitle className="text-lg">Membership &amp; Tiers</CardTitle>
+                            <CardTitle className="text-lg">Membership &amp; Plans</CardTitle>
                             <CardDescription>
-                                Tier pricing, plans and seasons are managed in their dedicated sections — not here.
+                                Plans and seasons are managed in their dedicated sections.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="flex flex-wrap gap-3">
-                            <Link href="/admin/tiers">
-                                <Button variant="outline">Manage Tiers</Button>
-                            </Link>
-                            <Link href="/admin/tiers/seasons">
-                                <Button variant="outline">Manage Seasons</Button>
-                            </Link>
                             <Link href="/admin/plans">
                                 <Button variant="outline">Manage Plans</Button>
+                            </Link>
+                            <Link href="/admin/seasons">
+                                <Button variant="outline">Manage Seasons</Button>
                             </Link>
                             <Link href="/admin/memberships">
                                 <Button variant="outline">Memberships</Button>

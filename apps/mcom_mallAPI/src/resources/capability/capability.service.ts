@@ -6,7 +6,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { MembershipService } from '../membership/membership.service';
-import { TierConfig } from '../tier/interfaces/tier-config.interface';
+import { CapabilityConfig as TierConfig } from './interfaces/capability-config.interface';
 import { ListingsService } from '../listings/listing.service';
 import { ProductService } from '../product/product.service';
 import { ServicesService } from '../services/services.service';
@@ -14,7 +14,6 @@ import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { CouponService } from '../coupon/coupon.service';
 import { PromotionService } from '../promotion/promotion.service';
-import { TierService } from '../tier/tier.service';
 import { PlansService } from '../plans/services/plans.service';
 
 export enum ActionType {
@@ -53,8 +52,6 @@ export class CapabilityService {
     private readonly couponService: CouponService,
     @Inject(forwardRef(() => PromotionService))
     private readonly promotionService: PromotionService,
-    @Inject(forwardRef(() => TierService))
-    private readonly tierService: TierService,
     @Inject(forwardRef(() => PlansService))
     private readonly plansService: PlansService,
   ) {}
@@ -80,16 +77,20 @@ export class CapabilityService {
             );
           }
         }
-        if (membership.tier?.configuration) {
-          return membership.tier.configuration as TierConfig;
-        }
       }
     }
 
-    // 2. Fallback to Default/Free Tier
-    const defaultTier = await this.tierService.findDefaultTier();
-    if (defaultTier) {
-      return defaultTier.configuration;
+    // 2. Fallback to Default Plan
+    try {
+      const plans = await this.plansService.findAll();
+      if (plans && plans.length > 0) {
+        const defaultVariant = plans[0].variants?.[0];
+        if (defaultVariant?.configuration) {
+          return defaultVariant.configuration as TierConfig;
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`Failed to resolve default plan configuration: ${e.message}`);
     }
 
     return null;

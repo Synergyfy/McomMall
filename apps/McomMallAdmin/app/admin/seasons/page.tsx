@@ -77,22 +77,18 @@ export default function SeasonsPage() {
         );
     };
 
-    const handleSelectSeason = (season: Season) => {
-        router.push(`/admin/tiers?type=seasonal&seasonId=${season.id}&startDate=${season.startDate}&endDate=${season.endDate}`);
-    };
-
     const seasons = data ?? [];
 
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={() => router.push('/admin/tiers')} className="gap-2">
+                <Button variant="ghost" onClick={() => router.push('/admin/plans')} className="gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Tiers
+                    Back to Plans
                 </Button>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Seasons Management</h1>
-                    <p className="text-slate-500">Live seasons from the API for seasonal subscription tiers.</p>
+                    <p className="text-slate-500">Live operational seasons and calendar windows.</p>
                 </div>
             </div>
 
@@ -103,7 +99,7 @@ export default function SeasonsPage() {
                     </div>
                     <div>
                         <p className="font-semibold text-blue-900">Create a New Season</p>
-                        <p className="text-sm text-blue-700">Set up a name and date range to start creating seasonal tiers.</p>
+                        <p className="text-sm text-blue-700">Set up a seasonal date window and operational calendar schedule.</p>
                     </div>
                 </div>
                 <Button onClick={() => setIsDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
@@ -134,7 +130,7 @@ export default function SeasonsPage() {
             {!isLoading && !isError && seasons.length === 0 && (
                 <Card>
                     <CardContent className="p-12 text-center text-sm text-slate-400">
-                        No seasons yet. Create one to start building seasonal tiers.
+                        No seasons yet. Create one to schedule seasonal periods.
                     </CardContent>
                 </Card>
             )}
@@ -157,14 +153,9 @@ export default function SeasonsPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-sm text-slate-500 bg-slate-50 p-3 rounded-md border border-slate-100">
-                                    <p>{season.description || 'Tiers created for this season will inherit this date range automatically.'}</p>
+                                    <p>{season.description || 'Seasonal calendar window active in system.'}</p>
                                 </div>
                             </CardContent>
-                            <CardFooter className="border-t pt-4 flex justify-end">
-                                <Button size="sm" onClick={() => handleSelectSeason(season)}>
-                                    Select &amp; Create Tier
-                                </Button>
-                            </CardFooter>
                         </Card>
                     );
                 })}

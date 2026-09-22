@@ -16,7 +16,7 @@ import { ListingsService } from '../listings/listing.service';
 import { AuthService } from '../auth/auth.service';
 import { UserRole } from '../../common/role.enum';
 import { ListingType } from '../listings/listing.enum';
-import { Tier } from '../tier/entities/tier.entity';
+import { PlanVariant } from '../plans/entities/plan-variant.entity';
 import { Membership } from '../membership/entities/membership.entity';
 
 export interface CompleteOnboardingDto {
@@ -294,63 +294,13 @@ export class GoogleBusinessService {
     }
 
     // ─── ENSURE USER HAS AN ACTIVE MEMBERSHIP FOR THE LISTING CREATION ───
-    const tierRepository = this.dataSource.getRepository(Tier);
+    const variantRepository = this.dataSource.getRepository(PlanVariant);
     const membershipRepository = this.dataSource.getRepository(Membership);
 
-    let tierName = 'Basic'; // Default fallback
-    if (selectedPlan === 'pro') tierName = 'Pro';
-    else if (selectedPlan === 'plus') tierName = 'Plus';
-    else if (selectedPlan === 'payg') tierName = 'PAYG';
-    else if (selectedPlan === 'standard') tierName = 'Standard';
-
-    let tier = await tierRepository
-      .createQueryBuilder('tier')
-      .where('LOWER(tier.name) = :name', { name: tierName.toLowerCase() })
-      .getOne();
-
-    if (!tier) {
-      tier = await tierRepository.findOne({ where: { isActive: true } });
-    }
-    if (!tier) {
-      tier = await tierRepository.findOne({ where: {} });
-    }
-    if (!tier) {
-      // Create default trial tier if none exists in database
-      const defaultConfiguration = {
-        quotas: {
-          maxListings: 100,
-          allowProductListing: true,
-          allowServiceListing: true,
-          maxProducts: 50,
-          maxServices: 50,
-          maxGiftCardTemplates: 5,
-          maxCouponTemplates: 10,
-          maxLoyaltyPrograms: 1,
-          maxImagesPerListing: 5,
-          featuredListingAllowance: 2,
-        },
-        featureFlags: {
-          priorityInSearch: true,
-          advancedAnalytics: true,
-          dedicatedSupport: true,
-          allowCustomBranding: true,
-          allowGroupCreation: true,
-        },
-      };
-      const newTier = tierRepository.create({
-        name: 'Default Trial Tier',
-        description: 'Dynamically created trial tier',
-        monthlyPrice: 0,
-        quarterlyPrice: 0,
-        annualPrice: 0,
-        isActive: true,
-        isDefault: true,
-        type: 'TRIAL' as any,
-        trialDuration: 14,
-        configuration: defaultConfiguration,
-      });
-      tier = await tierRepository.save(newTier);
-    }
+    const variant = await variantRepository.findOne({
+      where: { isActive: true },
+      relations: ['plan', 'tierLevel'],
+    });
 
     let membership = await membershipRepository.findOne({
       where: { user: { id: user.id }, isActive: true },
@@ -361,7 +311,8 @@ export class GoogleBusinessService {
       expiresAt.setDate(expiresAt.getDate() + 30); // 30 days trial
 
       membership = membershipRepository.create({
-        tier,
+        planVariant: variant || undefined,
+        planVariantId: variant?.id,
         user,
         startDate: new Date(),
         expiresAt,
