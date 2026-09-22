@@ -140,29 +140,32 @@ export interface GetAdminTransactionsParams {
     type?: string;
 }
 
+export type AdminTransactionType = 'payment' | 'refund' | 'payout';
+
 export interface AdminTransaction {
     id: string;
-    reference: string;
-    description: string;
+    payerName: string;
+    payeeName: string;
+    type: AdminTransactionType;
     amount: number;
-    type: string;
+    fees: number;
+    paymentMethod: string;
     status: string;
-    createdAt: string;
-    user?: {
-        name: string;
-        email: string;
-    };
-    business?: {
-        name: string;
-    };
+    date: string;
+    orderId?: string;
 }
 
 export interface GetAdminTransactionsResponse {
-    items: AdminTransaction[];
-    meta: {
-        totalItems: number;
-        itemsPerPage: number;
-        totalPages: number;
-        currentPage: number;
-    };
+    data: AdminTransaction[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface AdminTransactionStats {
+    totalVolume: number;
+    totalFees: number;
+    pendingCount: number;
+    refundCount: number;
 }

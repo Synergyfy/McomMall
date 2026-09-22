@@ -7,85 +7,81 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Calendar, ArrowLeft, Trash2, Pencil } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Plus, Calendar, ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Season, CreateSeasonInput } from '@/app/admin/types/season';
 import { format, addMonths, addYears } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useGetSeasons, useCreateSeason } from '@/service/seasons/hook';
+import type { Season } from '@/service/seasons/api';
 
+type DurationType = 'monthly' | 'quarterly' | 'annual';
 
-// Mock data for initial demonstration
-const MOCK_SEASONS: Season[] = [
-    {
-        id: '1',
-        name: 'Summer Sale 2026',
-        startDate: '2026-06-01',
-        endDate: '2026-08-31',
-        durationType: 'quarterly',
-        isActive: true,
-    },
-    {
-        id: '2',
-        name: 'Winter Holidays 2026',
-        startDate: '2026-12-01',
-        endDate: '2027-01-15',
-        durationType: 'monthly',
-        isActive: false,
-    }
-];
-
+function isCurrentlyActive(season: Season): boolean {
+    const now = Date.now();
+    const start = new Date(season.startDate).getTime();
+    const end = new Date(season.endDate).getTime();
+    return !isNaN(start) && !isNaN(end) && start <= now && now <= end;
+}
 
 export default function SeasonsPage() {
     const router = useRouter();
-    const [seasons, setSeasons] = useState<Season[]>(MOCK_SEASONS);
+    const { data, isLoading, isError, error, refetch } = useGetSeasons();
+    const createSeason = useCreateSeason();
+
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [newSeason, setNewSeason] = useState<CreateSeasonInput>({
-        name: '',
-        startDate: '',
-        endDate: '',
-        durationType: 'monthly',
-        isActive: true,
-    });
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [durationType, setDurationType] = useState<DurationType>('monthly');
+    const [endDate, setEndDate] = useState('');
 
-    const calculateEndDate = (start: string, duration: Season['durationType']) => {
+    const calculateEndDate = (start: string, duration: DurationType): string => {
         if (!start) return '';
-        const startDate = new Date(start);
-        let endDate;
-        if (duration === 'monthly') endDate = addMonths(startDate, 1);
-        else if (duration === 'quarterly') endDate = addMonths(startDate, 3);
-        else if (duration === 'annual') endDate = addYears(startDate, 1);
-        else return '';
-
-        return format(endDate, 'yyyy-MM-dd');
+        const startD = new Date(start);
+        let end: Date;
+        if (duration === 'monthly') end = addMonths(startD, 1);
+        else if (duration === 'quarterly') end = addMonths(startD, 3);
+        else end = addYears(startD, 1);
+        return format(end, 'yyyy-MM-dd');
     };
 
-    const handleDurationChange = (duration: Season['durationType']) => {
-        const endDate = calculateEndDate(newSeason.startDate, duration);
-        setNewSeason({ ...newSeason, durationType: duration, endDate });
+    const handleDurationChange = (duration: DurationType) => {
+        setDurationType(duration);
+        setEndDate(calculateEndDate(startDate, duration));
     };
 
     const handleStartDateChange = (start: string) => {
-        const endDate = calculateEndDate(start, newSeason.durationType);
-        setNewSeason({ ...newSeason, startDate: start, endDate });
+        setStartDate(start);
+        setEndDate(calculateEndDate(start, durationType));
     };
-
 
     const handleCreateSeason = () => {
-        const season: Season = {
-            ...newSeason,
-            id: Math.random().toString(36).substr(2, 9),
-        };
-        setSeasons([...seasons, season]);
-        setIsDialogOpen(false);
-        setNewSeason({ name: '', startDate: '', endDate: '', durationType: 'monthly', isActive: true });
+        createSeason.mutate(
+            {
+                name: name.trim(),
+                description: description.trim() || undefined,
+                startDate,
+                endDate,
+            },
+            {
+                onSuccess: () => {
+                    setIsDialogOpen(false);
+                    setName('');
+                    setDescription('');
+                    setStartDate('');
+                    setEndDate('');
+                    setDurationType('monthly');
+                },
+            },
+        );
     };
 
-
     const handleSelectSeason = (season: Season) => {
-        // Corrected URL from /admin/tiers/new to /admin/tiers
         router.push(`/admin/tiers?type=seasonal&seasonId=${season.id}&startDate=${season.startDate}&endDate=${season.endDate}`);
     };
 
+    const seasons = data ?? [];
 
     return (
         <div className="space-y-6">
@@ -96,7 +92,7 @@ export default function SeasonsPage() {
                 </Button>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Seasons Management</h1>
-                    <p className="text-slate-500">Define time-bounded periods for seasonal subscription tiers.</p>
+                    <p className="text-slate-500">Live seasons from the API for seasonal subscription tiers.</p>
                 </div>
             </div>
 
@@ -115,46 +111,63 @@ export default function SeasonsPage() {
                 </Button>
             </div>
 
+            {isLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[0, 1, 2].map((i) => (
+                        <div key={i} className="h-48 rounded-xl bg-slate-100 animate-pulse" />
+                    ))}
+                </div>
+            )}
+
+            {isError && (
+                <Card className="border-rose-200 bg-rose-50">
+                    <CardContent className="p-4 flex items-center gap-3 text-sm text-rose-700">
+                        <AlertTriangle className="h-4 w-4" />
+                        Failed to load seasons: {(error as Error)?.message ?? 'Unknown error'}
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={() => refetch()}>
+                            Retry
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {!isLoading && !isError && seasons.length === 0 && (
+                <Card>
+                    <CardContent className="p-12 text-center text-sm text-slate-400">
+                        No seasons yet. Create one to start building seasonal tiers.
+                    </CardContent>
+                </Card>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {seasons.map((season) => (
-                    <Card key={season.id} className="hover:shadow-md transition-shadow cursor-default">
-                        <CardHeader className="pb-3">
-                            <div className="flex justify-between items-start">
-                                <CardTitle className="text-xl">{season.name}</CardTitle>
-                                <div className="flex gap-2">
-                                    <Badge variant="outline" className="capitalize">
-                                        {season.durationType === 'monthly' ? '1m' : season.durationType === 'quarterly' ? '3m' : '12m'}
-                                    </Badge>
-                                    <Badge variant={season.isActive ? "default" : "secondary"}>
-                                        {season.isActive ? 'Active' : 'Inactive'}
+                {seasons.map((season) => {
+                    const active = isCurrentlyActive(season);
+                    return (
+                        <Card key={season.id} className="hover:shadow-md transition-shadow cursor-default">
+                            <CardHeader className="pb-3">
+                                <div className="flex justify-between items-start">
+                                    <CardTitle className="text-xl">{season.name}</CardTitle>
+                                    <Badge variant={active ? 'default' : 'secondary'}>
+                                        {active ? 'Active' : 'Inactive'}
                                     </Badge>
                                 </div>
-                            </div>
-                            <CardDescription>
-                                {format(new Date(season.startDate), 'PPP')} - {format(new Date(season.endDate), 'PPP')}
-                            </CardDescription>
-
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-sm text-slate-500 bg-slate-50 p-3 rounded-md border border-slate-100">
-                                <p>Tiers created for this season will inherit this date range automatically.</p>
-                            </div>
-                        </CardContent>
-                        <CardFooter className="border-t pt-4 flex justify-between">
-                            <div className="flex gap-2">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
-                                    <Pencil className="h-4 w-4" />
+                                <CardDescription>
+                                    {format(new Date(season.startDate), 'PPP')} - {format(new Date(season.endDate), 'PPP')}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm text-slate-500 bg-slate-50 p-3 rounded-md border border-slate-100">
+                                    <p>{season.description || 'Tiers created for this season will inherit this date range automatically.'}</p>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t pt-4 flex justify-end">
+                                <Button size="sm" onClick={() => handleSelectSeason(season)}>
+                                    Select &amp; Create Tier
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-50">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            <Button size="sm" onClick={() => handleSelectSeason(season)}>
-                                Select & Create Tier
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                ))}
+                            </CardFooter>
+                        </Card>
+                    );
+                })}
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -162,7 +175,7 @@ export default function SeasonsPage() {
                     <DialogHeader>
                         <DialogTitle>Create New Season</DialogTitle>
                         <DialogDescription>
-                            Define the name and timeframe for your seasonal campaign.
+                            Creates a live season via POST /seasons.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -172,8 +185,17 @@ export default function SeasonsPage() {
                             <Input
                                 id="name"
                                 placeholder="e.g., Summer Holiday 2026"
-                                value={newSeason.name}
-                                onChange={(e) => setNewSeason({ ...newSeason, name: e.target.value })}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Textarea
+                                id="description"
+                                placeholder="Optional description..."
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -182,13 +204,13 @@ export default function SeasonsPage() {
                                 <Input
                                     id="startDate"
                                     type="date"
-                                    value={newSeason.startDate}
+                                    value={startDate}
                                     onChange={(e) => handleStartDateChange(e.target.value)}
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="durationType">Duration Type</Label>
-                                <Select value={newSeason.durationType} onValueChange={(val: any) => handleDurationChange(val)}>
+                                <Select value={durationType} onValueChange={(val: DurationType) => handleDurationChange(val)}>
                                     <SelectTrigger id="durationType">
                                         <SelectValue placeholder="Select duration" />
                                     </SelectTrigger>
@@ -205,20 +227,20 @@ export default function SeasonsPage() {
                             <Input
                                 id="endDate"
                                 type="date"
-                                value={newSeason.endDate}
+                                value={endDate}
                                 readOnly
                                 className="bg-slate-50 text-slate-500 italic"
                             />
                         </div>
-
                     </div>
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                         <Button
                             onClick={handleCreateSeason}
-                            disabled={!newSeason.name || !newSeason.startDate || !newSeason.endDate}
+                            disabled={!name.trim() || !startDate || !endDate || createSeason.isPending}
                         >
+                            {createSeason.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                             Save Season
                         </Button>
                     </DialogFooter>

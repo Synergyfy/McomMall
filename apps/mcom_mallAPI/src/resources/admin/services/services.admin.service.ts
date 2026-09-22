@@ -1,7 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Service } from 'src/resources/services/entities/service.entity';
+import { Business } from 'src/resources/listings/entities/listing.entity';
+import { PricingModel } from 'src/resources/services/service.enum';
 import { Repository } from 'typeorm';
+import {
+  AdminServiceStatus,
+  CreateAdminServiceDto,
+} from '../dto/create-admin-service.dto';
 import {
   ServiceQueryDto,
   PaginatedServicesDto,
@@ -14,6 +23,8 @@ export class AdminServicesService {
   constructor(
     @InjectRepository(Service)
     private servicesRepository: Repository<Service>,
+    @InjectRepository(Business)
+    private businessRepository: Repository<Business>,
   ) {}
 
   async getStats(): Promise<ServiceStatsDto> {
@@ -93,5 +104,28 @@ export class AdminServicesService {
     const service = await this.servicesRepository.findOne({ where: { id } });
     if (!service) throw new NotFoundException('Service not found');
     return this.servicesRepository.softDelete(id);
+  }
+
+  async create(dto: CreateAdminServiceDto): Promise<Service> {
+    const business = await this.businessRepository.findOne({
+      where: { id: dto.businessId },
+    });
+    if (!business) {
+      throw new NotFoundException(
+        `Business with ID ${dto.businessId} was not found`,
+      );
+    }
+    const service = this.servicesRepository.create({
+      name: dto.name,
+      businessId: dto.businessId,
+      description: dto.description,
+      category: dto.category,
+      fixedPrice: dto.fixedPrice,
+      duration: dto.duration ?? 0,
+      pricingModel: PricingModel.FIXED,
+      status:
+        dto.status === AdminServiceStatus.INACTIVE ? 'draft' : 'published',
+    });
+    return this.servicesRepository.save(service);
   }
 }

@@ -8,37 +8,69 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
+import { useCreateAdminService } from '@/service/services/hook';
+import { useGetAdminBusinesses } from '@/service/admin/hook';
+
+interface ServiceFormValues {
+    name: string;
+    description: string;
+    price: number;
+    duration: number;
+    category: string;
+    businessId: string;
+    status: 'active' | 'inactive';
+}
 
 export default function AddServicePage() {
     const router = useRouter();
-    const methods = useForm({
+    const createService = useCreateAdminService();
+    const { data: businessesData, isLoading: businessesLoading } = useGetAdminBusinesses({
+        page: 1,
+        limit: 50,
+    });
+
+    const methods = useForm<ServiceFormValues>({
         defaultValues: {
             name: '',
             description: '',
             price: 0,
             duration: 60,
             category: '',
-            businessName: '',
             businessId: '',
-            images: [],
-            status: 'active'
-        }
+            status: 'active',
+        },
     });
 
-    const onSubmit = (data: any) => {
-        console.log('Final Service Data:', data);
-        toast.success('Service created successfully!');
-        router.push('/admin/services');
+    const {
+        register,
+        handleSubmit,
+        setValue,
+        watch,
+        formState: { errors },
+    } = methods;
+
+    const onSubmit = (data: ServiceFormValues) => {
+        createService.mutate(
+            {
+                name: data.name.trim(),
+                businessId: data.businessId,
+                description: data.description || undefined,
+                category: data.category || undefined,
+                fixedPrice: Number(data.price) || 0,
+                duration: Number(data.duration) || 0,
+                status: data.status,
+            },
+            { onSuccess: () => router.push('/admin/services') },
+        );
     };
 
     return (
         <div className="max-w-3xl mx-auto space-y-6 pb-20">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">Add New Service</h1>
-                    <p className="text-slate-500">Create a new service offering.</p>
+                    <p className="text-slate-500">Creates a live service via POST /admin/services.</p>
                 </div>
                 <Button variant="outline" onClick={() => router.push('/admin/services')}>
                     Cancel
@@ -52,32 +84,79 @@ export default function AddServicePage() {
                 </CardHeader>
                 <CardContent>
                     <FormProvider {...methods}>
-                        <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6">
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Service Name</Label>
-                                <Input id="name" {...methods.register('name')} placeholder="e.g. Full Body Massage" />
+                                <Label htmlFor="businessId">Business *</Label>
+                                <Select
+                                    value={watch('businessId')}
+                                    onValueChange={(val) => setValue('businessId', val, { shouldValidate: true })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={businessesLoading ? 'Loading businesses…' : 'Select business'} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(businessesData?.data ?? []).map((b) => (
+                                            <SelectItem key={b.id} value={b.id}>
+                                                {b.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <input
+                                    type="hidden"
+                                    {...register('businessId', { required: 'Business is required' })}
+                                />
+                                {errors.businessId && (
+                                    <p className="text-xs text-red-600">{errors.businessId.message}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Service Name *</Label>
+                                <Input
+                                    id="name"
+                                    {...register('name', { required: 'Service name is required' })}
+                                    placeholder="e.g. Full Body Massage"
+                                />
+                                {errors.name && <p className="text-xs text-red-600">{errors.name.message}</p>}
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="description">Description</Label>
-                                <Textarea id="description" {...methods.register('description')} placeholder="Describe the service..." rows={4} />
+                                <Textarea
+                                    id="description"
+                                    {...register('description')}
+                                    placeholder="Describe the service..."
+                                    rows={4}
+                                />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="price">Price (£)</Label>
-                                    <Input id="price" type="number" step="0.01" {...methods.register('price')} />
+                                    <Input
+                                        id="price"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        {...register('price', { valueAsNumber: true })}
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="duration">Duration (minutes)</Label>
-                                    <Input id="duration" type="number" {...methods.register('duration')} />
+                                    <Input
+                                        id="duration"
+                                        type="number"
+                                        min="0"
+                                        {...register('duration', { valueAsNumber: true })}
+                                    />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="category">Category</Label>
-                                    <Select onValueChange={(val) => methods.setValue('category', val)}>
+                                    <Select onValueChange={(val) => setValue('category', val)}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select Category" />
                                         </SelectTrigger>
@@ -92,7 +171,10 @@ export default function AddServicePage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="status">Status</Label>
-                                    <Select onValueChange={(val) => methods.setValue('status', val)} defaultValue="active">
+                                    <Select
+                                        onValueChange={(val) => setValue('status', val as 'active' | 'inactive')}
+                                        defaultValue="active"
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select Status" />
                                         </SelectTrigger>
@@ -104,19 +186,15 @@ export default function AddServicePage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="businessName">Business Name</Label>
-                                    <Input id="businessName" {...methods.register('businessName')} placeholder="Provider Name" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="businessId">Business ID (Optional)</Label>
-                                    <Input id="businessId" {...methods.register('businessId')} placeholder="Provider ID" />
-                                </div>
-                            </div>
-
                             <div className="pt-4 flex justify-end">
-                                <Button type="submit" className="bg-orange-500 hover:bg-orange-600">Create Service</Button>
+                                <Button
+                                    type="submit"
+                                    className="bg-orange-500 hover:bg-orange-600"
+                                    disabled={createService.isPending}
+                                >
+                                    {createService.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                    Create Service
+                                </Button>
                             </div>
                         </form>
                     </FormProvider>

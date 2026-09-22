@@ -3,7 +3,10 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Borough } from '../../boroughs/entities/borough.entity';
 
 @Entity('borough_campaigns')
 export class BoroughCampaign {
@@ -36,6 +39,16 @@ export class BoroughCampaign {
 
   @Column({ nullable: true })
   bannerUrl?: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  boroughId?: string | null;
+
+  @ManyToOne(() => Borough, (borough) => borough.campaigns, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'boroughId' })
+  borough?: Borough | null;
 
   @CreateDateColumn()
   createdAt: Date;

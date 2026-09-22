@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,185 +16,232 @@ import {
 import {
     ShieldAlert,
     MessageSquareX,
-    QrCode,
-    TicketX,
     UserX,
     Search,
     AlertTriangle,
-    Eye,
-    Ban,
-    AlertCircle,
     CheckCircle2,
-    ArrowUpCircle,
-    MoreHorizontal
+    Scale,
+    Star,
 } from 'lucide-react';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { useGetDisputeStats, useGetAllDisputes, useResolveDispute } from '@/service/dispute/hook';
+import { useGetAdminReviews, usePublishReview, useUnpublishReview } from '@/service/reviews/hook';
+import { useGetAdminUsers } from '@/service/admin/hook';
+import { useGetVerificationStats } from '@/service/verifications/hook';
 
 export default function CompliancePage() {
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const { data: disputeStats } = useGetDisputeStats();
+    const {
+        data: disputesData,
+        isLoading: disputesLoading,
+        isError: disputesError,
+        error: disputesErr,
+        refetch: refetchDisputes,
+    } = useGetAllDisputes({ search: searchQuery || undefined, page: 1, limit: 20 });
+    const resolveDispute = useResolveDispute();
+
+    const { data: reviewsData } = useGetAdminReviews(1, 20);
+    const publishReview = usePublishReview();
+    const unpublishReview = useUnpublishReview();
+
+    const { data: suspendedData } = useGetAdminUsers({ status: 'suspended', limit: 1 });
+    const { data: verificationStats } = useGetVerificationStats();
+
+    const disputes = useMemo(() => {
+        const list = disputesData?.data ?? [];
+        return list.filter((d) => d.status !== 'resolved');
+    }, [disputesData]);
+
+    const pendingReviews = useMemo(() => {
+        const arr = reviewsData?.data ?? [];
+        return arr.filter((r) => String(r.status).toLowerCase() === 'pending');
+    }, [reviewsData]);
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Moderation & Compliance</h1>
-                    <p className="text-slate-500">Secure oversight of reports, abuse, and platform integrity</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Moderation &amp; Compliance</h1>
+                    <p className="text-slate-500">Live integrity signals aggregated from disputes, reviews, users and verifications</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="relative w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input placeholder="Search reports or users..." className="pl-9 bg-white" />
-                    </div>
+                <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                        placeholder="Search disputes..."
+                        className="pl-9 bg-white"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
             </div>
 
-            {/* Moderation Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <Card className="border-0 shadow-sm border-t-4 border-t-red-500">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-red-100 text-red-600">
-                            <ShieldAlert className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900">42</p>
-                            <p className="text-sm text-slate-500 font-medium">Abuse Reports</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm border-t-4 border-t-orange-500">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-orange-100 text-orange-600">
-                            <MessageSquareX className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900">128</p>
-                            <p className="text-sm text-slate-500 font-medium">Spam Activity</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm border-t-4 border-t-purple-500">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-purple-100 text-purple-600">
-                            <QrCode className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900">15</p>
-                            <p className="text-sm text-slate-500 font-medium leading-tight">Suspicious QR Scans</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm border-t-4 border-t-amber-500">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-amber-100 text-amber-600">
-                            <TicketX className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900">8</p>
-                            <p className="text-sm text-slate-500 font-medium">Fake Rewards</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm border-t-4 border-t-slate-800">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-slate-200 text-slate-800">
-                            <UserX className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900">24</p>
-                            <p className="text-sm text-slate-500 font-medium">Suspended Accounts</p>
-                        </div>
-                    </CardContent>
-                </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { label: 'Open Disputes', value: disputeStats?.open, icon: Scale, tone: 'bg-red-100 text-red-600', border: 'border-t-red-500' },
+                    { label: 'Escalated', value: disputeStats?.escalated, icon: ShieldAlert, tone: 'bg-orange-100 text-orange-600', border: 'border-t-orange-500' },
+                    { label: 'Reviews Pending', value: pendingReviews.length, icon: MessageSquareX, tone: 'bg-purple-100 text-purple-600', border: 'border-t-purple-500' },
+                    { label: 'Suspended Accounts', value: suspendedData?.total, icon: UserX, tone: 'bg-slate-200 text-slate-800', border: 'border-t-slate-800' },
+                ].map((s) => (
+                    <Card key={s.label} className={cn('border-0 shadow-sm border-t-4', s.border)}>
+                        <CardContent className="p-4 flex items-center gap-4">
+                            <div className={cn('p-3 rounded-xl', s.tone)}>
+                                <s.icon className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-slate-900">{s.value ?? '…'}</p>
+                                <p className="text-sm text-slate-500 font-medium">{s.label}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
 
-            {/* Report Review Table */}
+            {disputesError && (
+                <Card className="border-rose-200 bg-rose-50">
+                    <CardContent className="p-4 flex items-center gap-3 text-sm text-rose-700">
+                        <AlertTriangle className="h-4 w-4" />
+                        Failed to load disputes: {(disputesErr as Error)?.message ?? 'Unknown error'}
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={() => refetchDisputes()}>
+                            Retry
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
             <Card className="border-0 shadow-sm overflow-hidden">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-amber-500" /> Action Required
-                    </CardTitle>
-                    <CardDescription>Review and resolve pending moderation tickets</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" /> Open Disputes
+                        </CardTitle>
+                        <CardDescription>Resolve directly or open the full disputes queue</CardDescription>
+                    </div>
+                    <Link href="/admin/disputes">
+                        <Button variant="outline" size="sm">Full queue</Button>
+                    </Link>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-slate-50/50">
-                                <TableHead>Report Type</TableHead>
-                                <TableHead>User / Entity</TableHead>
-                                <TableHead>Borough</TableHead>
-                                <TableHead>Severity</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {[
-                                { type: 'Fake Reward Claim', user: '@sarahj99', borough: 'Camden', severity: 'High', date: '2 hrs ago', status: 'Pending' },
-                                { type: 'Review Spam', user: 'Tech Fixers Ltd', borough: 'Hackney', severity: 'Medium', date: '5 hrs ago', status: 'Under Review' },
-                                { type: 'Suspicious QR', user: 'Unknown Device', borough: 'Southwark', severity: 'Critical', date: 'Yesterday', status: 'Escalated' },
-                                { type: 'Harassment', user: '@mark_b', borough: 'Westminster', severity: 'High', date: 'Yesterday', status: 'Pending' },
-                            ].map((report, i) => (
-                                <TableRow key={i}>
-                                    <TableCell className="font-medium text-slate-900">{report.type}</TableCell>
-                                    <TableCell className="text-slate-600 font-mono text-sm">{report.user}</TableCell>
-                                    <TableCell className="text-slate-600">{report.borough}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className={cn(
-                                            report.severity === 'Critical' ? 'text-red-700 border-red-300 bg-red-100' :
-                                            report.severity === 'High' ? 'text-orange-600 border-orange-300 bg-orange-50' :
-                                            'text-amber-600 border-amber-300 bg-amber-50'
-                                        )}>
-                                            {report.severity}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-slate-500 text-sm">{report.date}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary" className={cn(
-                                            report.status === 'Pending' ? 'bg-slate-100 text-slate-700' :
-                                            report.status === 'Escalated' ? 'bg-rose-100 text-rose-700' :
-                                            'bg-blue-100 text-blue-700'
-                                        )}>
-                                            {report.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-48">
-                                                <DropdownMenuItem className="cursor-pointer text-blue-600 font-medium">
-                                                    <Eye className="mr-2 h-4 w-4" /> Review Details
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="cursor-pointer text-amber-600">
-                                                    <AlertCircle className="mr-2 h-4 w-4" /> Issue Warning
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="cursor-pointer text-red-600">
-                                                    <Ban className="mr-2 h-4 w-4" /> Suspend Account
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="cursor-pointer text-emerald-600">
-                                                    <CheckCircle2 className="mr-2 h-4 w-4" /> Resolve Ticket
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="cursor-pointer text-slate-700">
-                                                    <ArrowUpCircle className="mr-2 h-4 w-4" /> Escalate
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
+                    {disputesLoading ? (
+                        <div className="p-6 space-y-3">
+                            {[0, 1, 2].map((i) => (
+                                <div key={i} className="h-14 rounded bg-slate-100 animate-pulse" />
                             ))}
-                        </TableBody>
-                    </Table>
+                        </div>
+                    ) : disputes.length === 0 ? (
+                        <p className="p-8 text-center text-sm text-slate-400">No open disputes. All clear.</p>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50/50">
+                                    <TableHead>Reason</TableHead>
+                                    <TableHead>Customer → Business</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {disputes.slice(0, 8).map((d) => (
+                                    <TableRow key={d.id}>
+                                        <TableCell>
+                                            <p className="font-medium text-slate-900 capitalize">{d.reason.replace(/_/g, ' ')}</p>
+                                            <p className="text-xs text-slate-400 truncate max-w-64">{d.description}</p>
+                                        </TableCell>
+                                        <TableCell className="text-sm">
+                                            {d.customerName} <span className="text-slate-400">→</span> {d.businessName}
+                                        </TableCell>
+                                        <TableCell className="text-right font-bold">£{Number(d.amount).toFixed(2)}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary" className="capitalize">
+                                                {d.status.replace(/_/g, ' ')}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-emerald-600"
+                                                disabled={resolveDispute.isPending}
+                                                onClick={() => resolveDispute.mutate(d.id)}
+                                            >
+                                                <CheckCircle2 className="h-4 w-4 mr-1" /> Resolve
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
+
+            <Card className="border-0 shadow-sm overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="flex items-center gap-2">
+                            <Star className="h-5 w-5 text-amber-500" /> Reviews Awaiting Moderation
+                        </CardTitle>
+                        <CardDescription>Publish or unpublish flagged reviews</CardDescription>
+                    </div>
+                    <Link href="/admin/reviews">
+                        <Button variant="outline" size="sm">All reviews</Button>
+                    </Link>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {pendingReviews.length === 0 ? (
+                        <p className="p-8 text-center text-sm text-slate-400">No pending reviews.</p>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50/50">
+                                    <TableHead>Review</TableHead>
+                                    <TableHead className="text-center">Rating</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {pendingReviews.slice(0, 8).map((review) => (
+                                    <TableRow key={review.id}>
+                                        <TableCell className="max-w-md truncate">{review.comment ?? '—'}</TableCell>
+                                        <TableCell className="text-center font-bold">{review.rating ?? '—'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-emerald-600"
+                                                    onClick={() => publishReview.mutate(review.id)}
+                                                >
+                                                    Publish
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-red-600"
+                                                    onClick={() => unpublishReview.mutate(review.id)}
+                                                >
+                                                    Reject
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
+            <p className="text-xs text-slate-400">
+                Pending identity/business checks live under{' '}
+                <Link href="/admin/verifications" className="font-bold text-blue-600">
+                    Verifications
+                </Link>{' '}
+                ({verificationStats?.pending ?? '…'} pending).
+            </p>
         </div>
     );
 }

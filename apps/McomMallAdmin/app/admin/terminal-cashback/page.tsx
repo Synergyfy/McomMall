@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -135,6 +135,71 @@ export default function TerminalCashbackPage() {
     const claims = claimsData?.data || [];
     const configs = configsData?.data || [];
     const owners = ownersData?.data || [];
+    const { data: globalRules, isLoading: isRulesLoading } = useGetGlobalRules();
+
+    interface FraudFlag {
+        claim: TerminalCashbackClaim;
+        severity: 'HIGH' | 'MEDIUM' | 'LOW';
+        reason: string;
+    }
+
+    // Live integrity heuristics computed transparently from claim records.
+    const fraudFlags: FraudFlag[] = useMemo(() => {
+        const flags: FraudFlag[] = [];
+        const byUser = new Map<string, TerminalCashbackClaim[]>();
+        for (const claim of claims) {
+            const list = byUser.get(claim.userId) ?? [];
+            list.push(claim);
+            byUser.set(claim.userId, list);
+        }
+        // Duplicate same-amount claims by the same user within 24h
+        for (const userClaims of byUser.values()) {
+            const sorted = [...userClaims].sort(
+                (a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
+            );
+            for (let i = 1; i < sorted.length; i++) {
+                const prev = sorted[i - 1];
+                const curr = sorted[i];
+                const gapHours =
+                    (new Date(curr.submittedAt).getTime() - new Date(prev.submittedAt).getTime()) / 3600000;
+                if (curr.amount === prev.amount && gapHours >= 0 && gapHours <= 24) {
+                    flags.push({
+                        claim: curr,
+                        severity: 'HIGH',
+                        reason: `Repeat £${Number(curr.amount).toFixed(2)} claim within 24h`,
+                    });
+                    break;
+                }
+            }
+            // Repeated rejections for the same user
+            const rejected = userClaims.filter((c) => c.status === 'rejected');
+            if (rejected.length >= 2) {
+                const latest = [...rejected].sort(
+                    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
+                )[0];
+                flags.push({
+                    claim: latest,
+                    severity: 'MEDIUM',
+                    reason: `${rejected.length} rejected claims for this user`,
+                });
+            }
+        }
+        // Pending claims without location proof
+        for (const claim of claims) {
+            if (claim.status === 'pending' && !claim.meta?.gps && flags.length < 8) {
+                flags.push({ claim, severity: 'LOW', reason: 'No GPS location attached' });
+            }
+        }
+        const order = { HIGH: 0, MEDIUM: 1, LOW: 2 } as const;
+        return flags.sort((a, b) => order[a.severity] - order[b.severity]).slice(0, 8);
+    }, [claims]);
+
+    const rejectedShare = useMemo(() => {
+        if (claims.length === 0) return 0;
+        return Math.round(
+            (claims.filter((c) => c.status === 'rejected').length / claims.length) * 100,
+        );
+    }, [claims]);
 
     // --- Mutations ---
     const createConfigMutation = useCreateTerminalConfig();
@@ -143,6 +208,49 @@ export default function TerminalCashbackPage() {
 
     const [selectedClaim, setSelectedClaim] = useState<TerminalCashbackClaim | null>(null);
     const [selectedConfig, setSelectedConfig] = useState<TerminalCashbackConfig | null>(null);
+
+    // Live per-merchant aggregates for the analysis sheet.
+    const merchantAnalysis = useMemo(() => {
+        if (!selectedConfig) return null;
+        const mine = claims.filter((c) => c.ownerId === selectedConfig.userId);
+        const approved = mine.filter((c) => c.status === 'approved' || c.status === 'auto_approved');
+        const distributed = approved.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+        const avgTicket = approved.length > 0 ? distributed / approved.length : 0;
+        const approvalRate = mine.length > 0 ? Math.round((approved.length / mine.length) * 100) : 0;
+
+        const buckets = new Map<string, number>();
+        const now = new Date();
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            buckets.set(`${d.getFullYear()}-${d.getMonth()}`, 0);
+        }
+        for (const c of approved) {
+            const created = new Date(c.submittedAt);
+            if (isNaN(created.getTime())) continue;
+            const key = `${created.getFullYear()}-${created.getMonth()}`;
+            if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + Number(c.amount || 0));
+        }
+        const values = [...buckets.values()];
+        const max = Math.max(...values, 1);
+        const trend = values.map((v) => Math.round((v / max) * 100));
+
+        const requesters = new Map<string, { name: string; count: number; value: number }>();
+        for (const c of mine) {
+            const entry = requesters.get(c.userId) ?? {
+                name: c.userName || c.userId.slice(0, 8),
+                count: 0,
+                value: 0,
+            };
+            entry.count += 1;
+            entry.value += Number(c.amount || 0);
+            requesters.set(c.userId, entry);
+        }
+        const topRequesters = [...requesters.values()]
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 3);
+
+        return { mine, approved, distributed, avgTicket, approvalRate, trend, topRequesters };
+    }, [claims, selectedConfig]);
 
     const [isClaimSheetOpen, setIsClaimSheetOpen] = useState(false);
     const [isConfigSheetOpen, setIsConfigSheetOpen] = useState(false);
@@ -763,7 +871,9 @@ export default function TerminalCashbackPage() {
                                         </div>
                                     )}
                                 </div>
-                                <Button className="w-full bg-slate-800 hover:bg-slate-900 h-11 rounded-xl font-semibold shadow-none" onClick={() => toast.success("Global escalation rules updated.")}>Update Global Dials</Button>
+                                <p className="text-[10px] text-slate-400 leading-relaxed">
+                                    Global rules are read-only here — they are managed by the platform configuration.
+                                </p>
                             </CardContent>
                         </Card>
 
@@ -779,24 +889,37 @@ export default function TerminalCashbackPage() {
                             </CardHeader>
                             <CardContent className="space-y-6 pt-6 relative z-10">
                                 <div className="space-y-4">
-                                    {[
-                                        { label: 'GPS Geofencing', desc: 'Match scan to merchant geofence' },
-                                        { label: 'Receipt Image Hashing', desc: 'Block duplicate image uploads' },
-                                        { label: 'Device Fingerprinting', desc: 'Limit claims per unique hardware' },
-                                    ].map((rule, i) => (
-                                        <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                                    {isRulesLoading && (
+                                        <div className="h-16 rounded-xl bg-white/5 animate-pulse" />
+                                    )}
+                                    {!isRulesLoading && (globalRules ?? []).length === 0 && (
+                                        <p className="text-xs text-slate-400">No global rules configured.</p>
+                                    )}
+                                    {(globalRules ?? []).map((rule) => (
+                                        <div key={rule.ruleKey} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                                             <div>
-                                                <p className="text-sm font-semibold text-white tracking-tight">{rule.label}</p>
-                                                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{rule.desc}</p>
+                                                <p className="text-sm font-semibold text-white tracking-tight">{rule.ruleKey}</p>
+                                                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                                                    {rule.description ?? `Value: ${rule.value}`}
+                                                </p>
                                             </div>
-                                            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold text-[9px] px-2 py-0.5">ACTIVE</Badge>
+                                            <Badge
+                                                className={cn(
+                                                    'font-bold text-[9px] px-2 py-0.5',
+                                                    rule.isActive
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                        : 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+                                                )}
+                                            >
+                                                {rule.isActive ? 'ACTIVE' : 'OFF'}
+                                            </Badge>
                                         </div>
                                     ))}
                                 </div>
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex gap-3">
                                     <Info className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
                                     <p className="text-[11px] text-slate-300 leading-relaxed font-medium">
-                                        Note: High sensitivity dials currently protect ~15% of the reward budget from spoofing attempts.
+                                        Note: {rejectedShare}% of terminal claims were rejected after review.
                                     </p>
                                 </div>
                             </CardContent>
@@ -810,36 +933,64 @@ export default function TerminalCashbackPage() {
                                 <AlertTriangle className="h-4 w-4 text-red-500" />
                                 Recent Fraud Alerts
                             </CardTitle>
-                            <CardDescription className="text-xs">Automatic system flags requiring admin intervention.</CardDescription>
+                            <CardDescription className="text-xs">Heuristic flags computed from live claim records.</CardDescription>
                         </CardHeader>
                         <CardContent className="p-0">
-                            <Table>
-                                <TableHeader className="bg-slate-50/50">
-                                    <TableRow className="border-b border-slate-100">
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider pl-6 text-slate-500">Severity</TableHead>
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Reason</TableHead>
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500">User</TableHead>
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Merchant</TableHead>
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right pr-6 text-slate-500">Action</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    <TableRow className="border-b border-slate-50 group">
-                                        <TableCell className="pl-6"><Badge className="bg-red-50 text-red-600 border-red-100 font-bold text-[9px] px-2 py-0">CRITICAL</Badge></TableCell>
-                                        <TableCell className="font-semibold text-slate-700 text-sm">Duplicate Receipt Hash Match</TableCell>
-                                        <TableCell className="text-xs text-slate-500 font-medium">User #492</TableCell>
-                                        <TableCell className="text-xs text-slate-600 font-semibold">Urban Eats</TableCell>
-                                        <TableCell className="text-right pr-6"><Button variant="outline" size="sm" className="font-bold text-[10px] text-red-500 border-red-100 hover:bg-red-50" onClick={() => toast.error("User blacklisted.")}>BLACKLIST</Button></TableCell>
-                                    </TableRow>
-                                    <TableRow className="border-b border-slate-50 group">
-                                        <TableCell className="pl-6"><Badge className="bg-amber-50 text-amber-600 border-amber-100 font-bold text-[9px] px-2 py-0">MEDIUM</Badge></TableCell>
-                                        <TableCell className="font-semibold text-slate-700 text-sm">GPS Distance Anomaly (5.2km)</TableCell>
-                                        <TableCell className="text-xs text-slate-500 font-medium">User #102</TableCell>
-                                        <TableCell className="text-xs text-slate-600 font-semibold">TechHub</TableCell>
-                                        <TableCell className="text-right pr-6"><Button variant="outline" size="sm" className="font-bold text-[10px] text-slate-500 border-slate-200" onClick={() => toast.info("Opening map...")}>REVIEW</Button></TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
+                            {fraudFlags.length === 0 ? (
+                                <p className="p-8 text-center text-xs text-slate-400">
+                                    No integrity flags in the current claim set.
+                                </p>
+                            ) : (
+                                <Table>
+                                    <TableHeader className="bg-slate-50/50">
+                                        <TableRow className="border-b border-slate-100">
+                                            <TableHead className="text-[10px] font-bold uppercase tracking-wider pl-6 text-slate-500">Severity</TableHead>
+                                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Reason</TableHead>
+                                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500">User</TableHead>
+                                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Merchant</TableHead>
+                                            <TableHead className="text-[10px] font-bold uppercase tracking-wider text-right pr-6 text-slate-500">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {fraudFlags.map((flag) => (
+                                            <TableRow key={flag.claim.id} className="border-b border-slate-50 group">
+                                                <TableCell className="pl-6">
+                                                    <Badge
+                                                        className={cn(
+                                                            'font-bold text-[9px] px-2 py-0',
+                                                            flag.severity === 'HIGH' && 'bg-red-50 text-red-600 border-red-100',
+                                                            flag.severity === 'MEDIUM' && 'bg-amber-50 text-amber-600 border-amber-100',
+                                                            flag.severity === 'LOW' && 'bg-slate-100 text-slate-500 border-slate-200',
+                                                        )}
+                                                    >
+                                                        {flag.severity}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="font-semibold text-slate-700 text-sm">{flag.reason}</TableCell>
+                                                <TableCell className="text-xs text-slate-500 font-medium">
+                                                    {flag.claim.userName ?? flag.claim.userId.slice(0, 8)}
+                                                </TableCell>
+                                                <TableCell className="text-xs text-slate-600 font-semibold">
+                                                    {flag.claim.ownerName ?? flag.claim.ownerId.slice(0, 8)}
+                                                </TableCell>
+                                                <TableCell className="text-right pr-6">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="font-bold text-[10px] text-slate-500 border-slate-200"
+                                                        onClick={() => {
+                                                            setSelectedClaim(flag.claim);
+                                                            setIsClaimSheetOpen(true);
+                                                        }}
+                                                    >
+                                                        REVIEW
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -1233,23 +1384,27 @@ export default function TerminalCashbackPage() {
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm text-center transition-all hover:border-blue-100">
                                         <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Total Distributed</p>
-                                        <p className="text-2xl font-bold text-slate-700">£452</p>
-                                        <div className="flex items-center justify-center gap-1 mt-1 text-emerald-500 font-medium text-[10px]">
-                                            <TrendingUp size={12} /> +12.5%
+                                        <p className="text-2xl font-bold text-slate-700">
+                                            £{(merchantAnalysis?.distributed ?? 0).toFixed(2)}
+                                        </p>
+                                        <div className="flex items-center justify-center gap-1 mt-1 text-slate-400 font-medium text-[10px]">
+                                            {merchantAnalysis?.approved.length ?? 0} approved claims
                                         </div>
                                     </div>
                                     <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm text-center transition-all hover:border-blue-100">
-                                        <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Success Rate</p>
-                                        <p className="text-2xl font-bold text-slate-700">98.4%</p>
+                                        <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Approval Rate</p>
+                                        <p className="text-2xl font-bold text-slate-700">{merchantAnalysis?.approvalRate ?? 0}%</p>
                                         <div className="flex items-center justify-center gap-1 mt-1 text-slate-400 font-medium text-[10px]">
-                                            L1 Standard
+                                            {merchantAnalysis?.mine.length ?? 0} total claims
                                         </div>
                                     </div>
                                     <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm text-center transition-all hover:border-blue-100">
                                         <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Avg. Ticket</p>
-                                        <p className="text-2xl font-bold text-slate-700">£34.20</p>
-                                        <div className="flex items-center justify-center gap-1 mt-1 text-emerald-500 font-medium text-[10px]">
-                                            <ArrowUpRight size={12} /> +5%
+                                        <p className="text-2xl font-bold text-slate-700">
+                                            £{(merchantAnalysis?.avgTicket ?? 0).toFixed(2)}
+                                        </p>
+                                        <div className="flex items-center justify-center gap-1 mt-1 text-slate-400 font-medium text-[10px]">
+                                            per approved claim
                                         </div>
                                     </div>
                                 </div>
@@ -1261,14 +1416,20 @@ export default function TerminalCashbackPage() {
                                     </h4>
                                     <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-100 shadow-inner space-y-6">
                                         <div className="flex items-end justify-between gap-2 h-32 px-2">
-                                            {[40, 65, 45, 90, 55, 80, 70, 85, 95, 60, 75, 50].map((v, i) => (
-                                                <div key={i} className="flex-1 bg-white rounded-t-md relative group overflow-hidden border border-slate-100/50">
-                                                    <div
-                                                        className="absolute bottom-0 w-full bg-blue-400/20 group-hover:bg-blue-400 transition-all duration-500 rounded-t-md"
-                                                        style={{ height: `${v}%` }}
-                                                    />
-                                                </div>
-                                            ))}
+                                            {(merchantAnalysis?.trend ?? []).every((v) => v === 0) ? (
+                                                <p className="w-full text-center text-[10px] text-slate-400 py-12">
+                                                    No approved payouts in the last 12 months.
+                                                </p>
+                                            ) : (
+                                                (merchantAnalysis?.trend ?? []).map((v, i) => (
+                                                    <div key={i} className="flex-1 bg-white rounded-t-md relative group overflow-hidden border border-slate-100/50">
+                                                        <div
+                                                            className="absolute bottom-0 w-full bg-blue-400/20 group-hover:bg-blue-400 transition-all duration-500 rounded-t-md"
+                                                            style={{ height: `${Math.max(v, 4)}%` }}
+                                                        />
+                                                    </div>
+                                                ))
+                                            )}
                                         </div>
                                         <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">
                                             <span>Start Period</span>
@@ -1285,18 +1446,17 @@ export default function TerminalCashbackPage() {
                                             <div className="h-0.5 w-3 bg-orange-400" /> Top Requesters
                                         </h4>
                                         <div className="space-y-2">
-                                            {[
-                                                { name: 'John Smith', count: 12, value: '£24.00' },
-                                                { name: 'Sarah Wilson', count: 8, value: '£16.00' },
-                                                { name: 'David Chen', count: 5, value: '£10.00' },
-                                            ].map((user, i) => (
-                                                <div key={i} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:border-orange-100">
+                                            {(merchantAnalysis?.topRequesters ?? []).length === 0 && (
+                                                <p className="text-[10px] text-slate-400 text-center py-4">No claimants yet.</p>
+                                            )}
+                                            {(merchantAnalysis?.topRequesters ?? []).map((user) => (
+                                                <div key={user.name} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:border-orange-100">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="h-6 w-6 rounded-full bg-slate-50 flex items-center justify-center text-[10px] font-bold text-slate-400">{user.name[0]}</div>
+                                                        <div className="h-6 w-6 rounded-full bg-slate-50 flex items-center justify-center text-[10px] font-bold text-slate-400">{user.name[0]?.toUpperCase()}</div>
                                                         <span className="font-semibold text-slate-600 text-xs">{user.name}</span>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="font-bold text-slate-700 text-sm">{user.value}</p>
+                                                        <p className="font-bold text-slate-700 text-sm">£{user.value.toFixed(2)}</p>
                                                         <p className="text-[9px] text-slate-400 font-semibold uppercase">{user.count} Claims</p>
                                                     </div>
                                                 </div>
@@ -1312,14 +1472,27 @@ export default function TerminalCashbackPage() {
                                             <div className="relative inline-flex items-center justify-center">
                                                 <svg className="h-20 w-24 -rotate-90">
                                                     <circle cx="48" cy="48" r="38" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-200" />
-                                                    <circle cx="48" cy="48" r="38" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray="238.64" strokeDashoffset="23.86" className="text-blue-400" strokeLinecap="round" />
+                                                    <circle
+                                                        cx="48"
+                                                        cy="48"
+                                                        r="38"
+                                                        stroke="currentColor"
+                                                        strokeWidth="6"
+                                                        fill="transparent"
+                                                        strokeDasharray="238.64"
+                                                        strokeDashoffset={238.64 - (238.64 * (merchantAnalysis?.approvalRate ?? 0)) / 100}
+                                                        className="text-blue-400"
+                                                        strokeLinecap="round"
+                                                    />
                                                 </svg>
-                                                <span className="absolute text-xl font-bold text-slate-700">90</span>
+                                                <span className="absolute text-xl font-bold text-slate-700">
+                                                    {merchantAnalysis?.approvalRate ?? 0}
+                                                </span>
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Terminal Trust</p>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Approval Rate</p>
                                                 <p className="text-[10px] text-slate-400 leading-relaxed font-medium px-2">
-                                                    90% of claims pass GPS and hardware checks.
+                                                    Share of this terminal&apos;s claims approved after review.
                                                 </p>
                                             </div>
                                         </div>

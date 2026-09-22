@@ -15,6 +15,8 @@ export interface Promotion {
     | 'ALL_PRODUCTS'
     | 'SPECIFIC_PRODUCTS';
   businessIds?: string[];
+  businesses?: { id: string; businessName?: string }[];
+  participants?: { id: string }[];
   multiplier?: number;
   bonusPoints?: number;
   limitPerCustomer?: number;

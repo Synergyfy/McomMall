@@ -46,9 +46,31 @@ import {
     Rocket
 } from 'lucide-react';
 
+export interface HighStreetWizardData {
+    name: string;
+    borough: string;
+    region: string;
+    categories: string;
+    description: string;
+    hubType: string;
+    hubAddress: string;
+    hubManager: string;
+    contact: string;
+    hours: string;
+    communityName: string;
+    communityDescription: string;
+    goals: string;
+    boroughManager: string;
+    moderators: string[];
+    campaignManagers: string[];
+    communityLeaders: string[];
+}
+
 interface WizardProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onComplete?: (data: HighStreetWizardData) => void;
+    isSaving?: boolean;
 }
 
 const steps = [
@@ -77,7 +99,7 @@ const FieldLabel = ({ children, tooltip }: { children: React.ReactNode, tooltip:
     </div>
 );
 
-export function HighStreetActivationWizard({ open, onOpenChange }: WizardProps) {
+export function HighStreetActivationWizard({ open, onOpenChange, onComplete, isSaving }: WizardProps) {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState({
         name: '',
@@ -487,11 +509,15 @@ export function HighStreetActivationWizard({ open, onOpenChange }: WizardProps) 
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between border-b border-slate-200 pb-2">
                                     <span className="text-slate-500">High Street</span>
-                                    <span className="font-semibold text-slate-900">Oxford Street</span>
+                                    <span className="font-semibold text-slate-900">{formData.name || '—'}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-200 pb-2">
+                                    <span className="text-slate-500">Borough</span>
+                                    <span className="font-semibold text-slate-900">{formData.borough || '—'}</span>
                                 </div>
                                 <div className="flex justify-between border-b border-slate-200 pb-2">
                                     <span className="text-slate-500">Hub Setup</span>
-                                    <span className="font-semibold text-slate-900">Virtual & Physical</span>
+                                    <span className="font-semibold text-slate-900 capitalize">{formData.hubType}</span>
                                 </div>
                             </div>
                         </div>
@@ -517,12 +543,12 @@ export function HighStreetActivationWizard({ open, onOpenChange }: WizardProps) 
                             <h4 className="text-sm font-bold text-slate-900 mb-3">Activation Coverage</h4>
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Businesses Affected</span>
-                                    <Badge variant="secondary">142 Shops</Badge>
+                                    <span className="text-slate-500">Hub Address</span>
+                                    <span className="font-semibold text-slate-900">{formData.hubAddress || '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Radius Coverage</span>
-                                    <span className="font-semibold text-slate-900">0.5 miles</span>
+                                    <span className="text-slate-500">Community</span>
+                                    <span className="font-semibold text-slate-900">{formData.communityName || '—'}</span>
                                 </div>
                             </div>
                         </div>
@@ -605,9 +631,13 @@ export function HighStreetActivationWizard({ open, onOpenChange }: WizardProps) 
                                 Save Draft
                             </Button>
                             {currentStep === steps.length ? (
-                                <Button className="bg-orange-600 hover:bg-orange-700 text-white gap-2 px-6">
+                                <Button
+                                    className="bg-orange-600 hover:bg-orange-700 text-white gap-2 px-6"
+                                    disabled={!formData.name.trim() || isSaving}
+                                    onClick={() => onComplete?.(formData)}
+                                >
                                     <Rocket className="h-4 w-4" />
-                                    Activate High Street
+                                    {isSaving ? 'Activating…' : 'Activate High Street'}
                                 </Button>
                             ) : (
                                 <Button 
