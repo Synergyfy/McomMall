@@ -207,16 +207,17 @@ export class AdminService {
     const weeklyRevenue = revenueChart.reduce((sum, day) => sum + day.value, 0);
 
     // 3. Recent Activity (Mix of Users joined and Orders placed)
-    const recentUsers = await this.userRepository.find({
-      order: { created_at: 'DESC' },
-      take: 5,
-    });
-
-    const recentOrders = await this.orderRepository.find({
-      relations: ['user'],
-      order: { created_at: 'DESC' },
-      take: 5,
-    });
+    const [recentUsers, recentOrders] = await Promise.all([
+      this.userRepository.find({
+        order: { created_at: 'DESC' },
+        take: 5,
+      }),
+      this.orderRepository.find({
+        relations: ['user'],
+        order: { created_at: 'DESC' },
+        take: 5,
+      }),
+    ]);
 
     const activities = [
       ...recentUsers.map((u) => ({
@@ -226,7 +227,7 @@ export class AdminService {
       })),
       ...recentOrders.map((o) => ({
         type: 'order',
-        message: `New order #${o.id} by ${o.user?.name || 'Unknown'} for $${o.total}`,
+        message: `New order #${o.id.slice(0, 8)} by ${o.user?.name || 'Unknown'} — £${Number(o.total).toFixed(2)}`,
         timestamp: o.created_at,
       })),
     ]

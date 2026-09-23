@@ -68,7 +68,7 @@ export default function ActivityTimerAddPage() {
             toast.success('Task published successfully');
             router.push('/admin/activity-timer');
         } catch (error) {
-            console.error(error);
+            toast.error('Failed to publish task. Please try again.');
         }
     };
 

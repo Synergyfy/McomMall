@@ -415,9 +415,9 @@ export class PartnershipService {
         ],
       });
 
-      for (const orphan of orphanRequests) {
-        orphan.partnership = savedPartnership;
-        await this.itemPartnershipRequestRepository.save(orphan);
+      if (orphanRequests.length > 0) {
+        orphanRequests.forEach((orphan) => { orphan.partnership = savedPartnership; });
+        await this.itemPartnershipRequestRepository.save(orphanRequests);
       }
     } else {
       request.rejectedAt = new Date();

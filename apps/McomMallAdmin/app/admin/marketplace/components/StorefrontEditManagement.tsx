@@ -25,6 +25,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
+import { useUpdateBusiness } from '@/service/admin/hook';
 
 interface StorefrontEditManagementProps {
     store: any;
@@ -49,14 +51,18 @@ export const StorefrontEditManagement: React.FC<StorefrontEditManagementProps> =
         keywords: store.keywords || 'coffee, roastery, espresso, morning, north borough, artisan...',
     });
 
-    const [isSaving, setIsSaving] = useState(false);
+    const updateMutation = useUpdateBusiness();
 
     const handleSave = async () => {
-        setIsSaving(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await updateMutation.mutateAsync({
+            id: store.id,
+            data: {
+                businessName: formData.name,
+                shortDescription: formData.description?.slice(0, 255),
+                about: formData.description,
+            },
+        });
         onSave({ ...store, ...formData, visibility: formData.featured ? 'Featured' : 'High' });
-        setIsSaving(false);
     };
 
     return (
@@ -88,10 +94,11 @@ export const StorefrontEditManagement: React.FC<StorefrontEditManagementProps> =
                         </Button>
                         <Button 
                             onClick={handleSave}
-                            disabled={isSaving}
+                            disabled={updateMutation.isPending}
                             className="h-11 px-8 font-black text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-95 disabled:opacity-70"
                         >
-                            {isSaving ? 'Saving...' : 'Save Changes'}
+                            {updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>
                 </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import {
     Dialog,
     DialogContent,
@@ -125,9 +126,7 @@ export function HighStreetActivationWizard({ open, onOpenChange, onComplete, isS
     const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 1));
 
     const handleManagementAction = (type: string) => {
-        // In production, these would open specific selection modals or API calls
-        console.log(`Triggering ${type} action`);
-        // Simulating some UI feedback
+        toast.info(`Step "${type}" is not yet wired to the backend.`);
     };
 
     const renderStepContent = () => {

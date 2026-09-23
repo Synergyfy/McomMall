@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -177,6 +178,14 @@ export class TerminalCashbackService {
         'Configuration already exists for this owner.',
       );
 
+    // Assign server-side UUIDs to any ranges missing an id
+    if (dto.ranges) {
+      dto.ranges = dto.ranges.map((r) => ({
+        ...r,
+        id: r.id ?? randomUUID(),
+      }));
+    }
+
     const config = this.configRepository.create(dto);
     return this.configRepository.save(config);
   }
@@ -204,6 +213,13 @@ export class TerminalCashbackService {
     dto: UpdateTerminalConfigDto,
   ): Promise<TerminalConfig> {
     const config = await this.getConfig(userId);
+    // Assign server-side UUIDs to any ranges missing an id
+    if (dto.ranges) {
+      dto.ranges = dto.ranges.map((r) => ({
+        ...r,
+        id: r.id ?? randomUUID(),
+      }));
+    }
     Object.assign(config, dto);
     return this.configRepository.save(config);
   }

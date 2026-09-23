@@ -65,7 +65,6 @@ export default function AddProductPage() {
     });
 
     const onSubmit = (data: any) => {
-        console.log('Final Product Data:', data);
         toast.success('Product created successfully!');
         router.push('/admin/products');
     };

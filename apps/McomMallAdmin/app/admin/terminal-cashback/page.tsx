@@ -137,6 +137,19 @@ export default function TerminalCashbackPage() {
     const owners = ownersData?.data || [];
     const { data: globalRules, isLoading: isRulesLoading } = useGetGlobalRules();
 
+    // Claims queue search (filters the table below by user, owner, or claim ID)
+    const [claimSearch, setClaimSearch] = useState('');
+    const filteredClaims = useMemo(() => {
+        const q = claimSearch.trim().toLowerCase();
+        if (!q) return claims;
+        return claims.filter((c) =>
+            c.id.toLowerCase().includes(q) ||
+            c.userName?.toLowerCase().includes(q) ||
+            c.ownerName?.toLowerCase().includes(q) ||
+            c.userId.toLowerCase().includes(q),
+        );
+    }, [claims, claimSearch]);
+
     interface FraudFlag {
         claim: TerminalCashbackClaim;
         severity: 'HIGH' | 'MEDIUM' | 'LOW';
@@ -316,7 +329,7 @@ export default function TerminalCashbackPage() {
                     userId: owner.id,
                     userName: owner.name,
                     level: onboardLevels[0],
-                    ranges: onboardLevels.includes(1) ? [{ id: Math.random().toString(36).substr(2, 9), minSpend: 10, maxSpend: 100, rewardValue: 2, isActive: true }] : [],
+                    ranges: onboardLevels.includes(1) ? [{ minSpend: 10, maxSpend: 100, rewardValue: 2, isActive: true }] : [],
                     fixedRewardValue: onboardLevels.includes(2) ? 1.00 : onboardLevels.includes(3) ? 5.00 : undefined,
                     rewardType: onboardLevels.includes(3) ? 'fixed' : undefined,
                     apiEndpoint: onboardLevels.includes(3) ? 'https://api.merchant.com/v1/verify' : undefined,
@@ -337,7 +350,6 @@ export default function TerminalCashbackPage() {
             setOnboardLevels([]);
             setOnboardUserIds([]);
         } catch (error) {
-            console.error(error);
             toast.error("Failed to onboard one or more owners.");
         } finally {
             setIsInitializing(false);
@@ -352,11 +364,11 @@ export default function TerminalCashbackPage() {
     const handleAddRange = () => {
         if (!selectedConfig) return;
         const newRange = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: crypto.randomUUID(),
             minSpend: 0,
             maxSpend: 0,
             rewardValue: 0,
-            isActive: true
+            isActive: true,
         };
         setSelectedConfig({
             ...selectedConfig,
@@ -364,11 +376,13 @@ export default function TerminalCashbackPage() {
         });
     };
 
-    const handleRemoveRange = (rangeId: string) => {
+    const handleRemoveRange = (rangeId?: string, index?: number) => {
         if (!selectedConfig) return;
         setSelectedConfig({
             ...selectedConfig,
-            ranges: selectedConfig.ranges.filter(r => r.id !== rangeId)
+            ranges: selectedConfig.ranges.filter((r, i) =>
+                rangeId !== undefined ? r.id !== rangeId || i !== index : i !== index,
+            ),
         });
     };
 
@@ -696,7 +710,12 @@ export default function TerminalCashbackPage() {
                                 <div className="flex items-center gap-2">
                                     <div className="relative">
                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                        <Input placeholder="Search user or ID..." className="pl-9 w-64 bg-slate-50 border-slate-200 focus:bg-white text-sm" />
+                                        <Input
+                                            placeholder="Search user or ID..."
+                                            className="pl-9 w-64 bg-slate-50 border-slate-200 focus:bg-white text-sm"
+                                            value={claimSearch}
+                                            onChange={(e) => setClaimSearch(e.target.value)}
+                                        />
                                     </div>
                                     <Button variant="outline" size="icon" className="border-slate-200 bg-white"><Filter className="h-4 w-4 text-slate-500" /></Button>
                                 </div>
@@ -715,7 +734,7 @@ export default function TerminalCashbackPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {claims.map((claim) => (
+                                    {filteredClaims.map((claim) => (
                                         <TableRow key={claim.id} className="hover:bg-slate-50/50 cursor-pointer group border-b border-slate-50" onClick={() => { setSelectedClaim(claim); setIsClaimSheetOpen(true); }}>
                                             <TableCell className="font-mono text-[11px] text-slate-400 pl-6">{claim.id}</TableCell>
                                             <TableCell className="font-semibold text-slate-700">{claim.userName}</TableCell>
@@ -1162,8 +1181,8 @@ export default function TerminalCashbackPage() {
 
                                     {selectedConfig.level === 1 ? (
                                         <div className="space-y-2">
-                                            {selectedConfig.ranges.map((range) => (
-                                                <div key={range.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-orange-200 transition-all">
+                                            {selectedConfig.ranges.map((range, idx) => (
+                                                <div key={range.id ?? `new-${idx}`} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-orange-200 transition-all">
                                                     <div className="flex-1 grid grid-cols-2 gap-4">
                                                         <div>
                                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Spend Window</p>
@@ -1175,7 +1194,7 @@ export default function TerminalCashbackPage() {
                                                                     className="h-8 w-16 p-1 font-bold text-sm bg-slate-50 border-slate-200"
                                                                     onBlur={(e) => {
                                                                         const val = Number(e.target.value);
-                                                                        const updatedRanges = selectedConfig.ranges.map(r => r.id === range.id ? { ...r, minSpend: val } : r);
+                                                                        const updatedRanges = selectedConfig.ranges.map((r, i) => i === idx ? { ...r, minSpend: val } : r);
                                                                         setSelectedConfig({ ...selectedConfig, ranges: updatedRanges });
                                                                     }}
                                                                 />
@@ -1187,7 +1206,7 @@ export default function TerminalCashbackPage() {
                                                                     className="h-8 w-16 p-1 font-bold text-sm bg-slate-50 border-slate-200"
                                                                     onBlur={(e) => {
                                                                         const val = Number(e.target.value);
-                                                                        const updatedRanges = selectedConfig.ranges.map(r => r.id === range.id ? { ...r, maxSpend: val } : r);
+                                                                        const updatedRanges = selectedConfig.ranges.map((r, i) => i === idx ? { ...r, maxSpend: val } : r);
                                                                         setSelectedConfig({ ...selectedConfig, ranges: updatedRanges });
                                                                     }}
                                                                 />
@@ -1204,14 +1223,14 @@ export default function TerminalCashbackPage() {
                                                                     className="h-8 w-20 p-1 font-bold text-sm bg-orange-50/50 border-orange-100 focus:border-orange-400 text-orange-600"
                                                                     onBlur={(e) => {
                                                                         const val = Number(e.target.value);
-                                                                        const updatedRanges = selectedConfig.ranges.map(r => r.id === range.id ? { ...r, rewardValue: val } : r);
+                                                                        const updatedRanges = selectedConfig.ranges.map((r, i) => i === idx ? { ...r, rewardValue: val } : r);
                                                                         setSelectedConfig({ ...selectedConfig, ranges: updatedRanges });
                                                                     }}
                                                                 />
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-300 hover:text-red-400 transition-colors" onClick={() => handleRemoveRange(range.id)}><XCircle className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-300 hover:text-red-400 transition-colors" onClick={() => handleRemoveRange(range.id, idx)}><XCircle className="h-4 w-4" /></Button>
                                                 </div>
                                             ))}
                                         </div>
