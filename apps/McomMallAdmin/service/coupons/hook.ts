@@ -1,4 +1,5 @@
 import useSWR, { useSWRConfig } from 'swr';
+import { useQuery } from '@tanstack/react-query';
 import {
   Coupon,
   CreateCouponDto,
@@ -11,6 +12,31 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
+
+export interface CouponPage {
+  data: Coupon[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+// Platform-wide paginated coupon list for admin (GET /coupons/list is public + paginated)
+export const useGetAllCoupons = (params: { page?: number; limit?: number } = {}) => {
+  const { page = 1, limit = 10 } = params;
+  return useQuery({
+    queryKey: ['FETCH_ALL_COUPONS', page, limit],
+    queryFn: async (): Promise<CouponPage> => {
+      const response = await api.get('/coupons/list', { params: { page, limit } });
+      return response.data;
+    },
+  });
+};
 
 export const useGetCoupons = () => {
   const token = useSelector((state: RootState) => state.auth.accessToken);

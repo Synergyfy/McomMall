@@ -158,17 +158,19 @@ export class GroupCirclesService {
         });
         const networkUserMap = new Map(networkUsers.map((u) => [u.id, u]));
 
-        for (const userId of createGroupDto.networkIds) {
-          const user = networkUserMap.get(userId);
-          if (user) {
-            const member = manager.create(GroupMember, {
+        const networkMembers = createGroupDto.networkIds
+          .map((userId) => networkUserMap.get(userId))
+          .filter((u): u is User => Boolean(u))
+          .map((user) =>
+            manager.create(GroupMember, {
               group: saved,
               user,
               role: MemberRole.MEMBER,
               status: GroupMemberStatus.PENDING_PAYMENT,
-            });
-            await manager.save(member);
-          }
+            }),
+          );
+        if (networkMembers.length > 0) {
+          await manager.save(GroupMember, networkMembers);  // 1 save for all
         }
       }
 
@@ -182,17 +184,19 @@ export class GroupCirclesService {
         });
         const referredUserMap = new Map(referredUsers.map((u) => [u.id, u]));
 
-        for (const userId of createGroupDto.referredBusinessIds) {
-          const user = referredUserMap.get(userId);
-          if (user) {
-            const member = manager.create(GroupMember, {
+        const referredMembers = createGroupDto.referredBusinessIds
+          .map((userId) => referredUserMap.get(userId))
+          .filter((u): u is User => Boolean(u))
+          .map((user) =>
+            manager.create(GroupMember, {
               group: saved,
               user,
               role: MemberRole.MEMBER,
               status: GroupMemberStatus.PENDING_PAYMENT,
-            });
-            await manager.save(member);
-          }
+            }),
+          );
+        if (referredMembers.length > 0) {
+          await manager.save(GroupMember, referredMembers);  // 1 save for all
         }
       }
 

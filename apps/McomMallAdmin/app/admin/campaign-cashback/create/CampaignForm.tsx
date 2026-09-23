@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CampaignTargetType, CampaignDisplayType, CampaignUnlockMode, SpendingChannel } from '../types';
 import { Lock, Unlock, Globe, Info, Layers, Search, X, Check, ChevronDown, ChevronUp, Users, Building2, CalendarRange, Plus, Trash2, Crown, Navigation } from 'lucide-react';
 import { useGetAdminUsers, useGetAdminBusinesses } from '@/service/admin/hook';
-import { useGetTiers } from '@/service/tiers/hook';
+import { useGetPlans } from '@/service/plans/hook';
 import { useCreateCampaignCashback } from '@/service/campaign-cashback/hook';
 import { useCreateSeason, useGetSeasons } from '@/service/seasons/hook';
 import {
@@ -130,8 +130,8 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
         'Share campaign to 1 friend'
     ]);
 
-    // Live Tiers Data
-    const { data: tiers = [], isLoading: isLoadingTiers } = useGetTiers();
+    // Live Plans Data
+    const { data: plans = [], isLoading: isLoadingPlans } = useGetPlans();
     const [selectedSubscriptionTier, setSelectedSubscriptionTier] = useState<string>('all');
 
 
@@ -314,11 +314,11 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
 
                                         {audienceFilter === 'subscription' && (
                                             <div className="max-w-sm">
-                                                <Select value={selectedSubscriptionTier} onValueChange={setSelectedSubscriptionTier} disabled={isLoadingTiers}>
-                                                    <SelectTrigger className="bg-white text-sm"><SelectValue placeholder={isLoadingTiers ? "Loading tiers..." : "Select Tier"} /></SelectTrigger>
+                                                <Select value={selectedSubscriptionTier} onValueChange={setSelectedSubscriptionTier} disabled={isLoadingPlans}>
+                                                    <SelectTrigger className="bg-white text-sm"><SelectValue placeholder={isLoadingPlans ? "Loading plans..." : "Select Plan"} /></SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="all">All Tiers (Global)</SelectItem>
-                                                        {tiers.map(tier => (<SelectItem key={tier.id} value={tier.id}>{tier.name}</SelectItem>))}
+                                                        <SelectItem value="all">All Plans (Global)</SelectItem>
+                                                        {plans.map(plan => (<SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>

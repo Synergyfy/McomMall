@@ -111,6 +111,16 @@ export const useUpdateParticipantPoints = () => {
   });
 };
 
+export const useGetAdminPromotions = () => {
+  return useQuery<Promotion[], Error>({
+    queryKey: ['admin-promotions'],
+    queryFn: async () => {
+      const { data } = await api.get<Promotion[]>('/admin/promotions');
+      return data;
+    },
+  });
+};
+
 export const useGetParticipants = () => {
   return useQuery<Participant[], Error>({
     queryKey: ['promotion-participants'],

@@ -16,10 +16,21 @@ export interface Notification {
   updatedAt:string;
   recipientId: string;
   senderId: string | null;
-  type: 'new_message' | 'new_booking' | 'new_order';
+  type: 'new_message' | 'new_booking' | 'new_order' | 'broadcast_alert' | 'event_invite';
   entityId: string;
   seen: boolean;
   sender: Sender | null;
+}
+
+export type BroadcastType = 'broadcast_alert' | 'event_invite';
+
+export interface BroadcastNotificationDto {
+  title: string;
+  message: string;
+  segmentId?: string;
+  recipientIds?: string[];
+  type?: BroadcastType;
+  entityId?: string;
 }
 
 export type NotificationData = Notification[];

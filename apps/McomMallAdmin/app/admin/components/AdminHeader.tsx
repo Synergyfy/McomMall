@@ -34,53 +34,77 @@ import {
     AlertCircle,
     CheckCircle,
     Clock,
+    MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navItems } from '../data/navigation';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/service/store/store';
+import { useLogout } from '@/service/auth/hook';
+import { useGetNotifications, useMarkNotificationsAsSeen } from '@/service/notifications/hook';
+import type { Notification } from '@/service/notifications/types';
 
-interface Notification {
-    id: string;
-    type: 'alert' | 'success' | 'info';
-    title: string;
-    message: string;
-    time: string;
-    read: boolean;
+function getNotificationTitle(n: Notification): string {
+    switch (n.type) {
+        case 'new_order':
+            return 'New Order Placed';
+        case 'new_booking':
+            return 'New Booking Received';
+        case 'new_message':
+            return n.sender?.name ? `Message from ${n.sender.name}` : 'New Message';
+        case 'broadcast_alert':
+            return 'Broadcast Announcement';
+        case 'event_invite':
+            return 'Event Invitation';
+        default:
+            return 'System Notification';
+    }
 }
 
-const mockNotifications: Notification[] = [
-    {
-        id: '1',
-        type: 'alert',
-        title: 'Fraud Alert',
-        message: '3 suspicious transactions detected',
-        time: '2 min ago',
-        read: false,
-    },
-    {
-        id: '2',
-        type: 'success',
-        title: 'Payout Complete',
-        message: '£12,500 sent to Luxury Hotels Inc',
-        time: '15 min ago',
-        read: false,
-    },
-    {
-        id: '3',
-        type: 'info',
-        title: 'New Business Signup',
-        message: 'TechHub Electronics joined the platform',
-        time: '1 hour ago',
-        read: true,
-    },
-    {
-        id: '4',
-        type: 'alert',
-        title: 'Verification Pending',
-        message: '8 verifications awaiting review',
-        time: '2 hours ago',
-        read: true,
-    },
-];
+function getNotificationMessage(n: Notification): string {
+    switch (n.type) {
+        case 'new_order':
+            return `Order #${n.entityId?.slice(0, 8) || ''} is awaiting fulfillment`;
+        case 'new_booking':
+            return `Booking #${n.entityId?.slice(0, 8) || ''} scheduled`;
+        case 'new_message':
+            return 'New customer inquiry in chat inbox';
+        case 'broadcast_alert':
+            return 'Platform broadcast published to audience';
+        case 'event_invite':
+            return 'You have been invited to a borough event';
+        default:
+            return `Update on item #${n.entityId?.slice(0, 8) || ''}`;
+    }
+}
+
+function formatRelativeTime(dateStr: string): string {
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    if (isNaN(diffMs) || diffMs < 0) return 'Just now';
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDays = Math.floor(diffHr / 24);
+    return `${diffDays}d ago`;
+}
+
+function getNotificationIcon(type: Notification['type']) {
+    switch (type) {
+        case 'new_order':
+            return <CheckCircle className="h-4 w-4 text-green-500" />;
+        case 'new_booking':
+            return <Clock className="h-4 w-4 text-blue-500" />;
+        case 'broadcast_alert':
+            return <AlertCircle className="h-4 w-4 text-orange-500" />;
+        case 'new_message':
+            return <MessageSquare className="h-4 w-4 text-purple-500" />;
+        default:
+            return <Clock className="h-4 w-4 text-blue-500" />;
+    }
+}
 
 interface AdminHeaderProps {
     onMenuClick?: () => void;
@@ -90,7 +114,10 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     const pathname = usePathname();
     const router = useRouter();
     const [open, setOpen] = useState(false);
-    const [notifications, setNotifications] = useState(mockNotifications);
+    const { notifications = [], unseenIds = [], isLoading } = useGetNotifications();
+    const markSeenMutation = useMarkNotificationsAsSeen();
+    const { userName, userRole } = useSelector((state: RootState) => state.auth);
+    const logout = useLogout();
     const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
@@ -105,7 +132,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         return () => document.removeEventListener('keydown', down);
     }, []);
 
-    const unreadCount = notifications.filter((n) => !n.read).length;
+    const unreadCount = unseenIds.length;
 
     const getPageTitle = () => {
         const segments = pathname.split('/').filter(Boolean);
@@ -115,23 +142,12 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     };
 
     const markAsRead = (id: string) => {
-        setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-        );
+        markSeenMutation.mutate({ notificationIds: [id] });
     };
 
     const markAllAsRead = () => {
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    };
-
-    const getNotificationIcon = (type: Notification['type']) => {
-        switch (type) {
-            case 'alert':
-                return <AlertCircle className="h-4 w-4 text-red-500" />;
-            case 'success':
-                return <CheckCircle className="h-4 w-4 text-green-500" />;
-            default:
-                return <Clock className="h-4 w-4 text-blue-500" />;
+        if (unseenIds.length > 0) {
+            markSeenMutation.mutate({ notificationIds: unseenIds });
         }
     };
 
@@ -250,6 +266,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                                     variant="ghost"
                                     size="sm"
                                     onClick={markAllAsRead}
+                                    disabled={markSeenMutation.isPending}
                                     className="text-xs text-orange-500 hover:text-orange-600 h-auto p-0"
                                 >
                                     Mark all as read
@@ -258,31 +275,45 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <div className="max-h-80 overflow-y-auto">
-                            {notifications.map((notification) => (
-                                <DropdownMenuItem
-                                    key={notification.id}
-                                    className={cn(
-                                        'flex items-start gap-3 p-3 cursor-pointer',
-                                        !notification.read && 'bg-orange-50'
-                                    )}
-                                    onClick={() => markAsRead(notification.id)}
-                                >
-                                    <div className="mt-0.5">{getNotificationIcon(notification.type)}</div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className={cn('text-sm font-medium', !notification.read && 'text-slate-900')}>
-                                            {notification.title}
-                                        </p>
-                                        <p className="text-xs text-slate-500 truncate">{notification.message}</p>
-                                        <p className="text-xs text-slate-400 mt-1">{notification.time}</p>
-                                    </div>
-                                    {!notification.read && (
-                                        <div className="w-2 h-2 bg-orange-500 rounded-full mt-1.5" />
-                                    )}
-                                </DropdownMenuItem>
-                            ))}
+                            {isLoading ? (
+                                <div className="p-4 text-center text-xs text-slate-400">Loading notifications…</div>
+                            ) : notifications.length === 0 ? (
+                                <div className="p-4 text-center text-xs text-slate-400">No notifications yet</div>
+                            ) : (
+                                notifications.map((notification) => {
+                                    const isUnread = !notification.seen;
+                                    return (
+                                        <DropdownMenuItem
+                                            key={notification.id}
+                                            className={cn(
+                                                'flex items-start gap-3 p-3 cursor-pointer',
+                                                isUnread && 'bg-orange-50/60'
+                                            )}
+                                            onClick={() => {
+                                                if (isUnread) markAsRead(notification.id);
+                                            }}
+                                        >
+                                            <div className="mt-0.5">{getNotificationIcon(notification.type)}</div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={cn('text-sm font-medium', isUnread ? 'text-slate-900 font-semibold' : 'text-slate-700')}>
+                                                    {getNotificationTitle(notification)}
+                                                </p>
+                                                <p className="text-xs text-slate-500 truncate">{getNotificationMessage(notification)}</p>
+                                                <p className="text-xs text-slate-400 mt-1">{formatRelativeTime(notification.createdAt)}</p>
+                                            </div>
+                                            {isUnread && (
+                                                <div className="w-2 h-2 bg-orange-500 rounded-full mt-1.5 shrink-0" />
+                                            )}
+                                        </DropdownMenuItem>
+                                    );
+                                })
+                            )}
                         </div>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-center text-sm text-orange-500 hover:text-orange-600 justify-center">
+                        <DropdownMenuItem
+                            onClick={() => router.push('/admin/notifications')}
+                            className="text-center text-sm text-orange-500 hover:text-orange-600 justify-center cursor-pointer"
+                        >
                             View all notifications
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -293,14 +324,13 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="flex items-center gap-2 pl-2 pr-3">
                             <Avatar className="h-8 w-8">
-                                <AvatarImage src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop" />
-                                <AvatarFallback className="bg-gradient-to-br from-orange-400 to-orange-600 text-white text-xs">
-                                    SA
+                                <AvatarFallback className="bg-gradient-to-br from-orange-400 to-orange-600 text-white text-xs font-bold">
+                                    {(userName || 'Admin').slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
                             <div className="hidden md:block text-left">
-                                <p className="text-sm font-medium text-slate-900">Super Admin</p>
-                                <p className="text-xs text-slate-500">Super Admin</p>
+                                <p className="text-sm font-medium text-slate-900">{userName || 'Admin'}</p>
+                                <p className="text-xs text-slate-500 capitalize">{userRole || 'Super Admin'}</p>
                             </div>
                             <ChevronDown className="hidden md:block h-4 w-4 text-slate-400" />
                         </Button>
@@ -308,21 +338,21 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                     <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuLabel>
                             <div className="flex flex-col space-y-1">
-                                <p className="text-sm font-medium">Super Admin</p>
-                                <p className="text-xs text-slate-500">admin@mcommall.com</p>
+                                <p className="text-sm font-medium">{userName || 'Admin'}</p>
+                                <p className="text-xs text-slate-500 capitalize">{userRole || 'Super Admin'}</p>
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push('/admin/team')} className="cursor-pointer">
                             <User className="mr-2 h-4 w-4" />
-                            Profile
+                            Team & Access
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push('/admin/settings')} className="cursor-pointer">
                             <Settings className="mr-2 h-4 w-4" />
                             Settings
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
                             <LogOut className="mr-2 h-4 w-4" />
                             Logout
                         </DropdownMenuItem>

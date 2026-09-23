@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import api from '../api';
-import { Notification, NotificationData, MarkAsSeenPayload } from './types';
+import { Notification, NotificationData, MarkAsSeenPayload, BroadcastNotificationDto } from './types';
 import { useMemo } from 'react';
 
 export const NOTIFICATIONS_QUERY_KEY = 'notifications';
 
-export const useGetNotifications = () => {
+export const useGetNotifications = (options: { enabled?: boolean } = {}) => {
   const fetchNotifications = async (): Promise<NotificationData> => {
     try {
       const response = await api.get('/notifications');
@@ -19,7 +20,7 @@ export const useGetNotifications = () => {
   const queryResult = useQuery<NotificationData, Error>({
     queryKey: [NOTIFICATIONS_QUERY_KEY],
     queryFn: fetchNotifications,
-    enabled: false,
+    enabled: options.enabled ?? true,
     refetchInterval: 30000,
   });
 
@@ -78,6 +79,26 @@ export const useGetNotifications = () => {
   }, [notifications]);
 
   return { ...queryResult, ...processedData };
+};
+
+export const useBroadcastNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: BroadcastNotificationDto) => {
+      const response = await api.post('/notifications/broadcast', dto);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY] });
+      toast.success('Broadcast sent');
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Failed to send broadcast';
+      toast.error(message);
+    },
+  });
 };
 
 export const useMarkNotificationsAsSeen = () => {

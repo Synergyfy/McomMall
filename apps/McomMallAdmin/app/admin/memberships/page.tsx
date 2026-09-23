@@ -1,6 +1,6 @@
 'use client';
 
-import { useGetTiers } from '@/service/tiers/hook';
+import { useGetPlans } from '@/service/plans/hook';
 import { useGetAdminBusinesses, useGetBusinessStats } from '@/service/admin/hook';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,11 +37,11 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function MembershipsPage() {
-    const { data: tiers, isLoading: isTiersLoading } = useGetTiers();
+    const { data: plans, isLoading: isPlansLoading } = useGetPlans();
     const { data: businessesResponse, isLoading: isBusinessesLoading } = useGetAdminBusinesses({ limit: 10, page: 1 });
     const { data: stats, isLoading: isStatsLoading } = useGetBusinessStats();
 
-    const isLoading = isTiersLoading || isBusinessesLoading || isStatsLoading;
+    const isLoading = isPlansLoading || isBusinessesLoading || isStatsLoading;
 
     if (isLoading) {
         return <div className="p-8 text-center text-slate-500">Loading membership data...</div>;
@@ -50,11 +50,10 @@ export default function MembershipsPage() {
     const businesses = businessesResponse?.data || [];
 
     // Helper to get tier icon
-    const getTierIcon = (tierName: string) => {
-        const name = tierName.toLowerCase();
-        if (name.includes('platinum')) return <Crown className="h-5 w-5" />;
-        if (name.includes('gold')) return <Star className="h-5 w-5" />;
-        if (name.includes('silver')) return <Shield className="h-5 w-5" />;
+    const getTierIcon = (planName: string) => {
+        const name = planName.toLowerCase();
+        if (name.includes('plus') || name.includes('pro')) return <Crown className="h-5 w-5" />;
+        if (name.includes('premium') || name.includes('gold')) return <Star className="h-5 w-5" />;
         return <Award className="h-5 w-5" />;
     };
 
@@ -63,43 +62,31 @@ export default function MembershipsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Membership Management</h1>
-                    <p className="text-slate-500">Manage business subscription tiers and benefits</p>
+                    <p className="text-slate-500">Manage business subscription plans and benefits</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button asChild variant="outline">
-                        <Link href="/admin/plans">Manage Plans</Link>
+                        <Link href="/admin/seasons">Manage Seasons</Link>
                     </Button>
                     <Button asChild className="bg-slate-900 hover:bg-slate-800">
-                        <Link href="/admin/tiers">Manage Tiers</Link>
+                        <Link href="/admin/plans">Manage Plans</Link>
                     </Button>
                 </div>
             </div>
 
-            {/* Stats Overview - Dynamic Tiers */}
+            {/* Stats Overview - Dynamic Plans */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {tiers?.slice(0, 4).map((tier) => (
-                    <Card key={tier.id} className={cn(
-                        "border-0 shadow-sm border-t-4",
-                        tier.name.toLowerCase().includes('platinum') ? "border-t-slate-900" :
-                            tier.name.toLowerCase().includes('gold') ? "border-t-yellow-400" :
-                                tier.name.toLowerCase().includes('silver') ? "border-t-slate-400" :
-                                    "border-t-amber-700"
-                    )}>
+                {plans?.slice(0, 4).map((plan) => (
+                    <Card key={plan.id} className="border-0 shadow-sm border-t-4 border-t-indigo-600">
                         <CardContent className="p-4 flex items-center gap-4">
-                            <div className={cn(
-                                "p-3 rounded-xl",
-                                tier.name.toLowerCase().includes('platinum') ? "bg-slate-200 text-slate-900" :
-                                    tier.name.toLowerCase().includes('gold') ? "bg-yellow-100 text-yellow-600" :
-                                        tier.name.toLowerCase().includes('silver') ? "bg-slate-100 text-slate-500" :
-                                            "bg-amber-100 text-amber-700"
-                            )}>
-                                {getTierIcon(tier.name)}
+                            <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
+                                {getTierIcon(plan.name)}
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-slate-900">
-                                    {Math.floor(Math.random() * 1000)} 
+                                    {plan.variants?.length || 0}
                                 </p>
-                                <p className="text-sm text-slate-500 font-medium">{tier.name} Members</p>
+                                <p className="text-sm text-slate-500 font-medium">{plan.name} (Variants)</p>
                             </div>
                         </CardContent>
                     </Card>

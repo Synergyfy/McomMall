@@ -3,7 +3,7 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { MembershipTier } from '../membership-tier.enum';
 import { MembershipPayment } from './membership-payment.entity';
-import { Tier } from '../../tier/entities/tier.entity';
+import { PlanVariant } from '../../plans/entities/plan-variant.entity';
 import { PlanType } from '../dto/initiate-membership-payment.dto';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -13,19 +13,14 @@ export class Membership extends AbstractBaseEntity {
   @Column({ name: 'tier', type: 'enum', enum: MembershipTier, nullable: true })
   tierType: MembershipTier;
 
-  @ApiProperty({ type: () => Tier, nullable: true })
-  @ManyToOne(() => Tier, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'tier_id' })
-  tier: Tier;
-
-  @ApiProperty({ nullable: true })
-  @Column({ name: 'tier_id', nullable: true })
-  tierId: string;
+  @ApiProperty({ type: () => PlanVariant, nullable: true })
+  @ManyToOne(() => PlanVariant, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'plan_variant_id' })
+  planVariant: PlanVariant;
 
   @ApiProperty({
     nullable: true,
-    description:
-      'Purchased plan variant (new plans model). Null for legacy tier purchases.',
+    description: 'Purchased plan variant id.',
   })
   @Column({ name: 'plan_variant_id', type: 'uuid', nullable: true })
   planVariantId: string | null;

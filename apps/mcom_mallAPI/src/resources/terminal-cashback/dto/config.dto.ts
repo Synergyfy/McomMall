@@ -13,9 +13,10 @@ import { Type } from 'class-transformer';
 import { TerminalLevel } from '../entities/terminal-config.entity';
 
 class RangeDto {
-  @ApiProperty({ example: 'range_1', description: 'Unique ID for this range' })
+  @ApiProperty({ example: 'range_1', description: 'Unique ID for this range (auto-generated if omitted)' })
   @IsString()
-  id: string;
+  @IsOptional()
+  id?: string;
 
   @ApiProperty({ example: 10.0, description: 'Minimum spend amount' })
   @IsNumber()

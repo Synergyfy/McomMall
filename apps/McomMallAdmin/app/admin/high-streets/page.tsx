@@ -1,29 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { 
-    Plus, 
-    Search, 
-    Filter, 
-    MoreVertical, 
-    MapPin, 
-    Users, 
-    Building2, 
-    Activity,
+import {
+    Plus,
+    Search,
+    MoreVertical,
+    MapPin,
+    Building2,
     Globe,
-    QrCode,
-    CheckCircle2,
-    Clock,
-    AlertCircle,
-    BarChart3,
-    Rocket,
-    Store,
+    Trash2,
+    AlertTriangle,
+    Loader2,
     Map as MapIcon,
-    Rss,
-    ShoppingCart
+    Store,
+    Clock,
+    CheckCircle2,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -43,243 +37,163 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { HighStreetActivationWizard } from './components/HighStreetActivationWizard';
+import { HighStreetActivationWizard, HighStreetWizardData } from './components/HighStreetActivationWizard';
 import { cn } from '@/lib/utils';
 import { MapLayerData } from '@/components/MapComponent';
+import {
+    useGetHighStreets,
+    useGetHighStreetStats,
+    useCreateHighStreet,
+    useUpdateHighStreet,
+    useDeleteHighStreet,
+} from '@/service/high-streets/hook';
+import { useGetBoroughs } from '@/service/boroughs/hook';
+import type { HighStreetStatus } from '@/service/high-streets/types';
 
-const MapComponent = dynamic(() => import('@/components/MapComponent'), { 
+const MapComponent = dynamic(() => import('@/components/MapComponent'), {
     ssr: false,
     loading: () => (
         <div className="w-full h-full bg-slate-100 animate-pulse flex items-center justify-center rounded-lg">
             <MapIcon className="h-8 w-8 text-slate-300" />
         </div>
-    )
+    ),
 });
 
-// Advanced Simulated Map Data
-const mapData: MapLayerData[] = [
-    // High Street Zones (Polygons)
-    {
-        id: 'z1',
-        type: 'zone',
-        name: 'Oxford Street Core',
-        bounds: [
-            [51.5160, -0.1500],
-            [51.5165, -0.1400],
-            [51.5135, -0.1400],
-            [51.5130, -0.1500]
-        ],
-        color: '#f97316',
-        details: 'Primary commercial zone with 145 active businesses.'
-    },
-    {
-        id: 'z2',
-        type: 'zone',
-        name: 'Kings Road District',
-        bounds: [
-            [51.4890, -0.1750],
-            [51.4895, -0.1600],
-            [51.4865, -0.1600],
-            [51.4860, -0.1750]
-        ],
-        color: '#3b82f6',
-        details: 'Upscale retail and dining district.'
-    },
-
-    // Activation Zones (Circles)
-    {
-        id: 'a1',
-        type: 'activation',
-        name: 'West End Tech Hub',
-        coordinates: [51.5145, -0.1448],
-        radius: 300,
-        intensity: 0.5,
-        color: '#f59e0b'
-    },
-    {
-        id: 'a2',
-        type: 'activation',
-        name: 'Chelsea Virtual Zone',
-        coordinates: [51.4875, -0.1685],
-        radius: 400,
-        intensity: 0.3,
-        color: '#6366f1'
-    },
-
-    // Traffic Density (Circles/Heat)
-    {
-        id: 't1',
-        type: 'traffic',
-        name: 'Oxford Circus Peak',
-        coordinates: [51.5152, -0.1418],
-        radius: 150,
-        intensity: 0.9,
-        color: '#ef4444'
-    },
-    {
-        id: 't2',
-        type: 'traffic',
-        name: 'Tottenham Court Rd Flow',
-        coordinates: [51.5165, -0.1300],
-        radius: 200,
-        intensity: 0.6,
-        color: '#f97316'
-    },
-
-    // Participating Businesses (Markers)
-    {
-        id: 'b1',
-        type: 'business',
-        name: 'Selfridges & Co',
-        coordinates: [51.5144, -0.1519],
-        details: 'Flagship store, premium partner.',
-        color: '#10b981'
-    },
-    {
-        id: 'b2',
-        type: 'business',
-        name: 'Liberty London',
-        coordinates: [51.5137, -0.1396],
-        details: 'Heritage retail, active community member.',
-        color: '#10b981'
-    },
-
-    // Engagement Clusters (Circles)
-    {
-        id: 'c1',
-        type: 'cluster',
-        name: 'Soho Social Cluster',
-        coordinates: [51.5130, -0.1330],
-        radius: 250,
-        intensity: 0.7,
-        color: '#ec4899'
+function hubFlags(hubType: string): { hasPhysicalHub: boolean; hasVirtualHub: boolean } {
+    const t = hubType.toLowerCase();
+    if (t.includes('both') || t.includes('physical') && t.includes('virtual')) {
+        return { hasPhysicalHub: true, hasVirtualHub: true };
     }
-];
-
-// Mock data for High Streets (Inventory Table)
-const highStreets = [
-    {
-        id: '1',
-        name: 'Oxford Street',
-        borough: 'Westminster',
-        status: 'Active',
-        physicalHub: 'Yes',
-        virtualHub: 'Yes',
-        communityGroup: 'Active',
-        totalBusinesses: 145,
-        engagementScore: 92,
-        location: { lat: 51.5145, lng: -0.1448 },
-        hasPhysical: true,
-        hasVirtual: true
-    },
-    {
-        id: '2',
-        name: 'Kings Road',
-        borough: 'Kensington & Chelsea',
-        status: 'Active',
-        physicalHub: 'No',
-        virtualHub: 'Yes',
-        communityGroup: 'Active',
-        totalBusinesses: 88,
-        engagementScore: 78,
-        location: { lat: 51.4875, lng: -0.1685 },
-        hasPhysical: false,
-        hasVirtual: true
-    },
-    {
-        id: '3',
-        name: 'Brick Lane',
-        borough: 'Tower Hamlets',
-        status: 'Pending',
-        physicalHub: 'No',
-        virtualHub: 'No',
-        communityGroup: 'Inactive',
-        totalBusinesses: 122,
-        engagementScore: 45,
-        location: { lat: 51.5218, lng: -0.0718 },
-        hasPhysical: false,
-        hasVirtual: false
-    },
-];
+    if (t.includes('physical')) return { hasPhysicalHub: true, hasVirtualHub: false };
+    if (t.includes('virtual')) return { hasPhysicalHub: false, hasVirtualHub: true };
+    return { hasPhysicalHub: false, hasVirtualHub: false };
+}
 
 export default function HighStreetsPage() {
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pending' | 'Inactive'>('All');
-    const [boroughFilter, setBoroughFilter] = useState('All Boroughs');
+    const [statusFilter, setStatusFilter] = useState<'All' | 'active' | 'pending' | 'inactive'>('All');
+    const [boroughFilter, setBoroughFilter] = useState<string>('all');
     const [districtLayer, setDistrictLayer] = useState<'physical' | 'virtual'>('physical');
 
-    // Filter high street data based on ALL active filters
-    const filteredHighStreets = highStreets.filter(hs => {
-        const matchesSearch = hs.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                             hs.borough.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = statusFilter === 'All' || hs.status === statusFilter;
-        const matchesBorough = boroughFilter === 'All Boroughs' || hs.borough === boroughFilter;
-        return matchesSearch && matchesStatus && matchesBorough;
-    });
+    const { data, isLoading, isError, error, refetch } = useGetHighStreets();
+    const { data: stats, isLoading: statsLoading } = useGetHighStreetStats();
+    const { data: boroughs } = useGetBoroughs();
+    const create = useCreateHighStreet();
+    const update = useUpdateHighStreet();
+    const remove = useDeleteHighStreet();
 
-    // 1. Transform inventory high streets into map layer data
-    const highStreetMarkers: MapLayerData[] = filteredHighStreets
-        .filter(hs => districtLayer === 'physical' ? hs.hasPhysical : hs.hasVirtual)
-        .map(hs => ({
-            id: `hs-${hs.id}`,
-            type: 'business', // Using business type for markers
-            name: hs.name,
-            coordinates: [hs.location.lat, hs.location.lng] as [number, number],
-            color: districtLayer === 'physical' ? '#f97316' : '#3b82f6',
-            details: `${hs.borough} • ${hs.totalBusinesses} Businesses`
-        }));
+    const streets = useMemo(() => data ?? [], [data]);
 
-    // 2. Combine with the advanced simulation data
-    const finalMapData = [...highStreetMarkers, ...mapData];
+    const filtered = useMemo(
+        () =>
+            streets.filter((hs) => {
+                const q = searchQuery.trim().toLowerCase();
+                const matchesSearch =
+                    !q ||
+                    hs.name.toLowerCase().includes(q) ||
+                    (hs.borough?.name ?? '').toLowerCase().includes(q);
+                const matchesStatus = statusFilter === 'All' || hs.status === statusFilter;
+                const matchesBorough = boroughFilter === 'all' || hs.boroughId === boroughFilter;
+                const matchesLayer = districtLayer === 'physical' ? hs.hasPhysicalHub : hs.hasVirtualHub;
+                return matchesSearch && matchesStatus && matchesBorough && matchesLayer;
+            }),
+        [streets, searchQuery, statusFilter, boroughFilter, districtLayer],
+    );
+
+    const markers: MapLayerData[] = useMemo(
+        () =>
+            filtered
+                .filter((hs) => hs.latitude != null && hs.longitude != null)
+                .map((hs) => ({
+                    id: `hs-${hs.id}`,
+                    type: 'business',
+                    name: hs.name,
+                    coordinates: [hs.latitude as number, hs.longitude as number] as [number, number],
+                    color: districtLayer === 'physical' ? '#f97316' : '#3b82f6',
+                    details: `${hs.borough?.name ?? 'No borough'} • ${hs.status}`,
+                })),
+        [filtered, districtLayer],
+    );
+
+    const handleWizardComplete = (wizard: HighStreetWizardData) => {
+        const matched = (boroughs ?? []).find(
+            (b) => b.name.toLowerCase() === wizard.borough.trim().toLowerCase(),
+        );
+        create.mutate(
+            {
+                name: wizard.name.trim(),
+                description: wizard.description || undefined,
+                status: 'pending',
+                boroughId: matched?.id,
+                ...hubFlags(wizard.hubType),
+            },
+            { onSuccess: () => setIsWizardOpen(false) },
+        );
+    };
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">High Street Management</h1>
-                    <p className="text-slate-500">Manage physical and virtual high street ecosystems across boroughs.</p>
+                    <p className="text-slate-500">Live high street records from the API.</p>
                 </div>
-                <Button 
-                    onClick={() => setIsWizardOpen(true)}
-                    className="bg-orange-600 hover:bg-orange-700 text-white gap-2"
-                >
+                <Button onClick={() => setIsWizardOpen(true)} className="bg-orange-600 hover:bg-orange-700 text-white gap-2">
                     <Plus className="h-4 w-4" />
                     Activate High Street
                 </Button>
             </div>
 
-            {/* Overview Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                <StatCard title="Active High Streets" value="24" trend="+2" icon={MapIcon} />
-                <StatCard title="Pending Activations" value="7" trend="-1" icon={Clock} />
-                <StatCard title="Community Part." value="85%" trend="+5%" icon={Users} />
-                <StatCard title="Borough Coverage" value="12" trend="0" icon={MapPin} />
-                <StatCard title="Traffic Activity" value="1.2k" trend="+12%" icon={Activity} />
-                <StatCard title="QR Engagement" value="4.8k" trend="+18%" icon={QrCode} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                    { title: 'Total High Streets', value: stats?.total, icon: Store },
+                    { title: 'Active', value: stats?.active, icon: CheckCircle2 },
+                    { title: 'Pending Activation', value: stats?.pending, icon: Clock },
+                ].map((s) => (
+                    <Card key={s.title} className="border-slate-200">
+                        <CardContent className="p-4 flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-slate-100 text-slate-600">
+                                <s.icon className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.title}</p>
+                                <p className="text-2xl font-black text-slate-900">{statsLoading ? '…' : (s.value ?? '—')}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
 
-            {/* Main Content Area */}
+            {isError && (
+                <Card className="border-rose-200 bg-rose-50">
+                    <CardContent className="p-4 flex items-center gap-3 text-sm text-rose-700">
+                        <AlertTriangle className="h-4 w-4" />
+                        Failed to load high streets: {(error as Error)?.message ?? 'Unknown error'}
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={() => refetch()}>
+                            Retry
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Map Section */}
                 <Card className="lg:col-span-2 border-slate-200">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div className="space-y-1">
-                            <CardTitle className="text-lg font-semibold">High Street Activity Map</CardTitle>
+                            <CardTitle className="text-lg font-semibold">High Street Map</CardTitle>
                             <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50 h-5 px-1.5 text-[10px]">Live View</Badge>
-                                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter italic">District Overlay Active</span>
+                                <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50 h-5 px-1.5 text-[10px]">
+                                    {markers.length} plotted from live records
+                                </Badge>
                             </div>
                         </div>
-                        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner">
+                        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
                             <button
                                 onClick={() => setDistrictLayer('physical')}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-                                    districtLayer === 'physical' 
-                                        ? "bg-white text-orange-600 shadow-sm" 
-                                        : "text-slate-500 hover:text-slate-700"
+                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all',
+                                    districtLayer === 'physical' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500',
                                 )}
                             >
                                 <Building2 className="h-3.5 w-3.5" />
@@ -288,10 +202,8 @@ export default function HighStreetsPage() {
                             <button
                                 onClick={() => setDistrictLayer('virtual')}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-                                    districtLayer === 'virtual' 
-                                        ? "bg-white text-blue-600 shadow-sm" 
-                                        : "text-slate-500 hover:text-slate-700"
+                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all',
+                                    districtLayer === 'virtual' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500',
                                 )}
                             >
                                 <Globe className="h-3.5 w-3.5" />
@@ -301,319 +213,193 @@ export default function HighStreetsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-200 z-0">
-                            <MapComponent 
-                                data={finalMapData} 
-                                center={[51.5145, -0.1448]} // Centered on Oxford St
-                                zoom={14}
-                            />
+                            <MapComponent data={markers} center={[51.5074, -0.1278]} zoom={11} />
+                        </div>
+                        <p className="text-xs text-slate-400 mt-2">
+                            Only streets with saved coordinates appear. Traffic, zones and engagement overlays are not
+                            provided by the API.
+                        </p>
+                    </CardContent>
+                </Card>
 
-                            {/* Map Legend (Kept as overlay) */}
-                            <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-[400]">
-                                <div className="bg-white/95 backdrop-blur-sm p-3 rounded-lg border border-slate-200 shadow-xl space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm" />
-                                        <span className="text-[10px] font-bold text-slate-700">High Traffic Hub</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm" />
-                                        <span className="text-[10px] font-bold text-slate-700">Activation Zone</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" />
-                                        <span className="text-[10px] font-bold text-slate-700">Participating Biz</span>
-                                    </div>
-                                </div>
+                <Card className="border-slate-200 shadow-sm">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg font-semibold text-slate-800">Quick Filters</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                                placeholder="Search high streets..."
+                                className="pl-9 border-slate-200 h-9 text-sm"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</label>
+                            <div className="flex flex-wrap gap-2">
+                                {(['All', 'active', 'pending', 'inactive'] as const).map((status) => (
+                                    <Button
+                                        key={status}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setStatusFilter(status)}
+                                        className={cn(
+                                            'rounded-full h-7 px-3 text-[11px] font-semibold capitalize',
+                                            statusFilter === status
+                                                ? 'bg-orange-50 text-orange-600 border-orange-200'
+                                                : 'text-slate-600 border-slate-200',
+                                        )}
+                                    >
+                                        {status === 'All' ? 'All' : status}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="space-y-2.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Borough</label>
+                            <div className="flex flex-wrap gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setBoroughFilter('all')}
+                                    className={cn(
+                                        'rounded-full h-7 px-3 text-[11px] font-semibold',
+                                        boroughFilter === 'all'
+                                            ? 'bg-orange-50 text-orange-600 border-orange-200'
+                                            : 'text-slate-600 border-slate-200',
+                                    )}
+                                >
+                                    All Boroughs
+                                </Button>
+                                {(boroughs ?? []).map((b) => (
+                                    <Button
+                                        key={b.id}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setBoroughFilter(b.id)}
+                                        className={cn(
+                                            'rounded-full h-7 px-3 text-[11px] font-semibold',
+                                            boroughFilter === b.id
+                                                ? 'bg-orange-50 text-orange-600 border-orange-200'
+                                                : 'text-slate-600 border-slate-200',
+                                        )}
+                                    >
+                                        {b.name}
+                                    </Button>
+                                ))}
                             </div>
                         </div>
                     </CardContent>
                 </Card>
-
-                {/* Filters & Operational Feed Sidebar */}
-                <div className="flex flex-col gap-6 h-full">
-                    {/* Filters */}
-                    <Card className="border-slate-200 shadow-sm flex-1">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-lg font-semibold text-slate-800">Quick Filters</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-5">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input 
-                                    placeholder="Search high streets..." 
-                                    className="pl-9 border-slate-200 h-9 text-sm"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2.5">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {['All', 'Active', 'Pending', 'Inactive'].map((status) => (
-                                        <Button 
-                                            key={status}
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => setStatusFilter(status as any)}
-                                            className={cn(
-                                                "rounded-full h-7 px-3 text-[11px] font-semibold transition-all",
-                                                statusFilter === status 
-                                                    ? "bg-orange-50 text-orange-600 border-orange-200 shadow-sm ring-1 ring-orange-100" 
-                                                    : "hover:bg-slate-50 text-slate-600 border-slate-200"
-                                            )}
-                                        >
-                                            {status}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-2.5">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Borough</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {['All Boroughs', 'Westminster', 'Camden', 'Tower Hamlets'].map((borough) => (
-                                        <Button 
-                                            key={borough}
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => setBoroughFilter(borough)}
-                                            className={cn(
-                                                "rounded-full h-7 px-3 text-[11px] font-semibold transition-all",
-                                                boroughFilter === borough 
-                                                    ? "bg-orange-50 text-orange-600 border-orange-200 shadow-sm ring-1 ring-orange-100" 
-                                                    : "hover:bg-slate-50 text-slate-600 border-slate-200"
-                                            )}
-                                        >
-                                            {borough}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Operational Feed */}
-                    <Card className="border-slate-200 shadow-sm flex-1">
-                        <CardHeader className="flex flex-row items-center justify-between pb-3">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 bg-orange-50 rounded-lg border border-orange-100">
-                                    <Rss className="h-3.5 w-3.5 text-orange-600" />
-                                </div>
-                                <CardTitle className="text-sm font-bold text-slate-800 tracking-tight">Operational Feed</CardTitle>
-                            </div>
-                            <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
-                                <span className="relative flex h-1.5 w-1.5">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                                </span>
-                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Live</span>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4 pt-1">
-                            <FeedItem 
-                                icon={ShoppingCart} 
-                                iconColor="text-blue-600" 
-                                bgColor="bg-blue-50"
-                                title="Marylebone Zone spike detected"
-                                details="(+22% foot traffic)."
-                                time="2 minutes ago"
-                                location="Borough: Westminster"
-                                indicatorColor="bg-blue-600"
-                            />
-                            <FeedItem 
-                                icon={Rocket} 
-                                iconColor="text-orange-600" 
-                                bgColor="bg-orange-50"
-                                title="Hackney Virtual Hub successfully deployed."
-                                time="14 minutes ago"
-                                location="District: East"
-                                indicatorColor="bg-orange-700"
-                            />
-                            <FeedItem 
-                                icon={QrCode} 
-                                iconColor="text-emerald-600" 
-                                bgColor="bg-emerald-50"
-                                title="QR Engagement Milestone reached in Islington."
-                                time="32 minutes ago"
-                                location="Users: 5,000+"
-                                indicatorColor="bg-emerald-600"
-                            />
-                        </CardContent>
-                    </Card>
-                </div>
             </div>
 
-            {/* High Street List */}
             <Card className="border-slate-200">
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader>
                     <CardTitle className="text-lg font-semibold">High Street Inventory</CardTitle>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="gap-2">
-                            <Filter className="h-4 w-4" />
-                            Advanced Filters
-                        </Button>
-                    </div>
+                    <CardDescription>{isLoading ? 'Loading…' : `${filtered.length} streets shown`}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-slate-50/50">
-                                <TableHead className="font-semibold text-slate-700">High Street Name</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Borough</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Physical Hub</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Virtual Hub</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Community Group</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Businesses</TableHead>
-                                <TableHead className="font-semibold text-slate-700">Eng. Score</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredHighStreets.length > 0 ? (
-                                filteredHighStreets.map((hs) => (
-                                    <TableRow key={hs.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <TableCell className="font-medium text-slate-900">{hs.name}</TableCell>
-                                        <TableCell className="text-slate-600">{hs.borough}</TableCell>
-                                        <TableCell>
-                                            <Badge 
+                <CardContent className="p-0">
+                    {isLoading ? (
+                        <div className="p-6 space-y-3">
+                            {[0, 1, 2].map((i) => (
+                                <div key={i} className="h-14 rounded-xl bg-slate-100 animate-pulse" />
+                            ))}
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="p-12 text-center">
+                            <MapPin className="h-8 w-8 mx-auto text-slate-300" />
+                            <p className="mt-3 font-bold text-slate-700">No high streets found</p>
+                            <p className="text-sm text-slate-400">Activate your first high street to get started.</p>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50/50">
+                                    <TableHead className="pl-6">High Street Name</TableHead>
+                                    <TableHead>Borough</TableHead>
+                                    <TableHead className="text-center">Status</TableHead>
+                                    <TableHead className="text-center">Physical Hub</TableHead>
+                                    <TableHead className="text-center">Virtual Hub</TableHead>
+                                    <TableHead className="text-right pr-6" />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filtered.map((hs) => (
+                                    <TableRow key={hs.id}>
+                                        <TableCell className="pl-6 py-4">
+                                            <p className="font-bold text-slate-900">{hs.name}</p>
+                                            {hs.description && (
+                                                <p className="text-xs text-slate-400 truncate max-w-64">{hs.description}</p>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-sm text-slate-600">{hs.borough?.name ?? '—'}</TableCell>
+                                        <TableCell className="text-center">
+                                            <Badge
                                                 className={cn(
-                                                    "rounded-full px-2.5 py-0.5 font-medium",
-                                                    hs.status === 'Active' 
-                                                        ? "bg-emerald-100 text-emerald-700" 
-                                                        : "bg-amber-100 text-amber-700"
+                                                    'border-none text-[10px] font-black uppercase',
+                                                    hs.status === 'active'
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : hs.status === 'pending'
+                                                          ? 'bg-amber-500 text-white'
+                                                          : 'bg-slate-200 text-slate-500',
                                                 )}
                                             >
                                                 {hs.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>
-                                            {hs.physicalHub === 'Yes' ? (
-                                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                                            ) : (
-                                                <AlertCircle className="h-5 w-5 text-slate-300" />
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            {hs.virtualHub === 'Yes' ? (
-                                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                                            ) : (
-                                                <AlertCircle className="h-5 w-5 text-slate-300" />
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className={cn(
-                                                "gap-1",
-                                                hs.communityGroup === 'Active' ? "text-emerald-600" : "text-slate-400"
-                                            )}>
-                                                <Users className="h-3 w-3" />
-                                                {hs.communityGroup}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-slate-600 font-medium">{hs.totalBusinesses}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                    <div 
-                                                        className={cn(
-                                                            "h-full rounded-full",
-                                                            hs.engagementScore > 80 ? "bg-emerald-500" : "bg-amber-500"
-                                                        )}
-                                                        style={{ width: `${hs.engagementScore}%` }}
-                                                    />
-                                                </div>
-                                                <span className="text-xs font-semibold text-slate-700">{hs.engagementScore}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-center text-sm">{hs.hasPhysicalHub ? 'Yes' : 'No'}</TableCell>
+                                        <TableCell className="text-center text-sm">{hs.hasVirtualHub ? 'Yes' : 'No'}</TableCell>
+                                        <TableCell className="text-right pr-6">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreVertical className="h-4 w-4" />
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                                                        <MoreVertical className="h-5 w-5 text-slate-400" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem className="gap-2">
-                                                        <Activity className="h-4 w-4" /> Manage Ecosystem
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="gap-2">
-                                                        <Users className="h-4 w-4" /> Assign Manager
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="gap-2">
-                                                        <BarChart3 className="h-4 w-4" /> View Analytics
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="gap-2 text-orange-600">
-                                                        <Rocket className="h-4 w-4" /> Launch Campaign
+                                                <DropdownMenuContent align="end" className="w-52 p-1.5 rounded-xl shadow-xl">
+                                                    <DropdownMenuLabel className="text-[10px] font-black text-slate-400 uppercase px-2 py-1.5">
+                                                        Actions
+                                                    </DropdownMenuLabel>
+                                                    {(Object.keys({ active: 1, pending: 1, inactive: 1 }) as HighStreetStatus[])
+                                                        .filter((s) => s !== hs.status)
+                                                        .map((s) => (
+                                                            <DropdownMenuItem
+                                                                key={s}
+                                                                className="capitalize cursor-pointer"
+                                                                disabled={update.isPending}
+                                                                onClick={() => update.mutate({ id: hs.id, dto: { status: s } })}
+                                                            >
+                                                                Mark {s}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                    <DropdownMenuItem
+                                                        className="text-red-600 cursor-pointer"
+                                                        disabled={remove.isPending}
+                                                        onClick={() => {
+                                                            if (confirm(`Remove "${hs.name}"?`)) remove.mutate(hs.id);
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" /> Remove
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center text-slate-500">
-                                        No high streets match your current filters.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
 
-            {/* Activation Wizard Modal */}
-            <HighStreetActivationWizard 
-                open={isWizardOpen} 
-                onOpenChange={setIsWizardOpen} 
+            <HighStreetActivationWizard
+                open={isWizardOpen}
+                onOpenChange={setIsWizardOpen}
+                onComplete={handleWizardComplete}
+                isSaving={create.isPending}
             />
         </div>
-    );
-}
-
-function FeedItem({ icon: Icon, iconColor, bgColor, title, details, time, location, indicatorColor }: any) {
-    return (
-        <div className="flex gap-4 relative group">
-            <div className={cn("p-2 rounded-full h-fit shadow-sm relative z-10", bgColor)}>
-                <Icon className={cn("h-4 w-4", iconColor)} />
-                <div className={cn("absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white", indicatorColor)} />
-            </div>
-            <div className="flex-1 space-y-1">
-                <p className="text-xs text-slate-800 leading-snug">
-                    <span className="font-bold">{title.split(' ')[0]} {title.split(' ')[1]}</span> {title.split(' ').slice(2).join(' ')}
-                    {details && <span className="text-slate-500 ml-1 font-medium">{details}</span>}
-                </p>
-                <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                    <span>{time}</span>
-                    <span className="w-1 h-1 rounded-full bg-slate-200" />
-                    <span className="text-slate-500">{location}</span>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function StatCard({ title, value, trend, icon: Icon }: { title: string, value: string, trend: string, icon: any }) {
-    const isPositive = trend.startsWith('+');
-    return (
-        <Card className="border-slate-200">
-            <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                    <div className="p-2 bg-slate-100 rounded-lg">
-                        <Icon className="h-4 w-4 text-slate-600" />
-                    </div>
-                    <span className={cn(
-                        "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                        isPositive ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                    )}>
-                        {trend}
-                    </span>
-                </div>
-                <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{title}</p>
-                    <p className="text-xl font-bold text-slate-900">{value}</p>
-                </div>
-            </CardContent>
-        </Card>
     );
 }

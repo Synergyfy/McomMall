@@ -1,10 +1,26 @@
 import useSWR, { useSWRConfig } from 'swr';
 import api from '../api';
-import { CreateRewardDefinitionDto, RewardDefinition, MoneyEngineAnalytics } from './types';
+import { CreateRewardDefinitionDto, RewardDefinition, MoneyEngineAnalytics, AdminVoucherPage } from './types';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
+
+export const useGetAdminVouchers = (page: number = 1, limit: number = 50) => {
+    const token = useSelector((state: RootState) => state.auth.accessToken);
+    const { data, error, mutate } = useSWR<AdminVoucherPage>(
+        token ? `/money-engine/admin/vouchers?page=${page}&limit=${limit}` : null,
+        fetcher
+    );
+
+    return {
+        vouchers: data?.data ?? [],
+        total: data?.count ?? 0,
+        isLoading: !error && !data,
+        isError: error,
+        mutate,
+    };
+};
 
 export const useGetRewardDefinitions = () => {
     const token = useSelector((state: RootState) => state.auth.accessToken);

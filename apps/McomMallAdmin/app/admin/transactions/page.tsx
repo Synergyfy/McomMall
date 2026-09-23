@@ -131,50 +131,45 @@ export default function TransactionsPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Reference</TableHead>
+                                            <TableHead>Transaction</TableHead>
                                             <TableHead>Type</TableHead>
                                             <TableHead>Amount</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Date</TableHead>
-                                            <TableHead>User / Business</TableHead>
+                                            <TableHead>Payer → Payee</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {data?.items.length === 0 ? (
+                                        {(data?.data.length ?? 0) === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={6} className="text-center py-8">
                                                     No transactions found.
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            data?.items.map((transaction) => (
+                                            data?.data.map((transaction) => (
                                                 <TableRow key={transaction.id}>
                                                     <TableCell className="font-medium">
-                                                        {transaction.reference || transaction.id.substring(0, 8)}
-                                                        <div className="text-xs text-muted-foreground">{transaction.description}</div>
+                                                        <span className="font-mono text-xs">{transaction.id.substring(0, 8)}</span>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {transaction.paymentMethod}
+                                                            {transaction.orderId ? ` · Order ${transaction.orderId.substring(0, 8)}` : ''}
+                                                            {transaction.fees ? ` · Fee £${Number(transaction.fees).toFixed(2)}` : ''}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell>{getTypeBadge(transaction.type)}</TableCell>
                                                     <TableCell className="font-bold">
-                                                        £{transaction.amount.toFixed(2)}
+                                                        £{Number(transaction.amount).toFixed(2)}
                                                     </TableCell>
                                                     <TableCell>{getStatusBadge(transaction.status)}</TableCell>
                                                     <TableCell>
-                                                        {format(new Date(transaction.createdAt), 'MMM dd, yyyy HH:mm')}
+                                                        {format(new Date(transaction.date), 'MMM dd, yyyy HH:mm')}
                                                     </TableCell>
                                                     <TableCell>
-                                                        {transaction.user ? (
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">{transaction.user.name}</span>
-                                                                <span className="text-xs text-muted-foreground">{transaction.user.email}</span>
-                                                            </div>
-                                                        ) : transaction.business ? (
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">{transaction.business.name}</span>
-                                                                <span className="text-xs text-muted-foreground">Business</span>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-muted-foreground">-</span>
-                                                        )}
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">{transaction.payerName}</span>
+                                                            <span className="text-xs text-muted-foreground">→ {transaction.payeeName}</span>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             ))
@@ -183,10 +178,10 @@ export default function TransactionsPage() {
                                 </Table>
                             </div>
 
-                            {data?.meta && (
+                            {data && (
                                 <div className="flex items-center justify-between space-x-2 py-4">
                                     <div className="text-sm text-muted-foreground">
-                                        Showing {((data.meta.currentPage - 1) * data.meta.itemsPerPage) + 1} to {Math.min(data.meta.currentPage * data.meta.itemsPerPage, data.meta.totalItems)} of {data.meta.totalItems} results
+                                        Showing {((data.page - 1) * data.limit) + 1} to {Math.min(data.page * data.limit, data.total)} of {data.total} results
                                     </div>
                                     <div className="space-x-2">
                                         <Button
@@ -201,8 +196,8 @@ export default function TransactionsPage() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => setPage((p) => Math.min(data.meta.totalPages, p + 1))}
-                                            disabled={page >= data.meta.totalPages}
+                                            onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+                                            disabled={page >= data.totalPages}
                                         >
                                             Next
                                             <ArrowRight className="h-4 w-4 ml-2" />

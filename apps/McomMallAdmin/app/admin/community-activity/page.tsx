@@ -1,152 +1,212 @@
 'use client';
 
+import { useMemo } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-    MapPin,
     MessageSquare,
     Calendar,
     Megaphone,
     Store,
-    Users,
-    Activity,
-    Navigation,
-    Flame
+    Activity as ActivityIcon,
+    ShoppingBag,
+    AlertTriangle,
+    Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useGetAdminActivities, AdminActivity } from '@/service/activities/hook';
+
+function timeAgo(value?: string): string {
+    if (!value) return '';
+    const diff = Date.now() - new Date(value).getTime();
+    if (isNaN(diff)) return '';
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
+
+function displayName(user: AdminActivity['user']): string {
+    if (!user) return 'System';
+    return user.fullName || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'User';
+}
+
+function activityStyle(activity: AdminActivity): { icon: typeof MessageSquare; color: string } {
+    const hay = `${activity.action} ${activity.target}`.toLowerCase();
+    if (hay.includes('order')) return { icon: ShoppingBag, color: 'text-orange-500 bg-orange-100' };
+    if (hay.includes('book')) return { icon: Calendar, color: 'text-purple-500 bg-purple-100' };
+    if (hay.includes('promo')) return { icon: Megaphone, color: 'text-orange-500 bg-orange-100' };
+    if (hay.includes('listing') || hay.includes('business') || hay.includes('store')) {
+        return { icon: Store, color: 'text-emerald-500 bg-emerald-100' };
+    }
+    if (hay.includes('review') || hay.includes('message') || hay.includes('comment')) {
+        return { icon: MessageSquare, color: 'text-blue-500 bg-blue-100' };
+    }
+    return { icon: ActivityIcon, color: 'text-slate-500 bg-slate-100' };
+}
 
 export default function CommunityActivityPage() {
+    const { data, isLoading, isError, error, refetch } = useGetAdminActivities();
+
+    const activities = useMemo(() => {
+        const list = [...(data ?? [])];
+        list.sort(
+            (a, b) =>
+                new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime(),
+        );
+        return list;
+    }, [data]);
+
+    const targetCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const a of activities) {
+            map.set(a.target, (map.get(a.target) ?? 0) + 1);
+        }
+        return [...map.entries()].sort((x, y) => y[1] - x[1]).slice(0, 6);
+    }, [activities]);
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Community & Activity</h1>
-                    <p className="text-slate-500">Monitor local interactions and physical engagement</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Community &amp; Activity</h1>
+                    <p className="text-slate-500">Live platform activity from the API</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <Link href="/admin/notifications">
                     <Button className="bg-orange-500 hover:bg-orange-600">
                         <Megaphone className="h-4 w-4 mr-2" /> Send Community Blast
                     </Button>
-                </div>
+                </Link>
             </div>
 
+            {isError && (
+                <Card className="border-rose-200 bg-rose-50">
+                    <CardContent className="p-4 flex items-center gap-3 text-sm text-rose-700">
+                        <AlertTriangle className="h-4 w-4" />
+                        Failed to load activity: {(error as Error)?.message ?? 'Unknown error'}
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={() => refetch()}>
+                            Retry
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Community Feed */}
-                <div className="lg:col-span-1 space-y-4">
-                    <Card className="border-0 shadow-sm h-[calc(100vh-140px)] overflow-hidden flex flex-col">
+                <div className="lg:col-span-2 space-y-4">
+                    <Card className="border-0 shadow-sm overflow-hidden flex flex-col">
                         <CardHeader className="pb-3 border-b border-slate-100">
                             <CardTitle className="flex items-center gap-2">
                                 <MessageSquare className="h-5 w-5 text-blue-500" /> Live Feed
                             </CardTitle>
-                            <CardDescription>Real-time ecosystem activity</CardDescription>
+                            <CardDescription>
+                                {isLoading ? 'Loading…' : `${activities.length} recent actions`}
+                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="p-0 overflow-y-auto flex-1 bg-slate-50/50">
-                            <div className="divide-y divide-slate-100">
-                                {[
-                                    { type: 'discussion', title: 'New post in Camden Chat', desc: '"Anyone know when the night market opens?"', icon: MessageSquare, color: 'text-blue-500 bg-blue-100', time: '2m ago' },
-                                    { type: 'event', title: 'High Street RSVP', desc: '45 users joined "Tech Expo"', icon: Calendar, color: 'text-purple-500 bg-purple-100', time: '15m ago' },
-                                    { type: 'campaign', title: 'Campaign Engagement', desc: 'Flash Deal claimed 120 times', icon: Megaphone, color: 'text-orange-500 bg-orange-100', time: '24m ago' },
-                                    { type: 'business', title: 'Business Interaction', desc: 'Local Grocer responded to 5 reviews', icon: Store, color: 'text-emerald-500 bg-emerald-100', time: '1h ago' },
-                                    { type: 'borough', title: 'Borough Trend', desc: 'Southwark activity spiked by 40%', icon: Activity, color: 'text-rose-500 bg-rose-100', time: '2h ago' },
-                                    { type: 'discussion', title: 'New post in Hackney Hub', desc: '"Best coffee place nearby?"', icon: MessageSquare, color: 'text-blue-500 bg-blue-100', time: '2h ago' },
-                                    { type: 'event', title: 'Event Started', desc: 'Foodie Weekend Carnival is now live', icon: Calendar, color: 'text-purple-500 bg-purple-100', time: '3h ago' },
-                                    { type: 'business', title: 'New Storefront', desc: 'The Artisan Bakery verified their profile', icon: Store, color: 'text-emerald-500 bg-emerald-100', time: '4h ago' },
-                                ].map((item, i) => (
-                                    <div key={i} className="p-4 hover:bg-white transition-colors cursor-pointer">
-                                        <div className="flex gap-3">
-                                            <div className={cn('p-2 rounded-full h-8 w-8 flex items-center justify-center shrink-0', item.color)}>
-                                                <item.icon className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center justify-between gap-4 mb-1">
-                                                    <p className="font-semibold text-sm text-slate-900">{item.title}</p>
-                                                    <span className="text-[10px] text-slate-400 font-medium shrink-0">{item.time}</span>
+                        <CardContent className="p-0 overflow-y-auto flex-1 bg-slate-50/50 max-h-[calc(100vh-240px)]">
+                            {isLoading ? (
+                                <div className="p-4 space-y-3">
+                                    {[0, 1, 2, 3].map((i) => (
+                                        <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : activities.length === 0 ? (
+                                <p className="p-12 text-center text-sm text-slate-400">No activity recorded yet.</p>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {activities.map((item) => {
+                                        const { icon: Icon, color } = activityStyle(item);
+                                        return (
+                                            <div key={item.id} className="p-4 hover:bg-white transition-colors">
+                                                <div className="flex gap-3">
+                                                    <div className={cn('p-2 rounded-full h-8 w-8 flex items-center justify-center shrink-0', color)}>
+                                                        <Icon className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center justify-between gap-4 mb-1">
+                                                            <p className="font-semibold text-sm text-slate-900 capitalize">
+                                                                {item.action.replace(/_/g, ' ')} · {item.target.replace(/_/g, ' ')}
+                                                            </p>
+                                                            <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                                                                {timeAgo(item.created_at)}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-slate-600 leading-snug truncate">
+                                                            {item.targetName} — {displayName(item.user)}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-slate-600 leading-snug">{item.desc}</p>
                                             </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Activity Map */}
-                <div className="lg:col-span-2 space-y-4">
-                    <Card className="border-0 shadow-sm h-full flex flex-col overflow-hidden">
-                        <CardHeader className="pb-0 absolute z-10 w-full bg-gradient-to-b from-white/90 to-transparent">
-                            <CardTitle className="flex items-center gap-2">
-                                <MapPin className="h-5 w-5 text-rose-500" /> Interactive Activity Map
-                            </CardTitle>
-                            <CardDescription>Live engagement, traffic, and physical hotspots</CardDescription>
-                            
-                            <div className="flex gap-2 mt-4 pb-4">
-                                <Badge variant="secondary" className="bg-white/80 backdrop-blur border shadow-sm cursor-pointer hover:bg-rose-50 hover:text-rose-600 transition-colors">
-                                    <Flame className="h-3 w-3 mr-1 text-rose-500" /> Heat Maps
-                                </Badge>
-                                <Badge variant="secondary" className="bg-white/80 backdrop-blur border shadow-sm cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                                    <Users className="h-3 w-3 mr-1 text-indigo-500" /> Engagement Zones
-                                </Badge>
-                                <Badge variant="secondary" className="bg-white/80 backdrop-blur border shadow-sm cursor-pointer hover:bg-emerald-50 hover:text-emerald-600 transition-colors">
-                                    <Navigation className="h-3 w-3 mr-1 text-emerald-500" /> Foot Traffic
-                                </Badge>
-                                <Badge variant="secondary" className="bg-white/80 backdrop-blur border shadow-sm cursor-pointer hover:bg-amber-50 hover:text-amber-600 transition-colors">
-                                    <Calendar className="h-3 w-3 mr-1 text-amber-500" /> Event Activity
-                                </Badge>
-                            </div>
+                <div className="space-y-4">
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Activity by Target</CardTitle>
+                            <CardDescription>Live counts grouped by target type</CardDescription>
                         </CardHeader>
-                        
-                        {/* Mock Map Area */}
-                        <CardContent className="p-0 flex-1 relative bg-slate-100 min-h-[500px]">
-                            {/* Map Background Pattern */}
-                            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-                            
-                            {/* Map UI Elements */}
-                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-medium">
-                                Interactive Map Container
-                            </div>
-                            
-                            {/* Hotspots */}
-                            <div className="absolute top-[30%] left-[40%] text-center">
-                                <div className="relative">
-                                    <div className="absolute -inset-4 bg-rose-500/20 rounded-full animate-ping"></div>
-                                    <div className="absolute -inset-2 bg-rose-500/40 rounded-full animate-pulse"></div>
-                                    <div className="relative h-6 w-6 bg-rose-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center z-10">
-                                        <Flame className="h-3 w-3 text-white" />
+                        <CardContent className="space-y-2">
+                            {isLoading ? (
+                                <div className="h-24 rounded bg-slate-100 animate-pulse" />
+                            ) : targetCounts.length === 0 ? (
+                                <p className="text-sm text-slate-400 py-4 text-center">No data.</p>
+                            ) : (
+                                targetCounts.map(([target, count]) => (
+                                    <div key={target} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2">
+                                        <span className="text-sm font-medium text-slate-700 capitalize">
+                                            {target.replace(/_/g, ' ')}
+                                        </span>
+                                        <Badge variant="secondary">{count}</Badge>
                                     </div>
-                                </div>
-                                <div className="mt-2 bg-white/90 backdrop-blur px-2 py-1 rounded shadow-sm text-xs font-bold text-slate-800">
-                                    Camden High St
-                                </div>
-                            </div>
-                            
-                            <div className="absolute top-[60%] left-[65%] text-center">
-                                <div className="relative">
-                                    <div className="absolute -inset-6 bg-indigo-500/10 rounded-full animate-pulse"></div>
-                                    <div className="relative h-5 w-5 bg-indigo-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center z-10">
-                                        <Users className="h-3 w-3 text-white" />
-                                    </div>
-                                </div>
-                                <div className="mt-1 bg-white/90 backdrop-blur px-2 py-1 rounded shadow-sm text-xs font-bold text-slate-800">
-                                    Borough Market
-                                </div>
-                            </div>
-                            
-                            <div className="absolute top-[45%] left-[25%] text-center">
-                                <div className="relative">
-                                    <div className="relative h-4 w-4 bg-emerald-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center z-10">
-                                        <Navigation className="h-2 w-2 text-white" />
-                                    </div>
-                                </div>
-                                <div className="mt-1 bg-white/90 backdrop-blur px-2 py-1 rounded shadow-sm text-[10px] font-bold text-slate-600">
-                                    Hyde Park
-                                </div>
-                            </div>
+                                ))
+                            )}
+                        </CardContent>
+                    </Card>
 
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Recently Active Users</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {isLoading ? (
+                                <div className="h-20 rounded bg-slate-100 animate-pulse" />
+                            ) : (
+                                [...new Map(
+                                    activities
+                                        .filter((a) => a.user)
+                                        .map((a) => [a.user?.id, a] as const),
+                                ).values()].slice(0, 5).map((a) => (
+                                    <div key={a.user?.id} className="flex items-center gap-3">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarFallback className="text-[11px] bg-slate-200 text-slate-600">
+                                                {displayName(a.user).slice(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-slate-800 truncate">{displayName(a.user)}</p>
+                                            <p className="text-xs text-slate-400">{timeAgo(a.created_at)}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-0 shadow-sm bg-slate-900 text-white">
+                        <CardContent className="p-4 text-sm text-slate-300">
+                            Maps, heat layers and foot-traffic overlays are not provided by the API — this
+                            view shows the live action feed instead of simulated geography.
                         </CardContent>
                     </Card>
                 </div>

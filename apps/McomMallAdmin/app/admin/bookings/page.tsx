@@ -213,21 +213,32 @@ function BookingDetailSheet({
 export default function AdminBookingsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [page, setPage] = useState(1);
     
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
 
-    // Hooks
-    const { data: bookingsList = [], isLoading } = useGetAllBookings();
+    // Reset to page 1 when filter changes
+    const handleStatusChange = (val: string) => { setStatusFilter(val); setPage(1); };
+
+    // Hooks — server-side filter by status, client-side search within the page
+    const { data, isLoading } = useGetAllBookings({
+        page,
+        limit: 25,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+    });
+    const bookingsList = data?.serviceBookings ?? [];
+    const meta = data?.meta;
     const refundMutation = useRefundBooking();
 
-    // Client-side filtering for simplicity (assuming backend doesn't paginate yet based on the hook)
+    // Client-side search within the current page only
     const filteredBookings = bookingsList.filter(b => {
-        const matchesSearch = b.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              b.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              b.service?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        if (!searchQuery) return true;
+        return (
+            b.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            b.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            b.service?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
     });
 
     const handleView = (b: Booking) => {
@@ -236,9 +247,7 @@ export default function AdminBookingsPage() {
     };
 
     const handleRefund = (id: string) => {
-        if (window.confirm('Are you absolutely sure you want to force a refund for this booking?')) {
-            refundMutation.mutate(id);
-        }
+        refundMutation.mutate(id);
     };
 
     return (
@@ -265,7 +274,7 @@ export default function AdminBookingsPage() {
                             />
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <Select value={statusFilter} onValueChange={handleStatusChange}>
                                 <SelectTrigger className="w-[160px]">
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
@@ -283,6 +292,7 @@ export default function AdminBookingsPage() {
                             <Button variant="ghost" className="text-slate-500" onClick={() => {
                                 setSearchQuery('');
                                 setStatusFilter('all');
+                                setPage(1);
                             }}>
                                 Reset
                             </Button>
@@ -374,6 +384,21 @@ export default function AdminBookingsPage() {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {/* Pagination */}
+                    {meta && meta.totalPages > 1 && (
+                        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+                            <span className="text-sm text-slate-500">
+                                Page {meta.page} of {meta.totalPages} ({meta.total} total)
+                            </span>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" disabled={meta.page <= 1}
+                                    onClick={() => setPage(p => p - 1)}>Previous</Button>
+                                <Button variant="outline" size="sm" disabled={meta.page >= meta.totalPages}
+                                    onClick={() => setPage(p => p + 1)}>Next</Button>
+                            </div>
+                        </div>
+                    )}
 
                     {!isLoading && filteredBookings.length === 0 && (
                         <div className="py-20 text-center">

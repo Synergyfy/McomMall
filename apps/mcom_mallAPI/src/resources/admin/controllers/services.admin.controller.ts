@@ -1,16 +1,22 @@
 import {
+  Body,
   Controller,
   Get,
   UseGuards,
   Query,
   Delete,
   Param,
+  Post,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
   ApiOperation,
   ApiResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -21,6 +27,7 @@ import {
   PaginatedServicesDto,
   ServiceStatsDto,
 } from '../dto/catalog.dto';
+import { CreateAdminServiceDto } from '../dto/create-admin-service.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -48,5 +55,15 @@ export class AdminServicesController {
   @ApiOperation({ summary: 'Delete a service' })
   remove(@Param('id') id: string) {
     return this.adminServicesService.remove(id);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a service for any business (Admin only)' })
+  @ApiCreatedResponse({ description: 'Service created successfully' })
+  @ApiBadRequestResponse({ description: 'Invalid input payload' })
+  @ApiNotFoundResponse({ description: 'Business with specified ID was not found' })
+  @ApiUnauthorizedResponse({ description: 'Missing or expired JWT bearer token' })
+  create(@Body() dto: CreateAdminServiceDto) {
+    return this.adminServicesService.create(dto);
   }
 }

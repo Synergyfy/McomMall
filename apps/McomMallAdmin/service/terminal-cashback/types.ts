@@ -7,7 +7,7 @@ export interface TerminalCashbackStats {
 export type TerminalCashbackLevel = 1 | 2 | 3;
 
 export interface TerminalCashbackRange {
-    id: string;
+    id?: string;
     minSpend: number;
     maxSpend: number;
     rewardValue: number;

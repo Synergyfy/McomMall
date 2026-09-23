@@ -9,7 +9,6 @@ import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 import { GiftCardModule } from '../gift-card/gift-card.module';
 import { CouponModule } from '../coupon/coupon.module';
 import { PromotionModule } from '../promotion/promotion.module';
-import { TierModule } from '../tier/tier.module';
 import { PlansModule } from '../plans/plans.module';
 
 @Module({
@@ -22,7 +21,6 @@ import { PlansModule } from '../plans/plans.module';
     forwardRef(() => GiftCardModule),
     forwardRef(() => CouponModule),
     forwardRef(() => PromotionModule),
-    forwardRef(() => TierModule),
     forwardRef(() => PlansModule),
   ],
   controllers: [CapabilityController],

@@ -85,6 +85,41 @@ export const useGetAllAdminServices = (filters: AdminServiceFilters = {}) => {
   });
 };
 
+export interface CreateAdminServiceDto {
+  name: string;
+  businessId: string;
+  description?: string;
+  category?: string;
+  fixedPrice?: number;
+  duration?: number;
+  status?: 'active' | 'inactive';
+}
+
+// Create Service (admin — any business)
+export const useCreateAdminService = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (dto: CreateAdminServiceDto) => {
+      try {
+        const response = await api.post('/admin/services', dto);
+        return response.data;
+      } catch (error: unknown) {
+        const err = error as ErrorResponse;
+        throw new Error(err.response?.data?.message || err.message || 'Failed to create service');
+      }
+    },
+    onSuccess: () => {
+      toast.success('Service created successfully');
+      queryClient.invalidateQueries({ queryKey: ['FETCH_ALL_ADMIN_SERVICES'] });
+      queryClient.invalidateQueries({ queryKey: ['FETCH_ADMIN_SERVICE_STATS'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+};
+
 // Delete Service
 export const useDeleteService = () => {
   const queryClient = useQueryClient();

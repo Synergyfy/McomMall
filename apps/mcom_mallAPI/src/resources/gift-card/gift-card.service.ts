@@ -884,21 +884,28 @@ export class GiftCardService {
 
     let delivered = 0;
     let failed = 0;
+    const toUpdate: typeof cardsToDeliver = [];
 
+    // Send emails and collect status changes (no DB writes inside the loop)
     for (const card of cardsToDeliver) {
       try {
         await this.sendGiftCardEmail(card.id);
         card.deliveryStatus = GiftCardDeliveryStatus.DELIVERED;
         card.isActive = true;
-        await this.giftCardRepository.save(card);
         delivered++;
       } catch (error) {
         card.deliveryStatus = GiftCardDeliveryStatus.FAILED;
-        await this.giftCardRepository.save(card);
         failed++;
-        console.error(`Failed to send gift card ${card.id}:`, error);
+        this.logger.error(`Failed to send gift card ${card.id}: ${(error as Error).message}`);
       }
+      toUpdate.push(card);
     }
+
+    // Single batch write for all status updates
+    if (toUpdate.length > 0) {
+      await this.giftCardRepository.save(toUpdate);
+    }
+
     return { delivered, failed };
   }
 
@@ -1189,8 +1196,9 @@ export class GiftCardService {
         const giftCardRepo = manager.getRepository(GiftCard);
         const transactionRepo = manager.getRepository(GiftCardTransaction);
 
-        for (const cardData of giftCardsToCreate) {
-          const giftCard = giftCardRepo.create({
+        // Build all entities first, then save in two batch operations
+        const giftCardEntities = giftCardsToCreate.map((cardData) =>
+          giftCardRepo.create({
             code: this.generateUniqueCode(),
             initialBalance: cardData.amount,
             currentBalance: cardData.amount,
@@ -1211,18 +1219,23 @@ export class GiftCardService {
                   ),
                 )
               : null,
-          });
-          const savedGiftCard = await giftCardRepo.save(giftCard);
+          }),
+        );
 
-          await transactionRepo.save(
-            transactionRepo.create({
-              giftCardId: savedGiftCard.id,
-              type: GiftCardTransactionType.PURCHASE,
-              amount: savedGiftCard.initialBalance,
-              notes: `JSON Import - Row ${cardData.rowNumber}`,
-            }),
-          );
-        }
+        // Batch save all gift cards (1 INSERT instead of N)
+        const savedGiftCards = await giftCardRepo.save(giftCardEntities);
+
+        // Build all transactions, then batch save (1 INSERT instead of N)
+        const transactionEntities = savedGiftCards.map((savedCard, idx) =>
+          transactionRepo.create({
+            giftCardId: savedCard.id,
+            type: GiftCardTransactionType.PURCHASE,
+            amount: savedCard.initialBalance,
+            notes: `JSON Import - Row ${giftCardsToCreate[idx].rowNumber}`,
+          }),
+        );
+
+        await transactionRepo.save(transactionEntities);
       });
     } catch (e) {
       return {

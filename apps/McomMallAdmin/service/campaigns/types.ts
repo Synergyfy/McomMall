@@ -36,3 +36,37 @@ export interface Campaign {
   createdAt: string;
   updatedAt: string;
 }
+
+export type MarketingCampaignStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED' | 'SCHEDULED';
+
+export interface MarketingCampaign {
+  id: string;
+  name: string;
+  type: string;
+  status: MarketingCampaignStatus;
+  startDate: string;
+  endDate: string;
+  targetPostalCodes?: string[];
+  season?: { id: string; name: string } | null;
+  coupons?: { id: string }[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MarketingCampaignPage {
+  data: MarketingCampaign[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+export interface GetMarketingCampaignsParams {
+  page?: number;
+  limit?: number;
+}

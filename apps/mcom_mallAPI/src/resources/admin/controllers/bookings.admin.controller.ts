@@ -1,8 +1,9 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
 import { RolesGuard } from 'src/common/guards/roles.guard';
@@ -19,9 +20,20 @@ export class AdminBookingsController {
   constructor(private readonly adminBookingsService: AdminBookingsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all bookings' })
-  @ApiResponse({ status: 200, description: 'Return all bookings.' })
-  findAll() {
-    return this.adminBookingsService.findAll();
+  @ApiOperation({ summary: 'Get all bookings (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Returns paginated bookings.' })
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.adminBookingsService.findAll({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 25,
+      status,
+    });
   }
 }

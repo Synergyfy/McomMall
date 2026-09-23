@@ -9,6 +9,7 @@ import { PlanVariantFeature } from './entities/plan-variant-feature.entity';
 import { PlansService } from './services/plans.service';
 import { PlanExpiryService } from './services/plan-expiry.service';
 import { PlansController } from './controllers/plans.controller';
+import { SystemPlanController } from './controllers/system-plan.controller';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { PlansController } from './controllers/plans.controller';
       PlanVariantFeature,
     ]),
   ],
-  controllers: [PlansController],
+  controllers: [PlansController, SystemPlanController],
   providers: [PlansService, PlanExpiryService],
   exports: [PlansService, PlanExpiryService],
 })

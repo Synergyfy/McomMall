@@ -47,7 +47,6 @@ import { AuditsModule } from './resources/audits/audits.module';
 import { GroupCirclesModule } from './resources/group-circles/group-circles.module';
 import { SearchModule } from './resources/search/search.module';
 import { DisputeModule } from './resources/dispute/dispute.module';
-import { TierModule } from './resources/tier/tier.module';
 import { PlansModule } from './resources/plans/plans.module';
 import { TaxonomyModule } from './resources/taxonomy/taxonomy.module';
 import { MoneyEngineModule } from './resources/money-engine/money-engine.module';
@@ -84,12 +83,34 @@ import { SettingsModule } from './resources/settings/settings.module';
 import { FlashSalesModule } from './resources/flash-sales/flash-sales.module';
 import { QuizModule } from './resources/quiz/quiz.module';
 import { CustomerModule } from './resources/customer/customer.module';
+import { BoroughsModule } from './resources/boroughs/boroughs.module';
+import { HighStreetsModule } from './resources/high-streets/high-streets.module';
+import { ServiceTemplatesModule } from './resources/service-templates/service-templates.module';
+import { AdminRolesModule } from './resources/admin-roles/admin-roles.module';
+import { VerificationsModule } from './resources/verifications/verifications.module';
+import { TrainingModulesModule } from './resources/training/training.module';
+import { OnboardingModule } from './resources/onboarding/onboarding.module';
+import { QualityModule } from './resources/quality/quality.module';
+import { ExposModule } from './resources/expos/expos.module';
+import { WebhooksModule } from './resources/webhooks/webhooks.module';
+import { InstitutionalPartnersModule } from './resources/institutional-partners/institutional-partners.module';
 
 @Module({
   imports: [
     FlashSalesModule,
     QuizModule,
     CustomerModule,
+    BoroughsModule,
+    HighStreetsModule,
+    ServiceTemplatesModule,
+    AdminRolesModule,
+    VerificationsModule,
+    TrainingModulesModule,
+    OnboardingModule,
+    QualityModule,
+    ExposModule,
+    WebhooksModule,
+    InstitutionalPartnersModule,
     QrCodesModule,
     InterestSignalsModule,
     AutomationsModule,
@@ -110,7 +131,6 @@ import { CustomerModule } from './resources/customer/customer.module';
     MarketplaceModule,
     MoneyEngineModule,
     TaxonomyModule,
-    TierModule,
     PlansModule,
     DisputeModule,
     SearchModule,

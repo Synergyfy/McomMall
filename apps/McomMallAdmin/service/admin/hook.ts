@@ -12,7 +12,8 @@ import {
     BusinessDetail,
     CreateAdminUserDto,
     GetAdminTransactionsParams,
-    GetAdminTransactionsResponse
+    GetAdminTransactionsResponse,
+    AdminTransactionStats
 } from './types';
 import { toast } from 'sonner';
 
@@ -65,6 +66,11 @@ const createAdminUser = async (data: CreateAdminUserDto): Promise<any> => {
 
 const getAdminTransactions = async (params: GetAdminTransactionsParams): Promise<GetAdminTransactionsResponse> => {
     const { data } = await api.get('/admin/transactions', { params });
+    return data;
+};
+
+const getAdminTransactionStats = async (): Promise<AdminTransactionStats> => {
+    const { data } = await api.get('/admin/transactions/stats');
     return data;
 };
 
@@ -164,6 +170,13 @@ export const useGetAdminTransactions = (params: GetAdminTransactionsParams) => {
     return useQuery({
         queryKey: ['admin-transactions', params],
         queryFn: () => getAdminTransactions(params),
+    });
+};
+
+export const useGetAdminTransactionStats = () => {
+    return useQuery({
+        queryKey: ['admin-transaction-stats'],
+        queryFn: getAdminTransactionStats,
     });
 };
 

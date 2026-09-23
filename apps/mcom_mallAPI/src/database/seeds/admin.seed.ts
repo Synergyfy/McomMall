@@ -19,9 +19,10 @@ async function seed(): Promise<void> {
   await dataSource.initialize();
   const userRepository = dataSource.getRepository(User);
 
-  const email = process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;
+  const email = process.argv[2] || process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;
   // Never hardcode secrets: prefer env, otherwise generate and print once.
-  const plainPassword = process.env.ADMIN_PASSWORD || generatePassword();
+  const plainPassword =
+    process.argv[3] || process.env.ADMIN_PASSWORD || generatePassword();
   const passwordHash = await bcrypt.hash(plainPassword, SALT_ROUNDS);
 
   const existing = await userRepository.findOne({ where: { email } });

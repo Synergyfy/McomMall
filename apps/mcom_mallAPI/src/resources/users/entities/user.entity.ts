@@ -10,6 +10,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Promotion } from '../../promotion/entities/promotion.entity';
+import { AdminRole } from '../../admin-roles/entities/admin-role.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Offer } from '../../offer/entities/offer.entity';
 import { UserRole } from '../../../common/role.enum';
@@ -55,6 +56,16 @@ export class User extends AbstractBaseEntity {
 
   @Column({ type: 'enum', enum: UserRole })
   role: UserRole;
+
+  @Column({ type: 'uuid', nullable: true })
+  adminRoleId?: string | null;
+
+  @ManyToOne(() => AdminRole, (adminRole) => adminRole.members, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'adminRoleId' })
+  adminRole?: AdminRole | null;
 
   @Column({ nullable: true })
   profilePictureUrl?: string;

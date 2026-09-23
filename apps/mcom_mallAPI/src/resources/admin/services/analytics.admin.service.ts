@@ -59,44 +59,30 @@ export class AdminAnalyticsService {
         prevStartDate = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
     }
 
-    // 1. Signups Metric
-    const currentSignups = await this.userRepository.count({
-      where: { created_at: MoreThan(startDate) },
-    });
-    const prevSignups = await this.userRepository.count({
-      where: { created_at: Between(prevStartDate, startDate) },
-    });
-    const signupsMetric = this.calculateMetric(currentSignups, prevSignups);
-
-    // 2. Revenue Metric
-    const currentRevenue = await this.calculateTotalRevenue(
-      startDate,
-      new Date(),
-    );
-    const prevRevenue = await this.calculateTotalRevenue(
-      prevStartDate,
-      startDate,
-    );
-    const revenueMetric = this.calculateMetric(
+    // Run all independent metric queries in parallel — was 8 sequential, now 1 round trip
+    const [
+      currentSignups,
+      prevSignups,
       currentRevenue,
       prevRevenue,
-      true,
-    );
-
-    // 3. Visitors Metric (distinct users with recorded activity)
-    const [currentVisitors, prevVisitors] = await Promise.all([
+      currentVisitors,
+      prevVisitors,
+      currentOrders,
+      prevOrders,
+    ] = await Promise.all([
+      this.userRepository.count({ where: { created_at: MoreThan(startDate) } }),
+      this.userRepository.count({ where: { created_at: Between(prevStartDate, startDate) } }),
+      this.calculateTotalRevenue(startDate, new Date()),
+      this.calculateTotalRevenue(prevStartDate, startDate),
       this.countDistinctActiveUsers(startDate),
       this.countDistinctActiveUsers(prevStartDate, startDate),
+      this.orderRepository.count({ where: { created_at: MoreThan(startDate) } }),
+      this.orderRepository.count({ where: { created_at: Between(prevStartDate, startDate) } }),
     ]);
-    const visitorsMetric = this.calculateMetric(currentVisitors, prevVisitors);
 
-    // 4. Conversion Rate (orders placed / distinct active users)
-    const currentOrders = await this.orderRepository.count({
-      where: { created_at: MoreThan(startDate) },
-    });
-    const prevOrders = await this.orderRepository.count({
-      where: { created_at: Between(prevStartDate, startDate) },
-    });
+    const signupsMetric = this.calculateMetric(currentSignups, prevSignups);
+    const revenueMetric = this.calculateMetric(currentRevenue, prevRevenue, true);
+    const visitorsMetric = this.calculateMetric(currentVisitors, prevVisitors);
     const conversionMetric = this.calculatePercentageMetric(
       currentOrders,
       Math.max(currentVisitors, 1),
@@ -290,24 +276,6 @@ export class AdminAnalyticsService {
   }
 
   private async getTopCategories(): Promise<TopItemDto[]> {
-    const data = await this.orderRepository
-      .createQueryBuilder('o')
-      .leftJoin('o.items', 'oi')
-      .leftJoin('oi.product', 'p')
-      .select('p.category', 'name')
-      .addSelect('SUM(oi.price * oi.quantity)', 'value')
-      .where('o.created_at > :monthStart', {
-        monthStart: new Date(
-          new Date().getFullYear(),
-          new Date().getMonth(),
-          1,
-        ),
-      })
-      .groupBy('p.category')
-      .orderBy('value', 'DESC')
-      .limit(5)
-      .getRawMany();
-
     const prevMonthStart = new Date(
       new Date().getFullYear(),
       new Date().getMonth() - 1,
@@ -319,21 +287,40 @@ export class AdminAnalyticsService {
       1,
     );
 
-    const prevData = await this.orderRepository
-      .createQueryBuilder('o')
-      .leftJoin('o.items', 'oi')
-      .leftJoin('oi.product', 'p')
-      .select('p.category', 'name')
-      .addSelect('SUM(oi.price * oi.quantity)', 'value')
-      .where(
-        'o.created_at >= :prevMonthStart AND o.created_at < :currentMonthStart',
-        {
-          prevMonthStart,
-          currentMonthStart,
-        },
-      )
-      .groupBy('p.category')
-      .getRawMany();
+    const [data, prevData] = await Promise.all([
+      this.orderRepository
+        .createQueryBuilder('o')
+        .leftJoin('o.items', 'oi')
+        .leftJoin('oi.product', 'p')
+        .select('p.category', 'name')
+        .addSelect('SUM(oi.price * oi.quantity)', 'value')
+        .where('o.created_at > :monthStart', {
+          monthStart: new Date(
+            new Date().getFullYear(),
+            new Date().getMonth(),
+            1,
+          ),
+        })
+        .groupBy('p.category')
+        .orderBy('value', 'DESC')
+        .limit(5)
+        .getRawMany(),
+      this.orderRepository
+        .createQueryBuilder('o')
+        .leftJoin('o.items', 'oi')
+        .leftJoin('oi.product', 'p')
+        .select('p.category', 'name')
+        .addSelect('SUM(oi.price * oi.quantity)', 'value')
+        .where(
+          'o.created_at >= :prevMonthStart AND o.created_at < :currentMonthStart',
+          {
+            prevMonthStart,
+            currentMonthStart,
+          },
+        )
+        .groupBy('p.category')
+        .getRawMany(),
+    ]);
 
     const prevMap = new Map(
       prevData.map((pd) => [pd.name, Number(pd.value) || 0]),

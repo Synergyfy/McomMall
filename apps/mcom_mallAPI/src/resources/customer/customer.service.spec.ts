@@ -166,7 +166,7 @@ describe('CustomerService', () => {
         rewardType: RewardType.COUPON,
       } as Reward);
       const manager = managerMock();
-      const redemptionRepoMock = manager.getRepository(RewardRedemption);
+      const redemptionRepoMock = manager.getRepository(RewardRedemption) as any;
       (redemptionRepoMock.findOne as jest.Mock).mockResolvedValue({
         id: 'red1',
       });
@@ -185,7 +185,7 @@ describe('CustomerService', () => {
         rewardType: RewardType.COUPON,
       } as Reward);
       const manager = managerMock();
-      const userRepoMock = manager.getRepository(User);
+      const userRepoMock = manager.getRepository(User) as any;
       (userRepoMock.createQueryBuilder().getOne as jest.Mock).mockResolvedValue(
         {
           id: 'user-1',
@@ -232,7 +232,7 @@ describe('CustomerService', () => {
         pointsRequired: 500,
       } as Reward);
       const manager = managerMock();
-      const redemptionRepoMock = manager.getRepository(RewardRedemption);
+      const redemptionRepoMock = manager.getRepository(RewardRedemption) as any;
       (redemptionRepoMock.findOne as jest.Mock).mockResolvedValue({
         id: 'red1',
       });

@@ -22,15 +22,26 @@ const getCustomerBookings = async (days?: number): Promise<Booking[]> => {
   return data;
 };
 
-const getAllBookings = async (days?: number): Promise<Booking[]> => {
-    const { data } = await api.get('admin/bookings', { params: { days } });
-    return data.serviceBookings; // Correctly access the nested array
+export interface BookingsQueryParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+}
+
+export interface PaginatedBookingsResponse {
+  serviceBookings: Booking[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+const getAllBookings = async (params: BookingsQueryParams = {}): Promise<PaginatedBookingsResponse> => {
+    const { data } = await api.get('admin/bookings', { params });
+    return data;
 };
 
-export const useGetAllBookings = (days?: number) => {
+export const useGetAllBookings = (params: BookingsQueryParams = {}) => {
     return useQuery({
-        queryKey: ['all-admin-bookings', days],
-        queryFn: () => getAllBookings(days),
+        queryKey: ['all-admin-bookings', params],
+        queryFn: () => getAllBookings(params),
     });
 };
 

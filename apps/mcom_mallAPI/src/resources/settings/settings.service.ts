@@ -105,7 +105,7 @@ export class SettingsService {
     const [membership, payments, methods] = await Promise.all([
       this.membershipRepository.findOne({
         where: { user: { id: userId } },
-        relations: ['tier', 'payment'],
+        relations: ['planVariant', 'planVariant.plan', 'payment'],
       }),
       this.membershipPaymentRepository.find({
         where: { user: { id: userId } },
@@ -115,9 +115,9 @@ export class SettingsService {
     ]);
 
     return {
-      plan: membership?.tier
+      plan: membership?.planVariant
         ? {
-            name: membership.tier.name,
+            name: membership.planVariant.plan?.name ?? 'Plan',
             planType: membership.planType,
             expiresAt: membership.expiresAt,
             isActive: membership.isActive,

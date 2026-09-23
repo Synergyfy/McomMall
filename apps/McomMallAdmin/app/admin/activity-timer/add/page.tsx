@@ -8,7 +8,7 @@ import {
     PublishTaskDto
 } from '@/app/admin/types/activity-timer';
 import { usePublishActivityTask } from '@/service/activity-timer';
-import { useGetTiers } from '@/service/tiers/hook';
+import { useGetPlans } from '@/service/plans/hook';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,7 +30,7 @@ import { useRouter } from 'next/navigation';
 export default function ActivityTimerAddPage() {
     const router = useRouter();
     const publishMutation = usePublishActivityTask();
-    const { data: tiers } = useGetTiers();
+    const { data: plans } = useGetPlans();
 
     const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<PublishTaskDto>({
         defaultValues: {
@@ -68,7 +68,7 @@ export default function ActivityTimerAddPage() {
             toast.success('Task published successfully');
             router.push('/admin/activity-timer');
         } catch (error) {
-            console.error(error);
+            toast.error('Failed to publish task. Please try again.');
         }
     };
 
@@ -201,17 +201,17 @@ export default function ActivityTimerAddPage() {
                     </CardContent>
                 </Card>
 
-                {/* Tier Visibility (Replaces Target Audience) */}
+                {/* Plan Visibility (Replaces Target Audience) */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Tier Visibility</CardTitle>
-                        <CardDescription>Control which membership tiers can see this task.</CardDescription>
+                        <CardTitle>Plan Visibility</CardTitle>
+                        <CardDescription>Control which membership plans can see this task.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {/* Included Tiers */}
+                        {/* Included Plans */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-base font-semibold">Included Tiers</Label>
+                                <Label className="text-base font-semibold">Included Plans</Label>
                                 <div className="flex items-center space-x-2">
                                     <Checkbox
                                         id="all-tiers-included"
@@ -224,44 +224,44 @@ export default function ActivityTimerAddPage() {
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4 border-l-2 border-green-200">
-                                {tiers?.map((tier: any) => (
-                                    <div key={`inc-${tier.id}`} className="flex items-center space-x-2">
+                                {plans?.map((plan: any) => (
+                                    <div key={`inc-${plan.id}`} className="flex items-center space-x-2">
                                         <Checkbox
-                                            id={`inc-tier-${tier.id}`}
-                                            checked={includedTierIds.includes(tier.id)}
+                                            id={`inc-tier-${plan.id}`}
+                                            checked={includedTierIds.includes(plan.id)}
                                             onCheckedChange={(checked) => {
                                                 if (checked) {
-                                                    setValue('includedTierIds', [...includedTierIds, tier.id]);
+                                                    setValue('includedTierIds', [...includedTierIds, plan.id]);
                                                 } else {
-                                                    setValue('includedTierIds', includedTierIds.filter(id => id !== tier.id));
+                                                    setValue('includedTierIds', includedTierIds.filter(id => id !== plan.id));
                                                 }
                                             }}
                                         />
-                                        <Label htmlFor={`inc-tier-${tier.id}`}>{tier.name}</Label>
+                                        <Label htmlFor={`inc-tier-${plan.id}`}>{plan.name}</Label>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* Excluded Tiers */}
+                        {/* Excluded Plans */}
                         <div className="space-y-3 pt-4 border-t">
-                            <Label className="text-base font-semibold">Excluded Tiers</Label>
-                            <p className="text-xs text-slate-500">Users in these tiers will NOT see this task, even if included above.</p>
+                            <Label className="text-base font-semibold">Excluded Plans</Label>
+                            <p className="text-xs text-slate-500">Users in these plans will NOT see this task, even if included above.</p>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4 border-l-2 border-red-200">
-                                {tiers?.map((tier: any) => (
-                                    <div key={`exc-${tier.id}`} className="flex items-center space-x-2">
+                                {plans?.map((plan: any) => (
+                                    <div key={`exc-${plan.id}`} className="flex items-center space-x-2">
                                         <Checkbox
-                                            id={`exc-tier-${tier.id}`}
-                                            checked={excludedTierIds.includes(tier.id)}
+                                            id={`exc-tier-${plan.id}`}
+                                            checked={excludedTierIds.includes(plan.id)}
                                             onCheckedChange={(checked) => {
                                                 if (checked) {
-                                                    setValue('excludedTierIds', [...excludedTierIds, tier.id]);
+                                                    setValue('excludedTierIds', [...excludedTierIds, plan.id]);
                                                 } else {
-                                                    setValue('excludedTierIds', excludedTierIds.filter(id => id !== tier.id));
+                                                    setValue('excludedTierIds', excludedTierIds.filter(id => id !== plan.id));
                                                 }
                                             }}
                                         />
-                                        <Label htmlFor={`exc-tier-${tier.id}`}>{tier.name}</Label>
+                                        <Label htmlFor={`exc-tier-${plan.id}`}>{plan.name}</Label>
                                     </div>
                                 ))}
                             </div>

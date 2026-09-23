@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,188 +16,244 @@ import {
 import {
     Bell,
     Megaphone,
-    Gift,
     Calendar,
-    AlertTriangle,
-    Server,
     Send,
-    Clock,
-    Smartphone
+    AlertTriangle,
+    Loader2,
+    CheckCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+    useGetNotifications,
+    useBroadcastNotification,
+    useMarkNotificationsAsSeen,
+} from '@/service/notifications/hook';
+import type { BroadcastType } from '@/service/notifications/types';
+
+function typeLabel(type: string): string {
+    switch (type) {
+        case 'new_order':
+            return 'New order';
+        case 'new_booking':
+            return 'New booking';
+        case 'new_message':
+            return 'New message';
+        case 'broadcast_alert':
+            return 'Broadcast';
+        case 'event_invite':
+            return 'Event invite';
+        default:
+            return type.replace(/_/g, ' ');
+    }
+}
 
 export default function NotificationsPage() {
+    const { notifications, isLoading, isError, error, refetch, unseenIds } = useGetNotifications();
+    const broadcast = useBroadcastNotification();
+    const markSeen = useMarkNotificationsAsSeen();
+
+    useEffect(() => {
+        refetch();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const [title, setTitle] = useState('');
+    const [message, setMessage] = useState('');
+    const [broadcastType, setBroadcastType] = useState<BroadcastType>('broadcast_alert');
+
+    const counts = useMemo(() => {
+        const list = notifications ?? [];
+        const by = (t: string) => list.filter((n) => n.type === t).length;
+        return {
+            total: list.length,
+            unseen: (unseenIds ?? []).length,
+            orders: by('new_order'),
+            bookings: by('new_booking'),
+            messages: by('new_message'),
+        };
+    }, [notifications, unseenIds]);
+
+    const recent = useMemo(() => (notifications ?? []).slice(0, 8), [notifications]);
+
+    const canSend = title.trim().length > 0 && message.trim().length > 0 && !broadcast.isPending;
+
+    const handleSend = () => {
+        broadcast.mutate(
+            { title: title.trim(), message: message.trim(), type: broadcastType },
+            {
+                onSuccess: () => {
+                    setTitle('');
+                    setMessage('');
+                },
+            },
+        );
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Notifications & Communication</h1>
-                    <p className="text-slate-500">Manage platform-wide communication and alerts</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Notifications &amp; Communication</h1>
+                    <p className="text-slate-500">Live inbox and broadcast composer from the API</p>
                 </div>
+                {(unseenIds?.length ?? 0) > 0 && (
+                    <Button
+                        variant="outline"
+                        disabled={markSeen.isPending}
+                        onClick={() => markSeen.mutate({ notificationIds: unseenIds })}
+                    >
+                        <CheckCheck className="h-4 w-4 mr-2" /> Mark all seen ({unseenIds.length})
+                    </Button>
+                )}
             </div>
 
+            {isError && (
+                <Card className="border-rose-200 bg-rose-50">
+                    <CardContent className="p-4 flex items-center gap-3 text-sm text-rose-700">
+                        <AlertTriangle className="h-4 w-4" />
+                        Failed to load notifications: {(error as Error)?.message ?? 'Unknown error'}
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={() => refetch()}>
+                            Retry
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Communication Types Overview */}
                 <div className="lg:col-span-1 space-y-4">
                     <Card className="border-0 shadow-sm bg-slate-900 text-white h-full">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Bell className="h-5 w-5 text-blue-400" /> Communication Types
+                                <Bell className="h-5 w-5 text-blue-400" /> Inbox Overview
                             </CardTitle>
                             <CardDescription className="text-slate-400">
-                                Active channels and recent usage
+                                Live counts from GET /notifications
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <Megaphone className="h-4 w-4 text-orange-400" />
-                                    <span className="font-medium text-sm">Borough Announcements</span>
-                                </div>
-                                <Badge className="bg-slate-700 hover:bg-slate-600">12 Active</Badge>
-                            </div>
-                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <Smartphone className="h-4 w-4 text-blue-400" />
-                                    <span className="font-medium text-sm">Push Notifications</span>
-                                </div>
-                                <Badge className="bg-slate-700 hover:bg-slate-600">145k Sent</Badge>
-                            </div>
-                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <Gift className="h-4 w-4 text-emerald-400" />
-                                    <span className="font-medium text-sm">Reward Alerts</span>
-                                </div>
-                                <Badge className="bg-slate-700 hover:bg-slate-600">Auto</Badge>
-                            </div>
-                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <Calendar className="h-4 w-4 text-purple-400" />
-                                    <span className="font-medium text-sm">Event Reminders</span>
-                                </div>
-                                <Badge className="bg-slate-700 hover:bg-slate-600">8 Scheduled</Badge>
-                            </div>
-                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <AlertTriangle className="h-4 w-4 text-red-400" />
-                                    <span className="font-medium text-sm">Emergency Notices</span>
-                                </div>
-                                <Badge className="bg-red-500 hover:bg-red-600 border-0">0 Active</Badge>
-                            </div>
-                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
-                                <div className="flex items-center gap-3">
-                                    <Server className="h-4 w-4 text-slate-400" />
-                                    <span className="font-medium text-sm">Platform Updates</span>
-                                </div>
-                                <Badge className="bg-slate-700 hover:bg-slate-600">Drafting</Badge>
-                            </div>
+                            {isLoading ? (
+                                [0, 1, 2].map((i) => (
+                                    <div key={i} className="h-12 rounded-lg bg-slate-800 animate-pulse" />
+                                ))
+                            ) : (
+                                <>
+                                    {[
+                                        { label: 'Unseen notifications', value: counts.unseen },
+                                        { label: 'New orders', value: counts.orders },
+                                        { label: 'New bookings', value: counts.bookings },
+                                        { label: 'New messages', value: counts.messages },
+                                        { label: 'Total in inbox', value: counts.total },
+                                    ].map((row) => (
+                                        <div
+                                            key={row.label}
+                                            className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700"
+                                        >
+                                            <span className="font-medium text-sm">{row.label}</span>
+                                            <Badge className="bg-slate-700 hover:bg-slate-600">{row.value}</Badge>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Recent notifications</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            {isLoading ? (
+                                <div className="h-20 rounded bg-slate-100 animate-pulse" />
+                            ) : recent.length === 0 ? (
+                                <p className="text-sm text-slate-400 py-4 text-center">Inbox is empty.</p>
+                            ) : (
+                                recent.map((n) => (
+                                    <div
+                                        key={n.id}
+                                        className={cn(
+                                            'rounded-lg border p-3 text-sm',
+                                            n.seen ? 'border-slate-100 bg-white' : 'border-blue-100 bg-blue-50/50',
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <Badge variant="outline" className="text-[10px] uppercase">
+                                                {typeLabel(n.type)}
+                                            </Badge>
+                                            <span className="text-[11px] text-slate-400">
+                                                {new Date(n.createdAt).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 font-medium text-slate-800">
+                                            {n.sender?.name ?? 'System'}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Message Creator */}
                 <div className="lg:col-span-2 space-y-4">
                     <Card className="border-0 shadow-sm">
                         <CardHeader className="border-b border-slate-100 pb-4">
-                            <CardTitle>Message Creator</CardTitle>
-                            <CardDescription>Compose and schedule a new broadcast or alert</CardDescription>
+                            <CardTitle className="flex items-center gap-2">
+                                <Megaphone className="h-5 w-5 text-orange-500" /> Broadcast Composer
+                            </CardTitle>
+                            <CardDescription>Sends a live broadcast via POST /notifications/broadcast</CardDescription>
                         </CardHeader>
                         <CardContent className="pt-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Message Title</label>
-                                    <Input placeholder="e.g. Summer Night Market is Live!" />
+                                    <label className="text-sm font-medium text-slate-700">Message Title *</label>
+                                    <Input
+                                        placeholder="e.g. Summer Night Market is Live!"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                    />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Communication Type</label>
-                                    <Select defaultValue="borough">
+                                    <label className="text-sm font-medium text-slate-700">Broadcast Type</label>
+                                    <Select value={broadcastType} onValueChange={(v) => setBroadcastType(v as BroadcastType)}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select type..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="borough">Borough Announcement</SelectItem>
-                                            <SelectItem value="push">Push Notification</SelectItem>
-                                            <SelectItem value="reward">Reward Alert</SelectItem>
-                                            <SelectItem value="event">Event Reminder</SelectItem>
-                                            <SelectItem value="emergency">Emergency Notice</SelectItem>
-                                            <SelectItem value="platform">Platform Update</SelectItem>
+                                            <SelectItem value="broadcast_alert">Broadcast Alert</SelectItem>
+                                            <SelectItem value="event_invite">Event Invite</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Message Body</label>
-                                <Textarea 
-                                    placeholder="Type your message here... (Max 250 characters for push notifications)" 
+                                <label className="text-sm font-medium text-slate-700">Message Body *</label>
+                                <Textarea
+                                    placeholder="Type your broadcast message here..."
                                     className="min-h-[120px] resize-none"
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
                                 />
-                                <p className="text-xs text-slate-400 text-right">0 / 250</p>
+                                <p className="text-xs text-slate-400 text-right">{message.length} characters</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Audience Targeting</label>
-                                    <Select defaultValue="all">
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select audience..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Users</SelectItem>
-                                            <SelectItem value="customers">Customers Only</SelectItem>
-                                            <SelectItem value="businesses">Businesses Only</SelectItem>
-                                            <SelectItem value="active">Active this week</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Borough</label>
-                                    <Select defaultValue="all">
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select borough..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Boroughs (Global)</SelectItem>
-                                            <SelectItem value="camden">Camden</SelectItem>
-                                            <SelectItem value="hackney">Hackney</SelectItem>
-                                            <SelectItem value="southwark">Southwark</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                            <div className="flex items-center justify-end pt-6 border-t border-slate-100">
+                                <Button
+                                    className="bg-orange-500 hover:bg-orange-600"
+                                    disabled={!canSend}
+                                    onClick={handleSend}
+                                >
+                                    {broadcast.isPending ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Send className="h-4 w-4 mr-2" />
+                                    )}
+                                    Send Broadcast
+                                </Button>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Call to Action (CTA) Button</label>
-                                    <div className="flex gap-2">
-                                        <Input placeholder="Button Text (e.g. View Deal)" className="w-1/2" />
-                                        <Input placeholder="Link URL" className="w-1/2" />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Schedule</label>
-                                    <div className="flex gap-2">
-                                        <Button variant="outline" className="w-1/2 justify-start font-normal text-slate-600">
-                                            <Calendar className="mr-2 h-4 w-4" /> Today
-                                        </Button>
-                                        <Button variant="outline" className="w-1/2 justify-start font-normal text-slate-600">
-                                            <Clock className="mr-2 h-4 w-4" /> 12:00 PM
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-6 border-t border-slate-100">
-                                <Button variant="ghost" className="text-slate-500">Save as Draft</Button>
-                                <div className="flex gap-2">
-                                    <Button variant="outline">
-                                        <Clock className="h-4 w-4 mr-2" /> Schedule
-                                    </Button>
-                                    <Button className="bg-orange-500 hover:bg-orange-600">
-                                        <Send className="h-4 w-4 mr-2" /> Send Now
-                                    </Button>
-                                </div>
-                            </div>
+                            <p className="text-xs text-slate-400 flex items-center gap-1">
+                                <Calendar className="h-3 w-3" /> Scheduling, drafts and audience segments are not
+                                supported by the API yet — broadcasts send immediately to all recipients.
+                            </p>
                         </CardContent>
                     </Card>
                 </div>

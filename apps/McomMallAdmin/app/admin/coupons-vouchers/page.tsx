@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     Plus,
     Search,
@@ -79,7 +79,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
-import { useCreateRewardDefinition, useGetRewardDefinitions, useGetMoneyEngineAnalytics, useDeleteRewardDefinition } from '@/service/money-engine/hook';
+import { useCreateRewardDefinition, useGetRewardDefinitions, useGetMoneyEngineAnalytics, useDeleteRewardDefinition, useGetAdminVouchers } from '@/service/money-engine/hook';
 import { CreateRewardDefinitionDto, RewardDefinition } from '@/service/money-engine/types';
 import { useGetAdminListings } from '@/service/listings/hook';
 import { AdminListing } from '@/service/listings/types';
@@ -141,6 +141,47 @@ export default function CouponVoucherControl() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const { definitions, isLoading: isDefinitionsLoading } = useGetRewardDefinitions();
     const { analytics, isLoading: isAnalyticsLoading } = useGetMoneyEngineAnalytics();
+    const { vouchers, total: voucherTotal, isLoading: isVouchersLoading } = useGetAdminVouchers(1, 100);
+
+    // Live: vouchers minted per month (last 12 months, from admin voucher ledger)
+    const monthlyMinting = useMemo(() => {
+        const buckets = new Map<string, number>();
+        const now = new Date();
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            buckets.set(`${d.getFullYear()}-${d.getMonth()}`, 0);
+        }
+        for (const v of vouchers) {
+            const created = new Date(v.createdAt);
+            if (isNaN(created.getTime())) continue;
+            const key = `${created.getFullYear()}-${created.getMonth()}`;
+            if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
+        }
+        const values = [...buckets.values()];
+        const max = Math.max(...values, 1);
+        return values.map((count) => Math.round((count / max) * 100));
+    }, [vouchers]);
+
+    // Live: definition share by seasonal label
+    const seasonDistribution = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const d of (definitions as RewardDefinition[]) ?? []) {
+            const label = (d.seasonalLabels?.[0] ?? 'Unlabelled').trim() || 'Unlabelled';
+            counts.set(label, (counts.get(label) ?? 0) + 1);
+        }
+        const total = [...counts.values()].reduce((a, b) => a + b, 0) || 1;
+        const palette = ['bg-emerald-400', 'bg-orange-400', 'bg-amber-600', 'bg-blue-400', 'bg-purple-500', 'bg-slate-400'];
+        return [...counts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6)
+            .map(([label, count], i) => ({
+                label,
+                value: Math.round((count / total) * 100),
+                color: palette[i % palette.length],
+            }));
+    }, [definitions]);
+
+    const utilization = analytics?.networkUtilization?.value;
     const { data: listingsData, isLoading: isListingsLoading } = useGetAdminListings({ limit: 100 });
     const createRewardDefinition = useCreateRewardDefinition();
     const deleteRewardDefinition = useDeleteRewardDefinition();
@@ -878,38 +919,41 @@ export default function CouponVoucherControl() {
                             <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden bg-white">
                                 <CardHeader className="flex flex-row items-center justify-between pb-2 bg-slate-50/50">
                                     <div className="space-y-0.5">
-                                        <CardTitle className="text-lg font-bold text-slate-900">System Burn Velocity</CardTitle>
-                                        <CardDescription className="text-xs">Cashback Awarded vs. Burned Value over time</CardDescription>
+                                        <CardTitle className="text-lg font-bold text-slate-900">Voucher Minting Velocity</CardTitle>
+                                        <CardDescription className="text-xs">Vouchers minted per month (live ledger)</CardDescription>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-orange-50 text-[10px] font-bold text-orange-600 border border-orange-100 uppercase tracking-tighter">Cashback</div>
-                                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 text-[10px] font-bold text-blue-600 border border-blue-100 uppercase tracking-tighter">Burned</div>
+                                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-orange-50 text-[10px] font-bold text-orange-600 border border-orange-100 uppercase tracking-tighter">Minted</div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="h-[350px] flex items-center justify-center relative p-6">
                                     <div className="absolute inset-0 bg-gradient-to-b from-white to-slate-50/30" />
                                     <div className="relative text-center space-y-4">
-                                        <div className="flex items-end justify-center gap-2 h-48 w-full max-w-md mx-auto">
-                                            {[40, 65, 45, 90, 55, 80, 70, 85, 95, 60, 75, 50].map((v, i) => (
-                                                <div key={i} className="flex flex-col items-center gap-1 w-full">
-                                                    <motion.div
-                                                        initial={{ height: 0 }}
-                                                        animate={{ height: `${v}%` }}
-                                                        transition={{ delay: i * 0.05 }}
-                                                        className="w-full bg-orange-400/20 rounded-t-sm border-t-2 border-orange-400 relative group"
-                                                    >
+                                        {isVouchersLoading ? (
+                                            <div className="h-48 w-full max-w-md mx-auto rounded bg-slate-100 animate-pulse" />
+                                        ) : monthlyMinting.every((v) => v === 0) ? (
+                                            <p className="text-sm text-slate-400 py-16">No vouchers minted in the last 12 months.</p>
+                                        ) : (
+                                            <div className="flex items-end justify-center gap-2 h-48 w-full max-w-md mx-auto">
+                                                {monthlyMinting.map((v, i) => (
+                                                    <div key={i} className="flex flex-col items-center gap-1 w-full">
                                                         <motion.div
                                                             initial={{ height: 0 }}
-                                                            animate={{ height: `${v * 0.4}%` }}
-                                                            className="absolute bottom-0 w-full bg-blue-500 rounded-t-sm border-t-2 border-blue-600"
+                                                            animate={{ height: `${Math.max(v, 4)}%` }}
+                                                            transition={{ delay: i * 0.05 }}
+                                                            className="w-full bg-orange-400/20 rounded-t-sm border-t-2 border-orange-400 relative group"
                                                         />
-                                                    </motion.div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                         <div className="space-y-1">
-                                            <p className="text-sm font-bold text-slate-800">42% Average Recirculation Rate</p>
-                                            <p className="text-xs text-slate-500">System health is <span className="text-emerald-500 font-bold uppercase">Optimal</span></p>
+                                            <p className="text-sm font-bold text-slate-800">
+                                                {isAnalyticsLoading ? '…' : `${utilization ?? 0}% Network Utilization`}
+                                            </p>
+                                            <p className="text-xs text-slate-500">
+                                                Vouchers minted per month · {voucherTotal} total on ledger
+                                            </p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -922,13 +966,12 @@ export default function CouponVoucherControl() {
                                     <CardDescription className="text-xs">Distribution of active vouchers</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6 pt-4">
-                                    {[
-                                        { label: 'Spring', value: 45, color: 'bg-emerald-400' },
-                                        { label: 'Summer', value: 25, color: 'bg-orange-400' },
-                                        { label: 'Autumn', value: 15, color: 'bg-amber-600' },
-                                        { label: 'Winter', value: 10, color: 'bg-blue-400' },
-                                        { label: 'Expo', value: 5, color: 'bg-purple-500' },
-                                    ].map((season, i) => (
+                                    {isDefinitionsLoading ? (
+                                        <div className="h-32 rounded bg-slate-100 animate-pulse" />
+                                    ) : seasonDistribution.length === 0 ? (
+                                        <p className="text-sm text-slate-400">No definitions yet.</p>
+                                    ) : null}
+                                    {seasonDistribution.map((season, i) => (
                                         <div key={i} className="space-y-2">
                                             <div className="flex items-center justify-between text-xs">
                                                 <span className="font-bold text-slate-700">{season.label} Campaign</span>
@@ -952,8 +995,8 @@ export default function CouponVoucherControl() {
                             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <CardTitle className="text-lg font-bold text-slate-900">Network Integrity Ledger</CardTitle>
-                                        <CardDescription className="text-xs">Real-time spending & minting events</CardDescription>
+                                        <CardTitle className="text-lg font-bold text-slate-900">Voucher Ledger</CardTitle>
+                                        <CardDescription className="text-xs">Live issuance records from the money engine</CardDescription>
                                     </div>
                                     <Button variant="outline" size="sm" className="text-[10px] font-bold h-7 uppercase tracking-wider">Download CSV</Button>
                                 </div>
@@ -971,36 +1014,44 @@ export default function CouponVoucherControl() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody className="bg-white">
-                                            {[
-                                                { time: '2 mins ago', type: 'BURN', target: 'The Gourmet Kitchen', asset: 'Spring Expo Voucher', value: '-£25.00', status: 'success' },
-                                                { time: '5 mins ago', type: 'MINT', target: 'Charlie (User #492)', asset: 'Autumn Savings', value: '+£50.00', status: 'success' },
-                                                { time: '12 mins ago', type: 'BURN', target: 'Boutique Blooms', asset: 'Member Monthly Reward', value: '-£10.00', status: 'success' },
-                                                { time: '18 mins ago', type: 'RETIRE', target: 'Summer 2023 Law', asset: 'Definition #892', value: 'SYSTEM', status: 'archived' },
-                                                { time: '45 mins ago', type: 'MINT', target: 'Charlie (User #102)', asset: 'Spring Expo Voucher', value: '+£25.00', status: 'success' },
-                                            ].map((event, i) => (
-                                                <TableRow key={i} className="group border-b border-slate-50">
-                                                    <TableCell className="pl-6 py-4 text-xs font-medium text-slate-500">{event.time}</TableCell>
-                                                    <TableCell className="py-4">
-                                                        <Badge className={cn(
-                                                            "text-[9px] font-bold px-2 py-0.5 rounded-md border shadow-none",
-                                                            event.type === 'BURN' ? "bg-red-50 text-red-700 border-red-100" :
-                                                                event.type === 'MINT' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                                                                    "bg-slate-50 text-slate-700 border-slate-200"
-                                                        )}>
-                                                            {event.type}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="py-4 text-sm font-bold text-slate-800">{event.target}</TableCell>
-                                                    <TableCell className="py-4 text-xs italic text-slate-500">{event.asset}</TableCell>
-                                                    <TableCell className={cn(
-                                                        "py-4 text-right pr-6 font-mono font-bold text-sm",
-                                                        event.value.startsWith('-') ? "text-red-600" :
-                                                            event.value.startsWith('+') ? "text-emerald-600" : "text-slate-400"
-                                                    )}>
-                                                        {event.value}
+                                            {isVouchersLoading && (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="py-8 text-center text-sm text-slate-400">
+                                                        Loading ledger…
                                                     </TableCell>
                                                 </TableRow>
-                                            ))}
+                                            )}
+                                            {!isVouchersLoading && vouchers.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="py-8 text-center text-sm text-slate-400">
+                                                        No vouchers issued yet.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            {vouchers.slice(0, 25).map((voucher) => {
+                                                const total = Number(voucher.realBalance ?? 0) + Number(voucher.rewardBalance ?? 0);
+                                                return (
+                                                    <TableRow key={voucher.id} className="group border-b border-slate-50">
+                                                        <TableCell className="pl-6 py-4 text-xs font-medium text-slate-500">
+                                                            {new Date(voucher.createdAt).toLocaleString()}
+                                                        </TableCell>
+                                                        <TableCell className="py-4">
+                                                            <Badge className="text-[9px] font-bold px-2 py-0.5 rounded-md border shadow-none bg-emerald-50 text-emerald-700 border-emerald-100">
+                                                                MINT
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="py-4 text-sm font-bold text-slate-800">
+                                                            {voucher.ownerEmail ?? voucher.id.slice(0, 8)}
+                                                        </TableCell>
+                                                        <TableCell className="py-4 text-xs italic text-slate-500">
+                                                            {voucher.definition?.name ?? 'Voucher'}
+                                                        </TableCell>
+                                                        <TableCell className="py-4 text-right pr-6 font-mono font-bold text-sm text-emerald-600">
+                                                            +£{total.toFixed(2)}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
                                         </TableBody>
                                     </Table>
                                 </div>

@@ -36,3 +36,18 @@ export interface MoneyEngineAnalytics {
     rewardValueGiven: AnalyticsMetric;
     networkUtilization: AnalyticsMetric;
 }
+
+export interface AdminVoucher {
+    id: string;
+    ownerEmail?: string;
+    realBalance: number;
+    rewardBalance: number;
+    createdAt: string;
+    definition?: { id: string; name?: string } | null;
+    [key: string]: unknown;
+}
+
+export interface AdminVoucherPage {
+    data: AdminVoucher[];
+    count: number;
+}
