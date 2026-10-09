@@ -9,6 +9,11 @@ interface AuthState {
   packageInfo: {
     planType: string;
   } | null;
+  isTrial: boolean;
+  planId: string | null;
+  planName: string | null;
+  tasks: any[];
+  entitlement: any | null;
 }
 
 const initialState: AuthState = {
@@ -17,6 +22,11 @@ const initialState: AuthState = {
   userName: null,
   userRole: null,
   packageInfo: null,
+  isTrial: false,
+  planId: null,
+  planName: null,
+  tasks: [],
+  entitlement: null,
 };
 
 const authSlice = createSlice({
@@ -45,17 +55,38 @@ const authSlice = createSlice({
         packageInfo: {
           planType: string;
         } | null;
+        isTrial?: boolean;
+        planId?: string | null;
+        planName?: string | null;
+        tasks?: any[];
+        entitlement?: any | null;
       }>
     ) => {
       state.userId = action.payload.id;
       state.userName = action.payload.userName;
       state.userRole = action.payload.userRole;
       state.packageInfo = action.payload.packageInfo;
+      state.isTrial = Boolean(action.payload.isTrial);
+      state.planId = action.payload.planId || null;
+      state.planName = action.payload.planName || null;
+      state.tasks = action.payload.tasks || [];
+      state.entitlement = action.payload.entitlement || null;
+
       Cookies.set('userId', action.payload.id, { expires: 7 });
       Cookies.set('userRole', action.payload.userRole, { expires: 7 });
+      Cookies.set('is_trial', action.payload.isTrial ? 'true' : 'false', { expires: 7 });
+      if (action.payload.planId) {
+        Cookies.set('mcom_plan', action.payload.planId, { expires: 7 });
+      }
       localStorage.setItem('user-name', action.payload.userName);
       if (action.payload.packageInfo) {
         Cookies.set('packageInfo', JSON.stringify(action.payload.packageInfo), { expires: 7 });
+      }
+      if (action.payload.tasks) {
+        localStorage.setItem('mcom_tasks', JSON.stringify(action.payload.tasks));
+      }
+      if (action.payload.entitlement) {
+        localStorage.setItem('mcom_entitlement', JSON.stringify(action.payload.entitlement));
       }
     },
     logout: state => {
@@ -64,12 +95,21 @@ const authSlice = createSlice({
       state.userName = null;
       state.userRole = null;
       state.packageInfo = null;
+      state.isTrial = false;
+      state.planId = null;
+      state.planName = null;
+      state.tasks = [];
+      state.entitlement = null;
       Cookies.remove('access');
       Cookies.remove('refresh');
       Cookies.remove('userId');
       Cookies.remove('userRole');
       Cookies.remove('packageInfo');
+      Cookies.remove('is_trial');
+      Cookies.remove('mcom_plan');
       localStorage.removeItem('user-name');
+      localStorage.removeItem('mcom_tasks');
+      localStorage.removeItem('mcom_entitlement');
     },
     loadAuthFromCookies: state => {
       const accessToken = Cookies.get('access');

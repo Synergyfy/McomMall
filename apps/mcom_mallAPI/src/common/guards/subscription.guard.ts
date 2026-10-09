@@ -22,6 +22,14 @@ export class SubscriptionGuard implements CanActivate {
   >();
   private static readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+  static clearCache(userId?: string) {
+    if (userId) {
+      SubscriptionGuard.cache.delete(userId);
+    } else {
+      SubscriptionGuard.cache.clear();
+    }
+  }
+
   constructor(
     private readonly reflector: Reflector,
     private readonly mcomCentralService: McomCentralService,
@@ -111,7 +119,16 @@ export class SubscriptionGuard implements CanActivate {
 
     // Only throw if central was reachable AND no active subscription found
     if (centralReachable && !isActive) {
-      throw new ForbiddenException('No active MCOM Mall subscription');
+      const reason = packages?.reason || 'NO_ACTIVE_ENTITLEMENT';
+      const upgradeUrl =
+        packages?.upgradeUrl ||
+        `${this.mcomCentralService.getFrontendUrl()}/dashboard/memberships`;
+
+      throw new ForbiddenException({
+        message: 'subscription_required',
+        reason,
+        upgradeUrl,
+      });
     }
 
     // If central is unreachable, allow access (fail open) but log warning
@@ -119,6 +136,12 @@ export class SubscriptionGuard implements CanActivate {
       this.logger.warn(
         `MCOM Central unreachable for user ${centralUserId}, failing open`,
       );
+    }
+
+    if (packages?.entitlement) {
+      request.entitlement = packages.entitlement;
+      request.isTrial = packages.isTrial;
+      request.programmeTasks = packages.programmeTasks;
     }
 
     return true;

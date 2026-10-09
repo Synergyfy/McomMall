@@ -12,6 +12,12 @@ export interface Membership {
   planVariantId?: string | null;
   priceId?: string | null;
 
+  // Trial / entitlement fields returned by the central membership sync
+  isTrial?: boolean;
+  accessType?: string;
+  entitlement?: any;
+  packages?: any[];
+
   // Legacy/Optional fields (in case backend still sends them or for backward compat during migration)
   userId?: string;
   tierId?: string;

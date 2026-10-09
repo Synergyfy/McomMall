@@ -16,6 +16,7 @@ import { Location } from '../listings/entities/location.entity';
 import { ListingType, BusinessStatus } from '../listings/listing.enum';
 import { LocalMall } from '../localmall/entities/localmall.entity';
 import { ActivatedRegion } from '../localmall/entities/activated-region.entity';
+import { Membership } from '../membership/entities/membership.entity';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { McomCentralService } from './mcom-central.service';
@@ -34,19 +35,19 @@ export class SsoService {
     private readonly mcomCentralService: McomCentralService,
   ) {}
 
-  private getMcomSolutionsBackendUrl(): string {
-    return process.env.MCOM_SOLUTIONS_BACKEND_URL || 'http://localhost:3010';
-  }
-
-  private getMcomSolutionsFrontendUrl(): string {
+  getMcomSolutionsFrontendUrl(): string {
     return process.env.MCOM_SOLUTIONS_FRONTEND_URL || 'http://localhost:3000';
   }
 
-  private getMallFrontendUrl(): string {
+  getMcomSolutionsBackendUrl(): string {
+    return process.env.MCOM_SOLUTIONS_BACKEND_URL || 'http://localhost:3010';
+  }
+
+  getMallFrontendUrl(): string {
     return process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
   }
 
-  private getClientId(): string {
+  getClientId(): string {
     return process.env.SSO_CLIENT_ID || process.env.MCOM_CLIENT_ID || 'mcom-mall';
   }
 
@@ -216,48 +217,163 @@ export class SsoService {
       );
     }
 
-    // --- Subscription gate: check if business user has an active MCOM Mall package ---
-    let userPackages: {
-      tierId: string | null;
-      isActive: boolean;
-      packages: any[];
-    } | null = null;
+    // --- Entitlement Resolution Rules Engine (Standard Protocol Version: 2026-10-01) ---
     const isOwnerRole =
       centralUser.role?.toLowerCase() === 'owner' ||
       centralUser.role?.toLowerCase() === 'business';
 
-    if (isOwnerRole) {
-      // Prefer the membership status already included in the token response
-      const membershipStatus = centralUser.businessProfile?.membershipStatus;
-      const membershipLevel = centralUser.businessProfile?.membershipLevel;
+    let resolvedEntitlement =
+      tokenData.entitlement || centralUser.businessProfile?.entitlement || null;
 
-      if (membershipStatus) {
-        const isActive = membershipStatus.toLowerCase() === 'active';
-        userPackages = {
-          tierId: membershipLevel || null,
-          isActive,
-          packages: [],
-        };
-      } else if (centralUserId) {
-        // Fallback: query MCOM Solutions for package data
+    let userPackages: {
+      tierId: string | null;
+      isActive: boolean;
+      packages: any[];
+      reason?: string;
+      upgradeUrl?: string;
+    } | null = null;
+
+    if (isOwnerRole) {
+      if (!resolvedEntitlement && centralUserId) {
+        // Fallback: real-time introspection via GET /api/v1/auth/sso/entitlement
+        try {
+          resolvedEntitlement =
+            await this.mcomCentralService.getIntrospectedEntitlement(
+              centralUserId,
+              tokenData.accessToken,
+            );
+        } catch (err) {
+          this.logger.warn(
+            `Could not introspect entitlement for user ${centralUserId}: ${err instanceof Error ? err.message : err}`,
+          );
+        }
+      }
+
+      // Check if user has an active direct plan paid specifically for MCOM Mall
+      let hasLocalActivePlan = false;
+      let localActiveMembership: any = null;
+
+      try {
+        const existingLocalUser = await this.userRepository.findOne({
+          select: ['id', 'email', 'centralUserId'],
+          where: [
+            { email: centralUser.email },
+            ...(centralUserId ? [{ centralUserId }] : []),
+          ],
+        });
+
+        if (existingLocalUser) {
+          const membershipRepo = this.dataSource.getRepository(Membership);
+          const activeMem = await membershipRepo.findOne({
+            where: { user: { id: existingLocalUser.id }, isActive: true },
+          });
+
+          if (
+            activeMem &&
+            activeMem.isActive &&
+            (!activeMem.expiresAt ||
+              new Date(activeMem.expiresAt).getTime() > Date.now())
+          ) {
+            hasLocalActivePlan = true;
+            localActiveMembership = activeMem;
+          }
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Could not check local MCOM Mall plan: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+
+      if (hasLocalActivePlan && localActiveMembership) {
+        this.logger.log(
+          `User ${centralUser.email} has active direct plan on MCOM Mall (${localActiveMembership.planVariantId || localActiveMembership.planType || 'mall-direct'}), granting access.`,
+        );
+
+        if (!resolvedEntitlement || !resolvedEntitlement.access?.hasAccess) {
+          resolvedEntitlement = {
+            version: '2026-10-01',
+            targetPlatform: {
+              clientId: this.getClientId(),
+              platformSlug: 'mall',
+              name: 'MCOM Mall',
+            },
+            access: {
+              hasAccess: true,
+              accessType: 'DIRECT_PACKAGE',
+              upgradeUrl: `${this.getMcomSolutionsFrontendUrl()}/dashboard/memberships`,
+            },
+            plan: {
+              planId:
+                localActiveMembership.planVariantId ||
+                localActiveMembership.planType ||
+                'mall-direct',
+              planName: 'MCOM Mall Direct Plan',
+              source: 'direct',
+              status: 'active',
+              billingCycle: localActiveMembership.planType || null,
+              expiresAt: localActiveMembership.expiresAt
+                ? new Date(localActiveMembership.expiresAt).toISOString()
+                : null,
+              quotas: {},
+              limits: {},
+              features: [],
+            },
+            membershipContext: {
+              membershipPlanName: null,
+              membershipLevel: 'Direct',
+              membershipStatus: 'active',
+              isIncludedInMembership: false,
+            },
+            trialContext: {
+              isInTrial: false,
+              hasPaidVerificationFee: false,
+              trialExpiresAt: null,
+              daysRemaining: 0,
+              programmeTasks: [],
+            },
+          };
+        }
+      } else if (resolvedEntitlement && resolvedEntitlement.access) {
+        if (!resolvedEntitlement.access.hasAccess) {
+          const reason =
+            resolvedEntitlement.access.reason || 'NO_ACTIVE_ENTITLEMENT';
+          const upgradeUrl =
+            resolvedEntitlement.access.upgradeUrl ||
+            `${this.getMcomSolutionsFrontendUrl()}/dashboard/memberships`;
+
+          this.logger.warn(
+            `Access denied for user ${centralUserId}: reason=${reason}, upgradeUrl=${upgradeUrl}`,
+          );
+
+          throw new ForbiddenException({
+            message: 'subscription_required',
+            reason,
+            upgradeUrl,
+          });
+        }
+      } else {
+        // Fallback: query packages from MCOM Solutions if no entitlement was returned
         try {
           userPackages =
             await this.mcomCentralService.getUserPackages(centralUserId);
         } catch (err) {
           this.logger.warn(
-            `Could not verify subscription for user ${centralUserId}: ${err instanceof Error ? err.message : err}`,
+            `Could not verify legacy subscription for user ${centralUserId}: ${err instanceof Error ? err.message : err}`,
           );
         }
-      }
 
-      // Only block business login if we got a definitive "not active" response.
-      if (userPackages && !userPackages.isActive) {
-        throw new ForbiddenException(
-          'No active MCOM Mall subscription. Please subscribe at MCOM Solutions.',
-        );
+        if (userPackages && !userPackages.isActive) {
+          throw new ForbiddenException({
+            message: 'subscription_required',
+            reason: userPackages.reason || 'NO_ACTIVE_ENTITLEMENT',
+            upgradeUrl:
+              userPackages.upgradeUrl ||
+              `${this.getMcomSolutionsFrontendUrl()}/dashboard/memberships`,
+          });
+        }
       }
     }
-    // --- End subscription gate ---
+    // --- End entitlement resolution ---
 
     let localUser = await this.userRepository.findOne({
       where: { email: centralUser.email },
@@ -303,14 +419,19 @@ export class SsoService {
         localUser.lastName = newLastName;
         localUser.fullName = `${newFirstName} ${newLastName}`;
         localUser.role = newRole;
-        await this.userRepository.save(localUser);
+        await this.userRepository.update(localUser.id, {
+          firstName: newFirstName,
+          lastName: newLastName,
+          fullName: `${newFirstName} ${newLastName}`,
+          role: newRole,
+        });
       }
     }
 
     // Store the Mcom Solutions user ID for future subscription lookups
     if (centralUserId && localUser.centralUserId !== centralUserId) {
       localUser.centralUserId = centralUserId;
-      await this.userRepository.save(localUser);
+      await this.userRepository.update(localUser.id, { centralUserId });
     }
 
     // Store the Solutions SSO refresh token (encrypted at rest) so the mall
@@ -320,7 +441,9 @@ export class SsoService {
       const encrypted = encryptToken(tokenData.refreshToken);
       if (encrypted && localUser.centralRefreshToken !== encrypted) {
         localUser.centralRefreshToken = encrypted;
-        await this.userRepository.save(localUser);
+        await this.userRepository.update(localUser.id, {
+          centralRefreshToken: encrypted,
+        });
       } else if (!encrypted) {
         this.logger.warn(
           'TOKEN_ENCRYPTION_KEY is not configured — Solutions refresh token not stored; embedded card top-up unavailable.',
@@ -343,21 +466,38 @@ export class SsoService {
 
     const tokens = this.createToken(tokenPayload);
 
+    const isTrial =
+      resolvedEntitlement?.access?.accessType === 'TRIAL_PROGRAMME';
+    const planId =
+      resolvedEntitlement?.plan?.planId || userPackages?.tierId || null;
+    const planName = resolvedEntitlement?.plan?.planName || null;
+    const quotas = resolvedEntitlement?.plan?.quotas || {};
+    const tasks = resolvedEntitlement?.trialContext?.programmeTasks || [];
+    const accessType =
+      resolvedEntitlement?.access?.accessType ||
+      (userPackages?.isActive ? 'DIRECT_PACKAGE' : 'NONE');
+
     return {
       ...tokens,
       userId: localUser.id,
       name: `${localUser.firstName} ${localUser.lastName}`,
       role: localUser.role,
       email: localUser.email,
-      packageInfo: userPackages?.tierId
-        ? { planType: userPackages.tierId }
-        : null,
+      packageInfo: planId ? { planType: planId } : null,
+      entitlement: resolvedEntitlement,
+      accessType,
+      isTrial,
+      planId,
+      planName,
+      quotas,
+      tasks,
     };
   }
 
   private async jitStorefrontSync(localUser: User, centralUser: any) {
     const businessRepository = this.dataSource.getRepository(Business);
     const existingBusiness = await businessRepository.findOne({
+      select: ['id'],
       where: { user: { id: localUser.id } },
     });
 
@@ -401,6 +541,7 @@ export class SsoService {
     const mallName = `${borough} Local Mall`;
     const localMallRepository = this.dataSource.getRepository(LocalMall);
     let localMall = await localMallRepository.findOne({
+      select: ['id', 'name'],
       where: { name: mallName },
     });
 
@@ -416,6 +557,7 @@ export class SsoService {
     const activatedRegionRepository =
       this.dataSource.getRepository(ActivatedRegion);
     let activeRegion = await activatedRegionRepository.findOne({
+      select: ['id', 'name', 'isActive'],
       where: { name: borough },
     });
     if (!activeRegion) {
@@ -430,7 +572,7 @@ export class SsoService {
     }
 
     const newBusiness = businessRepository.create({
-      user: localUser,
+      user: { id: localUser.id } as User,
       businessName: centralUser.name || 'Hyperlocal Merchant',
       businessPhone: centralUser.phoneNumber || '0000000000',
       businessEmail: localUser.email,
@@ -440,13 +582,13 @@ export class SsoService {
       status: BusinessStatus.PUBLISHED,
       isVerified: true,
       isGoogleVerified: true,
-      localMall,
+      localMall: localMall ? ({ id: localMall.id } as LocalMall) : undefined,
     });
 
     const savedBusiness = await businessRepository.save(newBusiness);
 
     const newLocation = locationRepository.create({
-      business: savedBusiness,
+      business: { id: savedBusiness.id } as Business,
       postcode: cleanPostcode,
       addressLine1: address,
       city: borough,

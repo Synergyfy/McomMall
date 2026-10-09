@@ -55,13 +55,23 @@ export const useGetTrialStatus = () => {
       const statusData = statusRes.data;
       const membership = membershipRes.data;
 
-      if (statusData.status !== SubscriptionStatusEnum.TRIAL_ACTIVE && statusData.status !== SubscriptionStatusEnum.TRIAL_EXPIRED) {
+      const isTrial =
+        statusData.status === SubscriptionStatusEnum.TRIAL_ACTIVE ||
+        Boolean((membership as any)?.isTrial) ||
+        (membership as any)?.accessType === 'TRIAL_PROGRAMME';
+
+      if (!isTrial && statusData.status !== SubscriptionStatusEnum.TRIAL_EXPIRED) {
         return null;
       }
 
-      // Calculate expiresAt from membership creation date + duration
-      let expiresAt = statusData.trialEndDate || undefined;
-      if (membership && membership.created_at && membership.trialDuration) {
+      // Calculate expiresAt from Central entitlement / membership / status
+      let expiresAt =
+        (membership as any)?.entitlement?.trialContext?.trialExpiresAt ||
+        membership?.expiresAt ||
+        statusData.trialEndDate ||
+        undefined;
+
+      if (!expiresAt && membership && membership.created_at && membership.trialDuration) {
         const createdAt = new Date(membership.created_at);
         const durationMs = membership.trialDuration * 24 * 60 * 60 * 1000;
         expiresAt = new Date(createdAt.getTime() + durationMs).toISOString();
@@ -71,17 +81,24 @@ export const useGetTrialStatus = () => {
       const end = expiresAt ? new Date(expiresAt).getTime() : now;
       const remainingTime = Math.max(0, end - now);
 
+      const programmeTasks =
+        statusData.programmeTasks ||
+        (membership as any)?.programmeTasks ||
+        (membership as any)?.entitlement?.trialContext?.programmeTasks ||
+        [];
+
       return {
-        isActive: statusData.status === SubscriptionStatusEnum.TRIAL_ACTIVE,
+        isActive: isTrial && remainingTime > 0,
         remainingTime,
         expiresAt,
         tasks: statusData.tasks || {
-            createdBusiness: false,
-            createdProductOrService: false,
-            createdPromotion: false,
-            createdOffer: false,
-            createdCoupon: false,
+          createdBusiness: false,
+          createdProductOrService: false,
+          createdPromotion: false,
+          createdOffer: false,
+          createdCoupon: false,
         },
+        programmeTasks,
         pauses: [],
         isPaused: false,
         remainingPauses: 0,

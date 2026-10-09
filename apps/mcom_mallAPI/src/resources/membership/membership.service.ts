@@ -71,10 +71,124 @@ export class MembershipService {
   ) {}
 
   async findOne(user: User): Promise<any> {
-    // Source of truth: the local membership row. It only ever exists after a
-    // verified payment (central wallet capture), admin grant, or trial.
-    // Money itself always moves on the MCOM Solutions wallet server — the DB
-    // decides entitlement, never funds.
+    let centralUserId = user.centralUserId;
+    if (!centralUserId) {
+      const dbUser = await this.userRepository.findOne({
+        where: { id: user.id },
+      });
+      centralUserId = dbUser?.centralUserId;
+    }
+
+    // 1. For SSO users, prioritize real-time MCOM Central entitlement
+    if (centralUserId) {
+      try {
+        const userPackages =
+          await this.mcomCentralService.getUserPackages(centralUserId);
+
+        if (userPackages && userPackages.isActive) {
+          const isTrial =
+            userPackages.isTrial === true ||
+            userPackages.accessType === 'TRIAL_PROGRAMME';
+          const expiresAt =
+            userPackages.plan?.expiresAt ||
+            userPackages.entitlement?.trialContext?.trialExpiresAt ||
+            null;
+
+          let tierName = 'Central Membership';
+          if (isTrial) {
+            tierName = '14-Day Trial';
+          } else if (userPackages.entitlement?.plan?.planName) {
+            tierName = userPackages.entitlement.plan.planName;
+          } else if (
+            userPackages.entitlement?.membershipContext?.membershipPlanName
+          ) {
+            tierName = `${userPackages.entitlement.membershipContext.membershipPlanName} Membership`;
+          }
+
+          let displayTier: any = {
+            id: userPackages.tierId || 'trial-tier',
+            name: tierName,
+            description: isTrial
+              ? 'Task-gated trial access via MCOM Verification Programme'
+              : null,
+            monthlyPrice: null,
+            quarterlyPrice: null,
+            annualPrice: null,
+            features: userPackages.entitlement?.plan?.features || [],
+            configuration: userPackages.entitlement?.plan?.quotas || null,
+            isActive: true,
+          };
+
+          if (!isTrial && userPackages.tierId) {
+            try {
+              const { variant } = await this.plansService.resolveActivePrice(
+                userPackages.tierId,
+              );
+              const level = variant.tierLevel?.name;
+              const label =
+                level === PlanTier.PRO_PLUS
+                  ? 'Pro+'
+                  : level === PlanTier.PRO
+                    ? 'Pro'
+                    : 'Standard';
+              displayTier = {
+                id: variant.id,
+                name: `${variant.plan?.name ?? 'Plan'} · ${label}`,
+                description: variant.plan?.description ?? null,
+                monthlyPrice: null,
+                quarterlyPrice: null,
+                annualPrice: null,
+                features: variant.features ?? [],
+                configuration: variant.configuration ?? null,
+                isActive: true,
+              };
+            } catch {
+              // Fallback display tier retained
+            }
+          }
+
+          let planVariantId: string | null = null;
+          let priceId: string | null = null;
+          try {
+            const localMembership = await this.findActiveWithTier(user.id);
+            planVariantId = localMembership?.planVariantId ?? null;
+            priceId = localMembership?.priceId ?? null;
+          } catch {
+            planVariantId = null;
+            priceId = null;
+          }
+
+          return {
+            id: `subscription-${user.id}`,
+            isActive: true,
+            tierId: displayTier.id,
+            tier: displayTier,
+            planVariantId,
+            priceId,
+            planType: userPackages.entitlement?.plan?.billingCycle || null,
+            startDate: null,
+            expiresAt,
+            endDate: expiresAt,
+            isTrial,
+            trialDuration:
+              userPackages.entitlement?.trialContext?.daysRemaining || 14,
+            packages: userPackages.packages || [],
+            accessType: userPackages.accessType,
+            entitlement: userPackages.entitlement,
+            programmeTasks:
+              userPackages.programmeTasks ||
+              userPackages.entitlement?.trialContext?.programmeTasks ||
+              [],
+          };
+        }
+      } catch (centralErr) {
+        this.logger.warn(
+          `Failed to fetch membership from central for user ${user.id}: ${centralErr}`,
+        );
+      }
+    }
+
+    // 2. Fallback: local active membership row (direct purchases)
     try {
       const local = await this.findActiveWithTier(user.id);
       if (
@@ -88,98 +202,7 @@ export class MembershipService {
       // Never let a local read break the central fallback path below.
     }
 
-    let centralUserId = user.centralUserId;
-    if (!centralUserId) {
-      const dbUser = await this.userRepository.findOne({
-        where: { id: user.id },
-      });
-      centralUserId = dbUser?.centralUserId;
-    }
-
-    if (!centralUserId) {
-      throw new BadRequestException(
-        'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
-      );
-    }
-
-    const userPackages =
-      await this.mcomCentralService.getUserPackages(centralUserId);
-
-    if (!userPackages) {
-      return null;
-    }
-
-    if (!userPackages.isActive || !userPackages.tierId) {
-      return null;
-    }
-
-    let displayTier: any = {
-      id: userPackages.tierId,
-      name: 'Central Membership',
-      description: null,
-      monthlyPrice: null,
-      quarterlyPrice: null,
-      annualPrice: null,
-      features: [],
-      configuration: null,
-      isActive: true,
-    };
-
-    try {
-      const { variant } = await this.plansService.resolveActivePrice(
-        userPackages.tierId,
-      );
-      const level = variant.tierLevel?.name;
-      const label =
-        level === PlanTier.PRO_PLUS
-          ? 'Pro+'
-          : level === PlanTier.PRO
-            ? 'Pro'
-            : 'Standard';
-      displayTier = {
-        id: variant.id,
-        name: `${variant.plan?.name ?? 'Plan'} · ${label}`,
-        description: variant.plan?.description ?? null,
-        monthlyPrice: null,
-        quarterlyPrice: null,
-        annualPrice: null,
-        features: variant.features ?? [],
-        configuration: variant.configuration ?? null,
-        isActive: true,
-      };
-    } catch {
-      // Fallback display tier retained
-    }
-
-    // Attach the local variant purchase snapshot when present so storefronts
-    // can display plan + tier names (resolved via public GET /plans).
-    // Never allowed to break the central-SSO read path.
-    let planVariantId: string | null = null;
-    let priceId: string | null = null;
-    try {
-      const localMembership = await this.findActiveWithTier(user.id);
-      planVariantId = localMembership?.planVariantId ?? null;
-      priceId = localMembership?.priceId ?? null;
-    } catch {
-      planVariantId = null;
-      priceId = null;
-    }
-
-    return {
-      id: `subscription-${user.id}`,
-      isActive: true,
-      tierId: displayTier.id,
-      tier: displayTier,
-      planVariantId,
-      priceId,
-      planType: null,
-      startDate: null,
-      expiresAt: null,
-      endDate: null,
-      isTrial: false,
-      trialDuration: 0,
-      packages: userPackages.packages,
-    };
+    return null;
   }
 
   /**
@@ -601,7 +624,7 @@ export class MembershipService {
       membership.planVariant = purchasedVariant ?? undefined;
       membership.planVariantId = purchasedVariant ? purchasedVariant.id : null;
       membership.priceId = priceSnapshotId;
-      membership.user = user;
+      membership.user = { id: user.id } as User;
       membership.startDate = startDate;
       membership.expiresAt = expiresAt;
       membership.endDate = expiresAt;
@@ -611,9 +634,6 @@ export class MembershipService {
       membership.payment = savedPayment;
 
       const savedMembership = await membershipRepo.save(membership);
-
-      user.membership = savedMembership;
-      await userRepo.save(user);
 
       // Process Cashback
       if (user.email) {
@@ -691,7 +711,7 @@ export class MembershipService {
       const membership = priorTrial ?? membershipRepo.create();
       membership.planVariant = purchasedVariant;
       membership.planVariantId = purchasedVariant.id;
-      membership.user = user;
+      membership.user = { id: user.id } as User;
       membership.startDate = startDate;
       membership.expiresAt = expiresAt;
       membership.endDate = expiresAt;
@@ -701,8 +721,6 @@ export class MembershipService {
       membership.planType = PlanType.MONTHLY; // Default to monthly after trial usually
 
       const savedMembership = await membershipRepo.save(membership);
-      user.membership = savedMembership;
-      await userRepo.save(user);
 
       return savedMembership;
     });
@@ -736,7 +754,7 @@ export class MembershipService {
       const membership = priorGrant ?? membershipRepo.create();
       membership.planVariant = variant;
       membership.planVariantId = variant.id;
-      membership.user = user;
+      membership.user = { id: user.id } as User;
       membership.startDate = startDate;
       membership.expiresAt = expiresAt;
       membership.endDate = expiresAt;
@@ -745,8 +763,6 @@ export class MembershipService {
       membership.planType = PlanType.MONTHLY; // Default
 
       const savedMembership = await membershipRepo.save(membership);
-      user.membership = savedMembership;
-      await userRepo.save(user);
 
       return savedMembership;
     });

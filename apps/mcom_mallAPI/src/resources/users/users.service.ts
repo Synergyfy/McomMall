@@ -138,32 +138,6 @@ export class UsersService {
       return savedUser;
     });
 
-    // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
-    if (createdUser.role === UserRole.OWNER) {
-      try {
-        // Automatic Plan Assignment
-        const plans = await this.plansService.findAll();
-        const firstVariant = plans[0]?.variants?.[0];
-        if (firstVariant) {
-          await this.membershipService.joinTrial(
-            firstVariant.id,
-            createdUser,
-          );
-          console.log(
-            `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Owner ${createdUser.id}`,
-          );
-        } else {
-          console.log(
-            `[UsersService] No active Plan Variant found for auto-assignment.`,
-          );
-        }
-      } catch (error) {
-        console.error(
-          'Failed to auto-assign trial membership:',
-          error,
-        );
-      }
-    }
 
     return createdUser;
   }
@@ -213,30 +187,6 @@ export class UsersService {
       return savedUser;
     });
 
-    // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
-    if (createdUser.role === UserRole.OWNER) {
-      // We catch errors here to strictly not block user creation if timer service fails,
-      // though ideally it should succeed.
-      try {
-        // Automatic Plan Assignment
-        const plans = await this.plansService.findAll();
-        const firstVariant = plans[0]?.variants?.[0];
-        if (firstVariant) {
-          await this.membershipService.joinTrial(
-            firstVariant.id,
-            createdUser,
-          );
-          console.log(
-            `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Admin-Created Owner ${createdUser.id}`,
-          );
-        }
-      } catch (error) {
-        console.error(
-          'Failed to auto-assign trial membership:',
-          error,
-        );
-      }
-    }
 
     return createdUser;
   }

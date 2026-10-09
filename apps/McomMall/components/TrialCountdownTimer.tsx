@@ -38,6 +38,7 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
     remainingPauses = 0,
     remainingTime,
     tasks,
+    programmeTasks = [],
   } = trialStatus;
   const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
   const [timeLeft, setTimeLeft] = useState(remainingTime);
@@ -157,20 +158,44 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
                   See your trial period tasks
                 </p>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64 bg-gray-900 text-white border-gray-800">
-                {Object.entries(tasks).map(([key, completed]) => (
-                  <DropdownMenuItem
-                    key={key}
-                    className="flex items-center justify-between hover:bg-gray-800 focus:bg-gray-800"
-                  >
-                    <span>{taskLabels[key as keyof TrialTasks]}</span>
-                    {completed ? (
-                      <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <XCircleIcon className="w-5 h-5 text-red-500" />
-                    )}
-                  </DropdownMenuItem>
-                ))}
+              <DropdownMenuContent className="w-72 bg-gray-900 text-white border-gray-800 p-1 space-y-1">
+                {programmeTasks.length > 0 ? (
+                  <>
+                    <div className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-400 border-b border-gray-800">
+                      Onboarding Tasks ({programmeTasks.length})
+                    </div>
+                    {programmeTasks.map((t: any) => {
+                      const isDone = t.status === 'COMPLETED';
+                      return (
+                        <DropdownMenuItem
+                          key={t.taskId || t.id}
+                          className="flex items-center justify-between hover:bg-gray-800 focus:bg-gray-800 text-xs py-2"
+                        >
+                          <span className="truncate pr-2 font-medium">{t.title}</span>
+                          {isDone ? (
+                            <CheckCircleIcon className="w-4 h-4 text-emerald-400 shrink-0" />
+                          ) : (
+                            <XCircleIcon className="w-4 h-4 text-amber-400 shrink-0" />
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </>
+                ) : (
+                  Object.entries(tasks).map(([key, completed]) => (
+                    <DropdownMenuItem
+                      key={key}
+                      className="flex items-center justify-between hover:bg-gray-800 focus:bg-gray-800 text-xs"
+                    >
+                      <span>{taskLabels[key as keyof TrialTasks]}</span>
+                      {completed ? (
+                        <CheckCircleIcon className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <XCircleIcon className="w-4 h-4 text-amber-400" />
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

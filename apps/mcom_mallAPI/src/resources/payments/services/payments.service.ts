@@ -292,6 +292,7 @@ export class PaymentsService {
           remainingPauses: 0,
           isTrialPausable: false,
           tasks: tasksMap,
+          programmeTasks: membership.programmeTasks || [],
         };
       }
     } catch (e) {

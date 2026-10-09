@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../users/entities/user.entity';
 import { UsersModule } from '../users/users.module';
 import { SsoController } from './sso.controller';
+import { McomWebhookController } from './mcom-webhook.controller';
 import { SsoService } from './sso.service';
 import { McomCentralService } from './mcom-central.service';
 
@@ -23,7 +24,7 @@ import { McomCentralService } from './mcom-central.service';
     }),
     forwardRef(() => UsersModule),
   ],
-  controllers: [SsoController],
+  controllers: [SsoController, McomWebhookController],
   providers: [SsoService, McomCentralService],
   exports: [McomCentralService],
 })
