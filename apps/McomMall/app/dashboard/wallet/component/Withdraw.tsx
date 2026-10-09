@@ -167,10 +167,21 @@ const WithdrawalHistory: React.FC<{ history: Withdrawal[] }> = ({
   );
 };
 
+import { useWallet } from '@/service/wallet/hook';
+import { ExternalLink } from 'lucide-react';
+
 // --- MAIN PAGE COMPONENT ---
 export default function WithdrawPage({ onBack }: { onBack: () => void }) {
-  const balance = 275.5;
-  const minimumWithdrawal = 50.0;
+  const { data: walletData } = useWallet();
+
+  const balance =
+    walletData?.centralWallet?.availableBalance ??
+    parseFloat(String(walletData?.wallet?.spendableBalance || walletData?.wallet?.earningsBalance || 0));
+  const currencySymbol = walletData?.centralWallet?.currency || 'MCOM';
+  const minimumWithdrawal = 10.0;
+  const centralPortalUrl =
+    walletData?.centralWallet?.topUpUrl ||
+    `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/dashboard/wallet`;
 
   return (
     <>
@@ -206,43 +217,55 @@ export default function WithdrawPage({ onBack }: { onBack: () => void }) {
           }
         }
       `}</style>
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans">
-        <div className="max-w-4xl mx-auto">
-          <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
-            <h1 className="text-3xl font-bold text-gray-800">Withdraw</h1>
-            <Button onClick={onBack}>Back</Button>
-            <div className="flex items-center text-sm text-gray-500">
-              <span>Home</span>
-              <ChevronRight className="h-4 w-4 mx-1" />
-              <span>Withdraw</span>
+      <div className="min-h-screen bg-gray-50/50 p-4 sm:p-6 lg:p-8 font-sans">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Withdraw Funds</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Payout your available MCOM credits and platform earnings.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={onBack}>
+                Back to Wallet
+              </Button>
             </div>
           </header>
 
-          <div className="space-y-8">
-            <InfoCard title="Balance">
+          <div className="space-y-6">
+            <InfoCard title="Available Balance for Withdrawal">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <p className="text-gray-600">
-                    Your Balance:{' '}
-                    <span className="font-bold text-2xl text-gray-800">
-                      £{balance.toFixed(2)}
+                  <p className="text-gray-600 text-sm">
+                    Available Balance:{' '}
+                    <span className="font-extrabold text-2xl text-gray-900">
+                      {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
                     </span>
                   </p>
-                  <p className="text-sm text-gray-500">
-                    Minimum Withdraw Amount: £{minimumWithdrawal.toFixed(2)}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Minimum Withdraw Amount: 10.00 {currencySymbol}
                   </p>
                 </div>
-                <Button size="lg" disabled={balance < minimumWithdrawal}>
-                  Request Withdraw
-                </Button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={centralPortalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 px-4 py-2.5 rounded-lg shadow-sm transition-colors"
+                  >
+                    Manage Payout in Central Portal
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
             </InfoCard>
 
-            <InfoCard title="Payment Details">
+            <InfoCard title="Recent Withdrawals">
               <WithdrawalHistory history={withdrawalHistory} />
             </InfoCard>
 
-            <InfoCard title="Payment Methods">
+            <InfoCard title="Saved Payout Methods">
               <div className="divide-y divide-gray-200">
                 {paymentMethods.map(method => (
                   <PaymentMethodRow key={method.id} method={method} />

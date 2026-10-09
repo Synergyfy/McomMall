@@ -190,6 +190,41 @@ export class McomWalletService {
     }>('GET', `/balance/${encodeURIComponent(centralUserId)}`);
   }
 
+  async getTransactions(
+    centralUserId: string,
+    filters?: { page?: number; limit?: number; type?: string; category?: string },
+  ) {
+    const params = new URLSearchParams();
+    if (filters?.page) params.set('page', String(filters.page));
+    if (filters?.limit) params.set('limit', String(filters.limit));
+    if (filters?.type) params.set('type', filters.type);
+    if (filters?.category) params.set('category', filters.category);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+
+    return this.request<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        type: string;
+        category: string;
+        amount: number;
+        currency: string;
+        status: string;
+        reference?: string | null;
+        description?: string | null;
+        metadata?: Record<string, any> | null;
+        idempotencyKey?: string | null;
+        createdAt: string;
+        balanceBefore?: number;
+        balanceAfter?: number;
+      }>;
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>('GET', `/transactions/${encodeURIComponent(centralUserId)}${qs}`);
+  }
+
   /** Look up one of this platform's transactions (by id or idempotencyKey). */
   async getTransaction(id: string) {
     return this.request<{

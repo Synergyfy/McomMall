@@ -1,10 +1,12 @@
-import { IsNumber, IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsEnum, IsPositive, Max } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PlanType } from '../enums/plan-type.enum';
 import { PaymentPurpose } from '../enums/payment-purpose.enum';
 
 export class CreatePaymentIntentDto {
   @IsNumber()
+  @IsPositive()
+  @Max(50000)
   @IsOptional()
   amount?: number;
 

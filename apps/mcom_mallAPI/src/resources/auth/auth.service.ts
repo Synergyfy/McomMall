@@ -112,7 +112,7 @@ export class AuthService {
       const { id, role, firstName, lastName, email, centralUserId } = user;
       const name = `${firstName} ${lastName}`;
 
-      // Create new token payload
+      // Create new token payload with centralUserId preserved
       const tokenPayload: createTokenInterface = {
         sub: id,
         role,
@@ -122,16 +122,11 @@ export class AuthService {
         centralUserId,
       };
 
-      const newAccessToken = this.jwtService.sign(tokenPayload, {
-        expiresIn: '30m' as any,
-      });
-      const newRefreshToken = this.jwtService.sign(tokenPayload, {
-        expiresIn: '7d' as any,
-      });
+      const tokens = this.createToken(tokenPayload);
 
       return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         package: null,
         userId: id,
       };

@@ -5,6 +5,7 @@ import {
   UseGuards,
   Req,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -27,7 +28,6 @@ import {
 } from '@nestjs/swagger';
 import { UserRole } from '../../common/role.enum';
 
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { McomCentralService } from '../sso/mcom-central.service';
 
 @ApiTags('auth')
@@ -39,7 +39,6 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly userService: UsersService,
     private readonly emailService: EmailService,
-    private readonly activityTimerService: ActivityTimerService,
     private readonly mcomCentralService: McomCentralService,
   ) {}
 
@@ -77,16 +76,13 @@ export class AuthController {
 
     await this.userService.updateLastLogin(id);
 
-    const activeTimers =
-      await this.activityTimerService.getUserActiveTasks(user);
-
     return {
       auth,
       name,
       role,
       packageInfo: null,
       userId: id,
-      tasks: activeTimers,
+      tasks: [],
     };
   }
 
@@ -125,9 +121,6 @@ export class AuthController {
 
       await this.userService.updateLastLogin(user.id);
 
-      const activeTimers =
-        await this.activityTimerService.getUserActiveTasks(user);
-
       return {
         auth: {
           accessToken: authData.accessToken,
@@ -137,7 +130,7 @@ export class AuthController {
         role: user.role,
         packageInfo: null,
         userId: user.id,
-        tasks: activeTimers,
+        tasks: [],
       };
     } catch (error) {
       if (error instanceof ForbiddenException) {
@@ -164,7 +157,7 @@ export class AuthController {
       await this.userService.updateLastLogin(result.userId);
       return result;
     } catch (error) {
-      throw ErrorFactory.invalidCredentials();
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
 

@@ -66,10 +66,14 @@ export class VoucherConsumerController {
 
   @Post('redeem')
   @UseGuards(JwtAuthGuard)
-  async redeemVoucher(@Body() redeemVoucherDto: RedeemVoucherDto) {
-    // In a real-world scenario, you might get the staffId from the authenticated user
-    // if a staff member is redeeming on behalf of a customer.
-    return this.voucherService.redeemVoucher(redeemVoucherDto);
+  async redeemVoucher(
+    @CurrentUser() user: User,
+    @Body() redeemVoucherDto: RedeemVoucherDto,
+  ) {
+    return this.voucherService.redeemVoucher(redeemVoucherDto, {
+      id: user.id,
+      role: (user as any).role,
+    });
   }
 
   @Post(':code/initiate-reload')
@@ -97,9 +101,9 @@ export class VoucherConsumerController {
 
   @Get(':code')
   @Public()
-  @ApiOperation({ summary: 'Get details of a specific voucher publicly' })
+  @ApiOperation({ summary: 'Get public details of a specific voucher (masked)' })
   async getVoucherDetails(@Param('code') code: string) {
-    return this.voucherService.findVoucherByCode(code);
+    return this.voucherService.findPublicVoucherByCode(code);
   }
 
   @Get('products/:id')

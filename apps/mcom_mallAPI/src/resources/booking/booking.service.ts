@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   forwardRef,
@@ -19,6 +20,7 @@ import {
 } from 'typeorm';
 
 import { Business } from '../listings/entities/listing.entity';
+import { UserRole } from '../../common/role.enum';
 import { ListingType, BusinessStatus } from '../listings/listing.enum';
 import { NotificationType } from '../notification/notification.enum';
 import { NotificationService } from '../notification/notification.service';
@@ -396,15 +398,25 @@ export class BookingService {
     createBookingDto: CreateBookingDto,
     userId: string,
   ): Promise<ServiceBooking> {
-    return this.dataSource.transaction(async (transactionalEntityManager) => {
-      const booking = await this._createBooking(
-        createBookingDto,
-        userId,
-        transactionalEntityManager,
-      );
+    const booking = await this.dataSource.transaction(
+      async (transactionalEntityManager) => {
+        return this._createBooking(
+          createBookingDto,
+          userId,
+          transactionalEntityManager,
+          { skipNotifications: true },
+        );
+      },
+    );
 
-      return booking;
+    // Send notifications AFTER successful transaction commit
+    this.sendBookingNotifications(booking.id).catch((err) => {
+      this.logger.error(
+        `Failed to send post-commit booking notifications: ${err.message}`,
+      );
     });
+
+    return booking;
   }
 
   /**
@@ -415,18 +427,49 @@ export class BookingService {
     createBookingDto: CreateBookingDto,
     userId: string,
     transactionalEntityManager: EntityManager,
+    options?: { skipNotifications?: boolean },
   ): Promise<ServiceBooking> {
     return this._createBooking(
       createBookingDto,
       userId,
       transactionalEntityManager,
+      options,
     );
+  }
+
+  async sendBookingNotifications(bookingId: string): Promise<void> {
+    const fullBooking = await this.bookingRepository.findOne({
+      where: { id: bookingId },
+      relations: [
+        'user',
+        'service',
+        'service.business',
+        'service.business.user',
+      ],
+    });
+    if (!fullBooking) return;
+
+    try {
+      await this.emailService.sendBookingNotification(fullBooking, false);
+      await this.emailService.sendBookingNotification(fullBooking, true);
+    } catch (error) {
+      this.logger.error('Failed to send booking notification emails:', error);
+    }
+
+    if (fullBooking.service?.business?.user?.id) {
+      await this.notificationService.create({
+        recipientId: fullBooking.service.business.user.id,
+        type: NotificationType.NEW_BOOKING,
+        entityId: fullBooking.id,
+      });
+    }
   }
 
   private async _createBooking(
     createBookingDto: CreateBookingDto,
     userId: string,
     transactionalEntityManager: EntityManager,
+    options?: { skipNotifications?: boolean },
   ): Promise<ServiceBooking> {
     const { serviceId, startTime, endTime, numberOfGuests, addonIds } =
       createBookingDto;
@@ -478,6 +521,28 @@ export class BookingService {
       );
     }
 
+    // Concurrency protection: verify no overlapping active booking exists in DB transaction
+    const overlappingBooking = await transactionalEntityManager.findOne(
+      ServiceBooking,
+      {
+        where: {
+          service: { id: serviceId },
+          startTime: LessThan(end),
+          endTime: MoreThan(start),
+          status: In([
+            BookingStatus.CONFIRMED,
+            BookingStatus.APPROVED,
+            BookingStatus.PENDING,
+          ]),
+        },
+      },
+    );
+    if (overlappingBooking) {
+      throw new ConflictException(
+        'The selected time slot has just been booked by another customer.',
+      );
+    }
+
     // Process Addons
     const selectedAddons = [];
     if (addonIds && addonIds.length > 0) {
@@ -513,35 +578,37 @@ export class BookingService {
 
     const savedBooking = await transactionalEntityManager.save(booking);
 
-    // Fetch full booking details for email
-    const fullBooking = await transactionalEntityManager.findOne(
-      ServiceBooking,
-      {
-        where: { id: savedBooking.id },
-        relations: [
-          'user',
-          'service',
-          'service.business',
-          'service.business.user',
-        ],
-      },
-    );
+    if (!options?.skipNotifications) {
+      // Fetch full booking details for email
+      const fullBooking = await transactionalEntityManager.findOne(
+        ServiceBooking,
+        {
+          where: { id: savedBooking.id },
+          relations: [
+            'user',
+            'service',
+            'service.business',
+            'service.business.user',
+          ],
+        },
+      );
 
-    if (fullBooking) {
-      // Send emails to both customer and business owner
-      try {
-        await this.emailService.sendBookingNotification(fullBooking, false); // Customer
-        await this.emailService.sendBookingNotification(fullBooking, true); // Business Owner
-      } catch (error) {
-        console.error('Failed to send booking notification emails:', error);
+      if (fullBooking) {
+        // Send emails to both customer and business owner
+        try {
+          await this.emailService.sendBookingNotification(fullBooking, false); // Customer
+          await this.emailService.sendBookingNotification(fullBooking, true); // Business Owner
+        } catch (error) {
+          console.error('Failed to send booking notification emails:', error);
+        }
       }
-    }
 
-    await this.notificationService.create({
-      recipientId: business.user.id,
-      type: NotificationType.NEW_BOOKING,
-      entityId: savedBooking.id,
-    });
+      await this.notificationService.create({
+        recipientId: business.user.id,
+        type: NotificationType.NEW_BOOKING,
+        entityId: savedBooking.id,
+      });
+    }
 
     return savedBooking;
   }
@@ -1072,92 +1139,123 @@ export class BookingService {
       );
     }
 
-    return this.dataSource.transaction(async (manager) => {
-      const paymentRepo = manager.getRepository(ServicePayment);
-      const transactionRepo = manager.getRepository(BookingTransaction);
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const paymentRepo = manager.getRepository(ServicePayment);
+        const transactionRepo = manager.getRepository(BookingTransaction);
 
-      const newPayment = paymentRepo.create({
-        user: { id: userId },
-        amount,
-        currency,
-        transactionId,
-        paymentMethod: paymentProvider,
-      });
-      const savedPayment = await paymentRepo.save(newPayment);
+        const newPayment = paymentRepo.create({
+          user: { id: userId },
+          amount,
+          currency,
+          transactionId,
+          paymentMethod: paymentProvider,
+        });
+        const savedPayment = await paymentRepo.save(newPayment);
 
-      const newTransaction = transactionRepo.create({
-        booking,
-        type: TransactionType.PAYMENT,
-        amount,
-        referenceId: transactionId,
-        status: TransactionStatus.COMPLETED,
-      });
-      await transactionRepo.save(newTransaction);
+        const newTransaction = transactionRepo.create({
+          booking,
+          type: TransactionType.PAYMENT,
+          amount,
+          referenceId: transactionId,
+          status: TransactionStatus.COMPLETED,
+        });
+        await transactionRepo.save(newTransaction);
 
-      booking.payment = savedPayment;
-      booking.status = BookingStatus.CONFIRMED; // Mark booking as CONFIRMED upon successful payment
+        booking.payment = savedPayment;
+        booking.status = BookingStatus.CONFIRMED; // Mark booking as CONFIRMED upon successful payment
 
-      // Ensure amounts are synced to the booking entity if they weren't set during initiation
-      if (!booking.totalAmount || booking.totalAmount === 0) {
-        booking.totalAmount = amount;
-        const commissionRate = 0.1; // 10% commission
-        booking.commissionAmount = parseFloat(
-          (amount * commissionRate).toFixed(2),
-        );
-        booking.providerAmount = parseFloat(
-          (amount - booking.commissionAmount).toFixed(2),
-        );
-      }
-
-      await manager.save(booking);
-
-      // Fetch full booking details for email update
-      const fullBooking = await manager.findOne(ServiceBooking, {
-        where: { id: booking.id },
-        relations: [
-          'user',
-          'service',
-          'service.business',
-          'service.business.user',
-          'payment',
-        ],
-      });
-
-      if (fullBooking) {
-        // Send updated emails to both customer and business owner
-        try {
-          await this.emailService.sendBookingNotification(fullBooking, false); // Customer
-          await this.emailService.sendBookingNotification(fullBooking, true); // Business Owner
-        } catch (error) {
-          console.error('Failed to send booking verification emails:', error);
+        // Ensure amounts are synced to the booking entity if they weren't set during initiation
+        if (!booking.totalAmount || booking.totalAmount === 0) {
+          booking.totalAmount = amount;
+          const commissionRate = 0.1; // 10% commission
+          booking.commissionAmount = parseFloat(
+            (amount * commissionRate).toFixed(2),
+          );
+          booking.providerAmount = parseFloat(
+            (amount - booking.commissionAmount).toFixed(2),
+          );
         }
-      }
 
-      await this.walletService.creditEarning({
-        userId: booking.service.business.user.id,
-        amount: booking.providerAmount, // Only credit provider amount for earnings info (though it's in escrow)
-        type: WalletTransactionType.EARNING_BOOKING,
-        description: `Pending payment in escrow for booking #${booking.id}`,
+        await manager.save(booking);
+
+        // Fetch full booking details for email update
+        const fullBooking = await manager.findOne(ServiceBooking, {
+          where: { id: booking.id },
+          relations: [
+            'user',
+            'service',
+            'service.business',
+            'service.business.user',
+            'payment',
+          ],
+        });
+
+        if (fullBooking) {
+          // Send updated emails to both customer and business owner
+          try {
+            await this.emailService.sendBookingNotification(fullBooking, false); // Customer
+            await this.emailService.sendBookingNotification(fullBooking, true); // Business Owner
+          } catch (error) {
+            console.error('Failed to send booking verification emails:', error);
+          }
+        }
+
+        await this.walletService.creditEarning(
+          {
+            userId: booking.service.business.user.id,
+            amount: booking.providerAmount, // Only credit provider amount for earnings info (though it's in escrow)
+            type: WalletTransactionType.EARNING_BOOKING,
+            description: `Pending payment in escrow for booking #${booking.id}`,
+          },
+          manager,
+        );
+
+        // Process Cashback
+        if (booking.user.email) {
+          try {
+            await this.centralIntegrationService.processCashback(
+              booking.user.email,
+              Number(amount),
+              CashbackEvent.SERVICE_BOOKING_PAYMENT,
+              transactionId,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to process cashback for booking ${transactionId}: ${error.message}`,
+            );
+          }
+        }
+
+        return booking;
       });
-
-      // Process Cashback
-      if (booking.user.email) {
-        try {
-          await this.centralIntegrationService.processCashback(
-            booking.user.email,
-            Number(amount),
-            CashbackEvent.SERVICE_BOOKING_PAYMENT,
+    } catch (dbErr) {
+      this.logger.error(
+        `Database transaction failed for booking ${bookingId} after payment was verified/captured. Initiating compensating refund.`,
+        dbErr,
+      );
+      try {
+        if (paymentProvider === PaymentMethod.STRIPE) {
+          await this.paymentProviderService.refundStripePayment(
             transactionId,
+            amount,
           );
-        } catch (error) {
-          this.logger.error(
-            `Failed to process cashback for booking ${transactionId}: ${error.message}`,
+        } else if (paymentProvider === PaymentMethod.PAYPAL) {
+          await this.paymentProviderService.refundPaypalOrder(
+            transactionId,
+            amount,
+            currency,
           );
         }
+      } catch (refundErr) {
+        this.logger.error(
+          `Compensating refund also failed for booking ${bookingId}, transaction ${transactionId}: ${refundErr.message}`,
+        );
       }
-
-      return booking;
-    });
+      throw new InternalServerErrorException(
+        'An error occurred while confirming your booking. If your account was charged, a refund has been initiated.',
+      );
+    }
   }
 
   async completeBooking(
@@ -1305,16 +1403,35 @@ export class BookingService {
 
   async refundBooking(
     bookingId: string,
-    _adminId: string, // assuming refund is initiated by admin
+    requester: { id: string; role?: string } | string,
   ): Promise<ServiceBooking> {
+    const requesterObj =
+      typeof requester === 'string' ? { id: requester } : requester;
     return this.dataSource.transaction(async (manager) => {
       const booking = await manager.findOne(ServiceBooking, {
         where: { id: bookingId },
-        relations: ['user', 'payment'],
+        relations: [
+          'user',
+          'payment',
+          'service',
+          'service.business',
+          'service.business.user',
+        ],
       });
 
       if (!booking) {
         throw new NotFoundException('Booking not found.');
+      }
+
+      const isAdmin = requesterObj.role === UserRole.ADMIN;
+      const ownerId = (booking as any)?.service?.business?.user?.id;
+      const isBusinessOwner =
+        !!ownerId && ownerId === requesterObj.id && requesterObj.role === UserRole.OWNER;
+
+      if (!isAdmin && !isBusinessOwner) {
+        throw new ForbiddenException(
+          'Only platform admins or the business owner can refund this booking.',
+        );
       }
 
       if (

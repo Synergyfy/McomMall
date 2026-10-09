@@ -24,7 +24,6 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import Link from 'next/link';
 
 interface TrialCountdownTimerProps {
   trialStatus: TrialStatusResponse;
@@ -175,11 +174,6 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-        <div className="mt-3 flex justify-center">
-          <Link href="/dashboard/activity-timer">
-            <span className="text-xs font-semibold text-[#f48c25] hover:underline">View Timer Details</span>
-          </Link>
         </div>
       </PopoverContent>
     </Popover>

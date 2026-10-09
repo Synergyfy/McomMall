@@ -32,7 +32,6 @@ import {
   CapabilityService,
   ActionType,
 } from '../capability/capability.service';
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class PromotionService {
@@ -52,7 +51,6 @@ export class PromotionService {
     @InjectRepository(PointTransaction)
     private readonly pointTransactionRepository: Repository<PointTransaction>,
     private readonly activitiesService: ActivitiesService,
-    private readonly activityTimerService: ActivityTimerService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
   ) {}
@@ -131,11 +129,6 @@ export class PromotionService {
       'created',
       'promotion',
       savedPromotion.name,
-    );
-    await this.activityTimerService.completeTaskByKey(
-      user.id,
-      'createdLoyalty',
-      true,
     );
 
     return savedPromotion;

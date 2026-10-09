@@ -68,7 +68,6 @@ export const navItems: NavItem[] = [
     { title: 'Coupons & Vouchers', href: '/admin/coupons-vouchers', icon: Ticket, description: 'Manage digital coupons and vouchers' },
     { title: 'Loyalty Cashback', href: '/admin/campaign-cashback', icon: Gift, description: 'Manage loyalty reward programs' },
     { title: 'Templates', href: '/admin/templates', icon: LayoutTemplate, description: 'Email and document templates' },
-    { title: 'Activity Timers', href: '/admin/activity-timer', icon: Clock, description: 'Monitor session and activity timers' },
     { title: 'Compliance', href: '/admin/compliance', icon: ShieldAlert, description: 'Regulatory and safety compliance' },
     { title: 'Quality Assurance', href: '/admin/quality', icon: Award, description: 'Quality control and standards' },
     { title: 'Training Hub', href: '/admin/training', icon: GraduationCap, description: 'Staff and user training materials' },

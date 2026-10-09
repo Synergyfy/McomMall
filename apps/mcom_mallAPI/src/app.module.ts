@@ -56,8 +56,6 @@ import { ShippingAddressModule } from './resources/shipping-address/shipping-add
 import { HelpRequestsModule } from './help-requests/help-requests.module';
 import { TerminalCashbackModule } from './resources/terminal-cashback/terminal-cashback.module';
 import { CampaignCashbackModule } from './resources/campaign-cashback/campaign-cashback.module';
-import { ActivityTimerModule } from './resources/activity-timer/activity-timer.module';
-import { ActivityTimerGuard } from './resources/activity-timer/activity-timer.guard';
 import { SubscriptionGuard } from './common/guards/subscription.guard';
 import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
 import { SeasonsModule } from './resources/seasons/seasons.module';
@@ -127,7 +125,6 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     LocalMallModule,
     DigitalValueModule,
     SupportTicketsModule,
-    ActivityTimerModule,
     MarketplaceModule,
     MoneyEngineModule,
     TaxonomyModule,
@@ -204,10 +201,6 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ActivityTimerGuard,
     },
     {
       provide: APP_GUARD,

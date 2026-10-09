@@ -13,7 +13,6 @@ import { PromotionModule } from '../promotion/promotion.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { ProductVariantTemplateService } from './product-variant-template.service';
 import { ProductVariantTemplateController } from './product-variant-template.controller';
-import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 
 @Module({
   imports: [
@@ -27,7 +26,6 @@ import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
       PartnershipRequest,
     ]),
     ActivitiesModule,
-    ActivityTimerModule,
     forwardRef(() => PromotionModule),
   ],
   controllers: [ProductController, ProductVariantTemplateController],

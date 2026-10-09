@@ -12,7 +12,6 @@ import { PromotionActivity } from './entities/promotion-activity.entity';
 import { ActivitiesModule } from '../activities/activities.module';
 import { TransactionModule } from '../transaction/transaction.module';
 import { CapabilityModule } from '../capability/capability.module';
-import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 
 @Module({
   imports: [
@@ -26,7 +25,6 @@ import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
       PromotionActivity,
     ]),
     ActivitiesModule,
-    ActivityTimerModule,
     TransactionModule,
   ],
   controllers: [PromotionController],

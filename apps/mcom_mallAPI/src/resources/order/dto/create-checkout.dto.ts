@@ -45,6 +45,7 @@ class PaymentDto {
   transactionId?: string;
 
   @ApiProperty({ description: 'The total amount paid.', example: 14.5 })
+  @Type(() => Number)
   @IsNumber()
   amount: number;
 
@@ -123,11 +124,13 @@ export class CreateCheckoutDto {
   voucherCode?: string;
 
   @ApiPropertyOptional({ description: 'Amount to deduct from gift card.' })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   giftCardAmount?: number;
 
   @ApiPropertyOptional({ description: 'Amount to deduct from voucher.' })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   voucherAmount?: number;

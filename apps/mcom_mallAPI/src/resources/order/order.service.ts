@@ -2,8 +2,11 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
+  ConflictException,
   Inject,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,6 +25,7 @@ import { SalesStatsDto } from './dto/sales-stats.dto';
 import { PointsService } from '../transaction/points.service';
 import { Offer } from '../offer/entities/offer.entity';
 import { GiftCardService } from '../gift-card/gift-card.service';
+import { GiftCard, GiftCardDeliveryStatus } from '../gift-card/entities/gift-card.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { BusinessStatus } from '../listings/listing.enum';
 import { VoucherService } from '../voucher/voucher.service';
@@ -46,10 +50,14 @@ import {
 
 import { Service } from '../services/entities/service.entity';
 import { McomWalletService } from '../payments/services/mcom-wallet.service';
+import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
+import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
+import { UserRole } from '../../common/role.enum';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
@@ -95,6 +103,8 @@ export class OrderService {
     private readonly shippingPricingService: ShippingPricingService,
     @Inject(forwardRef(() => McomWalletService))
     private readonly mcomWalletService: McomWalletService,
+    @Inject(forwardRef(() => WalletRefundReconcileService))
+    private readonly walletRefundReconcileService: WalletRefundReconcileService,
   ) {}
 
   private validateBusinessAndOwner(business: Business) {
@@ -169,6 +179,14 @@ export class OrderService {
       }
       this.validateBusinessAndOwner(product.business);
 
+      if (product.enableStockManagement) {
+        if (product.stock < directPurchase.quantity) {
+          throw new ConflictException(
+            `Insufficient stock for product "${product.title}". Requested: ${directPurchase.quantity}, Available: ${product.stock}.`,
+          );
+        }
+      }
+
       directPurchaseProduct = product;
       businessContextId = product.business.id;
       const ownerId = product.business.user.id;
@@ -190,6 +208,14 @@ export class OrderService {
 
       for (const item of cart.items) {
         this.validateBusinessAndOwner(item.product.business);
+
+        if (item.product.enableStockManagement) {
+          if (item.product.stock < item.quantity) {
+            throw new ConflictException(
+              `Insufficient stock for product "${item.product.title}". Requested: ${item.quantity}, Available: ${item.product.stock}.`,
+            );
+          }
+        }
 
         const price = this.productService.calculatePrice(
           item.product,
@@ -533,8 +559,29 @@ export class OrderService {
           );
         }
 
-        // Process product items
+        // Process product items (batched to avoid N+1 single-row INSERTs)
         if (isDirectPurchase) {
+          if (directPurchaseProduct.enableStockManagement) {
+            const updateResult = await manager
+              .createQueryBuilder()
+              .update(Product)
+              .set({ stock: () => `stock - ${Number(directPurchase.quantity)}` })
+              .where(
+                'id = :id AND stock >= :qty AND enableStockManagement = true',
+                {
+                  id: directPurchaseProduct.id,
+                  qty: directPurchase.quantity,
+                },
+              )
+              .execute();
+
+            if (updateResult.affected === 0) {
+              throw new ConflictException(
+                `Insufficient stock for product "${directPurchaseProduct.title}" during reservation.`,
+              );
+            }
+          }
+
           const orderItem = manager.create(OrderItem, {
             order: savedOrder,
             product: directPurchaseProduct,
@@ -545,17 +592,43 @@ export class OrderService {
           savedOrder.items.push(orderItem);
         } else if (isCartCheckout) {
           for (const cartItem of cart.items) {
-            const orderItem = manager.create(OrderItem, {
+            if (cartItem.product.enableStockManagement) {
+              const updateResult = await manager
+                .createQueryBuilder()
+                .update(Product)
+                .set({ stock: () => `stock - ${Number(cartItem.quantity)}` })
+                .where(
+                  'id = :id AND stock >= :qty AND enableStockManagement = true',
+                  {
+                    id: cartItem.product.id,
+                    qty: cartItem.quantity,
+                  },
+                )
+                .execute();
+
+              if (updateResult.affected === 0) {
+                throw new ConflictException(
+                  `Insufficient stock for product "${cartItem.product.title}" during reservation.`,
+                );
+              }
+            }
+          }
+
+          const orderItems = cart.items.map((cartItem) =>
+            manager.create(OrderItem, {
               order: savedOrder,
               product: cartItem.product,
               quantity: cartItem.quantity,
               price: cartItem.product.price,
-            });
-            await manager.save(orderItem);
-            savedOrder.items.push(orderItem);
+            }),
+          );
+          if (orderItems.length > 0) {
+            const savedItems = await manager.save(OrderItem, orderItems);
+            savedOrder.items.push(...savedItems);
           }
         }
 
+        const createdBookingIds: string[] = [];
         // Process service bookings
         if (serviceBookings && serviceBookings.length > 0) {
           if (!directPurchaseProduct) {
@@ -598,7 +671,9 @@ export class OrderService {
                 },
                 userId,
                 manager,
+                { skipNotifications: true },
               );
+            createdBookingIds.push(serviceBooking.id);
 
             const partnership = partnershipMap.get(bookingDetail.serviceId);
             if (!partnership) {
@@ -619,6 +694,7 @@ export class OrderService {
           }
         }
 
+        const createdGiftCards: GiftCard[] = [];
         // Process new gift card purchases
         if (hasGiftCardPurchases) {
           // Batch-load businesses to avoid N+1
@@ -633,11 +709,14 @@ export class OrderService {
             const businessForPurchase = gcBusinessMap.get(
               gcPurchase.businessId,
             );
-            await this.giftCardService.purchaseGiftCard(
+            const savedGc = await this.giftCardService.purchaseGiftCard(
               gcPurchase,
               businessForPurchase,
               savedOrder,
+              manager,
+              { skipEarningsCredit: true, skipEmail: true },
             );
+            createdGiftCards.push(savedGc);
           }
         }
 
@@ -655,18 +734,21 @@ export class OrderService {
         }
 
         if (isCartCheckout) {
-          await this.cartService.clearCart(userId);
+          await this.cartService.clearCart(userId, manager);
         }
 
         // Credit earnings to all business owners involved in the order
         for (const [ownerId, amount] of earningsPerOwner.entries()) {
           if (amount > 0) {
-            await this.walletService.creditEarning({
-              userId: ownerId,
-              amount: amount,
-              type: WalletTransactionType.EARNING_ORDER,
-              description: `Earnings from order #${savedOrder.id}`,
-            });
+            await this.walletService.creditEarning(
+              {
+                userId: ownerId,
+                amount: amount,
+                type: WalletTransactionType.EARNING_ORDER,
+                description: `Earnings from order #${savedOrder.id}`,
+              },
+              manager,
+            );
           }
         }
 
@@ -674,14 +756,44 @@ export class OrderService {
           orderId: savedOrder.id,
         });
 
+        return { savedOrder, createdGiftCards, createdBookingIds };
+      })
+      .then(async ({ savedOrder, createdGiftCards, createdBookingIds }) => {
+        // Post-commit side effects: dispatch emails & notifications asynchronously
+        for (const gc of createdGiftCards) {
+          if (gc.deliveryStatus !== GiftCardDeliveryStatus.PENDING) {
+            this.giftCardService.sendGiftCardEmail(gc.id).catch((err) => {
+              this.logger.error(
+                `Failed to send gift card email for ${gc.id}: ${err.message}`,
+              );
+            });
+          }
+        }
+
+        for (const bookingId of createdBookingIds) {
+          this.bookingService
+            .sendBookingNotifications(bookingId)
+            .catch((err) => {
+              this.logger.error(
+                `Failed to send booking notifications for ${bookingId}: ${err.message}`,
+              );
+            });
+        }
+
         return savedOrder;
       })
       .catch(async (dbErr) => {
         // Compensating refund: order records failed AFTER a successful central
         // debit — credit the wallet back so the user is never charged for a
         // failed order. Same-amount credit with a derived key; central treats
-        // a repeated key as the same receipt (safe retry).
+        // a repeated key as the same receipt (safe retry). If the immediate
+        // credit fails, persist to the outbox for background reconciliation
+        // instead of swallowing the error.
         if (walletTransactionId && walletIdempotencyKey) {
+          const refundIdempotencyKey = this.mcomWalletService.buildKey(
+            'refund',
+            walletIdempotencyKey,
+          );
           try {
             const centralUserId = user.centralUserId;
             if (centralUserId) {
@@ -692,19 +804,22 @@ export class OrderService {
                 description: 'MCOM Mall order failed — auto refund',
                 reference: `mall-order-failed-${userId}`,
                 metadata: { platform: 'mcom-mall', mallUserId: userId },
-                idempotencyKey: this.mcomWalletService.buildKey(
-                  'refund',
-                  walletIdempotencyKey,
-                ),
+                idempotencyKey: refundIdempotencyKey,
               });
             }
           } catch (refundErr) {
-            // Surface the original DB error; refund failure is logged centrally.
-
-            console.error(
-              '[order.checkout] compensating wallet refund failed',
+            this.logger.error(
+              '[order.checkout] compensating wallet refund failed — queued for retry',
               refundErr,
             );
+            await this.walletRefundReconcileService.enqueue({
+              mallUserId: userId,
+              centralUserId: user.centralUserId,
+              amount: Number(finalAmount.toFixed(2)),
+              idempotencyKey: refundIdempotencyKey,
+              walletTransactionId,
+              failureReason: String((refundErr as any)?.message || refundErr),
+            });
           }
         }
         throw dbErr;
@@ -835,5 +950,55 @@ export class OrderService {
     const totalSpent = parseFloat(stats.totalSpent) || 0;
 
     return { totalOrders, totalSpent };
+  }
+
+  async updateOrderTracking(
+    orderId: string,
+    dto: UpdateOrderTrackingDto,
+    requester: { id: string; role?: string },
+  ): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: [
+        'business',
+        'business.user',
+        'items',
+        'items.product',
+        'items.product.business',
+        'items.product.business.user',
+      ],
+    });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const isAdmin = requester.role === UserRole.ADMIN;
+    if (!isAdmin) {
+      // Owners may only update tracking for orders containing their products.
+      const ownerId = requester.id;
+      const ownsOrder =
+        (order as any)?.business?.user?.id === ownerId ||
+        (order.items || []).some(
+          (item: any) => item?.product?.business?.user?.id === ownerId,
+        );
+      // Fall back to direct business relation check via items' product business.
+      if (!ownsOrder) {
+        const items = await this.orderItemRepository.find({
+          where: { order: { id: orderId } },
+          relations: ['product', 'product.business', 'product.business.user'],
+        });
+        const ownsViaItems = items.some(
+          (item: any) => item?.product?.business?.user?.id === ownerId,
+        );
+        if (!ownsViaItems) {
+          throw new ForbiddenException(
+            'You are not authorized to update tracking for this order.',
+          );
+        }
+      }
+    }
+
+    if (dto.trackingNumber !== undefined)
+      order.trackingNumber = dto.trackingNumber;
+    if (dto.carrierCode !== undefined) order.carrierCode = dto.carrierCode;
+    return this.orderRepository.save(order);
   }
 }

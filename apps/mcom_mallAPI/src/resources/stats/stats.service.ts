@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
@@ -20,9 +20,12 @@ import { OrderItem } from '../order/entities/order-item.entity';
 import { OwnerStatsDto } from './dto/owner-stats.dto';
 import { CustomerStatsDto } from './dto/customer-stats.dto';
 import { SalesChartQueryDto } from './dto/sales-chart.dto';
+import { WalletService } from '../wallet/wallet.service';
 
 @Injectable()
 export class StatsService {
+  private readonly logger = new Logger(StatsService.name);
+
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(Order)
@@ -47,6 +50,8 @@ export class StatsService {
     private readonly bookingRepository: Repository<ServiceBooking>,
     @InjectRepository(PromotionParticipant)
     private readonly promotionParticipantRepository: Repository<PromotionParticipant>,
+    @Inject(forwardRef(() => WalletService))
+    private readonly walletService: WalletService,
   ) {}
 
   async getUserStats(user: User): Promise<OwnerStatsDto | CustomerStatsDto> {
@@ -58,10 +63,14 @@ export class StatsService {
   }
 
   private async getOwnerStats(userId: string): Promise<OwnerStatsDto> {
-    const userWithWalletQuery = this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['wallet'],
-    });
+    const walletDetailsQuery = this.walletService
+      .getWalletDetails(userId)
+      .catch((err) => {
+        this.logger.warn(
+          `Failed to fetch wallet details for owner stats: ${err?.message || err}`,
+        );
+        return null;
+      });
 
     const productOrdersQuery = this.orderRepository
       .createQueryBuilder('order')
@@ -114,7 +123,7 @@ export class StatsService {
     });
 
     const [
-      userWithWallet,
+      walletDetails,
       productOrders,
       giftCard,
       promotions,
@@ -124,7 +133,7 @@ export class StatsService {
       serviceCount,
       listingCount,
     ] = await Promise.all([
-      userWithWalletQuery,
+      walletDetailsQuery,
       productOrdersQuery,
       giftCardQuery,
       promotionsQuery,
@@ -134,6 +143,13 @@ export class StatsService {
       serviceCountQuery,
       listingCountQuery,
     ]);
+
+    const totalWalletBalance = Number(
+      walletDetails?.balance ??
+        walletDetails?.centralWallet?.balance ??
+        walletDetails?.wallet?.balance ??
+        0,
+    );
 
     return {
       totalAmountEarnedFromProductOrders: +productOrders.sum || 0,
@@ -145,7 +161,7 @@ export class StatsService {
       totalAmountOfProduct: productCount,
       totalAmountOfService: serviceCount,
       totalAmountOfListing: listingCount,
-      totalWalletBalance: userWithWallet.wallet?.balance || 0,
+      totalWalletBalance,
     };
   }
 

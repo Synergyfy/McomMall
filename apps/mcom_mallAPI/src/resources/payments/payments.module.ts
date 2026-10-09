@@ -11,14 +11,12 @@ import { WalletTopUpProxyService } from './services/wallet-topup-proxy.service';
 import { SolutionsPaymentProxyService } from './services/solutions-payment-proxy.service';
 import { CentralIntegrationService } from './services/central-integration.service';
 import { MembershipModule } from '../membership/membership.module';
-import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 import { PlansModule } from '../plans/plans.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([PaymentHistory, User]),
     forwardRef(() => MembershipModule),
-    ActivityTimerModule,
     PlansModule,
   ],
   controllers: [PaymentsController, CashbackController],

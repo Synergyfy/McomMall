@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { Event } from '../events/entities/event.entity';
 import { Promotion } from '../promotion/entities/promotion.entity';
 import { BoroughCampaignsService } from '../visibility/borough-campaigns.service';
@@ -85,7 +86,7 @@ export class DiscoverService {
       .leftJoinAndSelect('business.category', 'category')
       .leftJoinAndSelect('business.businessHours', 'businessHours')
       .leftJoinAndSelect('business.location', 'location')
-      .where('business.status = :status', { status: 'PUBLISHED' });
+      .where('business.status = :status', { status: BusinessStatus.PUBLISHED });
 
     if (search) {
       qb.andWhere(
@@ -171,11 +172,11 @@ export class DiscoverService {
 
     switch (tab) {
       case 'live':
-        qb.andWhere('DATE(event.startDate) = :today', { today: todayStr });
+        qb.andWhere('event.date = :today', { today: todayStr });
         break;
       case 'upcoming':
-        qb.andWhere('event.startDate >= :today', { today: todayStr });
-        qb.orderBy('event.startDate', 'ASC');
+        qb.andWhere('event.date >= :today', { today: todayStr });
+        qb.orderBy('event.date', 'ASC');
         break;
       case 'joined':
         if (joinedIds) {
@@ -198,16 +199,16 @@ export class DiscoverService {
         qb.orderBy('RANDOM()');
         break;
       case 'nearby':
-        qb.orderBy('event.startDate', 'ASC');
+        qb.orderBy('event.date', 'ASC');
         break;
       case 'borough':
         if (borough && borough !== 'All') {
           qb.andWhere('business.borough = :borough', { borough });
         }
-        qb.orderBy('event.startDate', 'ASC');
+        qb.orderBy('event.date', 'ASC');
         break;
       default:
-        qb.orderBy('event.startDate', 'ASC');
+        qb.orderBy('event.date', 'ASC');
     }
 
     const [items, total] = await qb
@@ -271,9 +272,15 @@ export class DiscoverService {
       .createQueryBuilder('promotion')
       .leftJoinAndSelect('promotion.businesses', 'businesses')
       .where('promotion.isActive = :isActive', { isActive: true })
-      .andWhere('promotion.startDate <= :now', { now: new Date() })
-      .andWhere('promotion.endDate >= :now', { now: new Date() })
-      .orderBy('promotion.createdAt', 'DESC')
+      .andWhere(
+        '(promotion.beginDate IS NULL OR promotion.beginDate <= :now)',
+        { now: new Date() },
+      )
+      .andWhere(
+        '(promotion.endDate IS NULL OR promotion.endDate >= :now)',
+        { now: new Date() },
+      )
+      .orderBy('promotion.created_at', 'DESC')
       .take(limit)
       .getMany();
 

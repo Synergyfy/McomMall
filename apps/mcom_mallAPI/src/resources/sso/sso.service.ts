@@ -47,11 +47,15 @@ export class SsoService {
   }
 
   private getClientId(): string {
-    return process.env.SSO_CLIENT_ID || 'mcom-mall';
+    return process.env.SSO_CLIENT_ID || process.env.MCOM_CLIENT_ID || 'mcom-mall';
   }
 
   private getClientSecret(): string {
-    return process.env.SSO_CLIENT_SECRET || 'mall_secret_123';
+    return (
+      process.env.SSO_CLIENT_SECRET ||
+      process.env.MCOM_CLIENT_SECRET ||
+      'mall_secret_123'
+    );
   }
 
   private getBasicAuthHeader(): string {

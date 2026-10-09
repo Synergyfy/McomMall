@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,6 +11,7 @@ import { HashService } from 'src/common/hash/hash.service';
 
 @Injectable()
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
   constructor(
     private readonly mailerService: MailerService,
     @InjectRepository(User)
@@ -49,8 +50,10 @@ export class EmailService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
-    // Log the OTP to console for easy local testing when SMTP is not connected
-    console.log(`[EmailService] Generated OTP for ${email}: ${otp}`);
+    // Only log OTP in development mode for local test verification
+    if (process.env.NODE_ENV === 'development') {
+      this.logger.debug(`[EmailService] Generated OTP for ${email}: ${otp}`);
+    }
 
     await this.otpRepository.save({
       otp,

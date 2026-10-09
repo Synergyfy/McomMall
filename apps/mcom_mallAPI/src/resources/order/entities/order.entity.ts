@@ -1,5 +1,6 @@
 import {
   Entity,
+  Index,
   ManyToOne,
   OneToOne,
   Column,
@@ -21,6 +22,9 @@ import { ShippingAddress } from '../../shipping-address/entities/shipping-addres
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('orders')
+@Index('IDX_order_user', ['user'])
+@Index('IDX_order_business', ['business'])
+@Index('IDX_order_status', ['status'])
 export class Order extends AbstractBaseEntity {
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User)

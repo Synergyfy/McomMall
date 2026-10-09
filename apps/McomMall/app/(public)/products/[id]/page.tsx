@@ -337,7 +337,7 @@ export default function ProductPage() {
     const combinedMedia = [...(product.fileUrls || []), ...(product.media || [])];
     const baseImages = combinedMedia.length > 0
       ? combinedMedia
-      : [product.imageUrl || 'https://via.placeholder.com/500'];
+      : [product.imageUrl || '/images/placeholder.svg'];
 
     // Find the best image to show based on current selection
     let variantImage = displayVariation?.image;

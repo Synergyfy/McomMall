@@ -6,20 +6,6 @@ import { google } from 'googleapis';
 @Injectable()
 export class GoogleOAuthService {
   constructor(private readonly configService: ConfigService) {}
-  onModuleInit() {
-    console.log(
-      'GOOGLE_CLIENT_ID:',
-      this.configService.get<string>('GOOGLE_CLIENT_ID'),
-    );
-    console.log(
-      'GOOGLE_CLIENT_SECRET:',
-      this.configService.get<string>('GOOGLE_CLIENT_SECRET'),
-    );
-    console.log(
-      'GOOGLE_REDIRECT_URI:',
-      this.configService.get<string>('GOOGLE_REDIRECT_URI'),
-    );
-  }
 
   private makeClient() {
     return new google.auth.OAuth2(

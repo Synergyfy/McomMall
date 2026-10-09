@@ -78,7 +78,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   useEffect(() => {
     if (product) {
        // Set Main Image
-       const firstImage = product.imageUrl || (product.fileUrls?.find(isImageUrl)) || 'https://via.placeholder.com/500x500.png?text=No+Image';
+       const firstImage = product.imageUrl || (product.fileUrls?.find(isImageUrl)) || '/images/placeholder.svg';
        if (!mainImage) setMainImage(firstImage);
 
        // Initialize Selections for Matrix System (Select first available options)
@@ -214,7 +214,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           <div className="space-y-4 lg:col-span-2">
             <div className="aspect-square relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
               <img
-                src={mainImage || 'https://via.placeholder.com/500x500.png?text=No+Image'}
+                src={mainImage || '/images/placeholder.svg'}
                 alt={product.title}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 hover:scale-105"
               />

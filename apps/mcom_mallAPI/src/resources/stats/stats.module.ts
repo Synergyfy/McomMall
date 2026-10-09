@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { StatsController } from './stats.controller';
 import { StatsService } from './stats.service';
@@ -25,6 +25,7 @@ import { ServicesModule } from '../services/services.module';
 import { ListingsModule } from '../listings/listings.module';
 import { BookingModule } from '../booking/booking.module';
 import { PromotionModule } from '../promotion/promotion.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { PromotionModule } from '../promotion/promotion.module';
     ListingsModule,
     BookingModule,
     PromotionModule,
+    forwardRef(() => WalletModule),
   ],
   controllers: [StatsController],
   providers: [StatsService],

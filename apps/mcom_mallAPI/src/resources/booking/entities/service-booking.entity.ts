@@ -1,6 +1,7 @@
 import {
   Entity,
   Column,
+  Index,
   ManyToOne,
   OneToOne,
   JoinColumn,
@@ -15,6 +16,9 @@ import { ProductServiceBooking } from '../../order/entities/product-service-book
 import { BookingTransaction } from './booking-transaction.entity';
 
 @Entity('service_bookings')
+@Index('IDX_service_booking_user', ['user'])
+@Index('IDX_service_booking_service', ['service'])
+@Index('IDX_service_booking_status', ['status'])
 export class ServiceBooking extends AbstractBaseEntity {
   @ManyToOne(() => User)
   user: User;

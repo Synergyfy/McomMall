@@ -181,6 +181,9 @@ export class CouponService {
     return new PageDto(items, pageMetaDto);
   }
 
+  // Pre-check only (no row lock): final usageLimit/perUserLimit enforcement
+  // happens atomically inside redeem()/redeemForOrder() under
+  // SELECT ... FOR UPDATE. Never treat this as a reservation.
   async validateCoupon(
     code: string,
     user: User,
@@ -685,27 +688,19 @@ export class CouponService {
     code: string,
     userId: string,
   ): Promise<{ success: boolean; message: string; coupon: Coupon }> {
+    // Route through the locked transactional path so usageLimit/perUserLimit
+    // are enforced atomically under SELECT ... FOR UPDATE (see redeem()).
+    // The previous implementation saved a RedemptionLog with no checks.
+    const user = { id: userId } as User;
+    const log = await this.redeem(code, user);
     const coupon = await this.couponRepository.findOne({
       where: { code },
       relations: ['business'],
     });
-
     if (!coupon) {
       throw new NotFoundException(`Coupon with code ${code} not found.`);
     }
-
-    if (coupon.status !== CouponStatus.ACTIVE) {
-      throw new BadRequestException(
-        'Coupon is inactive or not currently active.',
-      );
-    }
-
-    const redemptionLog = this.redemptionLogRepository.create({
-      coupon,
-      user: { id: userId } as any,
-    });
-    await this.redemptionLogRepository.save(redemptionLog);
-
+    void log;
     return {
       success: true,
       message: `Coupon ${code} redeemed successfully.`,

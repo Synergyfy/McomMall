@@ -134,7 +134,14 @@ export const VoucherCardPreview: React.FC<VoucherCardPreviewProps> = ({
               </div>
             )}
             <div className="bg-white p-1 rounded-md shadow-sm border border-gray-100 scale-75 origin-top-right">
-              <QRCode value="DUMMY-CODE" size={48} />
+              <QRCode
+                value={
+                  name
+                    ? `preview:${name}:${expiryDays || 'no-expiry'}`
+                    : 'preview:new-voucher-product'
+                }
+                size={48}
+              />
             </div>
           </div>
         </div>

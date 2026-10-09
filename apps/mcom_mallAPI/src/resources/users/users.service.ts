@@ -22,7 +22,6 @@ import { UserRole } from '../../common/role.enum';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 import { ProvisionService } from '../provision/provision.service';
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { MembershipService } from '../membership/membership.service';
 import { PlansService } from '../plans/services/plans.service';
 
@@ -47,7 +46,6 @@ export class UsersService {
     private readonly emailService: EmailService,
     private readonly dataSource: DataSource,
     private readonly provisionService: ProvisionService,
-    private readonly activityTimerService: ActivityTimerService,
     private readonly membershipService: MembershipService,
     private readonly plansService: PlansService,
   ) {}
@@ -127,7 +125,7 @@ export class UsersService {
 
       const wallet = manager.create(Wallet, {
         user: savedUser,
-        balance: 1000, // Starting balance for every new user
+        balance: 0,
       });
       await manager.save(wallet);
 
@@ -159,11 +157,9 @@ export class UsersService {
             `[UsersService] No active Plan Variant found for auto-assignment.`,
           );
         }
-
-        await this.activityTimerService.getUserActiveTasks(createdUser);
       } catch (error) {
         console.error(
-          'Failed to auto-assign activity timer or trial membership:',
+          'Failed to auto-assign trial membership:',
           error,
         );
       }
@@ -204,7 +200,7 @@ export class UsersService {
 
       const wallet = manager.create(Wallet, {
         user: savedUser,
-        balance: 1000, // Starting balance for every new user
+        balance: 0,
       });
       await manager.save(wallet);
 
@@ -234,11 +230,9 @@ export class UsersService {
             `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Admin-Created Owner ${createdUser.id}`,
           );
         }
-
-        await this.activityTimerService.getUserActiveTasks(createdUser);
       } catch (error) {
         console.error(
-          'Failed to auto-assign activity timer or trial membership:',
+          'Failed to auto-assign trial membership:',
           error,
         );
       }
@@ -635,13 +629,7 @@ export class UsersService {
 
     await this.dataSource.transaction(async (manager) => {
       // 1. Delete dependent listing data (cascade will handle child rows of businesses)
-      const businesses = await manager.query(
-        'SELECT id FROM businesses WHERE "userId" = $1',
-        [userId],
-      );
-      for (const b of businesses) {
-        await manager.query('DELETE FROM businesses WHERE id = $1', [b.id]);
-      }
+      await manager.query('DELETE FROM businesses WHERE "userId" = $1', [userId]);
 
       // 2. Delete rows in other dependent tables
       await manager.query('DELETE FROM wallets WHERE "userId" = $1', [userId]);

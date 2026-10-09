@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import api from '@/service/api';
 import { useEditListing } from '@/service/listings/hook';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,14 +38,26 @@ export const OwnershipVerificationFlow: React.FC<OwnershipVerificationFlowProps>
     return () => clearInterval(interval);
   }, [step, timer]);
 
-  const handleSendCode = () => {
+  const handleSendCode = async () => {
+    const targetEmail = listing?.businessEmail;
+    if (!targetEmail) {
+      toast.error('No business email associated with this listing.');
+      return;
+    }
     setIsSending(true);
-    setTimeout(() => {
-      setIsSending(false);
+    try {
+      await api.post('email/send-otp', {
+        email: targetEmail,
+        type: 'VERIFICATION',
+      });
       setStep('pin');
       setTimer(60);
-      toast.success(`Verification code sent to your business ${method === 'email' ? 'email' : 'phone'}!`);
-    }, 1000);
+      toast.success(`Verification code sent to ${targetEmail}!`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to send verification code.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleVerify = async () => {
@@ -53,14 +66,18 @@ export const OwnershipVerificationFlow: React.FC<OwnershipVerificationFlowProps>
       return;
     }
 
+    const targetEmail = listing?.businessEmail;
+    if (!targetEmail) {
+      toast.error('No business email found for this listing.');
+      return;
+    }
+
     setIsVerifying(true);
     try {
-      // Simulate verifying. Let's make any code work (or a specific mock code like 123456)
-      if (pin !== '123456' && pin !== '000000') {
-        toast.error('Invalid verification PIN. Try 123456.');
-        setIsVerifying(false);
-        return;
-      }
+      await api.post('email/validate-otp', {
+        email: targetEmail,
+        otp: pin,
+      });
 
       await editListing({
         listingId: listing.id,
@@ -74,8 +91,8 @@ export const OwnershipVerificationFlow: React.FC<OwnershipVerificationFlowProps>
       if (typeof window !== 'undefined') {
         window.location.reload();
       }
-    } catch {
-      toast.error('Verification failed. Please try again.');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Invalid verification PIN. Please try again.');
     } finally {
       setIsVerifying(false);
     }

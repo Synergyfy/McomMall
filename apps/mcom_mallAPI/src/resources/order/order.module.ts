@@ -4,6 +4,8 @@ import { CartModule } from '../cart/cart.module';
 import { PromotionModule } from '../promotion/promotion.module';
 import { Order } from './entities/order.entity';
 import { OrderPayment } from './entities/order-payment.entity';
+import { FailedWalletRefund } from './entities/failed-wallet-refund.entity';
+import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
 import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { Product } from '../product/entities/product.entity';
@@ -33,6 +35,7 @@ import { PaymentsModule } from '../payments/payments.module';
       Order,
       OrderItem,
       OrderPayment,
+      FailedWalletRefund,
       Product,
       User,
       Offer,
@@ -57,7 +60,7 @@ import { PaymentsModule } from '../payments/payments.module';
     forwardRef(() => PaymentsModule),
   ],
   controllers: [OrderController],
-  providers: [OrderService],
-  exports: [OrderService],
+  providers: [OrderService, WalletRefundReconcileService],
+  exports: [OrderService, WalletRefundReconcileService],
 })
 export class OrderModule {}

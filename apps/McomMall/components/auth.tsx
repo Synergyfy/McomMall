@@ -21,7 +21,7 @@ import {
 import { Eye, EyeOff, ShieldCheck, RefreshCw, X, LogIn, UserPlus } from 'lucide-react';
 import OTPInput from './ui/otp-input';
 import { motion, AnimatePresence } from 'framer-motion';
-import api from '@/service/api';
+import api, { setBearerToken } from '@/service/api';
 import {
   Tooltip,
   TooltipContent,
@@ -86,6 +86,10 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
   const [showGoogleSignInPopup, setShowGoogleSignInPopup] = useState(false);
 
   const handleGoogleSignInStart = () => {
+    if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+      toast.info('Google Sign-in is not configured for production. Please sign in with your email and password.');
+      return;
+    }
     setShowGoogleSignInPopup(true);
   };
 
@@ -95,9 +99,20 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       const res = await api.post('google-business/login', { email, idToken });
       const { auth, user } = res.data;
 
-      // Set headers and auth cookies
-      api.defaults.headers.common['Authorization'] = `Bearer ${auth.accessToken}`;
-      document.cookie = `accessToken=${auth.accessToken}; path=/`;
+      // Set headers and standard auth cookies
+      if (auth?.accessToken) {
+        setBearerToken(auth.accessToken);
+        Cookies.set('access', auth.accessToken, { expires: 1 / 48 });
+      }
+      if (auth?.refreshToken) {
+        Cookies.set('refresh', auth.refreshToken, { expires: 7 });
+      }
+      if (user?.id) {
+        Cookies.set('userId', user.id, { expires: 7 });
+      }
+      if (user?.role) {
+        Cookies.set('userRole', user.role, { expires: 7 });
+      }
 
       toast.success('Google Login successful');
       if (redirect) router.push(redirect);

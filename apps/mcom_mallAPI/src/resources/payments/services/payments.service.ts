@@ -27,8 +27,6 @@ import { PaymentMethod } from 'src/resources/order/entities/order-payment.entity
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreatePaypalOrderDto } from '../dto/create-paypal-order.dto';
 import { PlanType } from '../enums/plan-type.enum';
-import { ActivityTimerService } from 'src/resources/activity-timer/activity-timer.service';
-import { ActivityTimerType } from 'src/resources/activity-timer/enums/activity-task-type.enum';
 
 @Injectable()
 export class PaymentsService {
@@ -44,13 +42,13 @@ export class PaymentsService {
     @Inject(forwardRef(() => MembershipService))
     private readonly membershipService: MembershipService,
     private readonly plansService: PlansService,
-    private readonly activityTimerService: ActivityTimerService,
   ) {}
 
-  async createStripePaymentIntent(dto: CreatePaymentIntentDto) {
+  async createStripePaymentIntent(dto: CreatePaymentIntentDto, userId: string) {
     let amount = dto.amount;
     const metadata: any = {
       purpose: dto.purpose || PaymentPurpose.MEMBERSHIP,
+      mallUserId: userId,
     };
 
     const variantId = dto.planVariantId || dto.tierId;
@@ -63,6 +61,10 @@ export class PaymentsService {
     }
 
     if (!amount) throw new BadRequestException('Amount or planVariantId is required');
+
+    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > 50000) {
+      throw new BadRequestException('Amount must be between 0 and 50000');
+    }
 
     return this.paymentProviderService.createStripePaymentIntent(
       amount,
@@ -71,10 +73,11 @@ export class PaymentsService {
     );
   }
 
-  async createPaypalOrder(dto: CreatePaypalOrderDto) {
+  async createPaypalOrder(dto: CreatePaypalOrderDto, userId: string) {
     let amount = dto.amount;
     const metadata: any = {
       purpose: dto.purpose || PaymentPurpose.MEMBERSHIP,
+      mallUserId: userId,
     };
 
     const variantId = dto.planVariantId || dto.tierId;
@@ -87,6 +90,10 @@ export class PaymentsService {
     }
 
     if (!amount) throw new BadRequestException('Amount or planVariantId is required');
+
+    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > 50000) {
+      throw new BadRequestException('Amount must be between 0 and 50000');
+    }
 
     return this.paymentProviderService.createPaypalOrder(
       amount,
@@ -267,6 +274,7 @@ export class PaymentsService {
 
       if (membership && membership.isTrial) {
         // Populate tasks
+        // Tasks map default state without activity timer service
         const tasksMap = {
           createdBusiness: false,
           createdProductOrService: false,
@@ -274,33 +282,6 @@ export class PaymentsService {
           createdOffer: false,
           createdCoupon: false,
         };
-
-        try {
-          // Need user object with relations for activityTimerService
-          const userWithRelations = await this.userRepository.findOne({
-            where: { id: userId },
-            relations: ['membership'],
-          });
-          if (userWithRelations) {
-            const activityTasks =
-              await this.activityTimerService.getUserActiveTasks(
-                userWithRelations,
-              );
-
-            // Find TRIAL composite task or just check all tasks
-            for (const group of activityTasks) {
-              if (group.type === ActivityTimerType.TRIAL && group.tasks) {
-                for (const t of group.tasks) {
-                  if (tasksMap.hasOwnProperty(t.key)) {
-                    tasksMap[t.key] = t.isCompleted;
-                  }
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Failed to fetch activity tasks for trial status', e);
-        }
 
         return {
           status: membership.isActive

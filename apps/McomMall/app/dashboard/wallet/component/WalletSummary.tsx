@@ -1,113 +1,132 @@
 import { useWallet } from '@/service/wallet/hook';
 import {
-  PiggyBank,
-  ShoppingCart,
   Wallet,
   Landmark,
-  Clock,
-  Gift,
-  Ticket,
-  Briefcase,
+  ShieldCheck,
+  AlertCircle,
+  Coins,
+  Lock,
+  ArrowUpRight,
+  Sparkles,
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
 import { ReactNode } from 'react';
+import { Badge } from '@/components/ui/badge';
 
 export const WalletSummary = () => {
   const { data: walletData, isLoading } = useWallet();
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-gray-200 h-40 rounded-lg animate-pulse" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-gray-100 h-36 rounded-2xl animate-pulse" />
         ))}
       </div>
     );
   }
 
   if (!walletData) {
-    return <p>No wallet data found.</p>;
+    return <p className="text-gray-500">No wallet data found.</p>;
   }
 
-  const {
-    earningsBalance,
-    spendableBalance,
-    pendingBalance,
-    earningsFromOrders,
-    earningsFromGiftCard,
-    earningsFromVoucher,
-    earningsFromBookings,
-    earningsFromCoupons,
-  } = walletData.wallet;
+  const centralWallet = walletData.centralWallet;
+  const isCentral = Boolean(centralWallet?.linked);
+  const currency = centralWallet?.currency || 'MCOM';
 
-  const totalBalance =
-    parseFloat(earningsBalance) +
-    parseFloat(spendableBalance) +
-    parseFloat(pendingBalance);
+  const balance = Number(centralWallet?.balance ?? walletData.wallet?.balance ?? 0);
+  const availableBalance = Number(
+    centralWallet?.availableBalance ??
+      walletData.wallet?.spendableBalance ??
+      walletData.wallet?.balance ??
+      balance
+  );
+  const holdReserve = Math.max(0, balance - availableBalance);
+  const status = centralWallet?.status || walletData.wallet?.status || (isCentral ? 'ACTIVE' : 'UNLINKED');
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-          <div>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Total Balance</h3>
-              <Landmark size={28} />
+    <div className="space-y-6">
+      {/* Central Wallet Banner Hero */}
+      <div className="bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5 text-orange-100 text-xs font-bold uppercase tracking-widest">
+              <Coins className="w-4 h-4" /> MCOM Central Wallet
+              {isCentral ? (
+                <Badge className="bg-white/20 hover:bg-white/20 text-white border-white/30 text-xs font-semibold px-2 py-0.5 ml-1">
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1" />
+                  {status}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-amber-200 border-amber-300/40 bg-amber-900/30 text-xs">
+                  <AlertCircle className="w-3.5 h-3.5 mr-1" />
+                  Local Account
+                </Badge>
+              )}
             </div>
-            <p className="text-5xl font-bold mt-2">{formatCurrency(totalBalance)}</p>
+
+            <div className="text-4xl sm:text-5xl font-black font-sans tracking-tight">
+              {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-xl sm:text-2xl font-bold ml-2.5 opacity-90">{currency}</span>
+            </div>
+
+            <div className="text-xs font-medium text-orange-100/90 pt-1">
+              Available: <span className="font-bold text-white">{availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</span>
+              {holdReserve > 0 && (
+                <span className="ml-2 opacity-80">· {holdReserve.toFixed(2)} {currency} in active hold</span>
+              )}
+            </div>
           </div>
-          <p className="text-sm opacity-80">Sum of all your balances</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:col-span-2">
-          <BalanceCard
-            title="Spendable Balance"
-            amount={parseFloat(spendableBalance)}
-            icon={<Wallet size={24} />}
-            color="green"
-          />
-          <BalanceCard
-            title="Earnings Balance"
-            amount={parseFloat(earningsBalance)}
-            icon={<PiggyBank size={24} />}
-            color="blue"
-          />
-          <BalanceCard
-            title="Pending Balance"
-            amount={parseFloat(pendingBalance)}
-            icon={<Clock size={24} />}
-            color="yellow"
-          />
+
+          <div className="bg-black/15 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-xs text-orange-50 space-y-1.5 max-w-xs self-start md:self-auto">
+            <div className="flex items-center gap-1.5 font-bold text-white">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              Single Source of Truth
+            </div>
+            <p className="opacity-90 leading-relaxed">
+              Managed centrally by MCOM Solutions. Synchronized in real-time across Mall, Rewards, Spin, and all MCOM apps.
+            </p>
+          </div>
         </div>
       </div>
-      <div className="bg-white p-6 rounded-2xl shadow">
-        <h3 className="text-xl font-bold mb-4">Earnings Breakdown</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <EarningSource
-            title="From Orders"
-            amount={parseFloat(earningsFromOrders)}
-            icon={<ShoppingCart size={20} />}
-          />
-          <EarningSource
-            title="From Gift Cards"
-            amount={parseFloat(earningsFromGiftCard)}
-            icon={<Gift size={20} />}
-          />
-          <EarningSource
-            title="From Vouchers"
-            amount={parseFloat(earningsFromVoucher)}
-            icon={<Ticket size={20} />}
-          />
-          <EarningSource
-            title="From Bookings"
-            amount={parseFloat(earningsFromBookings)}
-            icon={<Briefcase size={20} />}
-          />
-          <EarningSource
-            title="From Coupons"
-            amount={parseFloat(earningsFromCoupons)}
-            icon={<Ticket size={20} />}
-          />
-        </div>
+
+      {/* Main Balances Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <BalanceCard
+          title="Total Balance"
+          amount={balance}
+          subtitle="Total credits in central wallet"
+          icon={<Landmark size={20} />}
+          color="orange"
+          currency={currency}
+        />
+
+        <BalanceCard
+          title="Available Balance"
+          amount={availableBalance}
+          subtitle="Ready to spend (excl. holds)"
+          icon={<Wallet size={20} />}
+          color="green"
+          currency={currency}
+        />
+
+        <BalanceCard
+          title="Reserved / Holds"
+          amount={holdReserve}
+          subtitle="Pre-authorized checkout holds"
+          icon={<Lock size={20} />}
+          color="yellow"
+          currency={currency}
+        />
+
+        <BalanceCard
+          title="Conversion Rate"
+          amount={1.00}
+          subtitle="1 MCOM Credit = £1.00 GBP"
+          icon={<ArrowUpRight size={20} />}
+          color="blue"
+          currency="GBP"
+        />
       </div>
     </div>
   );
@@ -116,40 +135,45 @@ export const WalletSummary = () => {
 interface BalanceCardProps {
   title: string;
   amount: number;
+  subtitle?: string;
   icon: ReactNode;
-  color: 'green' | 'blue' | 'yellow';
+  color: 'orange' | 'green' | 'blue' | 'yellow';
+  currency?: string;
 }
 
-const BalanceCard = ({ title, amount, icon, color }: BalanceCardProps) => {
-  const colors = {
-    green: 'bg-green-100 text-green-700',
-    blue: 'bg-blue-100 text-blue-700',
-    yellow: 'bg-yellow-100 text-yellow-700',
+const BalanceCard = ({ title, amount, subtitle, icon, color, currency = 'MCOM' }: BalanceCardProps) => {
+  const colorStyles = {
+    orange: {
+      bg: 'bg-orange-50 text-orange-600 border-orange-100',
+    },
+    green: {
+      bg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    },
+    blue: {
+      bg: 'bg-blue-50 text-blue-600 border-blue-100',
+    },
+    yellow: {
+      bg: 'bg-amber-50 text-amber-600 border-amber-100',
+    },
   };
 
+  const style = colorStyles[color];
+
   return (
-    <div className="bg-white p-6 rounded-2xl shadow">
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${colors[color]}`}>
-        {icon}
+    <div className="bg-white p-5 rounded-2xl shadow-xs border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+      <div>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{title}</p>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${style.bg}`}>
+            {icon}
+          </div>
+        </div>
+        <p className="text-2xl font-bold text-gray-900 mt-3 tracking-tight">
+          {amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+          <span className="text-sm font-semibold text-gray-500">{currency}</span>
+        </p>
       </div>
-      <p className="text-gray-500 mt-4">{title}</p>
-      <p className="text-3xl font-bold">{formatCurrency(amount)}</p>
+      {subtitle && <p className="text-xs text-gray-400 mt-2 font-medium">{subtitle}</p>}
     </div>
   );
 };
-
-interface EarningSourceProps {
-  title: string;
-  amount: number;
-  icon: ReactNode;
-}
-
-const EarningSource = ({ title, amount, icon }: EarningSourceProps) => (
-  <div className="border border-gray-200 p-4 rounded-lg">
-    <div className="flex items-center text-gray-500">
-      {icon}
-      <p className="ml-2 font-semibold">{title}</p>
-    </div>
-    <p className="text-2xl font-bold mt-2">{formatCurrency(amount)}</p>
-  </div>
-);

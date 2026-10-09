@@ -14,7 +14,6 @@ import { ServiceProviderProfile } from '../service-provider-profile/entities/ser
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { ProvisionModule } from '../provision/provision.module';
 import { MembershipModule } from '../membership/membership.module';
-import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 import { PlansModule } from '../plans/plans.module';
 
 @Module({
@@ -32,7 +31,6 @@ import { PlansModule } from '../plans/plans.module';
     EmailModule,
     ProvisionModule,
     forwardRef(() => MembershipModule),
-    ActivityTimerModule,
     PlansModule,
   ],
   controllers: [UsersController],

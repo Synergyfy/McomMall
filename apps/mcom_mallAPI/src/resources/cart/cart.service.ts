@@ -141,14 +141,21 @@ export class CartService {
     });
   }
 
-  async clearCart(userId: string) {
-    const cart = await this.cartRepository.findOne({
+  async clearCart(userId: string, manager?: EntityManager) {
+    const cartRepo = manager
+      ? manager.getRepository(Cart)
+      : this.cartRepository;
+    const cartItemRepo = manager
+      ? manager.getRepository(CartItem)
+      : this.cartItemRepository;
+
+    const cart = await cartRepo.findOne({
       where: { user: { id: userId } },
       relations: ['items'],
     });
 
-    if (cart) {
-      await this.cartItemRepository.remove(cart.items);
+    if (cart && cart.items && cart.items.length > 0) {
+      await cartItemRepo.remove(cart.items);
     }
   }
 }

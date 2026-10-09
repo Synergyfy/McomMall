@@ -28,7 +28,6 @@ import {
   CapabilityService,
   ActionType,
 } from '../capability/capability.service';
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class ListingsService {
@@ -48,7 +47,6 @@ export class ListingsService {
     private readonly promotionService: PromotionService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
-    private readonly activityTimerService: ActivityTimerService,
     private readonly onboardingDeciderService: OnboardingDeciderService,
   ) {}
 
@@ -215,12 +213,6 @@ export class ListingsService {
         'created',
         'listing',
         savedBusiness.businessName,
-      );
-
-      await this.activityTimerService.completeTaskByKey(
-        userId,
-        'createdBusiness',
-        true,
       );
 
       await queryRunner.commitTransaction();
