@@ -6,6 +6,7 @@ import {
   Get,
   Patch,
   Param,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ServiceProviderProfileService } from './service-provider-profile.service';
 import { CreateServiceProviderProfileDto } from './dto/create-service-provider-profile.dto';
@@ -13,6 +14,7 @@ import { UpdateServiceProviderProfileDto } from './dto/update-service-provider-p
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../../common/role.enum';
 import {
   ApiTags,
   ApiOperation,
@@ -69,7 +71,13 @@ export class ServiceProviderProfileController {
   @ApiResponse({ status: 404, description: 'Profile not found.' })
   findByUserId(
     @Param('userId') userId: string,
+    @CurrentUser() user: User,
   ): Promise<ServiceProviderProfile> {
+    if (user?.id !== userId && user?.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        "You do not have permission to access this user's profile.",
+      );
+    }
     return this.profileService.findByUserId(userId);
   }
 

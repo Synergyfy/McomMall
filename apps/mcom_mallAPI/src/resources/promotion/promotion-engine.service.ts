@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, EntityManager } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Order } from '../order/entities/order.entity';
 import { Promotion } from './entities/promotion.entity';
@@ -29,7 +29,11 @@ export class PromotionEngineService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async processPurchase(user: User, order: Order): Promise<void> {
+  async processPurchase(
+    user: User,
+    order: Order,
+    externalManager?: EntityManager,
+  ): Promise<void> {
     this.logger.log(
       `Starting promotion processing for user ${user.id} and order ${order.id}`,
     );
@@ -47,9 +51,14 @@ export class PromotionEngineService {
       `Found ${participations.length} promotion participations for user ${user.id}`,
     );
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const queryRunner = externalManager
+      ? null
+      : this.dataSource.createQueryRunner();
+    if (queryRunner) {
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+    }
+    const manager = externalManager ?? queryRunner!.manager;
 
     try {
       // Batch-load all products to avoid N+1
@@ -103,12 +112,9 @@ export class PromotionEngineService {
           }
 
           if (promotion.limitPerCustomer) {
-            const activityCount = await queryRunner.manager.count(
-              PromotionActivity,
-              {
-                where: { participant: { id: participation.id } },
-              },
-            );
+            const activityCount = await manager.count(PromotionActivity, {
+              where: { participant: { id: participation.id } },
+            });
             if (activityCount >= promotion.limitPerCustomer) {
               this.logger.log(
                 `User has reached the limit of ${promotion.limitPerCustomer} for promotion ${promotion.id}`,
@@ -203,11 +209,11 @@ export class PromotionEngineService {
               );
 
               participation.pointsEarned += pointsToAward;
-              await queryRunner.manager.save(participation);
+              await manager.save(participation);
 
               // Update User Wallet
               user.points = (user.points || 0) + pointsToAward;
-              await queryRunner.manager.save(user);
+              await manager.save(user);
 
               const activity = this.promotionActivityRepository.create({
                 user,
@@ -215,7 +221,7 @@ export class PromotionEngineService {
                 participant: participation,
                 pointsEarned: pointsToAward,
               });
-              await queryRunner.manager.save(activity);
+              await manager.save(activity);
 
               // Create Point Transaction
               const transaction = new PointTransaction();
@@ -224,17 +230,20 @@ export class PromotionEngineService {
               transaction.type = PointTransactionType.EARNED;
               transaction.promotion = promotion;
               transaction.order = order;
-              await queryRunner.manager.save(transaction);
+              await manager.save(transaction);
             }
           }
         }
       }
-      await queryRunner.commitTransaction();
+      if (queryRunner) await queryRunner.commitTransaction();
     } catch (err) {
       this.logger.error('Error in promotion processing transaction', err);
-      await queryRunner.rollbackTransaction();
+      if (queryRunner) await queryRunner.rollbackTransaction();
+      // When joined to an outer transaction, surface the error so the caller
+      // can roll back atomically instead of silently swallowing it.
+      if (externalManager) throw err;
     } finally {
-      await queryRunner.release();
+      if (queryRunner) await queryRunner.release();
     }
   }
 }

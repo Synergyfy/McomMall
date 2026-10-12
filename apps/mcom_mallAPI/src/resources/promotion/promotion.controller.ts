@@ -162,8 +162,8 @@ export class PromotionController {
     description: 'The summary statistics for the promotion.',
     type: PromotionSummaryStatisticsDto,
   })
-  getSummaryStatistics(@Param('id') id: string) {
-    return this.promotionService.getSummaryStatistics(id);
+  getSummaryStatistics(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.promotionService.getSummaryStatistics(user.id, id);
   }
 
   @Get(':id/transaction-history')
@@ -176,9 +176,10 @@ export class PromotionController {
     type: PageDto<PromotionTransactionHistoryDto>,
   })
   getTransactionHistory(
+    @CurrentUser() user: User,
     @Param('id') id: string,
     @Query() query: PromotionHistoryQueryDto,
   ) {
-    return this.promotionService.getTransactionHistory(id, query);
+    return this.promotionService.getTransactionHistory(user.id, id, query);
   }
 }

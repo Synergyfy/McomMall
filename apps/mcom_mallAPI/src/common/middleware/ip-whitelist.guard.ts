@@ -8,41 +8,43 @@ import { Request } from 'express';
 
 @Injectable()
 export class IpWhitelistGuard implements CanActivate {
-  // Define allowed IPs. In production, load this from environment variables (e.g., process.env.ALLOWED_IPS.split(','))
-  private readonly allowedIps = [
-    '127.0.0.1',
-    '::1',
+  private readonly allowedIps: string[] = [
+    ...(process.env.SYSTEM_ALLOWED_IPS
+      ? process.env.SYSTEM_ALLOWED_IPS.split(',')
+          .map((ip) => ip.trim())
+          .filter(Boolean)
+      : []),
     process.env.LOYALTY_API_IP,
-  ];
+  ].filter((ip): ip is string => Boolean(ip && ip.trim()));
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
 
-    // Extract IP. This handles standard headers and proxy forwarded headers.
-    let requestIp = request.ip || request.socket.remoteAddress;
+    // Only trust X-Forwarded-For when explicitly enabled (i.e. behind a trusted
+    // proxy). Otherwise an attacker can spoof the header to appear as an
+    // allowed IP. `request.ip` already honours Express' `trust proxy` config.
+    const trustProxy = process.env.TRUST_PROXY === 'true';
+    const forwarded = request.headers['x-forwarded-for'];
+    let requestIp: string | undefined =
+      trustProxy && forwarded
+        ? typeof forwarded === 'string'
+          ? forwarded.split(',')[0].trim()
+          : forwarded[0]
+        : request.ip || request.socket?.remoteAddress;
 
-    // Handle specific proxy headers if behind Nginx/Load Balancer
-    if (request.headers['x-forwarded-for']) {
-      const forwarded = request.headers['x-forwarded-for'];
-      if (typeof forwarded === 'string') {
-        requestIp = forwarded.split(',')[0].trim();
-      } else {
-        requestIp = forwarded[0];
-      }
-    }
-
-    // Clean IPv6 mapped IPv4
+    // Clean IPv6 mapped IPv4.
     if (requestIp && requestIp.startsWith('::ffff:')) {
-      requestIp = requestIp.substr(7);
+      requestIp = requestIp.slice(7);
     }
 
-    // Check if the IP is in the allowed list
-    if (this.allowedIps.includes(requestIp)) {
+    // Loopback is only reachable locally and is useful for health checks/tests.
+    const isLoopback =
+      requestIp === '127.0.0.1' ||
+      requestIp === '::1' ||
+      requestIp === 'localhost';
+    if (isLoopback || (requestIp && this.allowedIps.includes(requestIp))) {
       return true;
     }
-
-    // For debugging locally, you might want to log the rejected IP
-    console.warn(`Blocked request from unauthorized IP: ${requestIp}`);
 
     throw new ForbiddenException('Access denied: Unauthorized IP address.');
   }

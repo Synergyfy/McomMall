@@ -38,7 +38,7 @@ export class BusinessCouponController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: RedeemCouponManualDto,
   ) {
-    return this.couponService.redeemManual(dto.code, req.user.id);
+    return this.couponService.redeemManual(dto.code, req.user);
   }
 
   @Get('sold')

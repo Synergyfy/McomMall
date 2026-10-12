@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HotspotCampaign } from './entities/hotspot-campaign.entity';
@@ -8,6 +12,8 @@ import {
   CreateHotspotDto,
 } from './dto/create-hotspot-campaign.dto';
 import { UpdateHotspotCampaignDto } from './dto/update-hotspot-campaign.dto';
+import { Business } from '../listings/entities/listing.entity';
+import { UserRole } from '../../common/role.enum';
 
 @Injectable()
 export class HotspotService {
@@ -16,9 +22,36 @@ export class HotspotService {
     private readonly campaignRepository: Repository<HotspotCampaign>,
     @InjectRepository(Hotspot)
     private readonly hotspotRepository: Repository<Hotspot>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
   ) {}
 
-  async findAllByBusiness(businessId: string): Promise<HotspotCampaign[]> {
+  private async assertBusinessAccess(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<void> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
+    });
+    if (!business) {
+      throw new NotFoundException(`Business with ID ${businessId} not found`);
+    }
+    if (
+      requester.role !== UserRole.ADMIN &&
+      business.user?.id !== requester.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this business.',
+      );
+    }
+  }
+
+  async findAllByBusiness(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<HotspotCampaign[]> {
+    await this.assertBusinessAccess(businessId, requester);
     return this.campaignRepository.find({
       where: { businessId },
       relations: ['hotspots'],
@@ -26,7 +59,10 @@ export class HotspotService {
     });
   }
 
-  async findOne(id: string): Promise<HotspotCampaign> {
+  async findOne(
+    id: string,
+    requester: { id: string; role?: string },
+  ): Promise<HotspotCampaign> {
     const campaign = await this.campaignRepository.findOne({
       where: { id },
       relations: ['hotspots'],
@@ -34,10 +70,15 @@ export class HotspotService {
     if (!campaign) {
       throw new NotFoundException(`Hotspot campaign with ID ${id} not found`);
     }
+    await this.assertBusinessAccess(campaign.businessId, requester);
     return campaign;
   }
 
-  async create(dto: CreateHotspotCampaignDto): Promise<HotspotCampaign> {
+  async create(
+    dto: CreateHotspotCampaignDto,
+    requester: { id: string; role?: string },
+  ): Promise<HotspotCampaign> {
+    await this.assertBusinessAccess(dto.businessId, requester);
     const campaign = this.campaignRepository.create({
       businessId: dto.businessId,
       name: dto.name,
@@ -52,8 +93,9 @@ export class HotspotService {
   async update(
     id: string,
     dto: UpdateHotspotCampaignDto,
+    requester: { id: string; role?: string },
   ): Promise<HotspotCampaign> {
-    const campaign = await this.findOne(id);
+    const campaign = await this.findOne(id, requester);
     if (dto.name !== undefined) campaign.name = dto.name;
     if (dto.imageUrl !== undefined) campaign.imageUrl = dto.imageUrl;
 
@@ -67,16 +109,23 @@ export class HotspotService {
       await this.hotspotRepository.save(hotspots);
     }
 
-    return this.findOne(updated.id);
+    return this.findOne(updated.id, requester);
   }
 
-  async remove(id: string): Promise<void> {
-    const campaign = await this.findOne(id);
+  async remove(
+    id: string,
+    requester: { id: string; role?: string },
+  ): Promise<void> {
+    const campaign = await this.findOne(id, requester);
     await this.campaignRepository.remove(campaign);
   }
 
-  async duplicate(id: string, newTitle?: string): Promise<HotspotCampaign> {
-    const original = await this.findOne(id);
+  async duplicate(
+    id: string,
+    newTitle: string | undefined,
+    requester: { id: string; role?: string },
+  ): Promise<HotspotCampaign> {
+    const original = await this.findOne(id, requester);
     const clonedCampaign = this.campaignRepository.create({
       businessId: original.businessId,
       name: newTitle || `${original.name} (Copy)`,
@@ -92,13 +141,16 @@ export class HotspotService {
     return this.campaignRepository.save(clonedCampaign);
   }
 
-  async getAnalytics(businessId: string): Promise<{
+  async getAnalytics(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<{
     totalCampaigns: number;
     totalHotspots: number;
     totalImpressions: number;
     totalClicks: number;
   }> {
-    const campaigns = await this.findAllByBusiness(businessId);
+    const campaigns = await this.findAllByBusiness(businessId, requester);
     const totalCampaigns = campaigns.length;
     let totalHotspots = 0;
     for (const c of campaigns) {

@@ -509,6 +509,15 @@ export class BookingService {
     const start = new Date(startTime);
     const end = new Date(endTime);
 
+    // Serialize concurrent bookings for the same service+slot. Without this,
+    // two READ COMMITTED transactions can both pass the overlap check and
+    // double-book. The advisory lock is held until the surrounding
+    // transaction commits or rolls back.
+    await transactionalEntityManager.query(
+      'SELECT pg_advisory_xact_lock(hashtext($1)::bigint)',
+      [`booking:${serviceId}:${start.toISOString()}`],
+    );
+
     // Check Availability using existing method logic
     const availability = await this.checkAvailability({
       serviceId,
@@ -1426,7 +1435,9 @@ export class BookingService {
       const isAdmin = requesterObj.role === UserRole.ADMIN;
       const ownerId = (booking as any)?.service?.business?.user?.id;
       const isBusinessOwner =
-        !!ownerId && ownerId === requesterObj.id && requesterObj.role === UserRole.OWNER;
+        !!ownerId &&
+        ownerId === requesterObj.id &&
+        requesterObj.role === UserRole.OWNER;
 
       if (!isAdmin && !isBusinessOwner) {
         throw new ForbiddenException(

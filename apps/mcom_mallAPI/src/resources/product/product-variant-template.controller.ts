@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductVariantTemplateService } from './product-variant-template.service';
@@ -14,10 +15,12 @@ import { CreateProductVariantTemplateDto } from './dto/create-product-variant-te
 import { UpdateProductVariantTemplateDto } from './dto/update-product-variant-template.dto';
 import { ProductVariantTemplateSearchDto } from './dto/product-variant-template-search.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../../common/role.enum';
 
 @ApiTags('Product Variant Templates')
 @ApiBearerAuth()
+@UseGuards(RolesGuard)
 @Controller('product-variant-template')
 export class ProductVariantTemplateController {
   constructor(

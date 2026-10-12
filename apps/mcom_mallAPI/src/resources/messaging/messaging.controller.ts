@@ -12,6 +12,9 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { SendCustomerAlertDto } from './dto/send-alert.dto';
 import { InviteToEventDto } from './dto/invite-to-event.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/role.enum';
 import { Request } from 'express';
 import { UsersService } from '../users/users.service';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -27,6 +30,8 @@ export class MessagingController {
   ) {}
 
   @Post('send-alert')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Send a broadcast alert to targeted customer segments',
   })
@@ -35,6 +40,8 @@ export class MessagingController {
   }
 
   @Post('invite-to-event')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Send event invitations to targeted customer segments',
   })
@@ -57,7 +64,7 @@ export class MessagingController {
   }
 
   @Get('conversations/:id')
-  getConversationMessages(@Param('id') id: string) {
-    return this.messagingService.getConversationMessages(id);
+  getConversationMessages(@Param('id') id: string, @Req() req: Request) {
+    return this.messagingService.getConversationMessages(id, req.user.id);
   }
 }

@@ -272,6 +272,20 @@ export class GiftCardService {
     const { purchaseDetails, paymentProvider, transactionId } = verifyDto;
     const { templateId, amount, assetId } = purchaseDetails;
 
+    // Idempotency: a retry with an already-processed transaction must not
+    // charge (PayPal capture) or refund again. Return the existing card.
+    const existingOrder = await this.dataSource.getRepository(Order).findOne({
+      where: { payment: { transactionId } },
+    });
+    if (existingOrder) {
+      const existingCard = await this.giftCardRepository.findOne({
+        where: { purchaseOrderId: existingOrder.id },
+      });
+      if (existingCard) {
+        return existingCard;
+      }
+    }
+
     const template = await this.templateRepository.findOne({
       where: { id: templateId, isActive: true },
       relations: ['owner'],
@@ -868,6 +882,16 @@ export class GiftCardService {
           'This gift card cannot be redeemed at this business.',
         );
       }
+    } else {
+      // System/loyalty gift cards are bound to their owner (the recipient).
+      // Only that owner may redeem them, so knowing a code is not enough to
+      // drain another customer's stored value.
+      const orderOwnerId = (order as any)?.user?.id || (order as any)?.userId;
+      if (!orderOwnerId || orderOwnerId !== giftCard.ownerId) {
+        throw new ForbiddenException(
+          'This gift card cannot be redeemed for this order.',
+        );
+      }
     }
 
     const settings = await this.getSettings(giftCard.ownerId);
@@ -957,7 +981,9 @@ export class GiftCardService {
       } catch (error) {
         card.deliveryStatus = GiftCardDeliveryStatus.FAILED;
         failed++;
-        this.logger.error(`Failed to send gift card ${card.id}: ${(error as Error).message}`);
+        this.logger.error(
+          `Failed to send gift card ${card.id}: ${(error as Error).message}`,
+        );
       }
       toUpdate.push(card);
     }

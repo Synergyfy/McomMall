@@ -20,7 +20,11 @@ export class SystemAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const apiKey = request.headers['x-system-api-key'];
-    const validKey = process.env.SYSTEM_API_KEY || 'secret-system-key'; // Set this in .env
+    const validKey = process.env.SYSTEM_API_KEY;
+    // Fail closed: never fall back to a hardcoded/default key.
+    if (!validKey) {
+      throw new UnauthorizedException('SYSTEM_API_KEY is not configured');
+    }
     return apiKey === validKey;
   }
 }

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Message } from './entities/message.entity';
@@ -101,7 +105,25 @@ export class MessagingService {
     return conversations;
   }
 
-  async getConversationMessages(conversationId: string): Promise<Message[]> {
+  async getConversationMessages(
+    conversationId: string,
+    userId: string,
+  ): Promise<Message[]> {
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+      relations: ['participants'],
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+    const isParticipant = (conversation.participants ?? []).some(
+      (p) => p.id === userId,
+    );
+    if (!isParticipant) {
+      throw new ForbiddenException(
+        'You are not a participant in this conversation.',
+      );
+    }
     return this.messageRepository.find({
       where: { conversation: { id: conversationId } },
       relations: ['sender', 'replies', 'parentMessage'],

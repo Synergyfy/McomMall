@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
@@ -8,6 +12,7 @@ import { Service } from '../services/entities/service.entity';
 import { Notification } from '../notification/entities/notification.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { Rotator } from '../rotators/entities/rotator.entity';
+import { UserRole } from '../../common/role.enum';
 
 @Injectable()
 export class ToolsService {
@@ -28,7 +33,32 @@ export class ToolsService {
     private readonly rotatorRepository: Repository<Rotator>,
   ) {}
 
-  private async findBusinessOrThrow(businessId: string): Promise<Business> {
+  private async assertBusinessAccess(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<void> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
+    });
+    if (!business) {
+      throw new NotFoundException(`Business with ID ${businessId} not found`);
+    }
+    if (
+      requester.role !== UserRole.ADMIN &&
+      business.user?.id !== requester.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to access this business.',
+      );
+    }
+  }
+
+  private async findBusinessOrThrow(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<Business> {
+    await this.assertBusinessAccess(businessId, requester);
     const business = await this.businessRepository.findOne({
       where: { id: businessId },
       relations: ['services', 'products', 'campaigns', 'rotators'],
@@ -39,8 +69,11 @@ export class ToolsService {
     return business;
   }
 
-  async getDashboard(businessId: string): Promise<any> {
-    const business = await this.findBusinessOrThrow(businessId);
+  async getDashboard(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<any> {
+    const business = await this.findBusinessOrThrow(businessId, requester);
 
     const serviceIds = (business.services ?? []).map((service) => service.id);
 
@@ -110,7 +143,11 @@ export class ToolsService {
     };
   }
 
-  async getExcessStock(businessId: string): Promise<Product[]> {
+  async getExcessStock(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<Product[]> {
+    await this.assertBusinessAccess(businessId, requester);
     const products = await this.productRepository.find({
       where: { business: { id: businessId } },
     });
@@ -123,8 +160,11 @@ export class ToolsService {
       .sort((a, b) => a.stock - b.stock);
   }
 
-  async getCapacity(businessId: string): Promise<any> {
-    const business = await this.findBusinessOrThrow(businessId);
+  async getCapacity(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<any> {
+    const business = await this.findBusinessOrThrow(businessId, requester);
     const serviceIds = (business.services ?? []).map((service) => service.id);
 
     if (serviceIds.length === 0) {
@@ -180,9 +220,13 @@ export class ToolsService {
     return { services: rows, overallFill };
   }
 
-  async getAlerts(businessId: string, limit = 50): Promise<any[]> {
+  async getAlerts(
+    businessId: string,
+    requester: { id: string; role?: string },
+    limit = 50,
+  ): Promise<any[]> {
     const [lowStockProducts, recentNotifications] = await Promise.all([
-      this.getExcessStock(businessId),
+      this.getExcessStock(businessId, requester),
       this.notificationRepository.find({
         where: { recipientId: businessId },
         order: { createdAt: 'DESC' },
@@ -212,8 +256,11 @@ export class ToolsService {
     return alerts.slice(0, limit);
   }
 
-  async getCampaigns(businessId: string): Promise<any[]> {
-    await this.findBusinessOrThrow(businessId);
+  async getCampaigns(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<any[]> {
+    await this.findBusinessOrThrow(businessId, requester);
     const [campaigns, rotators] = await Promise.all([
       this.campaignRepository.find({
         where: { business: { id: businessId } },
@@ -243,27 +290,33 @@ export class ToolsService {
     ];
   }
 
-  async createClearancePromotion(dto: {
-    businessId: string;
-    productIds: string[];
-    discountPercentage: number;
-    durationDays?: number;
-  }): Promise<{ status: string; count: number }> {
-    await this.findBusinessOrThrow(dto.businessId);
+  async createClearancePromotion(
+    dto: {
+      businessId: string;
+      productIds: string[];
+      discountPercentage: number;
+      durationDays?: number;
+    },
+    requester: { id: string; role?: string },
+  ): Promise<{ status: string; count: number }> {
+    await this.findBusinessOrThrow(dto.businessId, requester);
     return {
       status: 'created',
       count: dto.productIds.length,
     };
   }
 
-  async publishCapacitySlot(dto: {
-    businessId: string;
-    serviceId: string;
-    timeSlot: string;
-    discountRate: number;
-    availableSlots?: number;
-  }): Promise<{ status: string; offerId: string }> {
-    await this.findBusinessOrThrow(dto.businessId);
+  async publishCapacitySlot(
+    dto: {
+      businessId: string;
+      serviceId: string;
+      timeSlot: string;
+      discountRate: number;
+      availableSlots?: number;
+    },
+    requester: { id: string; role?: string },
+  ): Promise<{ status: string; offerId: string }> {
+    await this.findBusinessOrThrow(dto.businessId, requester);
     return {
       status: 'published',
       offerId: `capacity-offer-${Date.now()}`,

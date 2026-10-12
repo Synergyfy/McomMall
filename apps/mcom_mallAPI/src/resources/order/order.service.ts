@@ -25,7 +25,10 @@ import { SalesStatsDto } from './dto/sales-stats.dto';
 import { PointsService } from '../transaction/points.service';
 import { Offer } from '../offer/entities/offer.entity';
 import { GiftCardService } from '../gift-card/gift-card.service';
-import { GiftCard, GiftCardDeliveryStatus } from '../gift-card/entities/gift-card.entity';
+import {
+  GiftCard,
+  GiftCardDeliveryStatus,
+} from '../gift-card/entities/gift-card.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { BusinessStatus } from '../listings/listing.enum';
 import { VoucherService } from '../voucher/voucher.service';
@@ -50,6 +53,7 @@ import {
 
 import { Service } from '../services/entities/service.entity';
 import { McomWalletService } from '../payments/services/mcom-wallet.service';
+import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
 import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
 import { UserRole } from '../../common/role.enum';
@@ -103,6 +107,8 @@ export class OrderService {
     private readonly shippingPricingService: ShippingPricingService,
     @Inject(forwardRef(() => McomWalletService))
     private readonly mcomWalletService: McomWalletService,
+    @Inject(forwardRef(() => PaymentProviderService))
+    private readonly paymentProviderService: PaymentProviderService,
     @Inject(forwardRef(() => WalletRefundReconcileService))
     private readonly walletRefundReconcileService: WalletRefundReconcileService,
   ) {}
@@ -452,6 +458,41 @@ export class OrderService {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException('User not found');
 
+    // --- Server-side payment verification for card / PayPal ---
+    // Never trust a client-supplied transactionId: confirm the charge with the
+    // provider and match the amount before creating the order.
+    if (finalAmount > 0) {
+      const method = createCheckoutDto.payment.paymentMethod;
+      const transactionId = createCheckoutDto.payment.transactionId;
+
+      if (method === PaymentMethod.STRIPE || method === PaymentMethod.PAYPAL) {
+        if (!transactionId) {
+          throw new BadRequestException(
+            'A payment transaction ID is required for this payment method.',
+          );
+        }
+        const verification =
+          method === PaymentMethod.STRIPE
+            ? await this.paymentProviderService.verifyStripePaymentIntent(
+                transactionId,
+                Number(finalAmount.toFixed(2)),
+                'gbp',
+              )
+            : await this.paymentProviderService.captureAndVerifyPaypalOrder(
+                transactionId,
+                Number(finalAmount.toFixed(2)),
+                'gbp',
+              );
+        if (!verification.ok) {
+          throw new BadRequestException(
+            `Payment verification failed: ${verification.reason}`,
+          );
+        }
+      } else if (method !== PaymentMethod.MCOM_WALLET) {
+        throw new BadRequestException('Unsupported payment method.');
+      }
+    }
+
     // Validate offer BEFORE any central debit so a bad offerId can never
     // strand a successful debit outside the compensating-refund window.
     let offer: Offer | null = null;
@@ -565,7 +606,9 @@ export class OrderService {
             const updateResult = await manager
               .createQueryBuilder()
               .update(Product)
-              .set({ stock: () => `stock - ${Number(directPurchase.quantity)}` })
+              .set({
+                stock: () => `stock - ${Number(directPurchase.quantity)}`,
+              })
               .where(
                 'id = :id AND stock >= :qty AND enableStockManagement = true',
                 {
@@ -730,7 +773,11 @@ export class OrderService {
         }
 
         if (isDirectPurchase || isCartCheckout) {
-          await this.promotionEngineService.processPurchase(user, savedOrder);
+          await this.promotionEngineService.processPurchase(
+            user,
+            savedOrder,
+            manager,
+          );
         }
 
         if (isCartCheckout) {

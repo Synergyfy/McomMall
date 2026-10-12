@@ -20,13 +20,15 @@ export class McomWebhookController {
   private readonly logger = new Logger(McomWebhookController.name);
 
   private getWebhookSecret(): string {
-    return (
+    const secret =
       process.env.SSO_WEBHOOK_SECRET ||
       process.env.MCOM_WEBHOOK_SECRET ||
       process.env.SSO_API_SECRET ||
-      process.env.SSO_CLIENT_SECRET ||
-      'mall_secret_123'
-    );
+      process.env.SSO_CLIENT_SECRET;
+    if (!secret) {
+      throw new UnauthorizedException('Webhook secret is not configured');
+    }
+    return secret;
   }
 
   @Public()
@@ -41,28 +43,36 @@ export class McomWebhookController {
   ) {
     const secret = this.getWebhookSecret();
 
-    // Verify HMAC signature if signature header is provided
-    if (signature) {
-      const rawBody =
-        typeof req.rawBody === 'string'
-          ? req.rawBody
-          : JSON.stringify(payload);
-      const computed = crypto
-        .createHmac('sha256', secret)
-        .update(rawBody)
-        .digest('hex');
+    // Signature is mandatory: reject unsigned webhooks.
+    if (!signature) {
+      this.logger.warn('Rejected unsigned webhook from MCOM Central');
+      throw new UnauthorizedException('Missing webhook signature');
+    }
 
-      if (signature !== computed) {
-        this.logger.warn('Invalid webhook signature received from MCOM Central');
-        throw new UnauthorizedException('Invalid webhook signature');
-      }
+    const rawBody =
+      typeof req.rawBody === 'string' ? req.rawBody : JSON.stringify(payload);
+    const computed = crypto
+      .createHmac('sha256', secret)
+      .update(rawBody)
+      .digest('hex');
+
+    const provided = Buffer.from(signature);
+    const expected = Buffer.from(computed);
+    if (
+      provided.length !== expected.length ||
+      !crypto.timingSafeEqual(provided, expected)
+    ) {
+      this.logger.warn('Invalid webhook signature received from MCOM Central');
+      throw new UnauthorizedException('Invalid webhook signature');
     }
 
     const event = payload?.event || payload?.type;
     const data = payload?.data || payload;
     const userId = data?.userId || data?.centralUserId || data?.businessId;
 
-    this.logger.log(`Received MCOM webhook event: ${event} for user: ${userId}`);
+    this.logger.log(
+      `Received MCOM webhook event: ${event} for user: ${userId}`,
+    );
 
     // Invalidate local subscription guard cache for immediate fresh check
     if (userId) {

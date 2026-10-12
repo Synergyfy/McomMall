@@ -44,8 +44,8 @@ export class CampaignController {
     summary: 'Create a new Ad Campaign',
     description: 'Requires authentication.',
   })
-  create(@Body() createCampaignDto: CreateCampaignDto) {
-    return this.campaignService.create(createCampaignDto);
+  create(@Body() createCampaignDto: CreateCampaignDto, @Req() req) {
+    return this.campaignService.create(createCampaignDto, req.user);
   }
 
   @Get()
@@ -98,8 +98,9 @@ export class CampaignController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateCampaignDto: UpdateCampaignDto,
+    @Req() req,
   ) {
-    return this.campaignService.update(id, updateCampaignDto);
+    return this.campaignService.update(id, updateCampaignDto, req.user);
   }
 
   @Delete(':id')
@@ -109,8 +110,8 @@ export class CampaignController {
     summary: 'Delete an Ad Campaign',
     description: 'Requires authentication.',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.campaignService.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @Req() req) {
+    return this.campaignService.remove(id, req.user);
   }
 
   // --- Marketing Campaigns (New - Platform Controlled) ---

@@ -98,15 +98,24 @@ export class VoucherService {
   async updateVoucherProduct(
     id: string,
     updateDto: UpdateVoucherProductDto,
+    userId: string,
   ): Promise<VoucherProduct> {
-    const product = await this.voucherProductRepository.preload({
-      id,
-      ...updateDto,
+    const product = await this.voucherProductRepository.findOne({
+      where: { id },
+      relations: ['user'],
     });
 
     if (!product) {
       throw new NotFoundException(`VoucherProduct with ID "${id}" not found.`);
     }
+
+    if (product.user?.id !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this voucher product.',
+      );
+    }
+
+    Object.assign(product, updateDto);
 
     return this.voucherProductRepository.save(product);
   }
@@ -139,7 +148,10 @@ export class VoucherService {
     });
   }
 
-  async findVoucherProductById(productId: string): Promise<VoucherProduct> {
+  async findVoucherProductById(
+    productId: string,
+    userId?: string,
+  ): Promise<VoucherProduct> {
     const product = await this.voucherProductRepository.findOne({
       where: { id: productId },
       relations: ['user'],
@@ -147,6 +159,11 @@ export class VoucherService {
     if (!product) {
       throw new NotFoundException(
         `Voucher product with ID ${productId} not found`,
+      );
+    }
+    if (userId && product.user?.id !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to access this voucher product.',
       );
     }
     return product;
@@ -771,11 +788,43 @@ export class VoucherService {
       const voucherRepo = transactionalManager.getRepository(Voucher);
       const voucher = await voucherRepo.findOne({
         where: { code },
-        relations: ['voucherProduct'],
+        relations: [
+          'voucherProduct',
+          'voucherProduct.user',
+          'owner',
+          'buyer',
+          'recipient',
+        ],
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!voucher) {
         throw new NotFoundException('Voucher not found.');
+      }
+
+      // Authorization: only the voucher owner/buyer/recipient or the issuing
+      // merchant may redeem it against an order. Bearer use is denied.
+      const callerId = (order as any)?.user?.id;
+      if (!callerId) {
+        throw new ForbiddenException(
+          'Authentication context is required to redeem a voucher.',
+        );
+      }
+      const isOwner =
+        voucher.owner?.id === callerId ||
+        voucher.buyer?.id === callerId ||
+        (voucher as any).recipient?.id === callerId ||
+        (voucher as any).recipientId === callerId ||
+        (voucher as any).ownerId === callerId ||
+        (voucher as any).buyerId === callerId;
+      const merchantId =
+        (voucher.voucherProduct as any)?.user?.id ||
+        (voucher.voucherProduct as any)?.userId;
+      const isMerchant = !!merchantId && merchantId === callerId;
+      if (!isOwner && !isMerchant) {
+        throw new ForbiddenException(
+          'You are not authorized to redeem this voucher.',
+        );
       }
 
       await this.validateVoucherForRedemption(voucher, manager);
@@ -895,10 +944,24 @@ export class VoucherService {
   ): Promise<Voucher> {
     return this.dataSource.transaction(async (manager) => {
       const voucherRepo = manager.getRepository(Voucher);
-      const voucher = await voucherRepo.findOne({ where: { code } });
+      const voucher = await voucherRepo.findOne({
+        where: { code },
+        relations: ['voucherProduct', 'voucherProduct.user'],
+        lock: { mode: 'pessimistic_write' },
+      });
 
       if (!voucher) {
         throw new NotFoundException('Voucher not found.');
+      }
+
+      // Authorization: only the issuing merchant may manually redeem a voucher.
+      const merchantId =
+        (voucher.voucherProduct as any)?.user?.id ||
+        (voucher.voucherProduct as any)?.userId;
+      if (!merchantId || merchantId !== staffId) {
+        throw new ForbiddenException(
+          'You are not authorized to redeem this voucher.',
+        );
       }
 
       await this.validateVoucherForRedemption(voucher, manager);

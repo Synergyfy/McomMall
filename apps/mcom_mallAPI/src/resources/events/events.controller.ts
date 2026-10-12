@@ -80,8 +80,9 @@ export class EventsController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateEventDto: UpdateEventDto,
+    @CurrentUser() user: User,
   ) {
-    return this.eventsService.update(id, updateEventDto);
+    return this.eventsService.update(id, updateEventDto, user);
   }
 
   @Patch(':id/status')
@@ -90,14 +91,18 @@ export class EventsController {
   async updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('status') status: string,
+    @CurrentUser() user: User,
   ) {
-    return this.eventsService.updateStatus(id, status);
+    return this.eventsService.updateStatus(id, status, user);
   }
 
   @Delete(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Delete an event' })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.eventsService.remove(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.eventsService.remove(id, user);
   }
 }

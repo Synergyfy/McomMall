@@ -196,9 +196,12 @@ export class GiftCardConsumerController {
       'Process scheduled gift card deliveries (to be called by a cron job)',
   })
   async processScheduledDeliveries(@Query('secret') secret: string) {
-    // In a real app, this secret would come from environment variables
-    // and be compared securely.
-    const CRON_SECRET = 'your-super-secret-cron-key';
+    // Secret must come from the environment; fail closed if unset so the
+    // endpoint can never be triggered with a hardcoded value.
+    const CRON_SECRET = process.env.CRON_SECRET;
+    if (!CRON_SECRET) {
+      throw new UnauthorizedException('CRON_SECRET is not configured');
+    }
     if (secret !== CRON_SECRET) {
       throw new UnauthorizedException('Invalid secret');
     }

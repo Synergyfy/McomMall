@@ -65,12 +65,14 @@ export class VoucherBusinessController {
     type: VoucherProduct,
   })
   async updateVoucherProduct(
+    @Req() req: Request,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateVoucherProductDto: UpdateVoucherProductDto,
   ) {
     return this.voucherService.updateVoucherProduct(
       id,
       updateVoucherProductDto,
+      req.user.id,
     );
   }
 
@@ -99,8 +101,11 @@ export class VoucherBusinessController {
     description: 'Return the voucher product.',
     type: VoucherProduct,
   })
-  async getVoucherProductById(@Param('id', ParseUUIDPipe) id: string) {
-    return this.voucherService.findVoucherProductById(id);
+  async getVoucherProductById(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.voucherService.findVoucherProductById(id, req.user.id);
   }
 
   @Get('sold')

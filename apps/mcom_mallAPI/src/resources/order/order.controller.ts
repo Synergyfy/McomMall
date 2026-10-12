@@ -126,7 +126,8 @@ export class OrderController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Trigger reconciliation of pending failed wallet refunds',
-    description: 'Processes pending failed refund records and credits user central wallets. Role: ADMIN.',
+    description:
+      'Processes pending failed refund records and credits user central wallets. Role: ADMIN.',
   })
   async reconcileRefunds() {
     await this.walletRefundReconcileService.reconcilePending();
@@ -139,7 +140,10 @@ export class OrderController {
     summary: 'Process pending failed wallet refunds via scheduled cron trigger',
   })
   async processScheduledRefundReconcile(@Query('secret') secret: string) {
-    const CRON_SECRET = process.env.CRON_SECRET || 'your-super-secret-cron-key';
+    const CRON_SECRET = process.env.CRON_SECRET;
+    if (!CRON_SECRET) {
+      throw new UnauthorizedException('CRON_SECRET is not configured');
+    }
     if (secret !== CRON_SECRET) {
       throw new UnauthorizedException('Invalid secret');
     }

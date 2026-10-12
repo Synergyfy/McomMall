@@ -200,7 +200,13 @@ export class UsersController {
     @Query('email') email: string,
     @Query('secret') secret: string,
   ) {
-    if (secret !== 'mcom_test_delete_secret_2026') {
+    // Testing-only endpoint. Never available in production and never using a
+    // hardcoded secret.
+    const testSecret = process.env.TEST_DELETE_SECRET;
+    if (process.env.NODE_ENV === 'production' || !testSecret) {
+      throw new ForbiddenException('Not available');
+    }
+    if (secret !== testSecret) {
       throw new ForbiddenException('Invalid secret');
     }
     return this.usersService.deleteByEmail(email);

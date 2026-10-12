@@ -27,6 +27,7 @@ import { UpdateFlashSaleItemDto } from './dto/update-flash-sale-item.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../common/role.enum';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -84,8 +85,11 @@ export class FlashSalesController {
     description: 'Invalid input payload or startDate after endDate',
   })
   @ApiUnauthorizedResponse({ description: 'Missing or expired JWT token' })
-  create(@Body() dto: CreateFlashSaleItemDto): Promise<FlashSaleItem> {
-    return this.flashSalesService.create(dto);
+  create(
+    @Body() dto: CreateFlashSaleItemDto,
+    @CurrentUser() user: any,
+  ): Promise<FlashSaleItem> {
+    return this.flashSalesService.create(dto, user);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -105,8 +109,9 @@ export class FlashSalesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateFlashSaleItemDto,
+    @CurrentUser() user: any,
   ): Promise<FlashSaleItem> {
-    return this.flashSalesService.update(id, dto);
+    return this.flashSalesService.update(id, dto, user);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -122,7 +127,10 @@ export class FlashSalesController {
   @ApiNotFoundResponse({
     description: 'Flash sale item with specified ID was not found',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.flashSalesService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: any,
+  ): Promise<void> {
+    return this.flashSalesService.remove(id, user);
   }
 }

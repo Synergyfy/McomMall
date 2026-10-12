@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { UserRole } from '../../common/role.enum';
 import {
   PointTransaction,
   PointTransactionType,
@@ -41,7 +46,39 @@ export class LoyaltyService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async allocatePoints(dto: AllocatePointsDto): Promise<PointTransaction> {
+  // --- Authorization ---
+
+  /**
+   * Ensures the caller owns the business (or is a platform admin) before any
+   * loyalty read/write. Prevents cross-tenant loyalty management by businessId.
+   */
+  private async assertBusinessAccess(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<void> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
+    });
+    if (!business) {
+      throw new NotFoundException(`Business with ID ${businessId} not found`);
+    }
+    if (
+      requester.role !== UserRole.ADMIN &&
+      business.user?.id !== requester.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this loyalty program.',
+      );
+    }
+  }
+
+  async allocatePoints(
+    dto: AllocatePointsDto,
+    requester: { id: string; role?: string },
+  ): Promise<PointTransaction> {
+    await this.assertBusinessAccess(dto.businessId, requester);
+
     const customer = await this.userRepository.findOne({
       where: { id: dto.customerId },
     });
@@ -75,7 +112,12 @@ export class LoyaltyService {
     });
   }
 
-  async getStats(businessId: string): Promise<any> {
+  async getStats(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<any> {
+    await this.assertBusinessAccess(businessId, requester);
+
     const business = await this.businessRepository.findOne({
       where: { id: businessId },
       relations: ['services', 'offers', 'promotions'],
@@ -136,7 +178,10 @@ export class LoyaltyService {
   async getCustomerLoyalty(
     businessId: string,
     customerId: string,
+    requester: { id: string; role?: string },
   ): Promise<any> {
+    await this.assertBusinessAccess(businessId, requester);
+
     const user = await this.userRepository.findOne({
       where: { id: customerId },
     });
@@ -185,14 +230,22 @@ export class LoyaltyService {
     };
   }
 
-  async findAllRules(businessId: string): Promise<LoyaltyRule[]> {
+  async findAllRules(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<LoyaltyRule[]> {
+    await this.assertBusinessAccess(businessId, requester);
     return this.ruleRepository.find({
       where: { businessId },
       order: { created_at: 'DESC' },
     });
   }
 
-  async createRule(dto: CreateLoyaltyRuleDto): Promise<LoyaltyRule> {
+  async createRule(
+    dto: CreateLoyaltyRuleDto,
+    requester: { id: string; role?: string },
+  ): Promise<LoyaltyRule> {
+    await this.assertBusinessAccess(dto.businessId, requester);
     const rule = this.ruleRepository.create(dto);
     return this.ruleRepository.save(rule);
   }
@@ -200,24 +253,34 @@ export class LoyaltyService {
   async updateRule(
     id: string,
     dto: UpdateLoyaltyRuleDto,
+    requester: { id: string; role?: string },
   ): Promise<LoyaltyRule> {
     const rule = await this.ruleRepository.findOne({ where: { id } });
     if (!rule) {
       throw new NotFoundException(`Loyalty rule with ID ${id} not found`);
     }
+    await this.assertBusinessAccess(rule.businessId, requester);
     Object.assign(rule, dto);
     return this.ruleRepository.save(rule);
   }
 
-  async removeRule(id: string): Promise<void> {
+  async removeRule(
+    id: string,
+    requester: { id: string; role?: string },
+  ): Promise<void> {
     const rule = await this.ruleRepository.findOne({ where: { id } });
     if (!rule) {
       throw new NotFoundException(`Loyalty rule with ID ${id} not found`);
     }
+    await this.assertBusinessAccess(rule.businessId, requester);
     await this.ruleRepository.remove(rule);
   }
 
-  async getSettings(businessId: string): Promise<LoyaltySettings> {
+  async getSettings(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<LoyaltySettings> {
+    await this.assertBusinessAccess(businessId, requester);
     let settings = await this.settingsRepository.findOne({
       where: { businessId },
     });
@@ -235,8 +298,9 @@ export class LoyaltyService {
   async updateSettings(
     businessId: string,
     dto: UpdateLoyaltySettingsDto,
+    requester: { id: string; role?: string },
   ): Promise<LoyaltySettings> {
-    const settings = await this.getSettings(businessId);
+    const settings = await this.getSettings(businessId, requester);
     Object.assign(settings, dto);
     return this.settingsRepository.save(settings);
   }

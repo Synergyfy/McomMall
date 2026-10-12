@@ -14,6 +14,7 @@ import {
 import { SsoService } from './sso.service';
 import { McomCentralService } from './mcom-central.service';
 import { Public } from '../../common/decorators/public.decorator';
+import { UserRole } from '../../common/role.enum';
 import {
   ApiTags,
   ApiOperation,
@@ -241,7 +242,12 @@ export class SsoController {
   @ApiOperation({ summary: 'Get user membership from MCOM Solutions' })
   @ApiResponse({ status: 200, description: 'Returns membership data' })
   @ApiResponse({ status: 400, description: 'Missing userId' })
-  async getUserMembership(@Param('userId') userId: string) {
+  async getUserMembership(@Param('userId') userId: string, @Req() req: any) {
+    if (req.user?.id !== userId && req.user?.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'You are not authorized to view this user membership.',
+      );
+    }
     const membership = await this.mcomCentralService.getUserMembership(userId);
 
     if (!membership) {

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -84,6 +85,17 @@ export class CheckoutService {
     // Ensure all products exist
     if (products.length !== productIds.length) {
       throw new NotFoundException('One or more products not found.');
+    }
+
+    // Early stock guard so a payment intent is not created for unavailable
+    // stock. The authoritative compare-and-set happens in completeCheckout.
+    for (const item of items) {
+      const product = products.find((p) => p.id === item.productId);
+      if (product?.enableStockManagement && product.stock < item.quantity) {
+        throw new ConflictException(
+          `Insufficient stock for product "${product.title}". Requested: ${item.quantity}, Available: ${product.stock}.`,
+        );
+      }
     }
 
     // Calculate subtotal
@@ -295,13 +307,12 @@ export class CheckoutService {
       }
     }
 
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-
     return this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(Order);
 
       const lockedOrder = await orderRepo.findOne({
         where: { id: orderId, user: { id: userId } },
+        relations: ['user'],
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -309,6 +320,31 @@ export class CheckoutService {
         throw new BadRequestException(
           'Pending order not found or already processed.',
         );
+      }
+
+      // Decrement stock with a compare-and-set so concurrent checkouts cannot
+      // oversell. Runs in the same transaction as the order status change.
+      const orderItemsForStock = await orderRepo.findOne({
+        where: { id: lockedOrder.id },
+        relations: ['items', 'items.product'],
+      });
+      for (const item of orderItemsForStock?.items ?? []) {
+        if (item.product?.enableStockManagement) {
+          const stockUpdate = await manager
+            .createQueryBuilder()
+            .update(Product)
+            .set({ stock: () => `stock - ${Number(item.quantity)}` })
+            .where(
+              'id = :id AND stock >= :qty AND enableStockManagement = true',
+              { id: item.product.id, qty: item.quantity },
+            )
+            .execute();
+          if (stockUpdate.affected === 0) {
+            throw new ConflictException(
+              `Insufficient stock for product "${item.product.title}".`,
+            );
+          }
+        }
       }
 
       // Redeem gift card
@@ -336,12 +372,15 @@ export class CheckoutService {
         );
       }
 
-      // Redeem Coupon
+      // Redeem Coupon (join the same transaction so it commits/rolls back with the order)
       if (lockedOrder.couponCode && lockedOrder.couponDiscountApplied > 0) {
-        await this.couponService.redeem(
-          lockedOrder.couponCode,
-          user,
+        await this.couponService.redeemForOrder(
+          {
+            code: lockedOrder.couponCode,
+            amount: lockedOrder.couponDiscountApplied,
+          },
           lockedOrder,
+          manager,
         );
       }
 

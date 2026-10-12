@@ -24,6 +24,9 @@ import { MembershipService } from 'src/resources/membership/membership.service';
 import { PlansService } from 'src/resources/plans/services/plans.service';
 import { PlanType as MembershipPlanType } from 'src/resources/membership/dto/initiate-membership-payment.dto';
 import { PaymentMethod } from 'src/resources/order/entities/order-payment.entity';
+import { OrderPayment } from '../../order/entities/order-payment.entity';
+import { Order } from '../../order/entities/order.entity';
+import { OrderStatus } from '../../order/enums/order-status.enum';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreatePaypalOrderDto } from '../dto/create-paypal-order.dto';
 import { PlanType } from '../enums/plan-type.enum';
@@ -37,6 +40,10 @@ export class PaymentsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(PaymentHistory)
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
+    @InjectRepository(OrderPayment)
+    private readonly orderPaymentRepository: Repository<OrderPayment>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
     @Inject(forwardRef(() => MembershipService))
@@ -60,9 +67,14 @@ export class PaymentsService {
       metadata.planType = dto.planType || PlanType.MONTHLY;
     }
 
-    if (!amount) throw new BadRequestException('Amount or planVariantId is required');
+    if (!amount)
+      throw new BadRequestException('Amount or planVariantId is required');
 
-    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > 50000) {
+    if (
+      !Number.isFinite(Number(amount)) ||
+      Number(amount) <= 0 ||
+      Number(amount) > 50000
+    ) {
       throw new BadRequestException('Amount must be between 0 and 50000');
     }
 
@@ -89,9 +101,14 @@ export class PaymentsService {
       metadata.planType = dto.planType || PlanType.MONTHLY;
     }
 
-    if (!amount) throw new BadRequestException('Amount or planVariantId is required');
+    if (!amount)
+      throw new BadRequestException('Amount or planVariantId is required');
 
-    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > 50000) {
+    if (
+      !Number.isFinite(Number(amount)) ||
+      Number(amount) <= 0 ||
+      Number(amount) > 50000
+    ) {
       throw new BadRequestException('Amount must be between 0 and 50000');
     }
 
@@ -320,5 +337,94 @@ export class PaymentsService {
       where: { user: { id: userId } },
       order: { created_at: 'DESC' },
     });
+  }
+
+  // --- Webhook reconciliation (out-of-band) ---
+
+  private readonly processedWebhookEvents = new Map<string, number>();
+  private static readonly MAX_PROCESSED_WEBHOOK_EVENTS = 5000;
+
+  /**
+   * Returns true if the given provider event id has already been handled.
+   * Bounded in-memory cache prevents replay of the same signed event within
+   * the signature-tolerance window (and duplicate provider retries).
+   */
+  isDuplicateWebhookEvent(eventId?: string): boolean {
+    if (!eventId) return false;
+    if (this.processedWebhookEvents.has(eventId)) {
+      return true;
+    }
+    this.processedWebhookEvents.set(eventId, Date.now());
+    if (
+      this.processedWebhookEvents.size >
+      PaymentsService.MAX_PROCESSED_WEBHOOK_EVENTS
+    ) {
+      const oldest = this.processedWebhookEvents.keys().next().value;
+      if (oldest) this.processedWebhookEvents.delete(oldest);
+    }
+    return false;
+  }
+
+  /**
+   * Reconciles a verified Stripe event. Successful payments are already
+   * handled synchronously by the checkout paths; here we only react to
+   * failures/refunds to keep the order state consistent if a client never
+   * completes the flow.
+   */
+  async handleStripeWebhookEvent(event: {
+    id: string;
+    type: string;
+    data: { object: any };
+  }): Promise<void> {
+    this.logger.log(`Stripe webhook ${event.id} received (${event.type})`);
+
+    const object = event.data?.object ?? {};
+    let transactionId: string | undefined;
+    if (event.type === 'charge.refunded') {
+      transactionId = object.payment_intent;
+    } else if (
+      event.type === 'payment_intent.payment_failed' ||
+      event.type === 'payment_intent.canceled'
+    ) {
+      transactionId = object.id;
+    }
+
+    if (transactionId) {
+      await this.markOrderPaymentFailed(transactionId);
+    }
+  }
+
+  /**
+   * Reconciles a verified PayPal webhook. PayPal's resource id is the capture
+   * id, which we do not store against orders, so this is currently
+   * logging-only; refunds/failures are handled synchronously on capture.
+   */
+  async handlePaypalWebhookEvent(event: {
+    id?: string;
+    event_type?: string;
+  }): Promise<void> {
+    this.logger.log(
+      `PayPal webhook ${event.id ?? 'unknown'} received (${event.event_type ?? 'unknown'})`,
+    );
+  }
+
+  private async markOrderPaymentFailed(transactionId: string): Promise<void> {
+    const payment = await this.orderPaymentRepository.findOne({
+      where: { transactionId },
+    });
+    if (!payment) {
+      this.logger.warn(
+        `Webhook referenced unknown payment transaction ${transactionId}`,
+      );
+      return;
+    }
+    const order = await this.orderRepository.findOne({
+      where: { payment: { id: payment.id } },
+    });
+    if (order && order.status === OrderStatus.PENDING) {
+      order.status = OrderStatus.FAILED;
+      await this.orderRepository.save(order);
+      this.logger.log(`Marked order ${order.id} FAILED from webhook`);
+    }
   }
 }

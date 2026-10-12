@@ -686,20 +686,32 @@ export class CouponService {
 
   async redeemManual(
     code: string,
-    userId: string,
+    requester: { id: string; role?: string },
   ): Promise<{ success: boolean; message: string; coupon: Coupon }> {
-    // Route through the locked transactional path so usageLimit/perUserLimit
-    // are enforced atomically under SELECT ... FOR UPDATE (see redeem()).
-    // The previous implementation saved a RedemptionLog with no checks.
-    const user = { id: userId } as User;
-    const log = await this.redeem(code, user);
     const coupon = await this.couponRepository.findOne({
       where: { code },
-      relations: ['business'],
+      relations: ['business', 'business.user'],
     });
     if (!coupon) {
       throw new NotFoundException(`Coupon with code ${code} not found.`);
     }
+
+    // Authorization: only the issuing merchant or a platform admin may
+    // manually redeem a coupon. Coupons are otherwise bearer tokens usable
+    // by shoppers, but merchants must not be able to burn others' coupons.
+    const isAdmin = requester.role === UserRole.ADMIN;
+    const ownerId = (coupon.business as any)?.user?.id;
+    const isOwner = !!ownerId && ownerId === requester.id;
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException(
+        'You are not authorized to redeem this coupon.',
+      );
+    }
+
+    // Route through the locked transactional path so usageLimit/perUserLimit
+    // are enforced atomically under SELECT ... FOR UPDATE (see redeem()).
+    const user = { id: requester.id } as User;
+    const log = await this.redeem(code, user);
     void log;
     return {
       success: true,

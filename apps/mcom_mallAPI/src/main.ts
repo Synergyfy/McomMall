@@ -15,7 +15,14 @@ import * as cookieParser from 'cookie-parser';
 // 1. Shared Configuration Function
 // This setup applies to both Local and Vercel environments
 async function configureApp(app: any) {
-  app.use(json({ limit: '50mb' }));
+  app.use(
+    json({
+      limit: '50mb',
+      verify: (req: any, _res: any, buf: Buffer) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    }),
+  );
   app.use(urlencoded({ limit: '50mb', extended: true }));
   const cookieSecret = process.env.COOKIE_SECRET;
   if (!cookieSecret) {

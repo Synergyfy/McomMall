@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { CentralIntegrationService } from '../services/central-integration.service';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 import { UserRole } from '../../../common/role.enum';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import {
@@ -27,6 +28,7 @@ import {
 import { Public } from '../../../common/decorators/public.decorator';
 
 @ApiTags('Cashback')
+@UseGuards(RolesGuard)
 @Controller('cashback')
 @ApiBearerAuth()
 export class CashbackController {

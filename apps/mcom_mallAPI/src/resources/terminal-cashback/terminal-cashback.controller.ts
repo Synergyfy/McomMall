@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -17,6 +18,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { TerminalCashbackService } from './terminal-cashback.service';
 import { CreateTerminalCashbackClaimDto } from './dto/create-claim.dto';
@@ -32,7 +35,7 @@ import { UserRole } from '../../common/role.enum';
 
 @ApiTags('Terminal Cashback')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('terminal-cashback')
 export class TerminalCashbackController {
   constructor(private readonly service: TerminalCashbackService) {}
@@ -92,8 +95,18 @@ export class TerminalCashbackController {
     description: 'Claim details',
     type: TerminalCashbackClaim,
   })
-  async getClaim(@Param('id') id: string) {
-    return this.service.getClaimById(id);
+  async getClaim(@Param('id') id: string, @CurrentUser() user: any) {
+    const claim = await this.service.getClaimById(id);
+    if (
+      user.role !== UserRole.ADMIN &&
+      claim.userId !== user.id &&
+      claim.ownerId !== user.id
+    ) {
+      throw new ForbiddenException(
+        'You are not authorized to view this claim.',
+      );
+    }
+    return claim;
   }
 
   @Patch('claims/:id/status')
@@ -106,7 +119,14 @@ export class TerminalCashbackController {
   async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateTerminalCashbackStatusDto,
+    @CurrentUser() user: any,
   ) {
+    const claim = await this.service.getClaimById(id);
+    if (user.role !== UserRole.ADMIN && claim.ownerId !== user.id) {
+      throw new ForbiddenException(
+        'You are not authorized to update this claim.',
+      );
+    }
     return this.service.updateClaimStatus(id, dto.status);
   }
 
@@ -132,6 +152,7 @@ export class TerminalCashbackController {
   // --- Configuration (Merchant/Admin) ---
 
   @Post('config')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Onboard a new merchant terminal (Admin)' })
   @ApiResponse({
     status: 201,
@@ -144,6 +165,7 @@ export class TerminalCashbackController {
   }
 
   @Get('config')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'List all terminal configs (Admin)' })
   @ApiResponse({ status: 200, description: 'List of configs' })
   async getAllConfigs(@Query('page') page = 1, @Query('limit') limit = 10) {
@@ -157,7 +179,12 @@ export class TerminalCashbackController {
     description: 'Terminal configuration',
     type: TerminalConfig,
   })
-  async getConfig(@Param('userId') userId: string) {
+  async getConfig(@Param('userId') userId: string, @CurrentUser() user: any) {
+    if (user.role !== UserRole.ADMIN && userId !== user.id) {
+      throw new ForbiddenException(
+        'You are not authorized to view this terminal configuration.',
+      );
+    }
     return this.service.getConfig(userId);
   }
 
@@ -171,13 +198,20 @@ export class TerminalCashbackController {
   async updateConfig(
     @Param('userId') userId: string,
     @Body() dto: UpdateTerminalConfigDto,
+    @CurrentUser() user: any,
   ) {
+    if (user.role !== UserRole.ADMIN && userId !== user.id) {
+      throw new ForbiddenException(
+        'You are not authorized to update this terminal configuration.',
+      );
+    }
     return this.service.updateConfig(userId, dto);
   }
 
   // --- Global Rules (Admin) ---
 
   @Get('global-rules')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get global fraud/escalation rules (Admin)' })
   @ApiResponse({
     status: 200,
@@ -189,6 +223,7 @@ export class TerminalCashbackController {
   }
 
   @Put('global-rules/:key')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update a global rule (Admin)' })
   @ApiResponse({
     status: 200,

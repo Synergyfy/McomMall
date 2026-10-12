@@ -3,12 +3,16 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FlashSalesService } from './flash-sales.service';
 import { FlashSaleItem } from './entities/flash-sale-item.entity';
+import { Business } from '../listings/entities/listing.entity';
+import { Product } from '../product/entities/product.entity';
 import { FlashSaleStatus } from './flash-sale.enum';
 import { NotFoundException } from '@nestjs/common';
 
 describe('FlashSalesService', () => {
   let service: FlashSalesService;
   let repo: Repository<FlashSaleItem>;
+
+  const admin = { id: 'admin-1', role: 'admin' };
 
   const mockItem: FlashSaleItem = {
     id: 'item-1',
@@ -41,6 +45,14 @@ describe('FlashSalesService', () => {
             remove: jest.fn(),
             createQueryBuilder: jest.fn(),
           },
+        },
+        {
+          provide: getRepositoryToken(Business),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(Product),
+          useValue: { findOne: jest.fn() },
         },
       ],
     }).compile();
@@ -95,24 +107,30 @@ describe('FlashSalesService', () => {
   describe('create', () => {
     it('rejects startDate after endDate', async () => {
       await expect(
-        service.create({
-          title: 'Bad',
-          category: 'X',
-          price: 1,
-          startDate: '2026-09-10T00:00:00.000Z',
-          endDate: '2026-09-01T00:00:00.000Z',
-        }),
+        service.create(
+          {
+            title: 'Bad',
+            category: 'X',
+            price: 1,
+            startDate: '2026-09-10T00:00:00.000Z',
+            endDate: '2026-09-01T00:00:00.000Z',
+          },
+          admin,
+        ),
       ).rejects.toThrow('startDate must be before endDate');
     });
 
     it('creates the item with defaults', async () => {
-      const created = await service.create({
-        title: 'Good',
-        category: 'X',
-        price: 1,
-        startDate: '2026-09-01T00:00:00.000Z',
-        endDate: '2026-09-10T00:00:00.000Z',
-      });
+      const created = await service.create(
+        {
+          title: 'Good',
+          category: 'X',
+          price: 1,
+          startDate: '2026-09-01T00:00:00.000Z',
+          endDate: '2026-09-10T00:00:00.000Z',
+        },
+        admin,
+      );
       expect(created.status).toBe(FlashSaleStatus.ACTIVE);
       expect(repo.save).toHaveBeenCalled();
     });
@@ -122,7 +140,7 @@ describe('FlashSalesService', () => {
     it('deletes the item', async () => {
       jest.spyOn(repo, 'findOne').mockResolvedValue(mockItem);
       jest.spyOn(repo, 'remove').mockResolvedValue(mockItem);
-      await expect(service.remove('item-1')).resolves.toBeUndefined();
+      await expect(service.remove('item-1', admin)).resolves.toBeUndefined();
     });
   });
 });
