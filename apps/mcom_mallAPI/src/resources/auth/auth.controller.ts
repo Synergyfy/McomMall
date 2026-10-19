@@ -14,9 +14,6 @@ import {
   LogoutAuthDto,
 } from './dto/create-auth.dto';
 import { UsersService } from '../users/users.service';
-import { EmailService } from '../email/email.service';
-import { ResetPasswordDto } from '../email/dto/reset-password.dto';
-import { OtpType } from '../email/entities/otp.entity';
 import { ErrorFactory } from '../../common/errors/error.factory';
 import { Public } from '../../common/decorators/public.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -38,7 +35,6 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly userService: UsersService,
-    private readonly emailService: EmailService,
     private readonly mcomCentralService: McomCentralService,
   ) {}
 
@@ -159,34 +155,6 @@ export class AuthController {
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
-  }
-
-  @Public()
-  @Post('forgot-password')
-  async forgotPassword(@Body('email') email: string) {
-    return this.emailService.sendOtp({ email, type: OtpType.PASSWORD_RESET });
-  }
-
-  @Public()
-  @Post('reset-password')
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.emailService.resetPassword(resetPasswordDto);
-  }
-
-  @Public()
-  @Post('send-verification-otp')
-  async sendVerificationOtp(@Body('email') email: string) {
-    return this.emailService.sendOtp({ email, type: OtpType.VERIFICATION });
-  }
-
-  @Public()
-  @Post('verify-verification-otp')
-  async verifyVerificationOtp(@Body() body: { email: string; otp: string }) {
-    return this.emailService.validateOtp({
-      email: body.email,
-      otp: body.otp,
-      type: OtpType.VERIFICATION,
-    });
   }
 
   @ApiOperation({ summary: 'Logout and revoke token' })

@@ -1,17 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailService } from './email.service';
-import { EmailController } from './email.controller';
-import { Otp } from './entities/otp.entity';
-import { User } from '../users/entities/user.entity';
-import { HashService } from '../../common/hash/hash.service';
-import { HashModule } from '../../common/hash/hash.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Otp, User]),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -29,10 +22,9 @@ import { HashModule } from '../../common/hash/hash.module';
       }),
       inject: [ConfigService],
     }),
-    HashModule,
   ],
-  controllers: [EmailController],
-  providers: [EmailService, HashService],
+  controllers: [],
+  providers: [EmailService],
   exports: [EmailService],
 })
 export class EmailModule {}

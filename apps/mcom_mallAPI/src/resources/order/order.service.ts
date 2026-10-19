@@ -21,6 +21,16 @@ import { Product } from '../product/entities/product.entity';
 import { PromotionEngineService } from '../promotion/promotion-engine.service';
 import { NotificationService } from '../notification/notification.service';
 import { OrderItem } from './entities/order-item.entity';
+import {
+  OrderItemReward,
+  RewardRedemptionStatus,
+  RewardTargetType,
+} from './entities/order-item-reward.entity';
+import { RewardOutboxOperation } from './entities/reward-redemption-outbox.entity';
+import { RewardsIntegrationService } from '../rewards-integration/rewards-integration.service';
+import { RewardsClientService } from '../rewards-integration/rewards-client.service';
+import { EligibilityLine } from '../rewards-integration/interfaces/reward-issuance.interface';
+import { RewardRedemptionReconcileService } from './reward-redemption-reconcile.service';
 import { SalesStatsDto } from './dto/sales-stats.dto';
 import { PointsService } from '../transaction/points.service';
 import { Offer } from '../offer/entities/offer.entity';
@@ -59,6 +69,17 @@ import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
 import { UserRole } from '../../common/role.enum';
 import { randomUUID } from 'crypto';
 
+interface AppliedReward {
+  issuanceId: string;
+  lineKey: string;
+  targetType: RewardTargetType;
+  targetId: string;
+  discountAmount: number;
+  rewardType?: string;
+  issuerClientId?: string;
+  code?: string | null;
+}
+
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
@@ -67,6 +88,8 @@ export class OrderService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
     private readonly orderItemRepository: Repository<OrderItem>,
+    @InjectRepository(OrderItemReward)
+    private readonly orderItemRewardRepository: Repository<OrderItemReward>,
     @InjectRepository(OrderPayment)
     private readonly orderPaymentRepository: Repository<OrderPayment>,
     @InjectRepository(Product)
@@ -111,6 +134,9 @@ export class OrderService {
     private readonly paymentProviderService: PaymentProviderService,
     @Inject(forwardRef(() => WalletRefundReconcileService))
     private readonly walletRefundReconcileService: WalletRefundReconcileService,
+    private readonly rewardsIntegrationService: RewardsIntegrationService,
+    private readonly rewardsClient: RewardsClientService,
+    private readonly rewardReconcileService: RewardRedemptionReconcileService,
   ) {}
 
   private validateBusinessAndOwner(business: Business) {
@@ -148,6 +174,7 @@ export class OrderService {
       serviceBookings,
       shippingAddressId,
       carrierCode,
+      rewardApplications,
     } = createCheckoutDto;
     const cart = await this.cartService.getCart(userId);
 
@@ -310,6 +337,32 @@ export class OrderService {
 
     const totalBeforeRedemption = productTotal + giftCardPurchaseTotal;
 
+    // --- MCOM Rewards discount application (per line item) ---
+    const rewardLinesBuilt: EligibilityLine[] =
+      await this.rewardsIntegrationService.buildProductLines(
+        isDirectPurchase
+          ? [
+              {
+                productId: directPurchase.productId,
+                quantity: directPurchase.quantity,
+                selectedVariants: directPurchase.variant,
+              },
+            ]
+          : isCartCheckout
+            ? cart.items.map((item) => ({
+                productId: item.product.id,
+                quantity: item.quantity,
+                selectedVariants: item.selectedVariants || {},
+              }))
+            : [],
+      );
+    const rewardResolution = await this.resolveRewardApplications(
+      userId,
+      rewardApplications,
+      rewardLinesBuilt,
+    );
+    const rewardDiscountTotal = rewardResolution.total;
+
     let couponAmountToApply = 0;
     if (createCheckoutDto.couponCode) {
       try {
@@ -321,22 +374,26 @@ export class OrderService {
           user,
         );
 
+        const couponBase = Math.max(
+          0,
+          totalBeforeRedemption - rewardDiscountTotal,
+        );
+
         if (coupon.discountType === DiscountType.FIXED) {
-          // Type check if needed
           couponAmountToApply = Math.min(
-            totalBeforeRedemption,
+            couponBase,
             Number(coupon.discountValue),
           );
         } else {
-          couponAmountToApply =
-            totalBeforeRedemption * (Number(coupon.discountValue) / 100);
+          couponAmountToApply = couponBase * (Number(coupon.discountValue) / 100);
         }
       } catch (error) {
         throw new BadRequestException(`Invalid coupon: ${error.message}`);
       }
     }
 
-    const totalAfterDiscounts = totalBeforeRedemption - couponAmountToApply;
+    const totalAfterDiscounts =
+      totalBeforeRedemption - couponAmountToApply - rewardDiscountTotal;
 
     // Dynamic Shipping Fee Calculation (Royal Mail pricing API with DB fallback)
     const shippingItems: ShippingItemInput[] = [];
@@ -458,6 +515,23 @@ export class OrderService {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException('User not found');
 
+    // Reserve all selected rewards BEFORE charging, so a reward can never be
+    // double-spent by a concurrent checkout. Released on any failure below.
+    let rewardReservationRef: string | null = null;
+    if (rewardResolution.applications.length > 0) {
+      rewardReservationRef = `mall-order-${randomUUID()}`;
+      await this.reserveRewards(
+        rewardResolution.applications,
+        rewardReservationRef,
+      );
+    }
+
+    let offer: Offer | null = null;
+    let walletRequested = false;
+    let walletTransactionId: string | null = null;
+    let walletIdempotencyKey: string | null = null;
+
+    try {
     // --- Server-side payment verification for card / PayPal ---
     // Never trust a client-supplied transactionId: confirm the charge with the
     // provider and match the amount before creating the order.
@@ -495,7 +569,6 @@ export class OrderService {
 
     // Validate offer BEFORE any central debit so a bad offerId can never
     // strand a successful debit outside the compensating-refund window.
-    let offer: Offer | null = null;
     if (createCheckoutDto.offerId) {
       offer = await this.offerRepository.findOneBy({
         id: createCheckoutDto.offerId,
@@ -504,10 +577,8 @@ export class OrderService {
     }
 
     // --- MCOM Wallet (centralized) payment path: replaces Stripe/PayPal ---
-    const walletRequested =
+    walletRequested =
       createCheckoutDto.payment.paymentMethod === PaymentMethod.MCOM_WALLET;
-    let walletTransactionId: string | null = null;
-    let walletIdempotencyKey: string | null = null;
     if (walletRequested && finalAmount > 0) {
       if (!this.mcomWalletService.isEnabled()) {
         throw new BadRequestException(
@@ -538,6 +609,18 @@ export class OrderService {
         throw this.mcomWalletService.toHttpException(err);
       }
     }
+    } catch (preOrderErr) {
+      // Payment verification / wallet debit failed after rewards were reserved:
+      // release them so the shopper keeps their reward.
+      if (rewardResolution.applications.length > 0 && rewardReservationRef) {
+        await this.releaseRewards(
+          rewardResolution.applications,
+          rewardReservationRef,
+          'checkout_pre_order_failure',
+        );
+      }
+      throw preOrderErr;
+    }
 
     return this.entityManager
       .transaction(async (manager) => {
@@ -562,6 +645,7 @@ export class OrderService {
           shippingAddress,
           carrierCode,
           estimatedShippingFee,
+          rewardDiscountApplied: rewardDiscountTotal,
         };
         if (offer) {
           orderData.appliedOffer = offer;
@@ -669,6 +753,30 @@ export class OrderService {
             const savedItems = await manager.save(OrderItem, orderItems);
             savedOrder.items.push(...savedItems);
           }
+        }
+
+        // Persist reward redemptions (reserved now; committed post-payment).
+        if (rewardResolution.applications.length > 0) {
+          const itemIdByProduct = new Map<string, string>();
+          for (const oi of savedOrder.items) {
+            if (oi.product?.id) itemIdByProduct.set(oi.product.id, oi.id);
+          }
+          const rewardRows = rewardResolution.applications.map((app) =>
+            manager.create(OrderItemReward, {
+              order: savedOrder,
+              orderItemId: itemIdByProduct.get(app.targetId) || null,
+              rewardIssuanceId: app.issuanceId,
+              issuerClientId: app.issuerClientId,
+              rewardType: app.rewardType,
+              targetType: app.targetType,
+              targetId: app.targetId,
+              discountAmount: app.discountAmount,
+              status: RewardRedemptionStatus.RESERVED,
+              reservationRef: rewardReservationRef,
+              metadata: { code: app.code ?? null, lineKey: app.lineKey },
+            }),
+          );
+          await manager.save(OrderItemReward, rewardRows);
         }
 
         const createdBookingIds: string[] = [];
@@ -806,6 +914,14 @@ export class OrderService {
         return { savedOrder, createdGiftCards, createdBookingIds };
       })
       .then(async ({ savedOrder, createdGiftCards, createdBookingIds }) => {
+        if (rewardResolution.applications.length > 0) {
+          await this.commitRewards(
+            savedOrder.id,
+            rewardReservationRef,
+            rewardResolution.applications,
+          );
+        }
+
         // Post-commit side effects: dispatch emails & notifications asynchronously
         for (const gc of createdGiftCards) {
           if (gc.deliveryStatus !== GiftCardDeliveryStatus.PENDING) {
@@ -830,6 +946,15 @@ export class OrderService {
         return savedOrder;
       })
       .catch(async (dbErr) => {
+        // Order creation failed after rewards were reserved → release them.
+        if (rewardResolution.applications.length > 0 && rewardReservationRef) {
+          await this.releaseRewards(
+            rewardResolution.applications,
+            rewardReservationRef,
+            'checkout_db_failure',
+          );
+        }
+
         // Compensating refund: order records failed AFTER a successful central
         // debit — credit the wallet back so the user is never charged for a
         // failed order. Same-amount credit with a derived key; central treats
@@ -873,6 +998,194 @@ export class OrderService {
       });
   }
 
+  /**
+   * Validate the caller's selected reward applications against the freshly
+   * fetched issuances and the cart lines, returning the authoritative
+   * per-line discount. Throws BadRequestException on any inconsistency.
+   */
+  private async resolveRewardApplications(
+    userId: string,
+    rawApplications: { issuanceId: string; lineKey: string }[] | undefined,
+    lines: EligibilityLine[],
+  ): Promise<{ applications: AppliedReward[]; total: number }> {
+    if (!rawApplications || rawApplications.length === 0) {
+      return { applications: [], total: 0 };
+    }
+
+    if (!this.rewardsClient.isEnabled()) {
+      throw new BadRequestException(
+        'Reward redemption is not available right now. Please try again later.',
+      );
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'centralUserId'],
+    });
+    if (!user?.centralUserId) {
+      throw new BadRequestException(
+        'Link your MCOM account (SSO) to use earned rewards.',
+      );
+    }
+
+    let issuances;
+    try {
+      const result = await this.rewardsClient.listUserIssuances(
+        user.centralUserId,
+        { status: 'ISSUED', limit: 100 },
+      );
+      issuances = result.data;
+    } catch {
+      throw new BadRequestException(
+        'Could not verify your rewards with MCOM Rewards. Please try again.',
+      );
+    }
+
+    const eligible = this.rewardsIntegrationService.evaluateIssuances(
+      issuances,
+      lines,
+    );
+    const eligibleById = new Map(eligible.map((e) => [e.issuanceId, e]));
+    const lineByKey = new Map(lines.map((l) => [l.lineKey, l]));
+
+    const applications: AppliedReward[] = [];
+    const usedIssuances = new Set<string>();
+    const usedLines = new Set<string>();
+
+    for (const app of rawApplications) {
+      const reward = eligibleById.get(app.issuanceId);
+      if (!reward) {
+        throw new BadRequestException(
+          'One of the selected rewards is no longer valid for this order.',
+        );
+      }
+      if (usedIssuances.has(app.issuanceId)) {
+        throw new BadRequestException(
+          'The same reward cannot be applied twice.',
+        );
+      }
+      if (usedLines.has(app.lineKey)) {
+        throw new BadRequestException('Only one reward can be applied per item.');
+      }
+
+      const match = reward.applicableLines.find(
+        (l) => l.lineKey === app.lineKey,
+      );
+      const line = lineByKey.get(app.lineKey);
+      if (!match || !line) {
+        throw new BadRequestException(
+          'One of the selected rewards does not apply to the chosen item.',
+        );
+      }
+      if (line.kind !== 'PRODUCT') {
+        throw new BadRequestException(
+          'Service rewards are not yet supported at checkout.',
+        );
+      }
+
+      usedIssuances.add(app.issuanceId);
+      usedLines.add(app.lineKey);
+
+      const issuance = issuances.find((i) => i.id === app.issuanceId);
+      applications.push({
+        issuanceId: app.issuanceId,
+        lineKey: app.lineKey,
+        targetType: RewardTargetType.PRODUCT,
+        targetId: line.id,
+        discountAmount: match.discountAmount,
+        rewardType: issuance?.rewardType ?? undefined,
+        issuerClientId: issuance?.issuerClientId,
+        code: issuance?.code ?? null,
+      });
+    }
+
+    const total = applications.reduce((sum, a) => sum + a.discountAmount, 0);
+    return {
+      applications,
+      total: Math.round((total + Number.EPSILON) * 100) / 100,
+    };
+  }
+
+  private async reserveRewards(
+    applications: AppliedReward[],
+    reservationRef: string,
+  ): Promise<void> {
+    for (const app of applications) {
+      try {
+        await this.rewardsClient.reserveIssuance(app.issuanceId, {
+          orderRef: reservationRef,
+          idempotencyKey: `${reservationRef}:${app.issuanceId}`,
+          metadata: {
+            discountAmount: app.discountAmount,
+            targetId: app.targetId,
+          },
+        });
+      } catch (err: any) {
+        throw new BadRequestException(
+          `Could not reserve reward "${app.issuanceId}": ${err?.message || err}`,
+        );
+      }
+    }
+  }
+
+  private async commitRewards(
+    orderId: string,
+    reservationRef: string | null,
+    applications: AppliedReward[],
+  ): Promise<void> {
+    for (const app of applications) {
+      try {
+        await this.rewardsClient.commitIssuance(app.issuanceId, {
+          orderRef: reservationRef || orderId,
+        });
+        await this.orderItemRewardRepository.update(
+          { orderId, rewardIssuanceId: app.issuanceId },
+          {
+            status: RewardRedemptionStatus.COMMITTED,
+            committedAt: new Date(),
+          },
+        );
+      } catch (err: any) {
+        this.logger.error(
+          `[order.checkout] reward commit failed for ${app.issuanceId} — queued`,
+          err,
+        );
+        await this.rewardReconcileService.enqueue({
+          rewardIssuanceId: app.issuanceId,
+          orderId,
+          reservationRef: reservationRef || undefined,
+          operation: RewardOutboxOperation.COMMIT,
+          failureReason: String(err?.message || err),
+        });
+      }
+    }
+  }
+
+  private async releaseRewards(
+    applications: AppliedReward[],
+    reservationRef: string,
+    reason: string,
+  ): Promise<void> {
+    for (const app of applications) {
+      try {
+        await this.rewardsClient.releaseIssuance(app.issuanceId, {
+          orderRef: reservationRef,
+          reason,
+        });
+      } catch (err: any) {
+        this.logger.warn(
+          `[order.checkout] reward release failed for ${app.issuanceId}: ${err?.message || err}`,
+        );
+        await this.rewardReconcileService.enqueue({
+          rewardIssuanceId: app.issuanceId,
+          reservationRef,
+          operation: RewardOutboxOperation.RELEASE,
+          failureReason: String(err?.message || err),
+        });
+      }
+    }
+  }
+
   async getOrdersForCustomer(
     customerId: string,
     pagination: PaginationQueryDto,
@@ -882,7 +1195,7 @@ export class OrderService {
 
     const [items, total] = await this.orderRepository.findAndCount({
       where: { user: { id: customerId } },
-      relations: ['items', 'items.product'],
+      relations: ['items', 'items.product', 'rewardRedemptions'],
       skip,
       take: limit,
       order: { created_at: 'DESC' },
@@ -909,6 +1222,7 @@ export class OrderService {
       .leftJoinAndSelect('order.user', 'customer')
       .leftJoinAndSelect('order.items', 'item')
       .leftJoinAndSelect('item.product', 'product')
+      .leftJoinAndSelect('order.rewardRedemptions', 'rewardRedemption')
       .leftJoin('product.business', 'business')
       .leftJoin('business.user', 'user')
       .where('user.id = :ownerId', { ownerId })
@@ -934,7 +1248,13 @@ export class OrderService {
     const skip = (page - 1) * limit;
 
     const [items, total] = await this.orderRepository.findAndCount({
-      relations: ['user', 'items', 'items.product', 'items.product.business'],
+      relations: [
+        'user',
+        'items',
+        'items.product',
+        'items.product.business',
+        'rewardRedemptions',
+      ],
       skip,
       take: limit,
       order: { created_at: 'DESC' },
@@ -966,6 +1286,22 @@ export class OrderService {
     const productsSold = parseInt(stats.productsSold) || 0;
     const orderCount = parseInt(stats.orders) || 0;
 
+    // Reward discounts absorbed by this owner's products (committed only).
+    const rewardStats = await this.orderItemRewardRepository
+      .createQueryBuilder('reward')
+      .leftJoin('reward.orderItem', 'orderItem')
+      .leftJoin('orderItem.product', 'rewardProduct')
+      .leftJoin('rewardProduct.business', 'rewardBusiness')
+      .leftJoin('rewardBusiness.user', 'rewardOwner')
+      .select('COALESCE(SUM(reward.discountAmount), 0)', 'rewardDiscountTotal')
+      .where('rewardOwner.id = :ownerId', { ownerId })
+      .andWhere('reward.status = :status', {
+        status: RewardRedemptionStatus.COMMITTED,
+      })
+      .getRawOne();
+    const rewardDiscountTotal =
+      parseFloat(rewardStats?.rewardDiscountTotal) || 0;
+
     const commissionRate = this.configService.get<number>('commission.rate');
     const netSales = totalSales * commissionRate;
     const grossSales = totalSales;
@@ -980,6 +1316,7 @@ export class OrderService {
       totalEarnings,
       grossSales,
       balance,
+      rewardDiscountTotal,
     };
   }
 

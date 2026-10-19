@@ -30,6 +30,11 @@ export interface ServiceBookingDetailsDto {
   price: number;
 }
 
+export interface RewardApplicationDto {
+  issuanceId: string;
+  lineKey: string;
+}
+
 export interface CreateCheckoutDto {
   payment: PaymentDto;
   directPurchase?: DirectPurchaseDto;
@@ -41,6 +46,7 @@ export interface CreateCheckoutDto {
   serviceBookings?: ServiceBookingDetailsDto[];
   giftCardAmount?: number;
   voucherAmount?: number;
+  rewardApplications?: RewardApplicationDto[];
 }
 
 const checkout = async (checkoutData: CreateCheckoutDto) => {
@@ -55,6 +61,7 @@ const checkout = async (checkoutData: CreateCheckoutDto) => {
     serviceBookings,
     giftCardAmount,
     voucherAmount,
+    rewardApplications,
   } = checkoutData;
   const { data } = await api.post('/order/checkout', {
     payment,
@@ -67,6 +74,7 @@ const checkout = async (checkoutData: CreateCheckoutDto) => {
     serviceBookings,
     giftCardAmount,
     voucherAmount,
+    rewardApplications,
   });
   return data;
 };

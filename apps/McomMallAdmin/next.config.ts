@@ -9,6 +9,25 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Next 16 uses Turbopack by default. Serwist injects a webpack config, so we
+  // declare an (empty) turbopack config to opt in cleanly for `next dev`.
+  // Production builds explicitly use webpack (`next build --webpack`) so the
+  // Serwist service worker is still generated.
+  turbopack: {},
+  onDemandEntries: {
+    maxInactiveAge: 15 * 1000,
+    pagesBufferLength: 2,
+  },
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'antd',
+      'recharts',
+      'framer-motion',
+      'date-fns',
+      '@radix-ui/react-icons',
+    ],
+  },
   allowedDevOrigins: ['*.preview.same-app.com', 'https://3000-firebase-mcommalladmingit-1759853738433.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev'],
   images: {
     unoptimized: true,

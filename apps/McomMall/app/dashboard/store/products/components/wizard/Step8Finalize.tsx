@@ -5,7 +5,8 @@ import {
     Settings2,
     CheckCircle2,
     UploadCloud,
-    ArrowLeft
+    ArrowLeft,
+    AlertCircle
 } from 'lucide-react';
 import InfoIcon from '@/components/ui/lib/Tooltip';
 
@@ -16,9 +17,10 @@ interface Step8Props {
     onPublish: () => void;
     onSaveDraft: () => void;
     isPending?: boolean;
+    submitError?: string | null;
 }
 
-export default function Step8Finalize({ formData, updateFormData, onBack, onPublish, onSaveDraft, isPending }: Step8Props) {
+export default function Step8Finalize({ formData, updateFormData, onBack, onPublish, onSaveDraft, isPending, submitError }: Step8Props) {
     // attributes: { name: string, options: { name: string, priceModifier: number }[] }[]
     const attributes = formData.attributes || [];
     const variations = formData.variations || [];
@@ -63,6 +65,16 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                         <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500 ease-out" style={{ width: '100%' }}></div>
                     </div>
                 </div>
+
+                {submitError && (
+                    <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive" role="alert">
+                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                        <div>
+                            <p className="font-bold">We couldn&apos;t publish your product</p>
+                            <p className="text-sm">{submitError}</p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="flex flex-col gap-2">
                     <h1 className="text-[#1c140d] dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">Product Variants</h1>

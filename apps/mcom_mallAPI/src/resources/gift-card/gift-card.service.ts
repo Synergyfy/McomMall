@@ -112,14 +112,20 @@ export class GiftCardService {
     private readonly capabilityService: CapabilityService,
   ) {}
 
-  // --- System Integration Methods ---
+  // --- Partner (ecosystem M2M) Integration Methods ---
 
-  async createSystemGiftCard(payload: {
+  /**
+   * Issue a gift-card reward on behalf of an ecosystem partner (e.g. MCOM
+   * Rewards). Called over the zero-hop service mesh — the caller is
+   * authenticated by an RS256 service token, never a shared secret.
+   */
+  async createPartnerGiftCard(payload: {
     amount: number;
     recipientEmail: string;
     recipientName?: string;
     message?: string;
     businessName: string;
+    code?: string;
   }): Promise<GiftCard> {
     const amount = Number(payload.amount);
     const { recipientEmail, recipientName, message, businessName } = payload;
@@ -184,7 +190,7 @@ export class GiftCardService {
     );
 
     const giftCard = this.giftCardRepository.create({
-      code: dv.code,
+      code: (payload.code && payload.code.trim()) || dv.code,
       initialBalance: amount,
       currentBalance: amount,
       currency: 'GBP',

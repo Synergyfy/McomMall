@@ -10,7 +10,6 @@ import { RevokedToken } from './entities/revoked-token.entity';
 import { HashService } from '../../common/hash/hash.service';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
-import { EmailModule } from '../email/email.module';
 import { SsoModule } from '../sso/sso.module';
 
 @Module({
@@ -28,7 +27,6 @@ import { SsoModule } from '../sso/sso.module';
     }),
     TypeOrmModule.forFeature([User, RevokedToken]),
     UsersModule,
-    EmailModule,
     forwardRef(() => SsoModule),
   ],
   controllers: [AuthController],

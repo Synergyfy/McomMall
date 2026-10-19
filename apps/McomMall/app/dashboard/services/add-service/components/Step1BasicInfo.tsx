@@ -264,7 +264,7 @@ export function Step1BasicInfo() {
                               value={sector.name}
                               key={sector.id}
                               onSelect={() => {
-                                form.setValue("sector", sector.id);
+                                form.setValue("sector", sector.id, { shouldValidate: true });
                                 form.setValue("category", ""); // Reset category
                                 form.setValue("subcategory", ""); // Reset subcategory
                                 setSectorOpen(false);

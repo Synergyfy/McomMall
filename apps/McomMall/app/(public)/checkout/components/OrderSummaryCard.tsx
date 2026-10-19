@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Product } from '@/service/listings/types';
 import { Cart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
-import { Minus, Plus, Ticket, Gift, Tag, Percent, Calendar } from 'lucide-react';
+import { Minus, Plus, Ticket, Gift, Tag, Percent, Calendar, Sparkles } from 'lucide-react';
 import { CURRENCY } from '@/lib/utils';
 import { ServiceBookingDetailsDto } from '@/hooks/useCheckout';
 import { format } from 'date-fns';
@@ -22,6 +22,7 @@ interface OrderSummaryCardProps {
   giftCardDiscount: number;
   voucherDiscount: number;
   offerDiscount: number;
+  rewardDiscount?: number;
   serviceBookings?: ServiceBookingDetailsDto[] | null;
   selectedVariants?: Record<string, string>;
 }
@@ -38,6 +39,7 @@ export default function OrderSummaryCard({
   giftCardDiscount,
   voucherDiscount,
   offerDiscount,
+  rewardDiscount = 0,
   serviceBookings,
   selectedVariants,
 }: OrderSummaryCardProps) {
@@ -271,6 +273,11 @@ export default function OrderSummaryCard({
           'Offer Applied',
           offerDiscount,
           <Tag className="h-5 w-5" />
+        )}
+        {renderDiscountLine(
+          'Rewards',
+          rewardDiscount,
+          <Sparkles className="h-5 w-5" />
         )}
 
         {/* Total */}

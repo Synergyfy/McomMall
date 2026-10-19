@@ -80,6 +80,8 @@ export function Step3Pricing() {
                 <Select 
                   onValueChange={(val) => {
                     field.onChange(val);
+                    // Clear stale price errors when the pricing model changes.
+                    form.clearErrors(['fixedPrice', 'pricePerHour', 'pricePerUnit']);
                   }} 
                   value={field.value}
                 >
@@ -101,6 +103,7 @@ export function Step3Pricing() {
                     <SelectItem value="subscription">Subscription</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -193,7 +196,7 @@ export function Step3Pricing() {
                   <FormItem>
                     <FormLabel className="text-sm font-medium">Unit Name <span className="text-muted-foreground">(Optional)</span></FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Session, Item" {...field} className="py-6" />
+                      <Input placeholder="e.g. Session, Item" {...field} value={field.value ?? ''} className="py-6" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -334,7 +337,24 @@ export function Step3Pricing() {
                   <FormDescription>Charge more or less depending on the group size.</FormDescription>
                 </div>
                 <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      if (!checked) {
+                        form.clearErrors([
+                          'guestPricingModel',
+                          'minGuests',
+                          'maxGuests',
+                          'pricePerGuest',
+                          'fixedGroupPrice',
+                          'basePrice',
+                          'baseGuests',
+                          'additionalGuestPrice',
+                        ]);
+                      }
+                    }}
+                  />
                 </FormControl>
               </FormItem>
             )}
@@ -360,7 +380,7 @@ export function Step3Pricing() {
                         </Tooltip>
                       </div>
                       <FormControl>
-                        <Input type="number" {...field} className="h-9" />
+                        <Input type="number" {...field} value={field.value ?? ''} className="h-9" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -383,7 +403,7 @@ export function Step3Pricing() {
                         </Tooltip>
                       </div>
                       <FormControl>
-                        <Input type="number" {...field} className="h-9" />
+                        <Input type="number" {...field} value={field.value ?? ''} className="h-9" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -410,6 +430,13 @@ export function Step3Pricing() {
                     <Select 
                       onValueChange={(val) => {
                         field.onChange(val);
+                        form.clearErrors([
+                          'pricePerGuest',
+                          'fixedGroupPrice',
+                          'basePrice',
+                          'baseGuests',
+                          'additionalGuestPrice',
+                        ]);
                       }} 
                       value={field.value}
                     >
@@ -549,7 +576,7 @@ export function Step3Pricing() {
                 render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormControl>
-                      <Input placeholder="Add-on Name" {...field} className="h-9" />
+                      <Input placeholder="Add-on Name" {...field} value={field.value ?? ''} className="h-9" />
                     </FormControl>
                   </FormItem>
                 )}
@@ -562,7 +589,7 @@ export function Step3Pricing() {
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">£</span>
                       <FormControl>
-                        <Input type="number" placeholder="0" className="w-24 h-9 pl-5" {...field} />
+                        <Input type="number" placeholder="0" className="w-24 h-9 pl-5" {...field} value={field.value ?? ''} />
                       </FormControl>
                     </div>
                   </FormItem>
@@ -602,7 +629,7 @@ export function Step3Pricing() {
                 render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormControl>
-                      <Input placeholder="Service Name" {...field} className="h-9" />
+                      <Input placeholder="Service Name" {...field} value={field.value ?? ''} className="h-9" />
                     </FormControl>
                   </FormItem>
                 )}
@@ -615,7 +642,7 @@ export function Step3Pricing() {
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">£</span>
                       <FormControl>
-                        <Input type="number" placeholder="0" className="w-24 h-9 pl-5" {...field} />
+                        <Input type="number" placeholder="0" className="w-24 h-9 pl-5" {...field} value={field.value ?? ''} />
                       </FormControl>
                     </div>
                   </FormItem>

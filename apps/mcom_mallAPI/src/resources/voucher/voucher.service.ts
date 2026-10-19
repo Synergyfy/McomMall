@@ -1221,14 +1221,20 @@ export class VoucherService {
 
     return voucher;
   }
-  // --- System Integration Methods ---
+  // --- Partner (ecosystem M2M) Integration Methods ---
 
-  async createSystemVoucher(payload: {
+  /**
+   * Issue a voucher reward on behalf of an ecosystem partner (e.g. MCOM
+   * Rewards). Called over the zero-hop service mesh — the caller is
+   * authenticated by an RS256 service token, never a shared secret.
+   */
+  async createPartnerVoucher(payload: {
     amount: number;
     recipientEmail: string;
     recipientName?: string;
     message?: string;
     businessName: string;
+    code?: string;
   }): Promise<Voucher> {
     const amount = Number(payload.amount);
     const { recipientEmail, recipientName, message, businessName } = payload;
@@ -1257,7 +1263,7 @@ export class VoucherService {
     });
 
     const newVoucher = this.voucherRepository.create({
-      code: dv.code,
+      code: (payload.code && payload.code.trim()) || dv.code,
       initialValue: amount,
       balance: amount,
       status: VoucherStatus.UNREDEEMED,

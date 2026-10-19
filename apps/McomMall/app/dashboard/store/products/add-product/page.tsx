@@ -21,6 +21,14 @@ import { useAuth } from '@/service/auth/hook';
 import { useGetUserListings } from '@/service/listings/hook';
 import { useAddProduct } from '@/service/store/products/hook';
 import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
+import { parseApiError, scrollToFirstError, toSerializable } from '@/lib/form-validation';
+import {
+  ProductFormErrors,
+  PRODUCT_ERROR_ALIASES,
+  validateProductStep,
+  getProductStepsToValidate,
+  findFirstInvalidProductStep,
+} from '../components/wizard/validation';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -39,6 +47,8 @@ export default function AddProductPage() {
   const [createdProductId, setCreatedProductId] = useState<string | null>(null);
   const [fulfillmentType, setFulfillmentType] = useState<('shipping' | 'pickup')[]>([]);
   const [shippingMethod, setShippingMethod] = useState<'existing' | 'shipstation' | null>(null);
+  const [errors, setErrors] = useState<ProductFormErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     productName: '',
@@ -99,6 +109,18 @@ export default function AddProductPage() {
 
   const updateFormData = (newData: any) => {
     setFormData((prev) => ({ ...prev, ...newData }));
+
+    // Clear any validation error tied to the fields the user just changed so
+    // the messaging stays in sync as they type.
+    setErrors((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      const next = { ...prev };
+      for (const key of Object.keys(newData)) {
+        const aliases = PRODUCT_ERROR_ALIASES[key] ?? [key];
+        for (const alias of aliases) delete next[alias];
+      }
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -121,6 +143,20 @@ export default function AddProductPage() {
 
 
   const handlePublish = () => {
+    // Final gate: validate every relevant step before we send anything.
+    const stepsToValidate = getProductStepsToValidate(formData, fulfillmentType);
+    const firstInvalid = findFirstInvalidProductStep(formData, stepsToValidate);
+    if (firstInvalid) {
+      setErrors(firstInvalid.errors);
+      setStep(firstInvalid.step);
+      toast.error('Please complete the required details before publishing.');
+      scrollToFirstError(document.querySelector('main') ?? undefined, { delay: 180 });
+      return;
+    }
+
+    setErrors({});
+    setSubmitError(null);
+
     const variantConfig = formData.attributes.map((attr: any) => ({
       name: attr.name,
       type: attr.type || 'select',
@@ -181,7 +217,9 @@ export default function AddProductPage() {
       businessId: formData.businessId,
       title: formData.productName,
       productName: formData.productName,
-      description: formData.fullDesc,
+      description: (formData.fullDesc && formData.fullDesc.replace(/<[^>]*>/g, '').trim())
+        ? formData.fullDesc
+        : (formData.shortDesc?.trim() || formData.productName || ''),
       shortDescription: formData.shortDesc,
       category: formData.categoryName || formData.category,
       subCategory: formData.subCategoryName || formData.subCategory,
@@ -198,6 +236,9 @@ export default function AddProductPage() {
       variantConfig,
       fulfillmentType: fulfillmentType,
       shippingMethod: finalShippingMethod,
+      freeDeliveryRadius: formData.isFreeDelivery && String(formData.freeDeliveryRadius ?? '') !== ''
+        ? parseFloat(String(formData.freeDeliveryRadius)) || 0
+        : 0,
       weight: formData.weight ? parseFloat(formData.weight) : 0,
       length: formData.length ? parseFloat(formData.length) : 0,
       width: formData.width ? parseFloat(formData.width) : 0,
@@ -217,7 +258,15 @@ export default function AddProductPage() {
     if (payload.price <= 0) payload.price = 0;
     if (payload.regular_price <= 0) payload.regular_price = 0;
 
-    addProduct(payload, {
+    // Strip anything JSON can't serialize (e.g. a Window/DOM handle that
+    // leaked into form state) so the request is never blocked by a
+    // SecurityError before it is sent.
+    const { value: safePayload, dropped } = toSerializable<Record<string, unknown>>(payload);
+    if (process.env.NODE_ENV !== 'production' && dropped.length > 0) {
+      console.warn('[add-product] Dropped non-serializable payload fields:', dropped);
+    }
+
+    addProduct(safePayload as any, {
       onSuccess: (data: any) => {
         setCreatedProductId(data.id);
 
@@ -242,18 +291,101 @@ export default function AddProductPage() {
       },
       onError: (error: any) => {
         console.error('Failed to add product:', error);
-        toast.error(error.message || 'Failed to create product');
+        const parsed = parseApiError(error, [
+          'productName',
+          'title',
+          'businessId',
+          'bussinessId',
+          'category',
+          'subCategory',
+          'regular_price',
+          'sale_price',
+          'price',
+          'salePrice',
+          'sku',
+          'description',
+          'shortDescription',
+          'shortDesc',
+          'fullDesc',
+          'quantity',
+          'weight',
+        ]);
+
+        if (Object.keys(parsed.fields).length > 0) {
+          // Align common backend field names with the wizard's field keys so
+          // errors land under the right input.
+          const normalizedFields: ProductFormErrors = { ...parsed.fields };
+          if (normalizedFields.title && !normalizedFields.productName) {
+            normalizedFields.productName = normalizedFields.title;
+            delete normalizedFields.title;
+          }
+          if (normalizedFields.bussinessId && !normalizedFields.businessId) {
+            normalizedFields.businessId = normalizedFields.bussinessId;
+            delete normalizedFields.bussinessId;
+          }
+          if (normalizedFields.price && !normalizedFields.regular_price) {
+            normalizedFields.regular_price = normalizedFields.price;
+          }
+          if (normalizedFields.salePrice && !normalizedFields.sale_price) {
+            normalizedFields.sale_price = normalizedFields.salePrice;
+          }
+          if (normalizedFields.shortDescription && !normalizedFields.shortDesc) {
+            normalizedFields.shortDesc = normalizedFields.shortDescription;
+            normalizedFields.description = normalizedFields.description ?? normalizedFields.shortDesc;
+          }
+
+          setErrors(normalizedFields);
+
+          const stepForField: Record<string, number> = {
+            businessId: 1,
+            productName: 1,
+            title: 1,
+            category: 1,
+            subCategory: 1,
+            description: 2,
+            shortDescription: 2,
+            shortDesc: 2,
+            fullDesc: 2,
+            fileUrls: 2,
+            regular_price: 3,
+            sale_price: 3,
+            price: 3,
+            sku: 3,
+            variations: 3,
+            attributes: 3,
+            quantity: 3,
+          };
+
+          const firstKey = Object.keys(normalizedFields)[0];
+          const targetStep = stepForField[firstKey];
+          if (targetStep) {
+            setStep(targetStep);
+            scrollToFirstError(document.querySelector('main') ?? undefined, { delay: 200 });
+          }
+        }
+
+        setSubmitError(parsed.general || 'Failed to create product');
+        toast.error(parsed.general || 'Failed to create product');
       }
     });
   };
 
-  const nextStep = () => {
-    if (step === 1) {
-      if (!formData.businessId) {
-        toast.error('Please select a business to continue.');
-        return;
-      }
+  const nextStep = (patch?: any) => {
+    // Allow a step to hand over freshly-derived values (e.g. contentEditable
+    // HTML) so validation sees the latest data, not the previous render.
+    const merged = patch ? { ...formData, ...patch } : formData;
+    if (patch) updateFormData(patch);
+
+    // Validate the current step before allowing navigation.
+    const stepErrors = validateProductStep(step, merged);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      toast.error('Please fix the highlighted fields before continuing.');
+      scrollToFirstError(document.querySelector('main') ?? undefined, { delay: 80 });
+      return;
     }
+
+    setErrors({});
 
     // Branching from Step 3
     if (step === 3) {
@@ -413,11 +545,11 @@ export default function AddProductPage() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.push('/dashboard/store/products')} userListings={userListings?.data || []} />;
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.push('/dashboard/store/products')} userListings={userListings?.data || []} errors={errors} />;
       case 2:
-        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
+        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} errors={errors} />;
       case 3:
-        return <Step3PricingInventory formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
+        return <Step3PricingInventory formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} errors={errors} />;
       case 4:
         return (
           <Step4aFulfillmentSelection
@@ -447,7 +579,7 @@ export default function AddProductPage() {
           />
         );
       case 4.2:
-        return <Step4bDeliveryPricing formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
+        return <Step4bDeliveryPricing formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} errors={errors} />;
       case 5:
         return <Step5SelectCarrier onBack={prevStep} onNext={nextStep} />;
       case 5.1:
@@ -461,7 +593,7 @@ export default function AddProductPage() {
       case 7.5:
         return <Step7Partnership formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
       case 8:
-        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} isPending={isPending} />;
+        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} isPending={isPending} submitError={submitError} />
       default:
         return <div>Unknown Step</div>;
     }

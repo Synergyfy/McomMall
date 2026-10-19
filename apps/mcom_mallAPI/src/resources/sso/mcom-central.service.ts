@@ -19,11 +19,35 @@ export class McomCentralService {
     return process.env.MCOM_SOLUTIONS_FRONTEND_URL || 'http://localhost:3000';
   }
 
+  /**
+   * Secret used to sign legacy service-to-service HMAC requests. Must match the
+   * secret MCOM Central has issued for this client (`MCOM_MALL_SECRET` there).
+   */
+  private getHmacSecret(): string {
+    return (
+      process.env.MCOM_MALL_HMAC_SECRET ||
+      process.env.MCOM_HMAC_SECRET ||
+      this.apiSecret
+    );
+  }
+
+  /**
+   * Value sent as `X-API-Key` when introspecting entitlements without a bearer
+   * token. Must match this client's `apiKey` on MCOM Central.
+   */
+  private getClientApiKey(): string {
+    return (
+      process.env.MCOM_CLIENT_API_KEY ||
+      process.env.MCOM_API_KEY ||
+      this.apiSecret
+    );
+  }
+
   private getHmacHeaders(): Record<string, string> {
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const message = `${this.serviceId}:${timestamp}`;
     const signature = crypto
-      .createHmac('sha256', this.apiSecret)
+      .createHmac('sha256', this.getHmacSecret())
       .update(message)
       .digest('hex');
 
@@ -146,8 +170,9 @@ export class McomCentralService {
         });
       } else {
         const headers = this.getHmacHeaders();
-        if (this.apiSecret) {
-          headers['X-API-Key'] = this.apiSecret;
+        const clientApiKey = this.getClientApiKey();
+        if (clientApiKey) {
+          headers['X-API-Key'] = clientApiKey;
         }
         response = await fetch(
           `${this.baseUrl}/api/v1/auth/sso/entitlement?client_id=${encodeURIComponent(
@@ -158,8 +183,10 @@ export class McomCentralService {
       }
 
       if (!response.ok) {
+        const errorBody = await response.text().catch(() => '');
         this.logger.warn(
-          `MCOM Central entitlement introspection returned ${response.status} for userId=${userId}`,
+          `MCOM Central entitlement introspection returned ${response.status} for userId=${userId} ` +
+            `(client_id=${this.serviceId})${errorBody ? `: ${errorBody.slice(0, 200)}` : ''}`,
         );
         return null;
       }

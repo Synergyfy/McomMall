@@ -57,6 +57,12 @@ export class BookingController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get(':id/rewards/eligible')
+  getEligibleRewards(@Param('id') id: string, @Request() req) {
+    return this.bookingService.getEligibleBookingRewards(id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Put(':id/approve')
   approve(@Param('id') id: string, @Request() req) {
     return this.bookingService.approve(id, req.user.id);

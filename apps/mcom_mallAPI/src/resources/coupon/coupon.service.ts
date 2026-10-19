@@ -8,9 +8,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
+import * as crypto from 'crypto';
 
 import { Coupon } from './entities/coupon.entity';
-import { CouponStatus, CouponSourceType, TransactionType } from './coupon.enum';
+import { CouponStatus, CouponSourceType, DiscountType, TransactionType } from './coupon.enum';
 import { UserRole } from '../../common/role.enum';
 import {
   RedemptionLog,
@@ -718,5 +719,67 @@ export class CouponService {
       message: `Coupon ${code} redeemed successfully.`,
       coupon,
     };
+  }
+
+  // --- System Integration Methods ---
+
+  /**
+   * Create a single-use coupon on behalf of an ecosystem partner (e.g. MCOM
+   * Rewards issuing a coupon-type reward). Mirrors the gift card / voucher
+   * partner integration: the caller supplies a value and an optional shared
+   * `code`. Platform-sourced, so no business capability check is required.
+   * Called over the zero-hop service mesh — the caller is authenticated by an
+   * RS256 service token, never a shared secret.
+   *
+   * Idempotent on `code`: re-delivering the same code returns the existing
+   * coupon instead of failing on the unique constraint.
+   */
+  async createPartnerCoupon(payload: {
+    amount: number;
+    recipientEmail?: string;
+    recipientName?: string;
+    message?: string;
+    businessName?: string;
+    code?: string;
+    expiresAt?: string | Date;
+    usageLimit?: number;
+    perUserLimit?: number;
+  }): Promise<Coupon> {
+    const amount = Number(payload.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Coupon amount must be a positive number.');
+    }
+
+    const providedCode = (payload.code || '').trim();
+    const code = (
+      providedCode || `MC${crypto.randomBytes(6).toString('hex').toUpperCase()}`
+    ).slice(0, 20);
+
+    const existing = await this.couponRepository.findOne({ where: { code } });
+    if (existing) {
+      return existing;
+    }
+
+    const expiresAt = payload.expiresAt
+      ? new Date(payload.expiresAt)
+      : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+
+    const coupon = this.couponRepository.create({
+      code,
+      title: payload.message || `Reward from ${payload.businessName || 'MCOM Rewards'}`,
+      description:
+        payload.message ||
+        `Reward coupon from ${payload.businessName || 'MCOM Rewards'}`,
+      sourceType: CouponSourceType.PLATFORM,
+      discountType: DiscountType.FIXED,
+      discountValue: amount,
+      usageLimit: payload.usageLimit ?? 1,
+      perUserLimit: payload.perUserLimit ?? 1,
+      startDate: new Date(),
+      expiresAt,
+      status: CouponStatus.ACTIVE,
+    });
+
+    return this.couponRepository.save(coupon);
   }
 }

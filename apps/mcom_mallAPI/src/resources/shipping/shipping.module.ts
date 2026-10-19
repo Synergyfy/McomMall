@@ -6,14 +6,12 @@ import { ShippingPricingService } from './shipping-pricing.service';
 import { ShippingRate } from './entities/shipping-rate.entity';
 import { Order } from '../order/entities/order.entity';
 import { Business } from '../listings/entities/listing.entity';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { HttpModule } from '@nestjs/axios';
 import { RoyalMailService } from './royal-mail.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, Business, ShippingRate]),
-    EventEmitterModule.forRoot(),
     HttpModule,
   ],
   controllers: [ShippingController],

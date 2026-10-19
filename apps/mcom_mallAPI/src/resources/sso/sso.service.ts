@@ -352,10 +352,14 @@ export class SsoService {
           });
         }
       } else {
-        // Fallback: query packages from MCOM Solutions if no entitlement was returned
+        // Fallback: query packages from MCOM Solutions if no entitlement was returned.
+        // Pass the Solutions access token so the authenticated real-time
+        // entitlement endpoint is used instead of the service-HMAC path.
         try {
-          userPackages =
-            await this.mcomCentralService.getUserPackages(centralUserId);
+          userPackages = await this.mcomCentralService.getUserPackages(
+            centralUserId,
+            tokenData.accessToken,
+          );
         } catch (err) {
           this.logger.warn(
             `Could not verify legacy subscription for user ${centralUserId}: ${err instanceof Error ? err.message : err}`,

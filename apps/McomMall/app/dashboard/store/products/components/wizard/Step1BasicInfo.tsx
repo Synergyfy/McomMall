@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { FieldError } from '@/lib/form-validation';
 
 interface Step1Props {
   formData: any;
@@ -27,6 +28,7 @@ interface Step1Props {
   onNext: () => void;
   onCancel: () => void;
   userListings?: any[];
+  errors?: Record<string, string>;
 }
 
 const detectGender = (name: string): "male" | "female" | "unisex" | "none" => {
@@ -38,7 +40,7 @@ const detectGender = (name: string): "male" | "female" | "unisex" | "none" => {
   return 'none';
 };
 
-export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, userListings }: Step1Props) {
+export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, userListings, errors }: Step1Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isHybridFlow = searchParams.get('hybridFlow') === 'true';
@@ -167,10 +169,11 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
               </label>
               <div className="relative">
                 <select
-                  className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none"
+                  className={`w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none ${errors?.businessId ? 'border-destructive ring-1 ring-destructive' : ''}`}
                   id="businessId"
                   value={formData.businessId || formData.bussinessId || ''}
                   onChange={handleChange}
+                  aria-invalid={!!errors?.businessId}
                 >
                   <option disabled value="">Select a business...</option>
                   {userListings?.map((listing: any) => (
@@ -183,6 +186,7 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                   <ChevronDown className="w-5 h-5" />
                 </div>
               </div>
+              <FieldError message={errors?.businessId} />
             </div>
 
             {/* Product Name */}
@@ -202,14 +206,16 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
               </label>
               <div className="relative">
                 <input
-                  className="w-full rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] placeholder:text-[#9c7349]/60 transition-all border outline-none"
+                  className={`w-full rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] placeholder:text-[#9c7349]/60 transition-all border outline-none ${errors?.productName ? 'border-destructive ring-1 ring-destructive' : ''}`}
                   id="productName"
                   placeholder="e.g. Men's Cotton Summer Jacket"
                   type="text"
                   value={formData.productName || ''}
                   onChange={handleChange}
+                  aria-invalid={!!errors?.productName}
                 />
               </div>
+              <FieldError message={errors?.productName} />
               <p className="text-xs text-[#9c7349]">Keep it short and descriptive. Recommended length: 20-60 characters.</p>
             </div>
 
@@ -231,11 +237,12 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                 </label>
                 <div className="relative">
                   <select
-                    className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none disabled:opacity-50"
+                    className={`w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none disabled:opacity-50 ${errors?.category ? 'border-destructive ring-1 ring-destructive' : ''}`}
                     id="category"
                     value={formData.category || ''}
                     onChange={handleChange}
                     disabled={isLoadingCats}
+                    aria-invalid={!!errors?.category}
                   >
                     <option disabled value="">{isLoadingCats ? 'Loading categories...' : 'Select a category...'}</option>
                     {categories?.map((cat) => (
@@ -248,6 +255,7 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                     <ChevronDown className="w-5 h-5" />
                   </div>
                 </div>
+                <FieldError message={errors?.category} />
               </div>
 
               <div className="flex flex-col gap-2">

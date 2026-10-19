@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { OrderService } from './order.service';
 import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
+import { RewardRedemptionReconcileService } from './reward-redemption-reconcile.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
@@ -39,6 +40,7 @@ export class OrderController {
   constructor(
     private readonly orderService: OrderService,
     private readonly walletRefundReconcileService: WalletRefundReconcileService,
+    private readonly rewardRedemptionReconcileService: RewardRedemptionReconcileService,
   ) {}
 
   @Post('checkout')
@@ -149,5 +151,35 @@ export class OrderController {
     }
     await this.walletRefundReconcileService.reconcilePending();
     return { success: true, message: 'Reconciliation process completed.' };
+  }
+
+  @Post('reconcile-rewards')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Trigger reconciliation of pending reward redemptions',
+    description:
+      'Retries failed reward commit/release calls and releases stale reservations. Role: ADMIN.',
+  })
+  async reconcileRewards() {
+    await this.rewardRedemptionReconcileService.reconcilePending();
+    return { success: true, message: 'Reward reconciliation completed.' };
+  }
+
+  @Get('reconcile-rewards/process')
+  @Public()
+  @ApiOperation({
+    summary: 'Process pending reward redemptions via scheduled cron trigger',
+  })
+  async processScheduledRewardReconcile(@Query('secret') secret: string) {
+    const CRON_SECRET = process.env.CRON_SECRET;
+    if (!CRON_SECRET) {
+      throw new UnauthorizedException('CRON_SECRET is not configured');
+    }
+    if (secret !== CRON_SECRET) {
+      throw new UnauthorizedException('Invalid secret');
+    }
+    await this.rewardRedemptionReconcileService.reconcilePending();
+    return { success: true, message: 'Reward reconciliation completed.' };
   }
 }

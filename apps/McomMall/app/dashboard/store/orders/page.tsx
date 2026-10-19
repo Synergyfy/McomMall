@@ -59,6 +59,7 @@ type Order = {
   status: ActualOrderStatus;
   itemCount: number;
   total: number;
+  rewardDiscount: number;
   date: string;
   productName: string;
 };
@@ -143,6 +144,7 @@ export default function OrdersDashboard() {
         status,
         itemCount: order.items?.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0,
         total: parseFloat(order.total || '0'),
+        rewardDiscount: parseFloat(String(order.rewardDiscountApplied || '0')) || 0,
         date: order.createdAt,
         productName: order.items?.[0]?.product?.title || 'N/A',
       };
@@ -193,6 +195,7 @@ export default function OrdersDashboard() {
         Status: order.status,
         Items: order.itemCount,
         Total: order.total,
+        'Reward Discount': order.rewardDiscount,
         Date: order.date,
       }))
     );
@@ -234,6 +237,12 @@ export default function OrdersDashboard() {
               <p><strong>Product:</strong> {selectedOrder.productName}</p>
               <p><strong>Status:</strong> {selectedOrder.status}</p>
               <p><strong>Items:</strong> {selectedOrder.itemCount}</p>
+              {selectedOrder.rewardDiscount > 0 && (
+                <p className="text-green-700">
+                  <strong>MCOM Rewards discount:</strong> −£
+                  {selectedOrder.rewardDiscount.toFixed(2)}
+                </p>
+              )}
               <p><strong>Total:</strong> £{selectedOrder.total.toFixed(2)}</p>
               <p><strong>Date:</strong> {formatDate(selectedOrder.date).main}</p>
               {isMerchant && (
@@ -429,6 +438,7 @@ export default function OrdersDashboard() {
                     <TableHead>Product Name</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Items</TableHead>
+                    <TableHead>Rewards</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
@@ -438,7 +448,7 @@ export default function OrdersDashboard() {
                   {isLoading ? (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={9}
                         className="h-24 text-center block md:table-cell"
                       >
                         Loading...
@@ -502,6 +512,14 @@ export default function OrdersDashboard() {
                           {order.itemCount}
                         </TableCell>
                         <TableCell
+                          data-label="Rewards"
+                          className="responsive-cell font-medium text-green-700"
+                        >
+                          {order.rewardDiscount > 0
+                            ? `−£${order.rewardDiscount.toFixed(2)}`
+                            : '—'}
+                        </TableCell>
+                        <TableCell
                           data-label="Total"
                           className="responsive-cell font-medium text-gray-800"
                         >
@@ -528,7 +546,7 @@ export default function OrdersDashboard() {
                   ) : (
                     <TableRow className="block md:table-row">
                       <TableCell
-                        colSpan={8}
+                        colSpan={9}
                         className="h-24 text-center block md:table-cell text-gray-500"
                       >
                         No orders found.

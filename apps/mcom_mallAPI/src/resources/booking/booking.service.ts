@@ -52,6 +52,17 @@ import {
   TransactionType,
   TransactionStatus,
 } from './entities/booking-transaction.entity';
+import { BookingReward, BookingRewardStatus } from './entities/booking-reward.entity';
+import {
+  RewardOutboxOperation,
+  RewardOutboxStatus,
+  RewardRedemptionOutbox,
+} from '../order/entities/reward-redemption-outbox.entity';
+import { User } from '../users/entities/user.entity';
+import { RewardsClientService } from '../rewards-integration/rewards-client.service';
+import { RewardsEligibilityService } from '../rewards-integration/rewards-eligibility.service';
+import { EligibilityLine } from '../rewards-integration/interfaces/reward-issuance.interface';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class BookingService {
@@ -72,11 +83,19 @@ export class BookingService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Service)
     private readonly serviceRepository: Repository<Service>,
+    @InjectRepository(BookingReward)
+    private readonly bookingRewardRepository: Repository<BookingReward>,
+    @InjectRepository(RewardRedemptionOutbox)
+    private readonly rewardOutboxRepository: Repository<RewardRedemptionOutbox>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly emailService: EmailService,
+    private readonly rewardsClient: RewardsClientService,
+    private readonly rewardsEligibility: RewardsEligibilityService,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
   ) {}
@@ -875,6 +894,386 @@ export class BookingService {
     return this.priceModifierRepository.save(priceModifier);
   }
 
+  private toMoney(value: number): number {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+  }
+
+  /**
+   * Authoritative booking price from the service configuration. Used by both
+   * payment initiation and reward eligibility so both agree on the base.
+   */
+  private calculateBookingPricing(booking: ServiceBooking): {
+    totalAmount: number;
+    commissionAmount: number;
+    providerAmount: number;
+  } {
+    const service = booking.service;
+    let baseAmount = 0;
+    const pricingModel = service.pricingModel;
+
+    if (booking.tierId && service.tiers) {
+      const tier = service.tiers.find((t: any) => t.id === booking.tierId);
+      if (tier) baseAmount = Number(tier.price || 0);
+    } else if (booking.variantId && service.variants) {
+      const variant = service.variants.find(
+        (v: any) => v.id === booking.variantId,
+      );
+      if (variant) baseAmount = Number(variant.price || 0);
+    }
+
+    if (baseAmount === 0) {
+      if (pricingModel === 'fixed') {
+        baseAmount = Number(service.fixedPrice || 0);
+      } else if (pricingModel === 'perHour') {
+        baseAmount = Number(service.pricePerHour || 0);
+      } else if (pricingModel === 'perUnit') {
+        baseAmount = Number(service.pricePerUnit || 0);
+      }
+    }
+
+    let units = 1;
+    if (pricingModel === 'perHour') {
+      const durationHours =
+        (booking.endTime.getTime() - booking.startTime.getTime()) /
+        (1000 * 60 * 60);
+      units = Math.max(1, durationHours);
+    } else if (pricingModel === 'perUnit') {
+      units = booking.quantity || 1;
+    }
+
+    const calculatedBase = baseAmount * units;
+
+    let multiplier = 1;
+    let surcharge = 0;
+    const pricingRules = service.pricingRules;
+    if (pricingRules) {
+      const bookingDate = new Date(booking.startTime);
+      const isWeekend =
+        bookingDate.getDay() === 0 || bookingDate.getDay() === 6;
+      if (isWeekend && pricingRules.weekendMultiplier) {
+        multiplier = pricingRules.weekendMultiplier;
+      }
+      const startHour = bookingDate.getHours();
+      if ((startHour >= 18 || startHour < 7) && pricingRules.nightSurcharge) {
+        surcharge += Number(pricingRules.nightSurcharge);
+      }
+    }
+
+    let guestAmount = 0;
+    if (service.enableGuestPricing && service.guestPricingModel) {
+      const guests = booking.numberOfGuests || 1;
+      if (service.guestPricingModel === 'perGuest') {
+        guestAmount = Number(service.pricePerGuest || 0) * guests;
+      } else if (service.guestPricingModel === 'baseWithAdditional') {
+        const extraGuests = Math.max(0, guests - (service.baseGuests || 0));
+        guestAmount =
+          extraGuests * Number(service.additionalGuestPrice || 0);
+      }
+    }
+
+    let addonsAmount = 0;
+    if (booking.addonDetails && Array.isArray(booking.addonDetails)) {
+      addonsAmount = booking.addonDetails.reduce(
+        (sum, addon) => sum + Number(addon.price || 0),
+        0,
+      );
+    }
+
+    const bookingFee = Number(service.bookingFee || 0);
+    const travelFee =
+      (service.deliveryConfig?.mode === 'onsite'
+        ? service.deliveryConfig?.travelFee
+        : 0) || 0;
+
+    const totalAmount = this.toMoney(
+      calculatedBase * multiplier +
+        guestAmount +
+        addonsAmount +
+        surcharge +
+        bookingFee +
+        Number(travelFee),
+    );
+
+    if (totalAmount <= 0) {
+      throw new BadRequestException(
+        'Total booking amount must be greater than zero.',
+      );
+    }
+
+    const commissionRate = 0.1;
+    const commissionAmount = this.toMoney(totalAmount * commissionRate);
+    const providerAmount = this.toMoney(totalAmount - commissionAmount);
+    return { totalAmount, commissionAmount, providerAmount };
+  }
+
+  /** Rewards a shopper can apply to a specific booking. */
+  async getEligibleBookingRewards(bookingId: string, userId: string) {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId, user: { id: userId } },
+      relations: ['service', 'service.business', 'service.business.user'],
+    });
+    if (!booking) throw new NotFoundException('Booking not found.');
+
+    const pricing = this.calculateBookingPricing(booking);
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'centralUserId'],
+    });
+
+    let rewards: any[] = [];
+    let degraded = false;
+    if (this.rewardsClient.isEnabled() && user?.centralUserId) {
+      const result = await this.rewardsClient.tryListUserIssuances(
+        user.centralUserId,
+        { status: 'ISSUED', limit: 100 },
+      );
+      if (result) {
+        const line: EligibilityLine = {
+          lineKey: `service:${booking.service.id}`,
+          kind: 'SERVICE',
+          id: booking.service.id,
+          businessId: booking.service.business?.id,
+          businessMcomUserId:
+            booking.service.business?.user?.centralUserId ?? undefined,
+          unitPrice: pricing.totalAmount,
+          quantity: 1,
+        };
+        rewards = this.rewardsEligibility.evaluate(result.data, [line]);
+      } else {
+        degraded = true;
+      }
+    }
+
+    return {
+      meshEnabled: this.rewardsClient.isEnabled(),
+      degraded,
+      totalAmount: pricing.totalAmount,
+      rewardDiscountApplied: Number(booking.rewardDiscountApplied || 0),
+      rewards,
+    };
+  }
+
+  /**
+   * Reserve a reward for this booking (or release a previous reservation when
+   * the caller switches/removes the reward). Returns the discount amount.
+   */
+  private async applyBookingReward(
+    booking: ServiceBooking,
+    userId: string,
+    totalAmount: number,
+    issuanceId?: string,
+  ): Promise<number> {
+    if (!issuanceId) {
+      await this.releasePendingBookingRewards(
+        booking.id,
+        'booking_payment_reinitiated',
+      );
+      return 0;
+    }
+
+    if (!this.rewardsClient.isEnabled()) {
+      throw new BadRequestException(
+        'Reward redemption is not available right now. Please try again later.',
+      );
+    }
+
+    const committed = await this.bookingRewardRepository.findOne({
+      where: {
+        bookingId: booking.id,
+        status: BookingRewardStatus.COMMITTED,
+      },
+    });
+    if (committed) {
+      throw new BadRequestException(
+        'A reward has already been applied to this booking.',
+      );
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'centralUserId'],
+    });
+    if (!user?.centralUserId) {
+      throw new BadRequestException(
+        'Link your MCOM account (SSO) to use earned rewards.',
+      );
+    }
+
+    let issuances;
+    try {
+      const result = await this.rewardsClient.listUserIssuances(
+        user.centralUserId,
+        { status: 'ISSUED', limit: 100 },
+      );
+      issuances = result.data;
+    } catch {
+      throw new BadRequestException(
+        'Could not verify your rewards with MCOM Rewards. Please try again.',
+      );
+    }
+
+    const line: EligibilityLine = {
+      lineKey: `service:${booking.service.id}`,
+      kind: 'SERVICE',
+      id: booking.service.id,
+      businessId: booking.service.business?.id,
+      businessMcomUserId:
+        booking.service.business?.user?.centralUserId ?? undefined,
+      unitPrice: totalAmount,
+      quantity: 1,
+    };
+    const eligible = this.rewardsEligibility.evaluate(issuances, [line]);
+    const reward = eligible.find((r) => r.issuanceId === issuanceId);
+    const match = reward?.applicableLines.find(
+      (l) => l.lineKey === line.lineKey,
+    );
+    if (!match) {
+      throw new BadRequestException(
+        'The selected reward does not apply to this booking.',
+      );
+    }
+
+    const discount = this.toMoney(Math.min(match.discountAmount, totalAmount));
+
+    // Reuse an existing reservation for the same issuance (e.g. switching
+    // Stripe ↔ PayPal) instead of releasing and re-reserving it.
+    const existingReservation = await this.bookingRewardRepository.findOne({
+      where: {
+        bookingId: booking.id,
+        rewardIssuanceId: issuanceId,
+        status: BookingRewardStatus.RESERVED,
+      },
+    });
+    if (
+      existingReservation &&
+      this.toMoney(Number(existingReservation.discountAmount)) === discount
+    ) {
+      return discount;
+    }
+
+    // Switching rewards/amounts: release the previous reservation first.
+    await this.releasePendingBookingRewards(
+      booking.id,
+      'booking_reward_changed',
+    );
+
+    const reservationRef = `booking:${booking.id}:${randomUUID()}`;
+    try {
+      await this.rewardsClient.reserveIssuance(issuanceId, {
+        orderRef: reservationRef,
+        idempotencyKey: `${reservationRef}:${issuanceId}`,
+        metadata: { bookingId: booking.id, discountAmount: discount },
+      });
+    } catch (err: any) {
+      throw new BadRequestException(
+        `Could not reserve reward: ${err?.message || err}`,
+      );
+    }
+
+    const issuance = issuances.find((i) => i.id === issuanceId);
+    const row = this.bookingRewardRepository.create({
+      booking: { id: booking.id } as ServiceBooking,
+      bookingId: booking.id,
+      rewardIssuanceId: issuanceId,
+      issuerClientId: issuance?.issuerClientId,
+      rewardType: issuance?.rewardType ?? undefined,
+      discountAmount: discount,
+      status: BookingRewardStatus.RESERVED,
+      reservationRef,
+      metadata: { code: issuance?.code ?? null },
+    });
+    await this.bookingRewardRepository.save(row);
+    return discount;
+  }
+
+  private async releasePendingBookingRewards(
+    bookingId: string,
+    reason: string,
+  ): Promise<void> {
+    const rows = await this.bookingRewardRepository.find({
+      where: { bookingId, status: BookingRewardStatus.RESERVED },
+    });
+    for (const row of rows) {
+      try {
+        if (this.rewardsClient.isEnabled()) {
+          await this.rewardsClient.releaseIssuance(row.rewardIssuanceId, {
+            orderRef: row.reservationRef || `booking:${bookingId}`,
+            reason,
+          });
+        }
+        row.status = BookingRewardStatus.RELEASED;
+        row.releasedAt = new Date();
+        await this.bookingRewardRepository.save(row);
+      } catch (err: any) {
+        this.logger.warn(
+          `[booking] failed to release reward ${row.rewardIssuanceId}: ${err?.message || err}`,
+        );
+        await this.enqueueBookingRewardOutbox(
+          RewardOutboxOperation.RELEASE,
+          row,
+          String(err?.message || err),
+        );
+      }
+    }
+  }
+
+  private async commitBookingReward(booking: ServiceBooking): Promise<void> {
+    const row = await this.bookingRewardRepository.findOne({
+      where: { bookingId: booking.id, status: BookingRewardStatus.RESERVED },
+    });
+    if (!row) return;
+
+    try {
+      await this.rewardsClient.commitIssuance(row.rewardIssuanceId, {
+        orderRef: row.reservationRef || `booking:${booking.id}`,
+      });
+      row.status = BookingRewardStatus.COMMITTED;
+      row.committedAt = new Date();
+      await this.bookingRewardRepository.save(row);
+    } catch (err: any) {
+      this.logger.error(
+        `[booking] reward commit failed for ${row.rewardIssuanceId} — queued`,
+        err,
+      );
+      await this.enqueueBookingRewardOutbox(
+        RewardOutboxOperation.COMMIT,
+        row,
+        String(err?.message || err),
+      );
+    }
+  }
+
+  private async enqueueBookingRewardOutbox(
+    operation: RewardOutboxOperation,
+    row: BookingReward,
+    failureReason: string,
+  ): Promise<void> {
+    try {
+      const idempotencyKey = `${operation}:booking:${row.bookingId}:${row.rewardIssuanceId}`;
+      const existing = await this.rewardOutboxRepository.findOne({
+        where: { idempotencyKey },
+      });
+      if (existing) return;
+      await this.rewardOutboxRepository.save(
+        this.rewardOutboxRepository.create({
+          rewardIssuanceId: row.rewardIssuanceId,
+          orderId: `booking:${row.bookingId}`,
+          reservationRef: row.reservationRef,
+          operation,
+          idempotencyKey,
+          failureReason: failureReason?.slice(0, 2000),
+          status: RewardOutboxStatus.PENDING,
+          metadata: { bookingId: row.bookingId },
+        }),
+      );
+    } catch (err) {
+      this.logger.error(
+        `[booking] failed to persist reward outbox for ${row.rewardIssuanceId}`,
+        err,
+      );
+    }
+  }
+
   async initiatePayment(
     initiateDto: InitiateBookingPaymentDto,
     userId: string,
@@ -883,6 +1282,8 @@ export class BookingService {
     orderId?: string;
     provider: PaymentMethod;
     amount: number;
+    rewardDiscount?: number;
+    totalAmount?: number;
   }> {
     const { bookingId, paymentProvider } = initiateDto;
 
@@ -907,125 +1308,28 @@ export class BookingService {
       );
     }
 
-    // Calculate amounts based on actual service configuration
-    let baseAmount = 0;
-    const pricingModel = booking.service.pricingModel;
+    const pricing = this.calculateBookingPricing(booking);
+    const totalAmount = pricing.totalAmount;
 
-    // 1. Base Price Selection (Tier/Variant or Default)
-    if (booking.tierId && booking.service.tiers) {
-      const tier = booking.service.tiers.find(
-        (t: any) => t.id === booking.tierId,
-      );
-      if (tier) baseAmount = Number(tier.price || 0);
-    } else if (booking.variantId && booking.service.variants) {
-      const variant = booking.service.variants.find(
-        (v: any) => v.id === booking.variantId,
-      );
-      if (variant) baseAmount = Number(variant.price || 0);
-    }
-
-    if (baseAmount === 0) {
-      if (pricingModel === 'fixed') {
-        baseAmount = Number(booking.service.fixedPrice || 0);
-      } else if (pricingModel === 'perHour') {
-        baseAmount = Number(booking.service.pricePerHour || 0);
-      } else if (pricingModel === 'perUnit') {
-        baseAmount = Number(booking.service.pricePerUnit || 0);
-      }
-    }
-
-    // 2. Duration/Quantity Multiplier
-    let units = 1;
-    if (pricingModel === 'perHour') {
-      const durationHours =
-        (booking.endTime.getTime() - booking.startTime.getTime()) /
-        (1000 * 60 * 60);
-      units = Math.max(1, durationHours);
-    } else if (pricingModel === 'perUnit') {
-      units = booking.quantity || 1;
-    }
-
-    const calculatedBase = baseAmount * units;
-
-    // 3. Apply Pricing Rules (Weekend / Night)
-    let multiplier = 1;
-    let surcharge = 0;
-    const pricingRules = booking.service.pricingRules;
-
-    if (pricingRules) {
-      const bookingDate = new Date(booking.startTime);
-      const isWeekend =
-        bookingDate.getDay() === 0 || bookingDate.getDay() === 6;
-      if (isWeekend && pricingRules.weekendMultiplier) {
-        multiplier = pricingRules.weekendMultiplier;
-      }
-
-      const startHour = bookingDate.getHours();
-      if ((startHour >= 18 || startHour < 7) && pricingRules.nightSurcharge) {
-        surcharge += Number(pricingRules.nightSurcharge);
-      }
-    }
-
-    // 4. Guest Pricing
-    let guestAmount = 0;
-    if (
-      booking.service.enableGuestPricing &&
-      booking.service.guestPricingModel
-    ) {
-      const guests = booking.numberOfGuests || 1;
-      if (booking.service.guestPricingModel === 'perGuest') {
-        guestAmount = Number(booking.service.pricePerGuest || 0) * guests;
-      } else if (booking.service.guestPricingModel === 'baseWithAdditional') {
-        const extraGuests = Math.max(
-          0,
-          guests - (booking.service.baseGuests || 0),
-        );
-        guestAmount =
-          extraGuests * Number(booking.service.additionalGuestPrice || 0);
-      }
-    }
-
-    // 5. Addons Pricing
-    let addonsAmount = 0;
-    if (booking.addonDetails && Array.isArray(booking.addonDetails)) {
-      addonsAmount = booking.addonDetails.reduce(
-        (sum, addon) => sum + Number(addon.price || 0),
-        0,
-      );
-    }
-
-    const bookingFee = Number(booking.service.bookingFee || 0);
-    const travelFee =
-      (booking.service.deliveryConfig?.mode === 'onsite'
-        ? booking.service.deliveryConfig?.travelFee
-        : 0) || 0;
-
-    const totalAmount =
-      calculatedBase * multiplier +
-      guestAmount +
-      addonsAmount +
-      surcharge +
-      bookingFee +
-      Number(travelFee);
-
-    if (totalAmount <= 0) {
+    // --- MCOM Rewards discount for this booking ---
+    const rewardDiscount = await this.applyBookingReward(
+      booking,
+      userId,
+      totalAmount,
+      initiateDto.rewardIssuanceId,
+    );
+    const payableAmount = this.toMoney(totalAmount - rewardDiscount);
+    if (payableAmount <= 0) {
       throw new BadRequestException(
-        'Total booking amount must be greater than zero.',
+        'This reward covers the full booking value. Full-value reward redemptions are not supported in the payment flow yet.',
       );
     }
-
-    const commissionRate = 0.1; // 10% commission
-    const commissionAmount = parseFloat(
-      (totalAmount * commissionRate).toFixed(2),
-    );
-    const providerAmount = parseFloat(
-      (totalAmount - commissionAmount).toFixed(2),
-    );
-    const currency = 'GBP';
 
     booking.totalAmount = totalAmount;
-    booking.commissionAmount = commissionAmount;
-    booking.providerAmount = providerAmount;
+    booking.commissionAmount = pricing.commissionAmount;
+    booking.providerAmount = pricing.providerAmount;
+    booking.rewardDiscountApplied = rewardDiscount;
+    const currency = 'GBP';
 
     if (paymentProvider === PaymentMethod.STRIPE) {
       // Check if we already have a valid intent for this booking
@@ -1037,7 +1341,7 @@ export class BookingService {
           const existingIntent =
             await this.paymentProviderService.verifyStripePaymentIntent(
               booking.paymentIntentId,
-              totalAmount,
+              payableAmount,
               currency,
             );
           // If it's already succeeded or still processing, we can return it (though succeeded should be handled by verify)
@@ -1048,7 +1352,7 @@ export class BookingService {
             return {
               clientSecret: (existingIntent.details as any).client_secret,
               provider: PaymentMethod.STRIPE,
-              amount: totalAmount,
+              amount: payableAmount,
             };
           }
         } catch (_e) {
@@ -1058,7 +1362,7 @@ export class BookingService {
 
       const paymentIntent =
         await this.paymentProviderService.createStripePaymentIntent(
-          totalAmount,
+          payableAmount,
           currency,
           { bookingId: booking.id },
         );
@@ -1068,12 +1372,14 @@ export class BookingService {
       return {
         clientSecret: paymentIntent.client_secret,
         provider: PaymentMethod.STRIPE,
-        amount: totalAmount,
+        amount: payableAmount,
+        rewardDiscount,
+        totalAmount,
       };
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       // For PayPal, we usually create a new order unless we want to track capture state
       const order = await this.paymentProviderService.createPaypalOrder(
-        totalAmount,
+        payableAmount,
         currency,
         { bookingId: booking.id },
       );
@@ -1083,7 +1389,9 @@ export class BookingService {
       return {
         orderId: order.id,
         provider: PaymentMethod.PAYPAL,
-        amount: totalAmount,
+        amount: payableAmount,
+        rewardDiscount,
+        totalAmount,
       };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
@@ -1124,6 +1432,17 @@ export class BookingService {
       );
     }
 
+    // Server-side amount check: the client must pay the post-reward total.
+    const expectedAmount = this.toMoney(
+      Number(booking.totalAmount || 0) -
+        Number(booking.rewardDiscountApplied || 0),
+    );
+    if (expectedAmount > 0 && Math.abs(Number(amount) - expectedAmount) > 0.01) {
+      throw new BadRequestException(
+        `The payment amount (${amount}) does not match the expected total (${expectedAmount}).`,
+      );
+    }
+
     if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
@@ -1149,7 +1468,7 @@ export class BookingService {
     }
 
     try {
-      return await this.dataSource.transaction(async (manager) => {
+      const confirmedBooking = await this.dataSource.transaction(async (manager) => {
         const paymentRepo = manager.getRepository(ServicePayment);
         const transactionRepo = manager.getRepository(BookingTransaction);
 
@@ -1238,10 +1557,17 @@ export class BookingService {
 
         return booking;
       });
+
+      await this.commitBookingReward(confirmedBooking);
+      return confirmedBooking;
     } catch (dbErr) {
       this.logger.error(
         `Database transaction failed for booking ${bookingId} after payment was verified/captured. Initiating compensating refund.`,
         dbErr,
+      );
+      await this.releasePendingBookingRewards(
+        bookingId,
+        'booking_payment_failed',
       );
       try {
         if (paymentProvider === PaymentMethod.STRIPE) {

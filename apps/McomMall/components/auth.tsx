@@ -538,7 +538,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                       className="w-full h-11 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2.5 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
                     >
                       <LogIn className="w-4 h-4 shrink-0" />
-                      Sign In with MCOM Solutions
+                      Sign In with Central Hub Solution
                     </button>
 
                     <div className="text-center mt-4">
@@ -575,7 +575,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                                className="w-full h-11 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2.5 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
                              >
                                <UserPlus className="w-4 h-4 shrink-0" />
-                               Sign Up with MCOM Solutions
+                               Sign Up with Central Hub Solution
                              </button>
 
                              <div className="text-center mt-2">

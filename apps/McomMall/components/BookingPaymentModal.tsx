@@ -9,10 +9,14 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { CreditCard, Wallet, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { CreditCard, Wallet, Loader2, ShieldCheck, AlertCircle, Sparkles } from 'lucide-react';
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
-import { useInitiatePayment, useVerifyPayment } from '@/service/bookings/hook';
+import {
+  useInitiatePayment,
+  useVerifyPayment,
+  useGetEligibleBookingRewards,
+} from '@/service/bookings/hook';
 import { PaymentMethod } from '@/service/bookings/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookingSuccessModal } from './BookingSuccessModal';
@@ -36,17 +40,22 @@ export default function BookingPaymentModal({
   const [clientSecret, setClientSecret] = useState<string | undefined>();
   const [orderID, setOrderID] = useState<string | undefined>();
   const [amount, setAmount] = useState<number>(0);
+  const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [rewardDiscount, setRewardDiscount] = useState<number>(0);
+  const [rewardIssuanceId, setRewardIssuanceId] = useState<string | undefined>();
   const [isVerifying, setIsVerifying] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const initiatePaymentMutation = useInitiatePayment();
   const verifyPaymentMutation = useVerifyPayment();
+  const { data: rewardData, isLoading: rewardsLoading } =
+    useGetEligibleBookingRewards(bookingId, isOpen);
 
   useEffect(() => {
     if (isOpen && bookingId && !clientSecret && !orderID && !initiatePaymentMutation.isPending) {
       handleInitiatePayment(paymentMethod);
     }
-  }, [isOpen, bookingId, paymentMethod, clientSecret, orderID]);
+  }, [isOpen, bookingId, paymentMethod, clientSecret, orderID, rewardIssuanceId]);
 
   // Reset when method changes to allow switching between Stripe/PayPal
   const switchMethod = (method: PaymentMethod) => {
@@ -57,15 +66,27 @@ export default function BookingPaymentModal({
     }
   };
 
+  const handleRewardChange = (value: string) => {
+    const next = value || undefined;
+    if (next === rewardIssuanceId) return;
+    setRewardIssuanceId(next);
+    // Force a fresh payment intent for the new amount.
+    setClientSecret(undefined);
+    setOrderID(undefined);
+  };
+
   const handleInitiatePayment = async (method: PaymentMethod) => {
     try {
       const provider = method === PaymentMethod.STRIPE ? 'stripe' : 'paypal';
       const response = await initiatePaymentMutation.mutateAsync({
         bookingId,
         paymentProvider: provider,
+        rewardIssuanceId,
       });
 
       setAmount(response.amount);
+      setTotalAmount(response.totalAmount ?? response.amount);
+      setRewardDiscount(response.rewardDiscount ?? 0);
       if (method === PaymentMethod.STRIPE) {
         setClientSecret(response.clientSecret);
       } else {
@@ -164,8 +185,44 @@ export default function BookingPaymentModal({
                 </DialogHeader>
 
                 <div className="space-y-8">
+                    {/* Rewards */}
+                    {rewardData?.rewards?.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
+                          <Sparkles className="h-4 w-4 text-orange-500" />
+                          Apply a reward
+                        </label>
+                        <select
+                          value={rewardIssuanceId || ''}
+                          onChange={(e) => handleRewardChange(e.target.value)}
+                          disabled={rewardsLoading}
+                          className="w-full h-12 rounded-2xl border-2 border-slate-100 bg-white px-4 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-400"
+                        >
+                          <option value="">No reward</option>
+                          {rewardData.rewards.map((reward: any) => {
+                            const discount =
+                              reward.applicableLines?.[0]?.discountAmount ?? 0;
+                            return (
+                              <option
+                                key={reward.issuanceId}
+                                value={reward.issuanceId}
+                              >
+                                {reward.rewardTitle} (−
+                                {new Intl.NumberFormat('en-GB', {
+                                  style: 'currency',
+                                  currency: 'GBP',
+                                }).format(discount)}
+                                )
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    )}
+
                     {/* Amount Summary */}
-                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm">
+                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-1">
+                    <div className="flex justify-between items-center">
                     <span className="text-slate-500 font-bold uppercase tracking-wider text-xs">Total to Pay</span>
                     <span className="text-3xl font-black text-orange-600">
                         {new Intl.NumberFormat('en-GB', {
@@ -173,6 +230,27 @@ export default function BookingPaymentModal({
                         currency: 'GBP',
                         }).format(amount)}
                     </span>
+                    </div>
+                    {rewardDiscount > 0 && (
+                      <div className="flex justify-between items-center text-xs font-semibold text-green-600">
+                        <span>
+                          Reward discount
+                          {totalAmount > 0
+                            ? ` (booking ${new Intl.NumberFormat('en-GB', {
+                                style: 'currency',
+                                currency: 'GBP',
+                              }).format(totalAmount)})`
+                            : ''}
+                        </span>
+                        <span>
+                          −
+                          {new Intl.NumberFormat('en-GB', {
+                            style: 'currency',
+                            currency: 'GBP',
+                          }).format(rewardDiscount)}
+                        </span>
+                      </div>
+                    )}
                     </div>
 
                     {/* Method Selection */}

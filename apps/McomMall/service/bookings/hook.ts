@@ -49,8 +49,14 @@ const cancelBooking = async (bookingId: string): Promise<Booking> => {
 const initiatePayment = async (payload: {
   bookingId: string;
   paymentProvider: 'stripe' | 'paypal';
+  rewardIssuanceId?: string;
 }) => {
   const { data } = await api.post('/bookings/initiate-payment', payload);
+  return data;
+};
+
+const getEligibleBookingRewards = async (bookingId: string) => {
+  const { data } = await api.get(`/bookings/${bookingId}/rewards/eligible`);
   return data;
 };
 
@@ -172,6 +178,18 @@ export const useInitiatePayment = () => {
       const errorMessage = error?.response?.data?.message || 'Failed to initiate payment. Please try again.';
       toast.error(errorMessage);
     },
+  });
+};
+
+export const useGetEligibleBookingRewards = (
+  bookingId?: string | null,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: ['booking-rewards', bookingId],
+    queryFn: () => getEligibleBookingRewards(bookingId as string),
+    enabled: Boolean(bookingId) && enabled,
+    staleTime: 30_000,
   });
 };
 

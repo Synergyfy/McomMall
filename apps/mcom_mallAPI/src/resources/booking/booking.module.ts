@@ -15,7 +15,11 @@ import { RentalBooking } from './entities/rental-booking.entity';
 import { ServiceBooking } from './entities/service-booking.entity';
 import { ServicePayment } from './entities/service-payment.entity';
 import { BookingTransaction } from './entities/booking-transaction.entity';
+import { BookingReward } from './entities/booking-reward.entity';
+import { RewardRedemptionOutbox } from '../order/entities/reward-redemption-outbox.entity';
+import { User } from '../users/entities/user.entity';
 import { IntegrationSetting } from '../settings/entities/integration-setting.entity';
+import { RewardsIntegrationModule } from '../rewards-integration/rewards-integration.module';
 
 @Module({
   imports: [
@@ -29,12 +33,16 @@ import { IntegrationSetting } from '../settings/entities/integration-setting.ent
       Service,
       BookingTransaction,
       IntegrationSetting,
+      BookingReward,
+      RewardRedemptionOutbox,
+      User,
     ]),
 
     NotificationModule,
     PaymentsModule,
     EmailModule,
     forwardRef(() => WalletModule),
+    forwardRef(() => RewardsIntegrationModule),
   ],
   controllers: [BookingController],
   providers: [BookingService],

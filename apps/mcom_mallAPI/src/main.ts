@@ -65,27 +65,33 @@ async function configureApp(app: any) {
     new CamelCaseInterceptor(),
   );
 
-  const config = new DocumentBuilder()
-    .setTitle('McomMall API')
-    .setDescription('API documentation for Mcomall')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  // Swagger document generation reflects over the entire application (every
+  // controller and DTO) and is memory/latency heavy for an app this size. It is
+  // opt-in so it never bloats the dev server or serverless boot by default.
+  // Enable with ENABLE_SWAGGER=true when /api-docs is needed.
+  if (process.env.ENABLE_SWAGGER === 'true') {
+    const config = new DocumentBuilder()
+      .setTitle('McomMall API')
+      .setDescription('API documentation for Mcomall')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('/api-docs', app, document, {
-    customfavIcon:
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/favicon-16x16.png',
-    customCssUrl:
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css',
-    customJs: [
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js',
-    ],
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('/api-docs', app, document, {
+      customfavIcon:
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/favicon-16x16.png',
+      customCssUrl:
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css',
+      customJs: [
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js',
+      ],
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    });
+  }
 }
 
 // 2. Local Development Bootstrap

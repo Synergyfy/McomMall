@@ -9,6 +9,7 @@ import {
 import VariantManager from '../../components/VariantManager';
 import SizeGuideBuilder from '../../components/SizeGuideBuilder';
 import { useForm, FormProvider } from 'react-hook-form';
+import { FieldError } from '@/lib/form-validation';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -17,9 +18,10 @@ interface Step3Props {
     updateFormData: (data: any) => void;
     onNext: () => void;
     onBack: () => void;
+    errors?: Record<string, string>;
 }
 
-export default function Step3PricingInventory({ formData, updateFormData, onNext, onBack }: Step3Props) {
+export default function Step3PricingInventory({ formData, updateFormData, onNext, onBack, errors }: Step3Props) {
     // Initialize RHF for VariantManager compatibility
     const methods = useForm({
         defaultValues: {
@@ -197,6 +199,12 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                 <span className="text-xs font-bold text-[#f48c25]">Yes</span>
                             </div>
                         </div>
+                        {(errors?.attributes || errors?.variations) && (
+                            <div className="flex flex-col gap-1">
+                                <FieldError message={errors?.attributes} />
+                                <FieldError message={errors?.variations} />
+                            </div>
+                        )}
                     </section>
 
                     {hasVariants ? (
@@ -313,6 +321,8 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                 </div>
                             </div>
                         </div>
+
+                        <FieldError message={errors?.regular_price} />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                             <div className="flex flex-col gap-2">

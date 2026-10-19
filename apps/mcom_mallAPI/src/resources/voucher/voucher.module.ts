@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { VoucherConsumerController } from './voucher-consumer.controller';
 import { VoucherBusinessController } from './voucher-business.controller';
 import { VoucherAdminController } from './voucher-admin.controller';
-import { SystemVoucherController } from './system-voucher.controller';
 import { Voucher } from './entities/voucher.entity';
 import { VoucherProduct } from './entities/voucher-product.entity';
 import { VoucherTransaction } from './entities/voucher-transaction.entity';
@@ -35,7 +34,6 @@ import { DigitalValueModule } from '../digital-value/digital-value.module';
     VoucherConsumerController,
     VoucherBusinessController,
     VoucherAdminController,
-    SystemVoucherController,
   ],
   providers: [VoucherService],
   exports: [VoucherService],
