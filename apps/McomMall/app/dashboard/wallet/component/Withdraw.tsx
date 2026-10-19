@@ -174,9 +174,18 @@ import { ExternalLink } from 'lucide-react';
 export default function WithdrawPage({ onBack }: { onBack: () => void }) {
   const { data: walletData } = useWallet();
 
-  const balance =
+  const rawBalance =
     walletData?.centralWallet?.availableBalance ??
-    parseFloat(String(walletData?.wallet?.spendableBalance || walletData?.wallet?.earningsBalance || 0));
+    walletData?.wallet?.spendableBalance ??
+    walletData?.wallet?.earningsBalance;
+  const parsedBalance =
+    rawBalance === null || rawBalance === undefined || rawBalance === ''
+      ? null
+      : Number(rawBalance);
+  const balance =
+    parsedBalance !== null && Number.isFinite(parsedBalance)
+      ? parsedBalance
+      : null;
   const currencySymbol = walletData?.centralWallet?.currency || 'MCOM';
   const minimumWithdrawal = 10.0;
   const centralPortalUrl =
@@ -240,7 +249,13 @@ export default function WithdrawPage({ onBack }: { onBack: () => void }) {
                   <p className="text-gray-600 text-sm">
                     Available Balance:{' '}
                     <span className="font-extrabold text-2xl text-gray-900">
-                      {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                      {balance !== null
+                        ? balance.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : '—'}{' '}
+                      {currencySymbol}
                     </span>
                   </p>
                   <p className="text-xs text-gray-500 mt-1">

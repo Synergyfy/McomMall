@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
@@ -31,10 +32,15 @@ import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Withdrawal, WithdrawalStatus } from './entities/withdrawal.entity';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 
-import { McomWalletService } from '../payments/services/mcom-wallet.service';
+import {
+  McomWalletError,
+  McomWalletService,
+} from '../payments/services/mcom-wallet.service';
 
 @Injectable()
 export class WalletService {
+  private readonly logger = new Logger(WalletService.name);
+
   constructor(
     @InjectRepository(Wallet)
     private readonly walletRepository: Repository<Wallet>,
@@ -169,107 +175,192 @@ export class WalletService {
     });
   }
 
-  async getWalletDetails(userId: string): Promise<any> {
+  /**
+   * Returns the wallet shown on the dashboard.
+   *
+   * The MCOM Central wallet is the single source of truth. Balance reads are
+   * intentionally NOT gated by MCOM_WALLET_ENABLED: that flag only controls
+   * whether new wallet payments (holds/debits) are allowed. A misconfigured
+   * flag must never make an existing balance look like zero.
+   */
+  async getWalletDetails(
+    userId: string,
+    centralUserIdHint?: string,
+  ): Promise<any> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
     });
 
     const topUpUrl = this.mcomWalletService.getTopUpUrl();
-    const centralUserId = user?.centralUserId;
+    const walletEnabled = this.mcomWalletService.isEnabled();
+    const centralUserId =
+      user?.centralUserId || centralUserIdHint || null;
 
-    if (centralUserId && this.mcomWalletService.isEnabled()) {
-      try {
-        const [centralBalance, centralTxns] = await Promise.all([
-          this.mcomWalletService.getBalance(centralUserId),
-          this.mcomWalletService.getTransactions(centralUserId, { limit: 50 }).catch(() => ({ data: [] })),
-        ]);
-
-        if (centralBalance && centralBalance.success) {
-          const transactions = (centralTxns?.data || []).map((tx: any) => ({
-            id: tx.id,
-            createdAt: tx.createdAt,
-            updatedAt: tx.createdAt,
-            deletedAt: null,
-            amount: String(tx.amount),
-            type: tx.category || tx.type,
-            description: tx.description || `${tx.type} (${tx.category || 'MCOM'})`,
-            balanceAfter: String(tx.balanceAfter ?? tx.amount),
-            reference: tx.reference,
-            status: tx.status,
-          }));
-
-          return {
-            success: true,
-            balance: centralBalance.balance,
-            availableBalance: centralBalance.availableBalance,
-            currency: centralBalance.currency || 'MCOM',
-            status: centralBalance.status,
-            centralUserId,
-            topUpUrl,
-            transactionHistory: transactions,
-            centralWallet: {
-              enabled: true,
-              linked: true,
-              centralUserId,
-              balance: centralBalance.balance,
-              availableBalance: centralBalance.availableBalance,
-              currency: centralBalance.currency || 'MCOM',
-              status: centralBalance.status,
-              topUpUrl,
-            },
-            wallet: {
-              id: user?.id || userId,
-              balance: String(centralBalance.balance),
-              spendableBalance: String(centralBalance.availableBalance),
-              earningsBalance: '0',
-              pendingBalance: '0',
-              earningsFromOrders: '0',
-              earningsFromGiftCard: '0',
-              earningsFromVoucher: '0',
-              earningsFromCoupons: '0',
-              earningsFromBookings: '0',
-              currency: centralBalance.currency || 'MCOM',
-              status: centralBalance.status,
-            },
-          };
-        }
-      } catch (err) {
-        // Fall through to unlinked / fallback state
-      }
-    }
-
-    return {
-      success: false,
-      balance: 0,
-      availableBalance: 0,
+    const emptyWallet = (status: string) => ({
+      id: user?.id || userId,
+      balance: null,
+      spendableBalance: null,
+      earningsBalance: '0',
+      pendingBalance: '0',
+      earningsFromOrders: '0',
+      earningsFromGiftCard: '0',
+      earningsFromVoucher: '0',
+      earningsFromCoupons: '0',
+      earningsFromBookings: '0',
       currency: 'MCOM',
-      status: 'UNLINKED',
-      centralUserId: centralUserId || null,
-      topUpUrl,
-      transactionHistory: [],
-      centralWallet: {
-        enabled: this.mcomWalletService.isEnabled(),
-        linked: Boolean(centralUserId),
-        centralUserId: centralUserId || null,
-        message: centralUserId
-          ? 'Connecting to central wallet...'
-          : 'Please log in via MCOM SSO to link your central wallet.',
-        topUpUrl,
-      },
-      wallet: {
-        id: user?.id || userId,
-        balance: '0',
-        spendableBalance: '0',
-        earningsBalance: '0',
-        pendingBalance: '0',
-        earningsFromOrders: '0',
-        earningsFromGiftCard: '0',
-        earningsFromVoucher: '0',
-        earningsFromCoupons: '0',
-        earningsFromBookings: '0',
+      status,
+    });
+
+    if (!centralUserId) {
+      return {
+        success: false,
+        balance: null,
+        availableBalance: null,
         currency: 'MCOM',
         status: 'UNLINKED',
-      },
+        centralUserId: null,
+        topUpUrl,
+        transactionHistory: [],
+        lastSyncedAt: null,
+        errorCode: 'WALLET_NOT_LINKED',
+        message:
+          'MCOM Wallet is not linked. Please log in via MCOM SSO to link your central wallet.',
+        centralWallet: {
+          enabled: walletEnabled,
+          linked: false,
+          centralUserId: null,
+          message:
+            'Please log in via MCOM SSO to link your central wallet.',
+          topUpUrl,
+        },
+        wallet: emptyWallet('UNLINKED'),
+      };
+    }
+
+    try {
+      const centralBalance =
+        await this.mcomWalletService.getBalance(centralUserId);
+
+      if (!centralBalance || centralBalance.success !== true) {
+        throw new McomWalletError(
+          'WALLET_BALANCE_UNAVAILABLE',
+          'MCOM Central returned an unsuccessful balance response.',
+          502,
+        );
+      }
+
+      let transactions: any[] = [];
+      let transactionHistoryError: string | undefined;
+      try {
+        const centralTxns = await this.mcomWalletService.getTransactions(
+          centralUserId,
+          { limit: 50 },
+        );
+        transactions = (centralTxns?.data || []).map((tx: any) => ({
+          id: tx.id,
+          createdAt: tx.createdAt,
+          updatedAt: tx.createdAt,
+          deletedAt: null,
+          amount: String(tx.amount),
+          type: tx.category || tx.type,
+          description:
+            tx.description || `${tx.type} (${tx.category || 'MCOM'})`,
+          balanceAfter: String(tx.balanceAfter ?? tx.amount),
+          reference: tx.reference,
+          status: tx.status,
+        }));
+      } catch (err) {
+        transactionHistoryError = this.describeWalletError(err).message;
+        this.logger.warn(
+          `Could not load wallet transactions for user ${userId} ` +
+            `(centralUserId=${centralUserId}): ${transactionHistoryError}`,
+        );
+      }
+
+      const currency = centralBalance.currency || 'MCOM';
+
+      return {
+        success: true,
+        balance: centralBalance.balance,
+        availableBalance: centralBalance.availableBalance,
+        currency,
+        status: centralBalance.status,
+        centralUserId,
+        topUpUrl,
+        transactionHistory: transactions,
+        ...(transactionHistoryError ? { transactionHistoryError } : {}),
+        lastSyncedAt: new Date().toISOString(),
+        centralWallet: {
+          enabled: walletEnabled,
+          linked: true,
+          centralUserId,
+          balance: centralBalance.balance,
+          availableBalance: centralBalance.availableBalance,
+          currency,
+          status: centralBalance.status,
+          topUpUrl,
+        },
+        wallet: {
+          id: user?.id || userId,
+          balance: String(centralBalance.balance),
+          spendableBalance: String(centralBalance.availableBalance),
+          earningsBalance: '0',
+          pendingBalance: '0',
+          earningsFromOrders: '0',
+          earningsFromGiftCard: '0',
+          earningsFromVoucher: '0',
+          earningsFromCoupons: '0',
+          earningsFromBookings: '0',
+          currency,
+          status: centralBalance.status,
+        },
+      };
+    } catch (err) {
+      const { code, message } = this.describeWalletError(err);
+      this.logger.error(
+        `Failed to load MCOM wallet for user ${userId} ` +
+          `(centralUserId=${centralUserId}): ${code} - ${message}`,
+      );
+
+      return {
+        success: false,
+        balance: null,
+        availableBalance: null,
+        currency: 'MCOM',
+        status: 'UNAVAILABLE',
+        centralUserId,
+        topUpUrl,
+        transactionHistory: [],
+        lastSyncedAt: null,
+        errorCode: code,
+        message:
+          'Unable to load your MCOM wallet balance right now. Please retry.',
+        centralWallet: {
+          enabled: walletEnabled,
+          linked: true,
+          centralUserId,
+          message:
+            'Unable to load your MCOM wallet balance right now. Please retry.',
+          topUpUrl,
+        },
+        wallet: emptyWallet('UNAVAILABLE'),
+      };
+    }
+  }
+
+  private describeWalletError(err: unknown): {
+    code: string;
+    message: string;
+  } {
+    if (err instanceof McomWalletError) {
+      return { code: err.code, message: err.message };
+    }
+    if (err instanceof Error) {
+      return { code: 'WALLET_UNAVAILABLE', message: err.message };
+    }
+    return {
+      code: 'WALLET_UNAVAILABLE',
+      message: 'Unable to reach MCOM Central.',
     };
   }
 
