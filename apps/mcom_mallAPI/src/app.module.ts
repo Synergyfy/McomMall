@@ -8,6 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
@@ -56,8 +57,6 @@ import { ShippingAddressModule } from './resources/shipping-address/shipping-add
 import { HelpRequestsModule } from './help-requests/help-requests.module';
 import { TerminalCashbackModule } from './resources/terminal-cashback/terminal-cashback.module';
 import { CampaignCashbackModule } from './resources/campaign-cashback/campaign-cashback.module';
-import { ActivityTimerModule } from './resources/activity-timer/activity-timer.module';
-import { ActivityTimerGuard } from './resources/activity-timer/activity-timer.guard';
 import { SubscriptionGuard } from './common/guards/subscription.guard';
 import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
 import { SeasonsModule } from './resources/seasons/seasons.module';
@@ -74,6 +73,8 @@ import { AutomationsModule } from './resources/automations/automations.module';
 import { VisibilityModule } from './resources/visibility/visibility.module';
 import { TeamModule } from './resources/team/team.module';
 import { SsoModule } from './resources/sso/sso.module';
+import { ServiceMeshModule } from './resources/service-mesh/service-mesh.module';
+import { RewardsIntegrationModule } from './resources/rewards-integration/rewards-integration.module';
 import { DiscoverModule } from './resources/discover/discover.module';
 import { HotspotModule } from './resources/hotspot/hotspot.module';
 import { CustomerDirectoryModule } from './resources/customer-directory/customer-directory.module';
@@ -111,6 +112,9 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     ExposModule,
     WebhooksModule,
     InstitutionalPartnersModule,
+    // Single global EventEmitter instance. Modules (order, shipping, …) inject
+    // EventEmitter2 from this root registration instead of calling forRoot().
+    EventEmitterModule.forRoot(),
     QrCodesModule,
     InterestSignalsModule,
     AutomationsModule,
@@ -127,7 +131,6 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     LocalMallModule,
     DigitalValueModule,
     SupportTicketsModule,
-    ActivityTimerModule,
     MarketplaceModule,
     MoneyEngineModule,
     TaxonomyModule,
@@ -196,6 +199,8 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     CampaignCashbackModule,
     SeasonsModule,
     SsoModule,
+    ServiceMeshModule,
+    RewardsIntegrationModule,
     DiscoverModule,
   ],
   controllers: [AppController],
@@ -204,10 +209,6 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ActivityTimerGuard,
     },
     {
       provide: APP_GUARD,

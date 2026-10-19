@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GiftCardConsumerController } from './gift-card-consumer.controller';
 import { GiftCardMerchantController } from './gift-card-merchant.controller';
 import { GiftCardAdminController } from './gift-card-admin.controller';
-import { SystemGiftCardController } from './system-gift-card.controller';
 import { GiftCardAssetController } from './gift-card-asset.controller';
 import { AssetCategoryController } from './asset-category.controller';
 import { GiftCard } from './entities/gift-card.entity';
@@ -49,7 +48,6 @@ import { DigitalValueModule } from '../digital-value/digital-value.module';
     GiftCardConsumerController,
     GiftCardMerchantController,
     GiftCardAdminController,
-    SystemGiftCardController,
     GiftCardAssetController,
     AssetCategoryController,
   ],

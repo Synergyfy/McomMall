@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
   BadRequestException,
@@ -8,6 +9,7 @@ import { Repository } from 'typeorm';
 import { Event } from './entities/event.entity';
 import { LiveComment } from './entities/live-comment.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { UserRole } from '../../common/role.enum';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateLiveCommentDto } from './dto/create-live-comment.dto';
@@ -22,6 +24,26 @@ export class EventsService {
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
   ) {}
+
+  private async assertEventOwner(
+    id: string,
+    requester: { id: string; role?: string },
+  ): Promise<Event> {
+    const event = await this.eventRepository.findOne({
+      where: { id },
+      relations: ['business', 'business.user', 'voucherProduct'],
+    });
+    if (!event) {
+      throw new NotFoundException(`Event with ID "${id}" not found`);
+    }
+    const ownerId = (event.business as any)?.user?.id;
+    if (requester.role !== UserRole.ADMIN && ownerId !== requester.id) {
+      throw new ForbiddenException(
+        'You are not authorized to modify this event.',
+      );
+    }
+    return event;
+  }
 
   async create(userId: string, createEventDto: CreateEventDto): Promise<Event> {
     const business = await this.businessRepository.findOne({
@@ -74,20 +96,31 @@ export class EventsService {
     return event;
   }
 
-  async update(id: string, updateEventDto: UpdateEventDto): Promise<Event> {
-    const event = await this.findOne(id);
+  async update(
+    id: string,
+    updateEventDto: UpdateEventDto,
+    requester: { id: string; role?: string },
+  ): Promise<Event> {
+    const event = await this.assertEventOwner(id, requester);
     const updated = this.eventRepository.merge(event, updateEventDto);
     return this.eventRepository.save(updated);
   }
 
-  async updateStatus(id: string, status: string): Promise<Event> {
-    const event = await this.findOne(id);
+  async updateStatus(
+    id: string,
+    status: string,
+    requester: { id: string; role?: string },
+  ): Promise<Event> {
+    const event = await this.assertEventOwner(id, requester);
     event.status = status;
     return this.eventRepository.save(event);
   }
 
-  async remove(id: string): Promise<void> {
-    const event = await this.findOne(id);
+  async remove(
+    id: string,
+    requester: { id: string; role?: string },
+  ): Promise<void> {
+    const event = await this.assertEventOwner(id, requester);
     await this.eventRepository.remove(event);
   }
 

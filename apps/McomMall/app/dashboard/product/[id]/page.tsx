@@ -60,7 +60,7 @@ function ProductDetailsContent({ productId }: { productId: string }) {
           <ProductMediaGallery
             images={[...(product.fileUrls || []), ...(product.media || [])].length > 0
                 ? [...(product.fileUrls || []), ...(product.media || [])]
-                : [product.imageUrl || 'https://via.placeholder.com/500']}
+                : [product.imageUrl || '/images/placeholder.svg']}
             productTitle={product.title}
           />
           <div className="flex flex-col gap-8">

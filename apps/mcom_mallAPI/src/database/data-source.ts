@@ -15,19 +15,18 @@ const dataSource = new DataSource({
   //migrations: [process.env.DB_MIGRATIONS],
   migrations: [path.resolve(__dirname, 'migrations', '*{.ts,.js}')],
   migrationsRun: false,
-  synchronize: process.env.NODE_ENV !== 'production' && !process.env.VERCEL,
+  synchronize: process.env.DB_SYNCHRONIZE === 'true',
   ssl:
     process.env.NODE_ENV === 'production' || process.env.VERCEL
       ? { rejectUnauthorized: false }
       : false,
   // Reduce connection footprint when using pgBouncer (Session mode limits pool size)
-  // These are passed to the underlying 'pg' Pool
-  // extra: {
-  //   max: +(process.env.DB_POOL_MAX || 5),
-  //   idleTimeoutMillis: +(process.env.DB_IDLE_TIMEOUT_MS || 30000),
-  //   connectionTimeoutMillis: +(process.env.DB_CONNECTION_TIMEOUT_MS || 5000),
-  //   keepAlive: true,
-  // },
+  extra: {
+    max: +(process.env.DB_POOL_MAX || 5),
+    idleTimeoutMillis: +(process.env.DB_IDLE_TIMEOUT_MS || 10000),
+    connectionTimeoutMillis: +(process.env.DB_CONNECTION_TIMEOUT_MS || 5000),
+    keepAlive: true,
+  },
 });
 
 export async function initializeDataSource() {

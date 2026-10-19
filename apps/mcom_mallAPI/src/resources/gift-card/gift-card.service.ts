@@ -5,6 +5,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  InternalServerErrorException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
@@ -111,14 +112,20 @@ export class GiftCardService {
     private readonly capabilityService: CapabilityService,
   ) {}
 
-  // --- System Integration Methods ---
+  // --- Partner (ecosystem M2M) Integration Methods ---
 
-  async createSystemGiftCard(payload: {
+  /**
+   * Issue a gift-card reward on behalf of an ecosystem partner (e.g. MCOM
+   * Rewards). Called over the zero-hop service mesh — the caller is
+   * authenticated by an RS256 service token, never a shared secret.
+   */
+  async createPartnerGiftCard(payload: {
     amount: number;
     recipientEmail: string;
     recipientName?: string;
     message?: string;
     businessName: string;
+    code?: string;
   }): Promise<GiftCard> {
     const amount = Number(payload.amount);
     const { recipientEmail, recipientName, message, businessName } = payload;
@@ -183,7 +190,7 @@ export class GiftCardService {
     );
 
     const giftCard = this.giftCardRepository.create({
-      code: dv.code,
+      code: (payload.code && payload.code.trim()) || dv.code,
       initialBalance: amount,
       currentBalance: amount,
       currency: 'GBP',
@@ -271,6 +278,20 @@ export class GiftCardService {
     const { purchaseDetails, paymentProvider, transactionId } = verifyDto;
     const { templateId, amount, assetId } = purchaseDetails;
 
+    // Idempotency: a retry with an already-processed transaction must not
+    // charge (PayPal capture) or refund again. Return the existing card.
+    const existingOrder = await this.dataSource.getRepository(Order).findOne({
+      where: { payment: { transactionId } },
+    });
+    if (existingOrder) {
+      const existingCard = await this.giftCardRepository.findOne({
+        where: { purchaseOrderId: existingOrder.id },
+      });
+      if (existingCard) {
+        return existingCard;
+      }
+    }
+
     const template = await this.templateRepository.findOne({
       where: { id: templateId, isActive: true },
       relations: ['owner'],
@@ -333,128 +354,176 @@ export class GiftCardService {
       );
     }
 
-    return this.dataSource.transaction(async (manager) => {
-      const orderRepo = manager.getRepository(Order);
-      const paymentRepo = manager.getRepository(OrderPayment);
-      const giftCardRepo = manager.getRepository(GiftCard);
-      const transactionRepo = manager.getRepository(GiftCardTransaction);
+    try {
+      const savedGiftCard = await this.dataSource.transaction(
+        async (manager) => {
+          const orderRepo = manager.getRepository(Order);
+          const paymentRepo = manager.getRepository(OrderPayment);
+          const giftCardRepo = manager.getRepository(GiftCard);
+          const transactionRepo = manager.getRepository(GiftCardTransaction);
 
-      const newPayment = paymentRepo.create({
-        user: { id: userId } as User,
-        amount,
-        currency,
-        transactionId,
-        paymentMethod: paymentProvider,
-      });
-      const savedPayment = await paymentRepo.save(newPayment);
-
-      const newOrder = orderRepo.create({
-        user: { id: userId } as User,
-        total: amount,
-        payment: savedPayment,
-      });
-      const savedOrder = await orderRepo.save(newOrder);
-
-      const user = await manager.findOne(User, { where: { id: userId } });
-
-      const purchaseDto: PurchaseGiftCardDto = {
-        ...purchaseDetails,
-        businessId: business.id,
-      };
-
-      const deliveryDate = purchaseDto.deliveryDate || new Date();
-      const isScheduled = deliveryDate > new Date();
-
-      let finalAmount = purchaseDto.amount;
-      if (
-        template.bonusThreshold &&
-        template.bonusAmount &&
-        purchaseDto.amount >= template.bonusThreshold
-      ) {
-        finalAmount = Number(purchaseDto.amount) + Number(template.bonusAmount);
-      }
-
-      const expiryDate = template.expiryPeriodDays
-        ? new Date(
-            new Date().setDate(
-              new Date().getDate() + template.expiryPeriodDays,
-            ),
-          )
-        : null;
-
-      const dv = await this.digitalValueService.create(
-        {
-          type: DigitalValueType.GIFT_CARD,
-          initialValue: finalAmount,
-          ownerId: business.user.id,
-          metadata: {
-            ...purchaseDto,
-            purchaserId: userId,
-            templateId: template.id,
-          },
-          expiryDate: expiryDate ? expiryDate.toISOString() : null,
-        },
-        business.user.id,
-        manager,
-      );
-
-      const giftCard = giftCardRepo.create({
-        ...purchaseDto,
-        code: dv.code,
-        initialBalance: finalAmount,
-        currentBalance: finalAmount,
-        currency: 'GBP',
-        ownerId: business.user.id,
-        purchaserId: userId,
-        purchaseBusinessId: business.id,
-        templateId: template.id,
-        purchaseOrderId: savedOrder.id,
-        assetId,
-        htmlBody: purchaseDetails.htmlBody,
-        deliveryDate,
-        deliveryStatus: isScheduled
-          ? GiftCardDeliveryStatus.PENDING
-          : GiftCardDeliveryStatus.DELIVERED,
-        isActive: !isScheduled,
-        expiryDate,
-      });
-
-      const savedGiftCard = await giftCardRepo.save(giftCard);
-
-      await transactionRepo.save(
-        transactionRepo.create({
-          giftCardId: savedGiftCard.id,
-          orderId: savedOrder.id,
-          type: GiftCardTransactionType.PURCHASE,
-          amount: savedGiftCard.initialBalance,
-        }),
-      );
-
-      if (!isScheduled) {
-        await this.sendGiftCardEmail(savedGiftCard.id);
-      }
-
-      // Process Cashback
-      if (user?.email) {
-        try {
-          await this.centralIntegrationService.processCashback(
-            user.email,
-            Number(amount),
-            CashbackEvent.GIFT_CARD_PURCHASE,
+          const newPayment = paymentRepo.create({
+            user: { id: userId } as User,
+            amount,
+            currency,
             transactionId,
+            paymentMethod: paymentProvider,
+          });
+          const savedPayment = await paymentRepo.save(newPayment);
+
+          const newOrder = orderRepo.create({
+            user: { id: userId } as User,
+            total: amount,
+            payment: savedPayment,
+          });
+          const savedOrder = await orderRepo.save(newOrder);
+
+          const user = await manager.findOne(User, { where: { id: userId } });
+
+          const purchaseDto: PurchaseGiftCardDto = {
+            ...purchaseDetails,
+            businessId: business.id,
+          };
+
+          const deliveryDate = purchaseDto.deliveryDate || new Date();
+          const isScheduled = deliveryDate > new Date();
+
+          let finalAmount = purchaseDto.amount;
+          if (
+            template.bonusThreshold &&
+            template.bonusAmount &&
+            purchaseDto.amount >= template.bonusThreshold
+          ) {
+            finalAmount =
+              Number(purchaseDto.amount) + Number(template.bonusAmount);
+          }
+
+          const expiryDate = template.expiryPeriodDays
+            ? new Date(
+                new Date().setDate(
+                  new Date().getDate() + template.expiryPeriodDays,
+                ),
+              )
+            : null;
+
+          const dv = await this.digitalValueService.create(
+            {
+              type: DigitalValueType.GIFT_CARD,
+              initialValue: finalAmount,
+              ownerId: business.user.id,
+              metadata: {
+                ...purchaseDto,
+                purchaserId: userId,
+                templateId: template.id,
+              },
+              expiryDate: expiryDate ? expiryDate.toISOString() : null,
+            },
+            business.user.id,
+            manager,
           );
-        } catch (error) {
+
+          const giftCard = giftCardRepo.create({
+            ...purchaseDto,
+            code: dv.code,
+            initialBalance: finalAmount,
+            currentBalance: finalAmount,
+            currency: 'GBP',
+            ownerId: business.user.id,
+            purchaserId: userId,
+            purchaseBusinessId: business.id,
+            templateId: template.id,
+            purchaseOrderId: savedOrder.id,
+            assetId,
+            htmlBody: purchaseDetails.htmlBody,
+            deliveryDate,
+            deliveryStatus: isScheduled
+              ? GiftCardDeliveryStatus.PENDING
+              : GiftCardDeliveryStatus.DELIVERED,
+            isActive: !isScheduled,
+            expiryDate,
+          });
+
+          const saved = await giftCardRepo.save(giftCard);
+
+          await transactionRepo.save(
+            transactionRepo.create({
+              giftCardId: saved.id,
+              orderId: savedOrder.id,
+              type: GiftCardTransactionType.PURCHASE,
+              amount: saved.initialBalance,
+            }),
+          );
+
+          await this.walletService.creditEarning(
+            {
+              userId: business.user.id,
+              amount: purchaseDto.amount,
+              type: WalletTransactionType.EARNING_GIFT_CARD,
+              description: `Gift card purchase - ${saved.code}`,
+            },
+            manager,
+          );
+
+          // Process Cashback
+          if (user?.email) {
+            try {
+              await this.centralIntegrationService.processCashback(
+                user.email,
+                Number(amount),
+                CashbackEvent.GIFT_CARD_PURCHASE,
+                transactionId,
+              );
+            } catch (error) {
+              this.logger.error(
+                `Failed to process cashback for gift card ${transactionId}: ${error.message}`,
+              );
+            }
+          }
+
+          return {
+            ...saved,
+            transactionId: savedOrder.id,
+          };
+        },
+      );
+
+      // Post-commit email dispatch
+      if (savedGiftCard.deliveryStatus !== GiftCardDeliveryStatus.PENDING) {
+        this.sendGiftCardEmail(savedGiftCard.id).catch((err) => {
           this.logger.error(
-            `Failed to process cashback for gift card ${transactionId}: ${error.message}`,
+            `Failed to send gift card email for ${savedGiftCard.id}: ${err.message}`,
+          );
+        });
+      }
+
+      return savedGiftCard;
+    } catch (dbErr) {
+      this.logger.error(
+        `Database transaction failed for gift card purchase after payment was verified/captured. Initiating compensating refund.`,
+        dbErr,
+      );
+      try {
+        if (paymentProvider === PaymentMethod.STRIPE) {
+          await this.paymentProviderService.refundStripePayment(
+            transactionId,
+            amount,
+          );
+        } else if (paymentProvider === PaymentMethod.PAYPAL) {
+          await this.paymentProviderService.refundPaypalOrder(
+            transactionId,
+            amount,
+            currency,
           );
         }
+      } catch (refundErr) {
+        this.logger.error(
+          `Compensating refund also failed for gift card transaction ${transactionId}: ${refundErr.message}`,
+        );
       }
-
-      return {
-        ...savedGiftCard,
-        transactionId: savedOrder.id,
-      };
-    });
+      throw new InternalServerErrorException(
+        'An error occurred while creating your gift card. If your account was charged, a refund has been initiated.',
+      );
+    }
   }
 
   async initiateGiftCardReload(
@@ -670,6 +739,8 @@ export class GiftCardService {
     purchaseDto: PurchaseGiftCardDto,
     business: Business,
     purchaseOrder: Order,
+    externalManager?: EntityManager,
+    options?: { skipEarningsCredit?: boolean; skipEmail?: boolean },
   ): Promise<GiftCard> {
     const ownerId = business.user.id;
 
@@ -704,7 +775,7 @@ export class GiftCardService {
         )
       : null;
 
-    return this.dataSource.transaction(async (manager) => {
+    const execute = async (manager: EntityManager) => {
       const dv = await this.digitalValueService.create(
         {
           type: DigitalValueType.GIFT_CARD,
@@ -748,19 +819,29 @@ export class GiftCardService {
         }),
       );
 
-      if (!isScheduled) {
+      if (!isScheduled && !options?.skipEmail) {
         await this.sendGiftCardEmail(savedGiftCard.id);
       }
 
-      await this.walletService.creditEarning({
-        userId: ownerId,
-        amount: purchaseDto.amount,
-        type: WalletTransactionType.EARNING_GIFT_CARD,
-        description: `Gift card purchase - ${savedGiftCard.code}`,
-      });
+      if (!options?.skipEarningsCredit) {
+        await this.walletService.creditEarning(
+          {
+            userId: ownerId,
+            amount: purchaseDto.amount,
+            type: WalletTransactionType.EARNING_GIFT_CARD,
+            description: `Gift card purchase - ${savedGiftCard.code}`,
+          },
+          manager,
+        );
+      }
 
       return savedGiftCard;
-    });
+    };
+
+    if (externalManager) {
+      return execute(externalManager);
+    }
+    return this.dataSource.transaction(execute);
   }
 
   async checkBalance(code: string): Promise<CheckBalanceResponseDto> {
@@ -805,6 +886,16 @@ export class GiftCardService {
       ) {
         throw new ForbiddenException(
           'This gift card cannot be redeemed at this business.',
+        );
+      }
+    } else {
+      // System/loyalty gift cards are bound to their owner (the recipient).
+      // Only that owner may redeem them, so knowing a code is not enough to
+      // drain another customer's stored value.
+      const orderOwnerId = (order as any)?.user?.id || (order as any)?.userId;
+      if (!orderOwnerId || orderOwnerId !== giftCard.ownerId) {
+        throw new ForbiddenException(
+          'This gift card cannot be redeemed for this order.',
         );
       }
     }
@@ -896,7 +987,9 @@ export class GiftCardService {
       } catch (error) {
         card.deliveryStatus = GiftCardDeliveryStatus.FAILED;
         failed++;
-        this.logger.error(`Failed to send gift card ${card.id}: ${(error as Error).message}`);
+        this.logger.error(
+          `Failed to send gift card ${card.id}: ${(error as Error).message}`,
+        );
       }
       toUpdate.push(card);
     }

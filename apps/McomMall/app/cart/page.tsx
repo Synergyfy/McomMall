@@ -83,7 +83,7 @@ export default function CartPage() {
                       src={
                         item.product.imageUrl ||
                         (item.product.fileUrls && item.product.fileUrls[0]) ||
-                        'https://via.placeholder.com/100'
+                        '/images/placeholder.svg'
                       }
                       alt={item.product.title}
                       width={100}

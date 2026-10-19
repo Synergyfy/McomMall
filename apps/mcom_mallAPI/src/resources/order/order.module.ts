@@ -4,6 +4,12 @@ import { CartModule } from '../cart/cart.module';
 import { PromotionModule } from '../promotion/promotion.module';
 import { Order } from './entities/order.entity';
 import { OrderPayment } from './entities/order-payment.entity';
+import { FailedWalletRefund } from './entities/failed-wallet-refund.entity';
+import { OrderItemReward } from './entities/order-item-reward.entity';
+import { RewardRedemptionOutbox } from './entities/reward-redemption-outbox.entity';
+import { BookingReward } from '../booking/entities/booking-reward.entity';
+import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
+import { RewardRedemptionReconcileService } from './reward-redemption-reconcile.service';
 import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { Product } from '../product/entities/product.entity';
@@ -21,11 +27,11 @@ import { Partnership } from '../partnership/entities/partnership.entity';
 import { BookingModule } from '../booking/booking.module';
 import { PartnershipModule } from '../partnership/partnership.module';
 import { WalletModule } from '../wallet/wallet.module';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ProductModule } from '../product/product.module';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 import { ShippingModule } from '../shipping/shipping.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { RewardsIntegrationModule } from '../rewards-integration/rewards-integration.module';
 
 @Module({
   imports: [
@@ -33,6 +39,10 @@ import { PaymentsModule } from '../payments/payments.module';
       Order,
       OrderItem,
       OrderPayment,
+      FailedWalletRefund,
+      OrderItemReward,
+      RewardRedemptionOutbox,
+      BookingReward,
       Product,
       User,
       Offer,
@@ -41,7 +51,6 @@ import { PaymentsModule } from '../payments/payments.module';
       Partnership,
       ShippingAddress,
     ]),
-    EventEmitterModule.forRoot(),
     CartModule,
     forwardRef(() => PromotionModule),
     NotificationModule,
@@ -55,9 +64,18 @@ import { PaymentsModule } from '../payments/payments.module';
     forwardRef(() => ProductModule),
     ShippingModule,
     forwardRef(() => PaymentsModule),
+    forwardRef(() => RewardsIntegrationModule),
   ],
   controllers: [OrderController],
-  providers: [OrderService],
-  exports: [OrderService],
+  providers: [
+    OrderService,
+    WalletRefundReconcileService,
+    RewardRedemptionReconcileService,
+  ],
+  exports: [
+    OrderService,
+    WalletRefundReconcileService,
+    RewardRedemptionReconcileService,
+  ],
 })
 export class OrderModule {}

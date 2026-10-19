@@ -1,9 +1,11 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Order } from './order.entity';
 import { Product } from '../../product/entities/product.entity';
 
 @Entity('order_items')
+@Index('IDX_order_item_order', ['order'])
+@Index('IDX_order_item_product', ['product'])
 export class OrderItem extends AbstractBaseEntity {
   @ManyToOne(() => Order, (order) => order.items)
   order: Order;

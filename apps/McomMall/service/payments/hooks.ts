@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useSelector } from 'react-redux';
 import api from '../api';
+import { RootState } from '../store/store';
 import {
   ConfirmWalletTopUpRequest,
   CreatePaypalOrderRequest,
@@ -15,6 +17,7 @@ import {
   SubscriptionStatusEnum,
   TrialAction,
   TrialStatusResponse,
+  TrialTasks,
   WalletTopUpConfig,
 } from './types';
 import { ErrorResponse } from '../listings/hook';
@@ -44,8 +47,66 @@ export const useGetSubscriptionStatus = () => {
   return query;
 };
 
+const DEFAULT_TRIAL_TASKS: TrialTasks = {
+  createdBusiness: false,
+  createdProductOrService: false,
+  createdPromotion: false,
+  createdOffer: false,
+  createdCoupon: false,
+};
+
+/**
+ * Builds a TrialStatusResponse from the PlatformEntitlement captured during SSO
+ * login. The entitlement is the authoritative trial source of truth, so the
+ * dashboard can always show the trial state (and days remaining) even if the
+ * server-to-server re-check on MCOM Central is unavailable.
+ */
+export function buildTrialStatusFromEntitlement(
+  entitlement: any,
+): TrialStatusResponse | null {
+  if (!entitlement) return null;
+
+  const trial = entitlement.trialContext;
+  const accessType = entitlement.access?.accessType;
+  const isTrial = Boolean(trial?.isInTrial) || accessType === 'TRIAL_PROGRAMME';
+  if (!isTrial) return null;
+
+  const now = Date.now();
+  let expiresAt: string | undefined =
+    trial?.trialExpiresAt || entitlement.plan?.expiresAt || undefined;
+
+  if (
+    !expiresAt &&
+    typeof trial?.daysRemaining === 'number' &&
+    trial.daysRemaining > 0
+  ) {
+    expiresAt = new Date(now + trial.daysRemaining * 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  const end = expiresAt ? new Date(expiresAt).getTime() : now;
+  const remainingTime = Math.max(0, end - now);
+
+  return {
+    isActive: remainingTime > 0,
+    remainingTime,
+    expiresAt,
+    tasks: DEFAULT_TRIAL_TASKS,
+    programmeTasks: trial?.programmeTasks || [],
+    pauses: [],
+    isPaused: false,
+    remainingPauses: 0,
+    isTrialPausable: false,
+  };
+}
+
 export const useGetTrialStatus = () => {
+  const entitlement = useSelector((state: RootState) => state.auth.entitlement);
+
   const fetchAndTransform = async (): Promise<TrialStatusResponse | null> => {
+    // Entitlement resolved at SSO login — used as the primary/fallback source
+    // so the trial state is always visible on the dashboard.
+    const entitlementTrial = buildTrialStatusFromEntitlement(entitlement);
+
     try {
       const [statusRes, membershipRes] = await Promise.all([
         api.get<SubscriptionStatusResponse>('/payments/status'),
@@ -55,13 +116,25 @@ export const useGetTrialStatus = () => {
       const statusData = statusRes.data;
       const membership = membershipRes.data;
 
-      if (statusData.status !== SubscriptionStatusEnum.TRIAL_ACTIVE && statusData.status !== SubscriptionStatusEnum.TRIAL_EXPIRED) {
-        return null;
+      const isTrial =
+        statusData.status === SubscriptionStatusEnum.TRIAL_ACTIVE ||
+        Boolean((membership as any)?.isTrial) ||
+        (membership as any)?.accessType === 'TRIAL_PROGRAMME' ||
+        Boolean(entitlementTrial);
+
+      if (!isTrial && statusData.status !== SubscriptionStatusEnum.TRIAL_EXPIRED) {
+        return entitlementTrial;
       }
 
-      // Calculate expiresAt from membership creation date + duration
-      let expiresAt = statusData.trialEndDate || undefined;
-      if (membership && membership.created_at && membership.trialDuration) {
+      // Calculate expiresAt from Central entitlement / membership / status
+      let expiresAt =
+        (membership as any)?.entitlement?.trialContext?.trialExpiresAt ||
+        membership?.expiresAt ||
+        statusData.trialEndDate ||
+        entitlementTrial?.expiresAt ||
+        undefined;
+
+      if (!expiresAt && membership && membership.created_at && membership.trialDuration) {
         const createdAt = new Date(membership.created_at);
         const durationMs = membership.trialDuration * 24 * 60 * 60 * 1000;
         expiresAt = new Date(createdAt.getTime() + durationMs).toISOString();
@@ -71,17 +144,19 @@ export const useGetTrialStatus = () => {
       const end = expiresAt ? new Date(expiresAt).getTime() : now;
       const remainingTime = Math.max(0, end - now);
 
+      const programmeTasks =
+        statusData.programmeTasks ||
+        (membership as any)?.programmeTasks ||
+        (membership as any)?.entitlement?.trialContext?.programmeTasks ||
+        entitlementTrial?.programmeTasks ||
+        [];
+
       return {
-        isActive: statusData.status === SubscriptionStatusEnum.TRIAL_ACTIVE,
+        isActive: isTrial && remainingTime > 0,
         remainingTime,
         expiresAt,
-        tasks: statusData.tasks || {
-            createdBusiness: false,
-            createdProductOrService: false,
-            createdPromotion: false,
-            createdOffer: false,
-            createdCoupon: false,
-        },
+        tasks: statusData.tasks || entitlementTrial?.tasks || DEFAULT_TRIAL_TASKS,
+        programmeTasks,
         pauses: [],
         isPaused: false,
         remainingPauses: 0,
@@ -89,6 +164,10 @@ export const useGetTrialStatus = () => {
       };
     } catch (error: unknown) {
       const err = error as ErrorResponse;
+      // Fall back to the entitlement captured at login before giving up.
+      if (entitlementTrial) {
+        return entitlementTrial;
+      }
       // Don't throw an error for 404, it just means no trial exists
       if (err.response?.status === 404) {
         return null;
@@ -103,7 +182,7 @@ export const useGetTrialStatus = () => {
 
   const query = useQuery({
     queryFn: fetchAndTransform,
-    queryKey: ['FETCH_TRIAL_STATUS'],
+    queryKey: ['FETCH_TRIAL_STATUS', entitlement?.trialContext?.trialExpiresAt ?? null],
     enabled: true,
   });
 

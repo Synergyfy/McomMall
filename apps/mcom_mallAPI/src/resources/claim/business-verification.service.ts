@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { google } from 'googleapis';
+import { mybusinessaccountmanagement } from '@googleapis/mybusinessaccountmanagement';
+import { mybusinessbusinessinformation } from '@googleapis/mybusinessbusinessinformation';
 
 @Injectable()
 export class BusinessVerificationService {
@@ -7,8 +8,8 @@ export class BusinessVerificationService {
    * Returns evidence if the authenticated Google user manages a location with placeId.
    */
   async verifyPlaceOwnership(oauthClient: any, placeId: string) {
-    const accountMgmt = google.mybusinessaccountmanagement('v1');
-    const bizInfo = google.mybusinessbusinessinformation('v1');
+    const accountMgmt = mybusinessaccountmanagement('v1');
+    const bizInfo = mybusinessbusinessinformation('v1');
 
     const accountsResp = await accountMgmt.accounts.list({ auth: oauthClient });
     const accounts = accountsResp.data.accounts ?? [];

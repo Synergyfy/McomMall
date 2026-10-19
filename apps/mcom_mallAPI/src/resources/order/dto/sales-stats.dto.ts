@@ -21,4 +21,10 @@ export class SalesStatsDto {
 
   @ApiProperty()
   balance: number;
+
+  @ApiProperty({
+    description:
+      'Total MCOM Rewards discount absorbed by this owner’s products (committed redemptions).',
+  })
+  rewardDiscountTotal: number;
 }

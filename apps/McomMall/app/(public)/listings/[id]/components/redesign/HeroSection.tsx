@@ -67,7 +67,7 @@ export default function HeroSection({ listing }: HeroSectionProps) {
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] bg-white p-2 shadow-2xl border-4 border-white overflow-hidden">
                 <div className="relative w-full h-full rounded-[2rem] overflow-hidden bg-gray-50">
                    <img
-                    src={listing.logoUrl || 'https://via.placeholder.com/200?text=Logo'}
+                    src={listing.logoUrl || '/images/placeholder.svg'}
                     alt={listing.logoAltText || listing.businessName}
                     className="absolute inset-0 h-full w-full object-cover"
                   />

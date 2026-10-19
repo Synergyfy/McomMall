@@ -32,7 +32,6 @@ import {
   CapabilityService,
   ActionType,
 } from '../capability/capability.service';
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class PromotionService {
@@ -52,7 +51,6 @@ export class PromotionService {
     @InjectRepository(PointTransaction)
     private readonly pointTransactionRepository: Repository<PointTransaction>,
     private readonly activitiesService: ActivitiesService,
-    private readonly activityTimerService: ActivityTimerService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
   ) {}
@@ -105,6 +103,7 @@ export class PromotionService {
       if (includedProductIds) {
         promotion.includedProducts = await this.productRepository.findBy({
           id: In(includedProductIds),
+          business: { user: { id: userId } },
         });
       }
     }
@@ -122,6 +121,7 @@ export class PromotionService {
     if (excludedProductIds) {
       promotion.excludedProducts = await this.productRepository.findBy({
         id: In(excludedProductIds),
+        business: { user: { id: userId } },
       });
     }
 
@@ -131,11 +131,6 @@ export class PromotionService {
       'created',
       'promotion',
       savedPromotion.name,
-    );
-    await this.activityTimerService.completeTaskByKey(
-      user.id,
-      'createdLoyalty',
-      true,
     );
 
     return savedPromotion;
@@ -199,6 +194,7 @@ export class PromotionService {
       if (includedProductIds) {
         promotion.includedProducts = await this.productRepository.findBy({
           id: In(includedProductIds),
+          business: { user: { id: userId } },
         });
       }
     }
@@ -216,6 +212,7 @@ export class PromotionService {
     if (excludedProductIds) {
       promotion.excludedProducts = await this.productRepository.findBy({
         id: In(excludedProductIds),
+        business: { user: { id: userId } },
       });
     }
 
@@ -477,16 +474,11 @@ export class PromotionService {
   }
 
   async getSummaryStatistics(
+    userId: string,
     promotionId: string,
   ): Promise<PromotionSummaryStatisticsDto> {
-    const promotion = await this.promotionRepository.findOne({
-      where: { id: promotionId },
-    });
-    if (!promotion) {
-      throw new NotFoundException(
-        `Promotion with ID "${promotionId}" not found`,
-      );
-    }
+    // Enforces that the caller owns the business backing the promotion.
+    await this.findOne(userId, promotionId);
 
     const earnedPointsQuery = this.promotionParticipantRepository
       .createQueryBuilder('participant')
@@ -520,17 +512,12 @@ export class PromotionService {
   }
 
   async getTransactionHistory(
+    userId: string,
     promotionId: string,
     query: PromotionHistoryQueryDto,
   ): Promise<PageDto<PromotionTransactionHistoryDto>> {
-    const promotion = await this.promotionRepository.findOne({
-      where: { id: promotionId },
-    });
-    if (!promotion) {
-      throw new NotFoundException(
-        `Promotion with ID "${promotionId}" not found`,
-      );
-    }
+    // Enforces that the caller owns the business backing the promotion.
+    await this.findOne(userId, promotionId);
 
     const qb = this.pointTransactionRepository
       .createQueryBuilder('transaction')

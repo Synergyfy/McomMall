@@ -64,7 +64,7 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
   };
 
   const firstImageUrl =
-    service.media?.find(isImageUrl) || 'https://via.placeholder.com/500x500.png?text=No+Image';
+    service.media?.find(isImageUrl) || '/images/placeholder.svg';
 
   return (
     <div className="bg-white">

@@ -8,9 +8,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
+import * as crypto from 'crypto';
 
 import { Coupon } from './entities/coupon.entity';
-import { CouponStatus, CouponSourceType, TransactionType } from './coupon.enum';
+import { CouponStatus, CouponSourceType, DiscountType, TransactionType } from './coupon.enum';
 import { UserRole } from '../../common/role.enum';
 import {
   RedemptionLog,
@@ -181,6 +182,9 @@ export class CouponService {
     return new PageDto(items, pageMetaDto);
   }
 
+  // Pre-check only (no row lock): final usageLimit/perUserLimit enforcement
+  // happens atomically inside redeem()/redeemForOrder() under
+  // SELECT ... FOR UPDATE. Never treat this as a reservation.
   async validateCoupon(
     code: string,
     user: User,
@@ -683,33 +687,99 @@ export class CouponService {
 
   async redeemManual(
     code: string,
-    userId: string,
+    requester: { id: string; role?: string },
   ): Promise<{ success: boolean; message: string; coupon: Coupon }> {
     const coupon = await this.couponRepository.findOne({
       where: { code },
-      relations: ['business'],
+      relations: ['business', 'business.user'],
     });
-
     if (!coupon) {
       throw new NotFoundException(`Coupon with code ${code} not found.`);
     }
 
-    if (coupon.status !== CouponStatus.ACTIVE) {
-      throw new BadRequestException(
-        'Coupon is inactive or not currently active.',
+    // Authorization: only the issuing merchant or a platform admin may
+    // manually redeem a coupon. Coupons are otherwise bearer tokens usable
+    // by shoppers, but merchants must not be able to burn others' coupons.
+    const isAdmin = requester.role === UserRole.ADMIN;
+    const ownerId = (coupon.business as any)?.user?.id;
+    const isOwner = !!ownerId && ownerId === requester.id;
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException(
+        'You are not authorized to redeem this coupon.',
       );
     }
 
-    const redemptionLog = this.redemptionLogRepository.create({
-      coupon,
-      user: { id: userId } as any,
-    });
-    await this.redemptionLogRepository.save(redemptionLog);
-
+    // Route through the locked transactional path so usageLimit/perUserLimit
+    // are enforced atomically under SELECT ... FOR UPDATE (see redeem()).
+    const user = { id: requester.id } as User;
+    const log = await this.redeem(code, user);
+    void log;
     return {
       success: true,
       message: `Coupon ${code} redeemed successfully.`,
       coupon,
     };
+  }
+
+  // --- System Integration Methods ---
+
+  /**
+   * Create a single-use coupon on behalf of an ecosystem partner (e.g. MCOM
+   * Rewards issuing a coupon-type reward). Mirrors the gift card / voucher
+   * partner integration: the caller supplies a value and an optional shared
+   * `code`. Platform-sourced, so no business capability check is required.
+   * Called over the zero-hop service mesh — the caller is authenticated by an
+   * RS256 service token, never a shared secret.
+   *
+   * Idempotent on `code`: re-delivering the same code returns the existing
+   * coupon instead of failing on the unique constraint.
+   */
+  async createPartnerCoupon(payload: {
+    amount: number;
+    recipientEmail?: string;
+    recipientName?: string;
+    message?: string;
+    businessName?: string;
+    code?: string;
+    expiresAt?: string | Date;
+    usageLimit?: number;
+    perUserLimit?: number;
+  }): Promise<Coupon> {
+    const amount = Number(payload.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Coupon amount must be a positive number.');
+    }
+
+    const providedCode = (payload.code || '').trim();
+    const code = (
+      providedCode || `MC${crypto.randomBytes(6).toString('hex').toUpperCase()}`
+    ).slice(0, 20);
+
+    const existing = await this.couponRepository.findOne({ where: { code } });
+    if (existing) {
+      return existing;
+    }
+
+    const expiresAt = payload.expiresAt
+      ? new Date(payload.expiresAt)
+      : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+
+    const coupon = this.couponRepository.create({
+      code,
+      title: payload.message || `Reward from ${payload.businessName || 'MCOM Rewards'}`,
+      description:
+        payload.message ||
+        `Reward coupon from ${payload.businessName || 'MCOM Rewards'}`,
+      sourceType: CouponSourceType.PLATFORM,
+      discountType: DiscountType.FIXED,
+      discountValue: amount,
+      usageLimit: payload.usageLimit ?? 1,
+      perUserLimit: payload.perUserLimit ?? 1,
+      startDate: new Date(),
+      expiresAt,
+      status: CouponStatus.ACTIVE,
+    });
+
+    return this.couponRepository.save(coupon);
   }
 }

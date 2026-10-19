@@ -22,7 +22,6 @@ import { UserRole } from '../../common/role.enum';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 import { ProvisionService } from '../provision/provision.service';
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { MembershipService } from '../membership/membership.service';
 import { PlansService } from '../plans/services/plans.service';
 
@@ -47,7 +46,6 @@ export class UsersService {
     private readonly emailService: EmailService,
     private readonly dataSource: DataSource,
     private readonly provisionService: ProvisionService,
-    private readonly activityTimerService: ActivityTimerService,
     private readonly membershipService: MembershipService,
     private readonly plansService: PlansService,
   ) {}
@@ -127,7 +125,7 @@ export class UsersService {
 
       const wallet = manager.create(Wallet, {
         user: savedUser,
-        balance: 1000, // Starting balance for every new user
+        balance: 0,
       });
       await manager.save(wallet);
 
@@ -140,34 +138,6 @@ export class UsersService {
       return savedUser;
     });
 
-    // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
-    if (createdUser.role === UserRole.OWNER) {
-      try {
-        // Automatic Plan Assignment
-        const plans = await this.plansService.findAll();
-        const firstVariant = plans[0]?.variants?.[0];
-        if (firstVariant) {
-          await this.membershipService.joinTrial(
-            firstVariant.id,
-            createdUser,
-          );
-          console.log(
-            `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Owner ${createdUser.id}`,
-          );
-        } else {
-          console.log(
-            `[UsersService] No active Plan Variant found for auto-assignment.`,
-          );
-        }
-
-        await this.activityTimerService.getUserActiveTasks(createdUser);
-      } catch (error) {
-        console.error(
-          'Failed to auto-assign activity timer or trial membership:',
-          error,
-        );
-      }
-    }
 
     return createdUser;
   }
@@ -204,7 +174,7 @@ export class UsersService {
 
       const wallet = manager.create(Wallet, {
         user: savedUser,
-        balance: 1000, // Starting balance for every new user
+        balance: 0,
       });
       await manager.save(wallet);
 
@@ -217,32 +187,6 @@ export class UsersService {
       return savedUser;
     });
 
-    // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
-    if (createdUser.role === UserRole.OWNER) {
-      // We catch errors here to strictly not block user creation if timer service fails,
-      // though ideally it should succeed.
-      try {
-        // Automatic Plan Assignment
-        const plans = await this.plansService.findAll();
-        const firstVariant = plans[0]?.variants?.[0];
-        if (firstVariant) {
-          await this.membershipService.joinTrial(
-            firstVariant.id,
-            createdUser,
-          );
-          console.log(
-            `[UsersService] Auto-assigned Plan Variant (${firstVariant.id}) to new Admin-Created Owner ${createdUser.id}`,
-          );
-        }
-
-        await this.activityTimerService.getUserActiveTasks(createdUser);
-      } catch (error) {
-        console.error(
-          'Failed to auto-assign activity timer or trial membership:',
-          error,
-        );
-      }
-    }
 
     return createdUser;
   }
@@ -635,13 +579,7 @@ export class UsersService {
 
     await this.dataSource.transaction(async (manager) => {
       // 1. Delete dependent listing data (cascade will handle child rows of businesses)
-      const businesses = await manager.query(
-        'SELECT id FROM businesses WHERE "userId" = $1',
-        [userId],
-      );
-      for (const b of businesses) {
-        await manager.query('DELETE FROM businesses WHERE id = $1', [b.id]);
-      }
+      await manager.query('DELETE FROM businesses WHERE "userId" = $1', [userId]);
 
       // 2. Delete rows in other dependent tables
       await manager.query('DELETE FROM wallets WHERE "userId" = $1', [userId]);

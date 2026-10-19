@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +14,7 @@ import {
 import { TeamInvite, TeamInviteStatus } from './entities/team-invite.entity';
 import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { UserRole } from '../../common/role.enum';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 
@@ -29,13 +31,34 @@ export class TeamService {
     private readonly businessRepository: Repository<Business>,
   ) {}
 
-  async getTeam(businessId: string) {
+  /**
+   * Ensures the caller owns the business (or is a platform admin) before any
+   * team read/write. Prevents cross-tenant team management by businessId.
+   */
+  private async assertBusinessAccess(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<Business> {
     const business = await this.businessRepository.findOne({
       where: { id: businessId },
+      relations: ['user'],
     });
     if (!business) {
       throw new NotFoundException(`Business storefront not found`);
     }
+    if (
+      requester.role !== UserRole.ADMIN &&
+      business.user?.id !== requester.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this business.',
+      );
+    }
+    return business;
+  }
+
+  async getTeam(businessId: string, requester: { id: string; role?: string }) {
+    await this.assertBusinessAccess(businessId, requester);
 
     const members = await this.teamMemberRepository.find({
       where: { businessId },
@@ -73,13 +96,12 @@ export class TeamService {
     };
   }
 
-  async inviteMember(businessId: string, dto: InviteMemberDto) {
-    const business = await this.businessRepository.findOne({
-      where: { id: businessId },
-    });
-    if (!business) {
-      throw new NotFoundException(`Business storefront not found`);
-    }
+  async inviteMember(
+    businessId: string,
+    dto: InviteMemberDto,
+    requester: { id: string; role?: string },
+  ) {
+    await this.assertBusinessAccess(businessId, requester);
 
     const targetUser = await this.userRepository.findOne({
       where: { email: dto.email },
@@ -129,7 +151,10 @@ export class TeamService {
     businessId: string,
     memberId: string,
     dto: UpdateMemberDto,
+    requester: { id: string; role?: string },
   ) {
+    await this.assertBusinessAccess(businessId, requester);
+
     const member = await this.teamMemberRepository.findOne({
       where: { id: memberId, businessId },
     });
@@ -144,7 +169,13 @@ export class TeamService {
     return this.teamMemberRepository.save(member);
   }
 
-  async removeMember(businessId: string, memberId: string) {
+  async removeMember(
+    businessId: string,
+    memberId: string,
+    requester: { id: string; role?: string },
+  ) {
+    await this.assertBusinessAccess(businessId, requester);
+
     const member = await this.teamMemberRepository.findOne({
       where: { id: memberId, businessId },
     });
@@ -155,7 +186,13 @@ export class TeamService {
     return { success: true, message: 'Member removed successfully' };
   }
 
-  async revokeInvite(businessId: string, inviteId: string) {
+  async revokeInvite(
+    businessId: string,
+    inviteId: string,
+    requester: { id: string; role?: string },
+  ) {
+    await this.assertBusinessAccess(businessId, requester);
+
     const invite = await this.teamInviteRepository.findOne({
       where: { id: inviteId, businessId },
     });

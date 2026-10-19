@@ -28,7 +28,6 @@ import { ProductSearchDto } from './dto/product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { v4 as uuidv4 } from 'uuid';
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class ProductService {
@@ -42,7 +41,6 @@ export class ProductService {
     @InjectRepository(PartnershipRequest)
     private partnershipRequestRepository: Repository<PartnershipRequest>,
     private readonly activitiesService: ActivitiesService,
-    private readonly activityTimerService: ActivityTimerService,
     @Inject(forwardRef(() => PromotionService))
     private readonly promotionService: PromotionService,
     @Inject(forwardRef(() => CapabilityService))
@@ -152,12 +150,6 @@ export class ProductService {
       'created',
       'product',
       savedProduct.title,
-    );
-
-    await this.activityTimerService.completeTaskByKey(
-      business.user.id,
-      'createdProductOrService',
-      true,
     );
 
     return savedProduct;

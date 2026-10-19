@@ -7,7 +7,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Plus, Minus, ChevronDown, LogOut } from 'lucide-react';
 import { RootState } from '@/service/store/store';
 import { useLogout } from '@/service/auth/hook';
-import { useGetUserListings } from '@/service/listings/hook';
 import {
   mainMenuItems,
   listingMenuItems,
@@ -35,15 +34,6 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
     {}
   );
   const [expandedSection, setExpandedSection] = useState<string | null>('Main');
-
-  const { data: listingsData } = useGetUserListings(1, 100);
-  const listings = listingsData?.data || [];
-
-  const hasProducts = listings.some(l => l.listingType?.includes('RETAIL'));
-  const hasServices = listings.some(l => l.listingType?.includes('SERVICE'));
-
-  const showProducts = listings.length === 0 || hasProducts;
-  const showServices = listings.length === 0 || hasServices;
 
   useEffect(() => {
     if (isCollapsed) {
@@ -185,8 +175,8 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
       </nav>
       {userRole !== 'customer' && renderSection('Storefront', storefrontMenuItems)}
       {userRole !== 'customer' && renderSection('Listing', listingMenuItems)}
-      {userRole !== 'customer' && showProducts && renderSection('Product', productMenuItems)}
-      {userRole !== 'customer' && showServices && renderSection('Service', serviceMenuItems)}
+      {userRole !== 'customer' && renderSection('Product', productMenuItems)}
+      {userRole !== 'customer' && renderSection('Service', serviceMenuItems)}
       {userRole !== 'customer' && renderSection('Marketing', [...pluginMenuItems, ...marketingMenuItems])}
       {renderSection('My Purchases', historyMenuItems)}
       <nav className="mt-6">

@@ -338,4 +338,94 @@ export class PaymentProviderService {
       );
     }
   }
+
+  /**
+   * Verifies a Stripe webhook signature and returns the parsed event.
+   * Throws if the webhook secret is not configured or the signature is invalid.
+   */
+  constructStripeEvent(
+    payload: Buffer | string,
+    signature: string,
+  ): Stripe.Event {
+    const secret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    if (!secret) {
+      throw new ServiceUnavailableException(
+        'STRIPE_WEBHOOK_SECRET is not configured',
+      );
+    }
+    return this.stripe.webhooks.constructEvent(payload, signature, secret);
+  }
+
+  /**
+   * Verifies a PayPal webhook by calling PayPal's verify-webhook-signature API.
+   * Fails closed when credentials/webhook id are missing or verification fails.
+   */
+  async verifyPaypalWebhook(
+    headers: Record<string, any>,
+    body: any,
+  ): Promise<{ ok: boolean; reason?: string }> {
+    const webhookId = this.configService.get<string>('PAYPAL_WEBHOOK_ID');
+    const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');
+    if (!webhookId || !clientId || !clientSecret) {
+      return {
+        ok: false,
+        reason: 'PayPal webhook verification is not configured',
+      };
+    }
+    const baseUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://api-m.paypal.com'
+        : 'https://api-m.sandbox.paypal.com';
+    try {
+      const auth = Buffer.from(`${clientId}:${clientSecret}`).toString(
+        'base64',
+      );
+      const tokenRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials',
+      });
+      const tokenJson: any = await tokenRes.json();
+      if (!tokenRes.ok || !tokenJson?.access_token) {
+        return { ok: false, reason: 'Unable to obtain PayPal access token' };
+      }
+
+      const verifyRes = await fetch(
+        `${baseUrl}/v1/notifications/verify-webhook-signature`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${tokenJson.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            auth_algo: headers['paypal-auth-algo'],
+            cert_url: headers['paypal-cert-url'],
+            transmission_id: headers['paypal-transmission-id'],
+            transmission_sig: headers['paypal-transmission-sig'],
+            transmission_time: headers['paypal-transmission-time'],
+            webhook_id: webhookId,
+            webhook_event: body,
+          }),
+        },
+      );
+      const verifyJson: any = await verifyRes.json();
+      if (verifyJson?.verification_status === 'SUCCESS') {
+        return { ok: true };
+      }
+      return {
+        ok: false,
+        reason: `PayPal verification_status=${verifyJson?.verification_status}`,
+      };
+    } catch (error: any) {
+      return {
+        ok: false,
+        reason: error?.message ?? 'PayPal verification error',
+      };
+    }
+  }
 }

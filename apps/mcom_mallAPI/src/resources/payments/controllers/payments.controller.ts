@@ -33,21 +33,35 @@ export class PaymentsController {
   ) {}
 
   @Post('stripe/create-intent')
+  @UseGuards(JwtAuthGuard)
   createStripePaymentIntent(
     @Body() createPaymentIntentDto: CreatePaymentIntentDto,
+    @Req() req,
   ) {
     return this.paymentsService.createStripePaymentIntent(
       createPaymentIntentDto,
+      req.user.id,
     );
   }
 
   @Post('paypal/create-order')
-  createPaypalOrder(@Body() createPaypalOrderDto: CreatePaypalOrderDto) {
-    return this.paymentsService.createPaypalOrder(createPaypalOrderDto);
+  @UseGuards(JwtAuthGuard)
+  createPaypalOrder(
+    @Body() createPaypalOrderDto: CreatePaypalOrderDto,
+    @Req() req,
+  ) {
+    return this.paymentsService.createPaypalOrder(
+      createPaypalOrderDto,
+      req.user.id,
+    );
   }
 
   @Post('paypal/capture-order')
-  capturePaypalOrder(@Body() capturePaypalOrderDto: CapturePaypalOrderDto) {
+  @UseGuards(JwtAuthGuard)
+  capturePaypalOrder(
+    @Body() capturePaypalOrderDto: CapturePaypalOrderDto,
+    @Req() req,
+  ) {
     return this.paymentProviderService.capturePaypalOrder(
       capturePaypalOrderDto.orderId,
     );

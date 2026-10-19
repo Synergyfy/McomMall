@@ -23,7 +23,6 @@ import { ServicesModule } from '../services/services.module';
 import { ActivitiesModule } from '../activities/activities.module';
 import { PromotionModule } from '../promotion/promotion.module';
 import { CapabilityModule } from '../capability/capability.module';
-import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 import { LocalMallModule } from '../localmall/localmall.module';
 
 @Module({
@@ -51,7 +50,6 @@ import { LocalMallModule } from '../localmall/localmall.module';
     }),
     ServicesModule,
     ActivitiesModule,
-    ActivityTimerModule,
     forwardRef(() => PromotionModule),
   ],
   controllers: [ListingsController, ListingsGoogleController],

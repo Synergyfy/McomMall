@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   InternalServerErrorException,
   Inject,
   forwardRef,
@@ -46,6 +47,7 @@ import { WalletTransactionType } from '../wallet/entities/wallet-transaction.ent
 import { VoucherProductSearchDto } from './dto/voucher-product-search.dto';
 import { DigitalValueService } from '../digital-value/digital-value.service';
 import { DigitalValueType } from '../digital-value/digital-value.enums';
+import { UserRole } from '../../common/role.enum';
 
 @Injectable()
 export class VoucherService {
@@ -96,15 +98,24 @@ export class VoucherService {
   async updateVoucherProduct(
     id: string,
     updateDto: UpdateVoucherProductDto,
+    userId: string,
   ): Promise<VoucherProduct> {
-    const product = await this.voucherProductRepository.preload({
-      id,
-      ...updateDto,
+    const product = await this.voucherProductRepository.findOne({
+      where: { id },
+      relations: ['user'],
     });
 
     if (!product) {
       throw new NotFoundException(`VoucherProduct with ID "${id}" not found.`);
     }
+
+    if (product.user?.id !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this voucher product.',
+      );
+    }
+
+    Object.assign(product, updateDto);
 
     return this.voucherProductRepository.save(product);
   }
@@ -137,7 +148,10 @@ export class VoucherService {
     });
   }
 
-  async findVoucherProductById(productId: string): Promise<VoucherProduct> {
+  async findVoucherProductById(
+    productId: string,
+    userId?: string,
+  ): Promise<VoucherProduct> {
     const product = await this.voucherProductRepository.findOne({
       where: { id: productId },
       relations: ['user'],
@@ -145,6 +159,11 @@ export class VoucherService {
     if (!product) {
       throw new NotFoundException(
         `Voucher product with ID ${productId} not found`,
+      );
+    }
+    if (userId && product.user?.id !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to access this voucher product.',
       );
     }
     return product;
@@ -296,133 +315,166 @@ export class VoucherService {
       );
     }
 
-    return this.dataSource.transaction(async (manager) => {
-      const orderRepo = manager.getRepository(Order);
-      const paymentRepo = manager.getRepository(OrderPayment);
-      const voucherRepo = manager.getRepository(Voucher);
-      const _transactionRepo = manager.getRepository(VoucherTransaction);
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const orderRepo = manager.getRepository(Order);
+        const paymentRepo = manager.getRepository(OrderPayment);
+        const voucherRepo = manager.getRepository(Voucher);
+        const _transactionRepo = manager.getRepository(VoucherTransaction);
 
-      // Idempotency check: if transactionId already processed, return existing voucher
-      const existingPayment = await paymentRepo.findOne({
-        where: { transactionId },
-      });
-      if (existingPayment) {
-        const existingVoucher = await voucherRepo.findOne({
-          where: { buyer: { id: userId } },
-          order: { createdAt: 'DESC' },
+        // Idempotency check: if transactionId already processed, return existing voucher
+        const existingPayment = await paymentRepo.findOne({
+          where: { transactionId },
         });
-        if (existingVoucher) return existingVoucher;
-      }
+        if (existingPayment) {
+          const existingVoucher = await voucherRepo.findOne({
+            where: { buyer: { id: userId } },
+            order: { createdAt: 'DESC' },
+          });
+          if (existingVoucher) return existingVoucher;
+        }
 
-      const newPayment = paymentRepo.create({
-        user: { id: userId } as User,
-        amount,
-        currency,
-        transactionId,
-        paymentMethod: paymentProvider,
-      });
-      const savedPayment = await paymentRepo.save(newPayment);
-
-      const newOrder = orderRepo.create({
-        user: { id: userId } as User,
-        total: amount,
-        payment: savedPayment,
-      });
-      const savedOrder = await orderRepo.save(newOrder);
-
-      const user = await manager.findOne(User, { where: { id: userId } });
-
-      const deliveryDate = purchaseDetails.deliveryDate
-        ? new Date(purchaseDetails.deliveryDate)
-        : new Date();
-      const isScheduled = deliveryDate > new Date();
-
-      const expiresAt = product.expiryDays
-        ? new Date(Date.now() + product.expiryDays * 24 * 60 * 60 * 1000)
-        : null;
-
-      let finalAmount = amount;
-      if (
-        product.bonusThreshold &&
-        product.bonusAmount &&
-        amount >= product.bonusThreshold
-      ) {
-        finalAmount = Number(amount) + Number(product.bonusAmount);
-      }
-
-      const dv = await this.digitalValueService.create(
-        {
-          type: DigitalValueType.VOUCHER,
-          initialValue: finalAmount,
-          ownerId: userId,
-          metadata: {
-            ...purchaseDetails,
-            voucherProductId: product.id,
-          },
-          expiryDate: expiresAt ? expiresAt.toISOString() : null,
-        },
-        userId,
-        manager,
-      );
-
-      const newVoucher = voucherRepo.create({
-        code: dv.code,
-        initialValue: finalAmount,
-        balance: finalAmount,
-        status: isScheduled ? VoucherStatus.DISABLED : VoucherStatus.UNREDEEMED,
-        expiresAt,
-        buyer: { id: userId } as User,
-        owner: product.user,
-        voucherProduct: product,
-        order: savedOrder,
-        deliveryDate,
-        recipientName: purchaseDetails.recipientName,
-        recipientEmail: purchaseDetails.recipientEmail,
-        personalMessage: purchaseDetails.personalMessage,
-      });
-
-      const savedVoucher = await voucherRepo.save(newVoucher);
-
-      await this.createTransaction(
-        {
-          voucher: savedVoucher,
+        const newPayment = paymentRepo.create({
+          user: { id: userId } as User,
           amount,
-          type: TransactionType.PURCHASE,
-          balanceBefore: 0,
-          balanceAfter: amount,
-          notes: 'Initial voucher purchase.',
-        },
-        manager,
-      );
+          currency,
+          transactionId,
+          paymentMethod: paymentProvider,
+        });
+        const savedPayment = await paymentRepo.save(newPayment);
 
-      await this.walletService.creditEarning({
-        userId: product.user.id,
-        amount,
-        type: WalletTransactionType.EARNING_VOUCHER,
-        description: `Voucher purchase - ${savedVoucher.code}`,
+        const newOrder = orderRepo.create({
+          user: { id: userId } as User,
+          total: amount,
+          payment: savedPayment,
+        });
+        const savedOrder = await orderRepo.save(newOrder);
+
+        const user = await manager.findOne(User, { where: { id: userId } });
+
+        const deliveryDate = purchaseDetails.deliveryDate
+          ? new Date(purchaseDetails.deliveryDate)
+          : new Date();
+        const isScheduled = deliveryDate > new Date();
+
+        const expiresAt = product.expiryDays
+          ? new Date(Date.now() + product.expiryDays * 24 * 60 * 60 * 1000)
+          : null;
+
+        let finalAmount = amount;
+        if (
+          product.bonusThreshold &&
+          product.bonusAmount &&
+          amount >= product.bonusThreshold
+        ) {
+          finalAmount = Number(amount) + Number(product.bonusAmount);
+        }
+
+        const dv = await this.digitalValueService.create(
+          {
+            type: DigitalValueType.VOUCHER,
+            initialValue: finalAmount,
+            ownerId: userId,
+            metadata: {
+              ...purchaseDetails,
+              voucherProductId: product.id,
+            },
+            expiryDate: expiresAt ? expiresAt.toISOString() : null,
+          },
+          userId,
+          manager,
+        );
+
+        const newVoucher = voucherRepo.create({
+          code: dv.code,
+          initialValue: finalAmount,
+          balance: finalAmount,
+          status: isScheduled
+            ? VoucherStatus.DISABLED
+            : VoucherStatus.UNREDEEMED,
+          expiresAt,
+          buyer: { id: userId } as User,
+          owner: product.user,
+          voucherProduct: product,
+          order: savedOrder,
+          deliveryDate,
+          recipientName: purchaseDetails.recipientName,
+          recipientEmail: purchaseDetails.recipientEmail,
+          personalMessage: purchaseDetails.personalMessage,
+        });
+
+        const savedVoucher = await voucherRepo.save(newVoucher);
+
+        await this.createTransaction(
+          {
+            voucher: savedVoucher,
+            amount,
+            type: TransactionType.PURCHASE,
+            balanceBefore: 0,
+            balanceAfter: amount,
+            notes: 'Initial voucher purchase.',
+          },
+          manager,
+        );
+
+        await this.walletService.creditEarning(
+          {
+            userId: product.user.id,
+            amount,
+            type: WalletTransactionType.EARNING_VOUCHER,
+            description: `Voucher purchase - ${savedVoucher.code}`,
+          },
+          manager,
+        );
+
+        // Process Cashback
+        if (user.email) {
+          try {
+            await this.centralIntegrationService.processCashback(
+              user.email,
+              Number(amount),
+              CashbackEvent.VOUCHER_PURCHASE,
+              transactionId,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to process cashback for voucher ${transactionId}: ${error.message}`,
+            );
+          }
+        }
+
+        return {
+          ...savedVoucher,
+          transactionId: savedOrder.id,
+        };
       });
-
-      // Process Cashback
-      if (user.email) {
-        try {
-          await this.centralIntegrationService.processCashback(
-            user.email,
-            Number(amount),
-            CashbackEvent.VOUCHER_PURCHASE,
+    } catch (dbErr) {
+      this.logger.error(
+        `Database transaction failed for voucher purchase after payment was captured. Initiating compensating refund.`,
+        dbErr,
+      );
+      try {
+        if (paymentProvider === PaymentMethod.STRIPE) {
+          await this.paymentProviderService.refundStripePayment(
             transactionId,
+            amount,
           );
-        } catch (error) {
-          this.logger.error(
-            `Failed to process cashback for voucher ${transactionId}: ${error.message}`,
+        } else if (paymentProvider === PaymentMethod.PAYPAL) {
+          await this.paymentProviderService.refundPaypalOrder(
+            transactionId,
+            amount,
+            currency,
           );
         }
+      } catch (refundErr) {
+        this.logger.error(
+          `Compensating refund also failed for voucher transaction ${transactionId}: ${refundErr.message}`,
+        );
       }
-
-      return {
-        ...savedVoucher,
-        transactionId: savedOrder.id,
-      };
-    });
+      throw new InternalServerErrorException(
+        'An error occurred while creating your voucher. If your account was charged, a refund has been initiated.',
+      );
+    }
   }
 
   async initiateVoucherReload(
@@ -610,19 +662,57 @@ export class VoucherService {
 
   async redeemVoucher(
     redeemDto: RedeemVoucherDto,
-    staffId?: string,
+    requester?: { id: string; role?: string } | string,
   ): Promise<Voucher> {
     const { code, amount } = redeemDto;
+    const requesterObj =
+      typeof requester === 'string' ? { id: requester } : requester;
 
     return this.dataSource.transaction(async (manager) => {
       const voucherRepo = manager.getRepository(Voucher);
       const voucher = await voucherRepo.findOne({
         where: { code },
-        relations: ['voucherProduct'],
+        relations: [
+          'voucherProduct',
+          'voucherProduct.user',
+          'owner',
+          'buyer',
+          'recipient',
+        ],
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!voucher) {
         throw new NotFoundException('Voucher not found.');
+      }
+
+      // --- Authorization: owner/buyer/recipient, issuing merchant, or admin ---
+      if (requesterObj?.id) {
+        const callerId = requesterObj.id;
+        const callerRole = requesterObj.role;
+        const isAdmin = callerRole === UserRole.ADMIN;
+        const isOwner =
+          voucher.owner?.id === callerId ||
+          voucher.buyer?.id === callerId ||
+          (voucher as any).recipient?.id === callerId ||
+          (voucher as any).recipientId === callerId ||
+          (voucher as any).ownerId === callerId ||
+          (voucher as any).buyerId === callerId;
+        const merchantId =
+          (voucher.voucherProduct as any)?.user?.id ||
+          (voucher.voucherProduct as any)?.userId;
+        const isMerchant = !!merchantId && merchantId === callerId;
+
+        if (!isAdmin && !isOwner && !isMerchant) {
+          throw new ForbiddenException(
+            'You are not authorized to redeem this voucher.',
+          );
+        }
+      } else {
+        // No caller context — deny by default to prevent anonymous code enumeration.
+        throw new ForbiddenException(
+          'Authentication context is required to redeem a voucher.',
+        );
       }
 
       await this.validateVoucherForRedemption(voucher, manager);
@@ -676,7 +766,7 @@ export class VoucherService {
           type: TransactionType.REDEMPTION,
           balanceBefore,
           balanceAfter,
-          processedById: staffId,
+          processedById: requesterObj?.id,
           notes: 'Voucher redeemed.',
         },
         manager,
@@ -698,11 +788,43 @@ export class VoucherService {
       const voucherRepo = transactionalManager.getRepository(Voucher);
       const voucher = await voucherRepo.findOne({
         where: { code },
-        relations: ['voucherProduct'],
+        relations: [
+          'voucherProduct',
+          'voucherProduct.user',
+          'owner',
+          'buyer',
+          'recipient',
+        ],
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!voucher) {
         throw new NotFoundException('Voucher not found.');
+      }
+
+      // Authorization: only the voucher owner/buyer/recipient or the issuing
+      // merchant may redeem it against an order. Bearer use is denied.
+      const callerId = (order as any)?.user?.id;
+      if (!callerId) {
+        throw new ForbiddenException(
+          'Authentication context is required to redeem a voucher.',
+        );
+      }
+      const isOwner =
+        voucher.owner?.id === callerId ||
+        voucher.buyer?.id === callerId ||
+        (voucher as any).recipient?.id === callerId ||
+        (voucher as any).recipientId === callerId ||
+        (voucher as any).ownerId === callerId ||
+        (voucher as any).buyerId === callerId;
+      const merchantId =
+        (voucher.voucherProduct as any)?.user?.id ||
+        (voucher.voucherProduct as any)?.userId;
+      const isMerchant = !!merchantId && merchantId === callerId;
+      if (!isOwner && !isMerchant) {
+        throw new ForbiddenException(
+          'You are not authorized to redeem this voucher.',
+        );
       }
 
       await this.validateVoucherForRedemption(voucher, manager);
@@ -791,16 +913,55 @@ export class VoucherService {
     return voucher;
   }
 
+  async findPublicVoucherByCode(code: string) {
+    const voucher = await this.voucherRepository.findOne({
+      where: { code },
+      relations: ['voucherProduct'],
+    });
+    if (!voucher) {
+      throw new NotFoundException('Voucher not found.');
+    }
+    // Never expose balance, owner PII, or transaction history publicly —
+    // callers must authenticate + prove ownership to redeem or view value.
+    return {
+      code: voucher.code,
+      status: voucher.status,
+      expiresAt: voucher.expiresAt,
+      voucherProduct: voucher.voucherProduct
+        ? {
+            id: voucher.voucherProduct.id,
+            name: voucher.voucherProduct.name,
+            allowPartialRedemption:
+              voucher.voucherProduct.allowPartialRedemption,
+          }
+        : null,
+    };
+  }
+
   async manuallyMarkAsRedeemed(
     code: string,
     staffId: string,
   ): Promise<Voucher> {
     return this.dataSource.transaction(async (manager) => {
       const voucherRepo = manager.getRepository(Voucher);
-      const voucher = await voucherRepo.findOne({ where: { code } });
+      const voucher = await voucherRepo.findOne({
+        where: { code },
+        relations: ['voucherProduct', 'voucherProduct.user'],
+        lock: { mode: 'pessimistic_write' },
+      });
 
       if (!voucher) {
         throw new NotFoundException('Voucher not found.');
+      }
+
+      // Authorization: only the issuing merchant may manually redeem a voucher.
+      const merchantId =
+        (voucher.voucherProduct as any)?.user?.id ||
+        (voucher.voucherProduct as any)?.userId;
+      if (!merchantId || merchantId !== staffId) {
+        throw new ForbiddenException(
+          'You are not authorized to redeem this voucher.',
+        );
       }
 
       await this.validateVoucherForRedemption(voucher, manager);
@@ -1060,14 +1221,20 @@ export class VoucherService {
 
     return voucher;
   }
-  // --- System Integration Methods ---
+  // --- Partner (ecosystem M2M) Integration Methods ---
 
-  async createSystemVoucher(payload: {
+  /**
+   * Issue a voucher reward on behalf of an ecosystem partner (e.g. MCOM
+   * Rewards). Called over the zero-hop service mesh — the caller is
+   * authenticated by an RS256 service token, never a shared secret.
+   */
+  async createPartnerVoucher(payload: {
     amount: number;
     recipientEmail: string;
     recipientName?: string;
     message?: string;
     businessName: string;
+    code?: string;
   }): Promise<Voucher> {
     const amount = Number(payload.amount);
     const { recipientEmail, recipientName, message, businessName } = payload;
@@ -1096,7 +1263,7 @@ export class VoucherService {
     });
 
     const newVoucher = this.voucherRepository.create({
-      code: dv.code,
+      code: (payload.code && payload.code.trim()) || dv.code,
       initialValue: amount,
       balance: amount,
       status: VoucherStatus.UNREDEEMED,

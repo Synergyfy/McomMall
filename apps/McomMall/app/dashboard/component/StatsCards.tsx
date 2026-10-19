@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 import {
   DollarSign,
   ShoppingBag,
@@ -22,13 +23,23 @@ import {
 } from "@/service/stats/types";
 import { UserRole } from "@/service/auth/types";
 import { formatCurrency } from "@/lib/utils";
+import { useWallet } from "@/service/wallet/hook";
 
 interface StatsCardsProps {
   stats: OwnerStatsDto | CustomerStatsDto;
   role: UserRole;
 }
 
-const OwnerStatsMap = [
+interface StatItemConfig {
+  key: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  isCurrency: boolean;
+  href?: string;
+}
+
+const OwnerStatsMap: StatItemConfig[] = [
   {
     key: "totalAmountEarnedFromProductOrders",
     label: "Product Sales",
@@ -98,10 +109,11 @@ const OwnerStatsMap = [
     icon: Wallet,
     color: "text-emerald-700",
     isCurrency: true,
+    href: "/dashboard/wallet",
   },
 ];
 
-const CustomerStatsMap = [
+const CustomerStatsMap: StatItemConfig[] = [
   {
     key: "totalAmountSpentOnProductOrdered",
     label: "Product Spending",
@@ -171,23 +183,44 @@ const formatStatValue = (value: number | undefined | null, isCurrency: boolean) 
 };
 
 const StatsCards: React.FC<StatsCardsProps> = ({ stats, role }) => {
+  const router = useRouter();
+  const { data: walletData } = useWallet();
   const statsMap =
     role === UserRole.OWNER ? OwnerStatsMap : CustomerStatsMap;
 
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
-      {statsMap.map(({ key, label, icon: Icon, color, isCurrency }) => {
-        const value = stats[key as keyof typeof stats];
+      {statsMap.map(({ key, label, icon: Icon, color, isCurrency, href }) => {
+        let value: number | string | undefined | null = (stats as Record<string, any>)?.[key];
+
+        // Ensure wallet balance matches central wallet source of truth in real-time
+        if (key === "totalWalletBalance" && walletData) {
+          const liveBalance =
+            walletData.centralWallet?.balance ??
+            walletData.wallet?.balance;
+          if (liveBalance !== undefined && liveBalance !== null) {
+            value = Number(liveBalance);
+          }
+        }
+
         return (
           <div 
             key={key} 
-            className="hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 p-3 sm:p-4 flex flex-col justify-between gap-3 border border-slate-100/80 bg-white shadow-sm h-full rounded-2xl"
+            onClick={() => href && router.push(href)}
+            className={`hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 p-3 sm:p-4 flex flex-col justify-between gap-3 border border-slate-100/80 bg-white shadow-sm h-full rounded-2xl ${
+              href ? "cursor-pointer hover:border-orange-300 hover:ring-2 hover:ring-orange-100" : ""
+            }`}
           >
             <div className="flex flex-col gap-1.5 w-full min-w-0">
               <div className="flex items-center justify-between gap-1 w-full">
                 <div className="p-1.5 rounded-lg bg-slate-50 shrink-0">
                   <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${color}`} />
                 </div>
+                {href && (
+                  <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+                    View
+                  </span>
+                )}
               </div>
               <span 
                 className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider line-clamp-2 leading-tight" 

@@ -99,6 +99,6 @@ export class DigitalValueBusinessController {
     // Ensure merchantId is set correctly for redemption context
     redeemDto.merchantId = merchantId;
 
-    return this.digitalValueService.redeem(id, redeemDto);
+    return this.digitalValueService.redeemAtMerchant(id, merchantId, redeemDto);
   }
 }

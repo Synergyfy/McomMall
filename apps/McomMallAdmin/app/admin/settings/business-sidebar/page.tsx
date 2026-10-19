@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import {
   GripVertical, Save, Edit2, Check, X, ChevronDown, ChevronRight,
-  LayoutDashboard, Timer, Calendar, MessageSquare, Heart, Gift, LifeBuoy,
+  LayoutDashboard, Calendar, MessageSquare, Heart, Gift, LifeBuoy,
   Plus, List, BookOpen, ShoppingBag, Settings as SettingsIcon,
   Scan, Zap, History, CreditCard, Wallet, Coins, LogOut, UserPen, Users,
   SquareDashedKanban, Search, Settings2, Building2, ShieldCheck,
@@ -63,7 +63,6 @@ const initialData: NavGroup[] = [
     title: 'Main',
     items: [
       { id: 'nav-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { id: 'nav-activity-timer', label: 'Activity Timer', icon: Timer },
       { id: 'nav-my-bookings', label: 'My Bookings', icon: Calendar },
       { id: 'nav-messages', label: 'Messages', icon: MessageSquare },
       { id: 'nav-wishlist', label: 'My Wishlist', icon: Heart },

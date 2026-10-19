@@ -51,8 +51,11 @@ export class SettingsController {
 
   @Get('integrations')
   @ApiOperation({ summary: 'Get integration toggles for a business' })
-  getIntegrations(@Query('businessId', ParseUUIDPipe) businessId: string) {
-    return this.settingsService.getIntegrations(businessId);
+  getIntegrations(
+    @Query('businessId', ParseUUIDPipe) businessId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.settingsService.getIntegrations(businessId, user);
   }
 
   @Put('integrations')
@@ -60,8 +63,9 @@ export class SettingsController {
   updateIntegrations(
     @Query('businessId', ParseUUIDPipe) businessId: string,
     @Body() dto: UpdateIntegrationSettingsDto,
+    @CurrentUser() user: User,
   ) {
-    return this.settingsService.updateIntegrations(businessId, dto);
+    return this.settingsService.updateIntegrations(businessId, dto, user);
   }
 
   @Get('payment-methods')

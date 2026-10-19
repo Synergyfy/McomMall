@@ -31,6 +31,8 @@ import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Withdrawal, WithdrawalStatus } from './entities/withdrawal.entity';
 import { RequestWithdrawalDto } from './dto/request-withdrawal.dto';
 
+import { McomWalletService } from '../payments/services/mcom-wallet.service';
+
 @Injectable()
 export class WalletService {
   constructor(
@@ -53,6 +55,7 @@ export class WalletService {
     @Inject(forwardRef(() => BookingService))
     private readonly bookingService: BookingService,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly mcomWalletService: McomWalletService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -167,37 +170,126 @@ export class WalletService {
   }
 
   async getWalletDetails(userId: string): Promise<any> {
-    const wallet = await this.getWallet(userId);
-    const transactionHistory = await this.getTransactionHistory(wallet.id);
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
 
-    const totalCashbackBalance = Number(wallet.earningsBalance);
-    const terminalCashbackBalance = Number(wallet.earningsFromTerminalCashback);
-    const normalCashbackBalance =
-      totalCashbackBalance - terminalCashbackBalance;
+    const topUpUrl = this.mcomWalletService.getTopUpUrl();
+    const centralUserId = user?.centralUserId;
+
+    if (centralUserId && this.mcomWalletService.isEnabled()) {
+      try {
+        const [centralBalance, centralTxns] = await Promise.all([
+          this.mcomWalletService.getBalance(centralUserId),
+          this.mcomWalletService.getTransactions(centralUserId, { limit: 50 }).catch(() => ({ data: [] })),
+        ]);
+
+        if (centralBalance && centralBalance.success) {
+          const transactions = (centralTxns?.data || []).map((tx: any) => ({
+            id: tx.id,
+            createdAt: tx.createdAt,
+            updatedAt: tx.createdAt,
+            deletedAt: null,
+            amount: String(tx.amount),
+            type: tx.category || tx.type,
+            description: tx.description || `${tx.type} (${tx.category || 'MCOM'})`,
+            balanceAfter: String(tx.balanceAfter ?? tx.amount),
+            reference: tx.reference,
+            status: tx.status,
+          }));
+
+          return {
+            success: true,
+            balance: centralBalance.balance,
+            availableBalance: centralBalance.availableBalance,
+            currency: centralBalance.currency || 'MCOM',
+            status: centralBalance.status,
+            centralUserId,
+            topUpUrl,
+            transactionHistory: transactions,
+            centralWallet: {
+              enabled: true,
+              linked: true,
+              centralUserId,
+              balance: centralBalance.balance,
+              availableBalance: centralBalance.availableBalance,
+              currency: centralBalance.currency || 'MCOM',
+              status: centralBalance.status,
+              topUpUrl,
+            },
+            wallet: {
+              id: user?.id || userId,
+              balance: String(centralBalance.balance),
+              spendableBalance: String(centralBalance.availableBalance),
+              earningsBalance: '0',
+              pendingBalance: '0',
+              earningsFromOrders: '0',
+              earningsFromGiftCard: '0',
+              earningsFromVoucher: '0',
+              earningsFromCoupons: '0',
+              earningsFromBookings: '0',
+              currency: centralBalance.currency || 'MCOM',
+              status: centralBalance.status,
+            },
+          };
+        }
+      } catch (err) {
+        // Fall through to unlinked / fallback state
+      }
+    }
 
     return {
-      wallet,
-      cashbackBreakdown: {
-        terminalCashbackBalance,
-        normalCashbackBalance,
-        totalCashbackBalance,
+      success: false,
+      balance: 0,
+      availableBalance: 0,
+      currency: 'MCOM',
+      status: 'UNLINKED',
+      centralUserId: centralUserId || null,
+      topUpUrl,
+      transactionHistory: [],
+      centralWallet: {
+        enabled: this.mcomWalletService.isEnabled(),
+        linked: Boolean(centralUserId),
+        centralUserId: centralUserId || null,
+        message: centralUserId
+          ? 'Connecting to central wallet...'
+          : 'Please log in via MCOM SSO to link your central wallet.',
+        topUpUrl,
       },
-      transactionHistory,
+      wallet: {
+        id: user?.id || userId,
+        balance: '0',
+        spendableBalance: '0',
+        earningsBalance: '0',
+        pendingBalance: '0',
+        earningsFromOrders: '0',
+        earningsFromGiftCard: '0',
+        earningsFromVoucher: '0',
+        earningsFromCoupons: '0',
+        earningsFromBookings: '0',
+        currency: 'MCOM',
+        status: 'UNLINKED',
+      },
     };
   }
 
-  async creditEarning(creditEarningDto: CreditEarningDto): Promise<Wallet> {
+  async creditEarning(
+    creditEarningDto: CreditEarningDto,
+    externalManager?: EntityManager,
+  ): Promise<Wallet> {
     const { userId, amount, type, description } = creditEarningDto;
 
-    return this.dataSource.transaction(async (manager) => {
+    const execute = async (manager: EntityManager) => {
       const walletRepo = manager.getRepository(Wallet);
-      const user = await this.userRepository.findOneBy({ id: userId });
+      const userRepo = manager.getRepository(User);
+      const user = await userRepo.findOneBy({ id: userId });
       if (!user) {
         throw new NotFoundException('User not found');
       }
 
       let wallet = await walletRepo.findOne({
         where: { user: { id: userId } },
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!wallet) {
@@ -249,7 +341,12 @@ export class WalletService {
       );
 
       return savedWallet;
-    });
+    };
+
+    if (externalManager) {
+      return execute(externalManager);
+    }
+    return this.dataSource.transaction(execute);
   }
 
   async releaseBookingPayment(bookingId: string): Promise<Wallet> {

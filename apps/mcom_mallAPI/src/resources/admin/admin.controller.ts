@@ -66,13 +66,13 @@ export class AdminController {
     return this.orderService.getOrdersForAdmin(pagination);
   }
 
-  @ApiOperation({ summary: 'Create a new super admin' })
+  @ApiOperation({ summary: 'Create a new super admin (Admin only)' })
   @ApiResponse({
     status: 201,
     description: 'Super admin created successfully.',
   })
   @ApiResponse({ status: 400, description: 'Invalid input.' })
-  @Public()
+  @Roles(UserRole.ADMIN)
   @Post('signup')
   async create(@Body() createAdminDto: CreateAdminDto) {
     return this.adminService.create(createAdminDto);

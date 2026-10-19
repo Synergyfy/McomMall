@@ -12,6 +12,15 @@ import { Form } from '@/components/ui/form';
 import { useAddService } from '@/service/services/hook';
 import { CreateServiceDto } from '@/service/services/types';
 import { uploadFile } from '@/lib/upload';
+import { zodResolver, parseApiError, scrollToFirstError, toSerializable } from '@/lib/form-validation';
+import {
+  ServiceFormValues,
+  serviceFormSchema,
+  serviceStepFields,
+  serviceStepNames,
+  serviceFieldToStep,
+  serviceKnownFields,
+} from './schema';
 import { ProductStatusModal } from '../../store/products/components/wizard/lib/ProductStatusModal';
 import { useGetCategories, useGetSubCategoriesByCategory, useGetCategoriesBySector } from '@/service/taxonomy/hook';
 import { cn } from '@/lib/utils';
@@ -25,8 +34,6 @@ import { Step6FinalReview } from './components/Step6FinalReview';
 import { Step7FinalReview } from './components/Step7FinalReview';
 import Step7Partnership from '../../store/products/components/wizard/Step7Partnership';
 import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
-
-type ServiceFormValues = any;
 
 const ALL_STEPS = [
   { id: 1, name: 'Basic Info', label: '1' },
@@ -65,6 +72,7 @@ function AddServicePageContent() {
   }, [currentStep]);
 
   const form = useForm<ServiceFormValues>({
+    resolver: zodResolver<ServiceFormValues>(serviceFormSchema, { raw: true }),
     mode: 'onChange',
     defaultValues: {
       name: '',
@@ -137,77 +145,47 @@ function AddServicePageContent() {
   const sectorId = form.watch('sector');
   const { data: categories } = useGetCategoriesBySector(sectorId);
   const categoryId = form.watch('category');
-  const { data: subcategories } = useGetSubCategoriesByCategory(categoryId);
+  const { data: subcategories } = useGetSubCategoriesByCategory(categoryId ?? '');
 
-  // Define fields for each step to map errors to steps
-  const fieldsByStep: Record<number, string[]> = {
-    1: ['businessId', 'name', 'sector', 'category', 'subcategory', 'shortDescription', 'description', 'targetAudience', 'tags'],
-    2: ['deliveryConfig.mode', 'deliveryConfig.cities', 'deliveryConfig.regions', 'deliveryConfig.travelFee'],
-    3: ['pricingModel', 'fixedPrice', 'pricePerHour', 'pricePerUnit', 'unitName', 'pricingRules', 'enableGuestPricing', 'guestPricingModel', 'minGuests', 'maxGuests', 'configurableAddons', 'bundledServices', 'isQuoteModel', 'bookingFee'],
-    4: ['availability.schedule', 'availability.slotDuration', 'availability.bufferTime', 'availability.maxBookingsPerSlot', 'availability.staffPerBooking', 'availability.serviceRadiusKm'],
-    5: ['requireApproval', 'bookingRequirements'],
-    6: ['media'],
-    7: [],
-    8: []
+  /**
+   * Validates only the fields owned by the given step. `trigger` re-runs the
+   * resolver but react-hook-form only applies errors for the requested names,
+   * so untouched steps never light up.
+   */
+  const validateStep = async (stepNumber: number): Promise<boolean> => {
+    const fields = serviceStepFields[stepNumber] ?? [];
+    if (fields.length === 0) return true;
+    return form.trigger(fields as any, { shouldFocus: false });
   };
 
-  const validateStep = (stepNumber: number) => {
-    const values = form.getValues();
-    let isValid = true;
-    
-    // Clear relevant errors before re-validating
-    const fieldsToClear = fieldsByStep[stepNumber] || [];
-    fieldsToClear.forEach(f => form.clearErrors(f as any));
-
-    const setError = (path: string, message: string) => {
-      form.setError(path as any, { type: 'manual', message });
-      isValid = false;
-    };
-
-    if (stepNumber === 1) {
-      if (!values.businessId) setError('businessId', 'Please select a business');
-      if (!values.name?.trim()) setError('name', 'Service name is required');
-      if (!values.sector) setError('sector', 'Sector is required');
-    } else if (stepNumber === 2) {
-      if (!values.deliveryConfig?.mode) setError('deliveryConfig.mode', 'Delivery mode is required');
-    } else if (stepNumber === 3) {
-      if (!values.pricingModel) setError('pricingModel', 'Pricing model is required');
-      if (['fixed', 'perJob', 'perSession', 'subscription'].includes(values.pricingModel)) {
-        if (values.fixedPrice === undefined || values.fixedPrice === null || values.fixedPrice === '') {
-           setError('fixedPrice', 'Base price is required');
-        }
-      }
-      if (values.pricingModel === 'perHour' && (values.pricePerHour === undefined || values.pricePerHour === null || values.pricePerHour === '')) {
-         setError('pricePerHour', 'Price per hour is required');
-      }
-      if (values.pricingModel === 'perUnit' && (values.pricePerUnit === undefined || values.pricePerUnit === null || values.pricePerUnit === '')) {
-         setError('pricePerUnit', 'Price per unit is required');
-      }
-    } else if (stepNumber === 6) {
-       // media is optional per backend but good to have
-    } else if (stepNumber === 7) {
-        // partnership is optional
-    }
-
-    return isValid;
+  const focusFirstError = (delay = 60) => {
+    const formEl = typeof document !== 'undefined' ? document.querySelector('form') : null;
+    scrollToFirstError(formEl, { delay });
   };
 
   const onSubmit = async (data: ServiceFormValues) => {
-    // Manual final check for all steps
-    let allValid = true;
-    for (let i = 1; i <= 7; i++) {
-        if (!validateStep(i)) {
-            allValid = false;
-            setCurrentStep(i);
-            toast.error('Please fix the errors before publishing.');
-            return; // Stop and stay on the step with error
-        }
+    // Validate every step in the active flow and jump to the first offender.
+    let firstInvalidStep: number | null = null;
+    for (const stepId of STEPS.map((s) => s.id)) {
+      const fields = serviceStepFields[stepId] ?? [];
+      const valid = fields.length === 0 ? true : await form.trigger(fields as any);
+      if (!valid && firstInvalidStep === null) {
+        firstInvalidStep = stepId;
+      }
+    }
+
+    if (firstInvalidStep !== null) {
+      const stepToShow = firstInvalidStep;
+      setCurrentStep(stepToShow);
+      toast.error(`Please complete the "${serviceStepNames[stepToShow]}" step before publishing.`);
+      focusFirstError(350);
+      return;
     }
 
     setIsUploading(true);
     try {
       const mediaUrls = await Promise.all(
-        data.media.map(async (file: File | string) => {
+        (data.media ?? []).map(async (file: File | string) => {
           if (typeof file === 'string') return { secure_url: file, type: 'image' };
           const result = await uploadFile(file);
           return { ...result, type: (file as File).type.startsWith('video/') ? 'video' : 'image' };
@@ -235,6 +213,9 @@ function AddServicePageContent() {
 
       const serviceData: CreateServiceDto = {
         ...data,
+        pricingModel: data.pricingModel as CreateServiceDto['pricingModel'],
+        guestPricingModel: data.guestPricingModel as CreateServiceDto['guestPricingModel'],
+        bookingRequirements: data.bookingRequirements as CreateServiceDto['bookingRequirements'],
         sector: data.sector,
         shortDesc: data.shortDescription || '',
         fullDesc: data.description || '',
@@ -274,9 +255,9 @@ function AddServicePageContent() {
 
         availability: data.availability ? {
           ...data.availability,
-          schedule: data.availability.schedule.map((s: any) => ({
+          schedule: (data.availability.schedule ?? []).map((s: any) => ({
             ...s,
-            day: s.day.charAt(0).toUpperCase() + s.day.slice(1),
+            day: typeof s.day === 'string' ? s.day.charAt(0).toUpperCase() + s.day.slice(1) : s.day,
             breaks: s.breaks?.map((b: any) => `${b.start}-${b.end}`) || []
           })),
           slotDuration: parseNum(data.availability.slotDuration) || 60,
@@ -291,7 +272,16 @@ function AddServicePageContent() {
       };
 
       setIsUploading(false);
-      addService(serviceData, {
+
+      // Strip anything JSON can't serialize (a Window/DOM handle, function or
+      // File that leaked into form state) so axios/JSON.stringify can never
+      // throw a SecurityError before the request is sent.
+      const { value: safeServiceData, dropped } = toSerializable<CreateServiceDto>(serviceData);
+      if (process.env.NODE_ENV !== 'production' && dropped.length > 0) {
+        console.warn('[add-service] Dropped non-serializable payload fields:', dropped);
+      }
+
+      addService(safeServiceData, {
         onSuccess: (data: any) => {
           localStorage.removeItem(DRAFT_STORAGE_KEY);
           if (data.plusItem || form.getValues('plusItem')) {
@@ -305,7 +295,13 @@ function AddServicePageContent() {
               // Set base service ID (the one we just created)
               requestDto.baseServiceId = data.id;
 
-              createPartnershipRequest(requestDto, {
+              const { value: safeRequestDto, dropped: droppedRequest } =
+                toSerializable<Record<string, unknown>>(requestDto);
+              if (process.env.NODE_ENV !== 'production' && droppedRequest.length > 0) {
+                console.warn('[add-service] Dropped non-serializable partnership fields:', droppedRequest);
+              }
+
+              createPartnershipRequest(safeRequestDto as any, {
                   onSuccess: () => toast.success('Partnership request sent!'),
                   onError: (err) => toast.error('Service created, but partnership request failed: ' + err.message)
               });
@@ -314,13 +310,29 @@ function AddServicePageContent() {
           setShowSuccessDialog(true);
         },
         onError: (err: any) => {
-          toast.error(err.message || 'Failed to create service');
+          const parsed = parseApiError(err, serviceKnownFields);
+
+          if (Object.keys(parsed.fields).length > 0) {
+            Object.entries(parsed.fields).forEach(([path, fieldMessage]) => {
+              form.setError(path as any, { type: 'server', message: String(fieldMessage) });
+            });
+
+            const firstPath = Object.keys(parsed.fields)[0];
+            const stepForField = serviceFieldToStep[firstPath];
+            if (stepForField) {
+              setCurrentStep(stepForField);
+              focusFirstError(350);
+            }
+          }
+
+          toast.error(parsed.general || 'Failed to create service');
         },
       });
     } catch (error) {
       console.error(error);
       setIsUploading(false);
-      toast.error('An error occurred during upload');
+      const parsed = parseApiError(error);
+      toast.error(parsed.general || 'An error occurred during upload');
     }
   };
 
@@ -328,28 +340,17 @@ function AddServicePageContent() {
     if (isNavigating) return;
     setIsNavigating(true);
 
-    if (validateStep(currentStep)) {
+    const valid = await validateStep(currentStep);
+
+    if (valid) {
       const currentIndex = STEPS.findIndex(s => s.id === currentStep);
       const nextIndex = Math.min(currentIndex + 1, STEPS.length - 1);
       setCurrentStep(STEPS[nextIndex].id);
       setTimeout(() => setIsNavigating(false), 500);
     } else {
       setIsNavigating(false);
-      toast.error('Please fix the errors before proceeding.');
-      setTimeout(() => {
-        const formEl = document.querySelector('form');
-        if (!formEl) return;
-        const errorElement = formEl.querySelector('[aria-invalid="true"], [data-slot="form-message"]');
-        if (errorElement) {
-          const item = (errorElement.closest('[data-slot="form-item"]') || errorElement) as HTMLElement;
-          item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          const field = formEl.querySelector('[aria-invalid="true"]') as HTMLElement | null;
-          if (field) {
-            field.classList.add('ring-2', 'ring-destructive');
-            setTimeout(() => field.classList.remove('ring-2', 'ring-destructive'), 2500);
-          }
-        }
-      }, 300);
+      toast.error(`Please fix the highlighted ${serviceStepNames[currentStep] ?? ''} fields before proceeding.`);
+      focusFirstError(80);
     }
   };
 
@@ -360,14 +361,55 @@ function AddServicePageContent() {
     setCurrentStep(STEPS[prevIndex].id);
   };
 
+  /**
+   * Progress-circle navigation. Going backwards is always allowed; moving
+   * forward validates every step between the current one and the target so the
+   * user can never skip past an incomplete step.
+   */
+  const goToStep = async (targetId: number) => {
+    if (isNavigating || isUploading || isAddingService) return;
+
+    const currentIndex = STEPS.findIndex(s => s.id === currentStep);
+    const targetIndex = STEPS.findIndex(s => s.id === targetId);
+    if (targetIndex === -1 || targetIndex === currentIndex) return;
+
+    if (targetIndex < currentIndex) {
+      setCurrentStep(targetId);
+      return;
+    }
+
+    setIsNavigating(true);
+    for (let i = currentIndex; i < targetIndex; i++) {
+      const stepId = STEPS[i].id;
+      const valid = await validateStep(stepId);
+      if (!valid) {
+        setIsNavigating(false);
+        setCurrentStep(stepId);
+        toast.error(`Please fix the highlighted ${serviceStepNames[stepId] ?? ''} fields before moving on.`);
+        focusFirstError(80);
+        return;
+      }
+    }
+
+    setIsNavigating(false);
+    setCurrentStep(targetId);
+  };
+
   const handleSaveDraft = () => {
     if (isNavigating || isUploading || isAddingService) return;
     const values = form.getValues();
-    const draftValues = {
+    const rawDraftValues = {
       ...values,
       media: Array.isArray(values.media) ? values.media.filter((m: any) => typeof m === 'string') : [],
       plusItem: values.plusItem ?? null,
     };
+
+    // Same guard as submit: never let a non-serializable value break drafts.
+    const { value: draftValues, dropped } = toSerializable<Record<string, unknown>>(rawDraftValues);
+    if (process.env.NODE_ENV !== 'production' && dropped.length > 0) {
+      console.warn('[add-service] Dropped non-serializable draft fields:', dropped);
+    }
+
     try {
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ values: draftValues, step: currentStep }));
       toast.success(`Draft saved (step ${currentStep}). You can continue later.`);
@@ -455,7 +497,7 @@ function AddServicePageContent() {
               <div 
                 key={step.id} 
                 className="flex flex-col items-center cursor-pointer group"
-                onClick={() => !isAddingService && !isUploading && !isNavigating && setCurrentStep(step.id)}
+                onClick={() => goToStep(step.id)}
               >
                 <div
                   className={`w-7 h-7 sm:w-12 sm:h-12 text-[10px] sm:text-base rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all duration-300 ${currentStep >= step.id
@@ -493,8 +535,10 @@ function AddServicePageContent() {
           <Form {...form}>
             <form
               onSubmit={(e) => {
-                  e.preventDefault(); // Extra safety
-                  form.handleSubmit(onSubmit)(e);
+                  e.preventDefault();
+                  // Validate per-step inside onSubmit so we can jump the user
+                  // to the first step that needs attention.
+                  void onSubmit(form.getValues());
               }}
               className=""
             >

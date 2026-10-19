@@ -45,6 +45,7 @@ class PaymentDto {
   transactionId?: string;
 
   @ApiProperty({ description: 'The total amount paid.', example: 14.5 })
+  @Type(() => Number)
   @IsNumber()
   amount: number;
 
@@ -72,6 +73,18 @@ class DirectPurchaseDto {
   })
   @IsOptional()
   variant?: Record<string, string>;
+}
+
+class RewardApplicationDto {
+  @ApiProperty({ description: 'MCOM Rewards issuance id being applied.' })
+  @IsString()
+  issuanceId: string;
+
+  @ApiProperty({
+    description: 'Stable cart/booking line key (e.g. "product:<uuid>").',
+  })
+  @IsString()
+  lineKey: string;
 }
 
 export class CreateCheckoutDto {
@@ -123,14 +136,29 @@ export class CreateCheckoutDto {
   voucherCode?: string;
 
   @ApiPropertyOptional({ description: 'Amount to deduct from gift card.' })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   giftCardAmount?: number;
 
-  @ApiPropertyOptional({ description: 'Amount to deduct from voucher.' })
+  @ApiPropertyOptional({
+    description: 'Amount to deduct from voucher.',
+  })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   voucherAmount?: number;
+
+  @ApiPropertyOptional({
+    type: [RewardApplicationDto],
+    description:
+      'MCOM Rewards reward issuances to apply, each bound to a cart line.',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RewardApplicationDto)
+  @IsOptional()
+  rewardApplications?: RewardApplicationDto[];
 
   @ApiPropertyOptional({
     type: [ServiceBookingDetailsDto],

@@ -36,8 +36,8 @@ export class TeamController {
   @ApiResponse({ status: 200, description: 'Return team list.' })
   @Roles(UserRole.OWNER, UserRole.ADMIN)
   @Get(':businessId')
-  async getTeam(@Param('businessId') businessId: string) {
-    return this.teamService.getTeam(businessId);
+  async getTeam(@Param('businessId') businessId: string, @Req() req) {
+    return this.teamService.getTeam(businessId, req.user);
   }
 
   @ApiOperation({ summary: 'Invite a new member to the team' })
@@ -47,8 +47,9 @@ export class TeamController {
   async inviteMember(
     @Param('businessId') businessId: string,
     @Body() dto: InviteMemberDto,
+    @Req() req,
   ) {
-    return this.teamService.inviteMember(businessId, dto);
+    return this.teamService.inviteMember(businessId, dto, req.user);
   }
 
   @ApiOperation({ summary: 'Update team member role or permissions' })
@@ -59,8 +60,9 @@ export class TeamController {
     @Param('businessId') businessId: string,
     @Param('memberId') memberId: string,
     @Body() dto: UpdateMemberDto,
+    @Req() req,
   ) {
-    return this.teamService.updateMember(businessId, memberId, dto);
+    return this.teamService.updateMember(businessId, memberId, dto, req.user);
   }
 
   @ApiOperation({ summary: 'Remove a member from the team' })
@@ -70,8 +72,9 @@ export class TeamController {
   async removeMember(
     @Param('businessId') businessId: string,
     @Param('memberId') memberId: string,
+    @Req() req,
   ) {
-    return this.teamService.removeMember(businessId, memberId);
+    return this.teamService.removeMember(businessId, memberId, req.user);
   }
 
   @ApiOperation({ summary: 'Revoke/Cancel a pending team invitation' })
@@ -81,7 +84,8 @@ export class TeamController {
   async revokeInvite(
     @Param('businessId') businessId: string,
     @Param('inviteId') inviteId: string,
+    @Req() req,
   ) {
-    return this.teamService.revokeInvite(businessId, inviteId);
+    return this.teamService.revokeInvite(businessId, inviteId, req.user);
   }
 }

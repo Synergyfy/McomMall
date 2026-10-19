@@ -18,17 +18,19 @@ import {
 } from 'lucide-react';
 import MediaCropper from '@/app/dashboard/add-listing/components/steps/shared/MediaCropper';
 import { uploadFile } from '@/lib/upload';
+import { FieldError } from '@/lib/form-validation';
 import { toast } from 'sonner';
 
 interface Step2Props {
     formData: any;
     updateFormData: (data: any) => void;
-    onNext: () => void;
+    onNext: (patch?: any) => void;
     onBack: () => void;
     onSaveDraft: () => void;
+    errors?: Record<string, string>;
 }
 
-export default function Step2MediaContent({ formData, updateFormData, onNext, onBack, onSaveDraft }: Step2Props) {
+export default function Step2MediaContent({ formData, updateFormData, onNext, onBack, onSaveDraft, errors }: Step2Props) {
     const [croppingIndex, setCroppingIndex] = React.useState<{ index: number, type: 'image' | 'video' } | null>(null);
     const [isUploadingImage, setIsUploadingImage] = React.useState(false);
     const [isUploadingVideo, setIsUploadingVideo] = React.useState(false);
@@ -53,6 +55,22 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                 updateFormData({ fullDesc: html });
             }
         }
+    };
+
+    const handleContinue = () => {
+        syncEditorValue();
+        const editorHtml = editorRef.current?.innerHTML ?? formData.fullDesc ?? '';
+        // Hand the freshest description to the page so step validation runs
+        // against the value the user just typed.
+        onNext({ fullDesc: editorHtml });
+    };
+
+    const handleSaveDraftClick = () => {
+        syncEditorValue();
+        if (editorRef.current && editorRef.current.innerHTML !== formData.fullDesc) {
+            updateFormData({ fullDesc: editorRef.current.innerHTML });
+        }
+        onSaveDraft();
     };
 
     const execCommand = (command: string, value?: string) => {
@@ -160,6 +178,8 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                 <div className="flex flex-col gap-6">
                     <h2 className="text-md md:text-lg font-bold text-[#1c140d] dark:text-[#ece0d6] border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">Description</h2>
 
+                    <FieldError message={errors?.description} />
+
                     <div className="flex flex-col gap-2">
                         <label className="text-[#1c140d] dark:text-[#ece0d6] text-sm font-semibold" htmlFor="shortDesc">
                             Short Description
@@ -177,7 +197,7 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
 
                     <div className="flex flex-col gap-2">
                         <label className="text-[#1c140d] dark:text-[#ece0d6] text-sm font-semibold" htmlFor="fullDesc">
-                            Full Description
+                            Full Description <span className="text-xs font-normal text-muted-foreground">(Optional if short description is provided)</span>
                         </label>
                         <p className="text-xs text-gray-500 mb-1">Detailed information about your product features and benefits.</p>
                         <div className="rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#f8f7f5] dark:bg-[#221910] overflow-hidden">
@@ -355,6 +375,7 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                                 <span className="text-[10px] md:text-xs text-[#9c7349]">PDF, ZIP, MP3, etc.</span>
                             </div>
                             <p className="text-xs text-gray-500 mt-1">Upload the actual files that customers will receive after purchase.</p>
+                            <FieldError message={errors?.fileUrls} className="mt-2" />
                         </div>
 
                         <div className="relative group">
@@ -414,11 +435,11 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                         Back
                     </button>
 
-                    <button onClick={onSaveDraft} className="flex-1 md:flex-none md:ml-auto px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] text-[#9c7349] dark:text-[#cba885] font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap">
+                    <button onClick={handleSaveDraftClick} className="flex-1 md:flex-none md:ml-auto px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] text-[#9c7349] dark:text-[#cba885] font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap">
                         Save Draft
                     </button>
 
-                    <button onClick={onNext} className="flex-1 md:flex-none px-1 sm:px-8 py-2.5 sm:py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap">
+                    <button onClick={handleContinue} className="flex-1 md:flex-none px-1 sm:px-8 py-2.5 sm:py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap">
                         Continue
                         <ArrowRight size={16} className="hidden sm:block" />
                     </button>

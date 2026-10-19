@@ -18,7 +18,16 @@ export const envValidationSchema = Joi.object({
   MCOM_SOLUTIONS_BACKEND_URL: Joi.string().uri().allow('').optional(),
   MCOM_SOLUTIONS_FRONTEND_URL: Joi.string().uri().allow('').optional(),
   MCOM_CLIENT_ID: Joi.string().allow('').optional(),
+  MCOM_CLIENT_SECRET: Joi.string().allow('').optional(),
   MCOM_HMAC_SECRET: Joi.string().allow('').optional(),
+  // Ecosystem service mesh (zero-hop M2M).
+  MCOM_REWARDS_MESH_ENABLED: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  MCOM_REWARDS_CLIENT_ID: Joi.string().allow('').optional(),
+  MCOM_ALLOWED_CALLERS: Joi.string().allow('').optional(),
+  MCOM_SERVICE_SCOPES: Joi.string().allow('').optional(),
   MCOM_WALLET_ENABLED: Joi.string()
     .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
     .allow('')

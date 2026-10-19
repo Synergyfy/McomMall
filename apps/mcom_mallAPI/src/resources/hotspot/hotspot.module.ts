@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HotspotCampaign } from './entities/hotspot-campaign.entity';
 import { Hotspot } from './entities/hotspot.entity';
+import { Business } from '../listings/entities/listing.entity';
 import { HotspotService } from './hotspot.service';
 import { HotspotController } from './hotspot.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([HotspotCampaign, Hotspot])],
+  imports: [TypeOrmModule.forFeature([HotspotCampaign, Hotspot, Business])],
   controllers: [HotspotController],
   providers: [HotspotService],
   exports: [HotspotService],

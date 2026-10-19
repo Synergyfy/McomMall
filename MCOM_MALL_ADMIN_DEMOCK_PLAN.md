@@ -83,7 +83,7 @@
 | 34 | `app/admin/coupons-vouchers/page.tsx` | Analytics tab hardcoded bars `[40,65,…]`, `Spring 45%`, Network Integrity Ledger → `GET /money-engine/admin/analytics` series + ledger | [x] 2026-09-22 — monthly minting chart from live vouchers, season share from live definitions, ledger from `GET /money-engine/admin/vouchers` |
 | 35 | `app/admin/terminal-cashback/page.tsx` | Fraud Detection Rules fallback + Analysis Sheet trend heights + `John Smith` claimers → `GET /terminal-cashback/stats`, `/claims` aggregations | [x] 2026-09-22 — dials wired to live global rules; fraud log replaced with transparent claim heuristics + claim-sheet review; analysis sheet fully computed from live claims; fake dials-update toast removed |
 
-**Reference — already fully real (do not touch unless regression):** `admin/page.tsx`, `activity-timer/*`, `bookings`, `campaign-cashback/*`, `cashback` (via tables), `content`, `coupons/products/*`, `disputes`, `gift-cards/templates/*`, `listings`, `memberships`, `plans/*`, `products/*`, `reviews`, `services`, `settings/business-sidebar`, `templates`, `templates/products`, `tiers`, `transactions`, `vouchers/products/*`.
+**Reference — already fully real (do not touch unless regression):** `admin/page.tsx`, `bookings`, `campaign-cashback/*`, `cashback` (via tables), `content`, `coupons/products/*`, `disputes`, `gift-cards/templates/*`, `listings`, `memberships`, `plans/*`, `products/*`, `reviews`, `services`, `settings/business-sidebar`, `templates`, `templates/products`, `tiers`, `transactions`, `vouchers/products/*`.
 
 ## Cleanup checklist
 

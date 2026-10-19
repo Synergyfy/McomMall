@@ -10,7 +10,6 @@ import { CapabilityConfig as TierConfig } from './interfaces/capability-config.i
 import { ListingsService } from '../listings/listing.service';
 import { ProductService } from '../product/product.service';
 import { ServicesService } from '../services/services.service';
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { CouponService } from '../coupon/coupon.service';
 import { PromotionService } from '../promotion/promotion.service';
@@ -44,8 +43,6 @@ export class CapabilityService {
     private readonly productService: ProductService,
     @Inject(forwardRef(() => ServicesService))
     private readonly servicesService: ServicesService,
-    @Inject(forwardRef(() => ActivityTimerService))
-    private readonly activityTimerService: ActivityTimerService,
     @Inject(forwardRef(() => GiftCardService))
     private readonly giftCardService: GiftCardService,
     @Inject(forwardRef(() => CouponService))

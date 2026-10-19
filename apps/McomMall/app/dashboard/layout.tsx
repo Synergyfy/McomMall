@@ -4,6 +4,7 @@
 
 import { useGetTrialStatus } from '@/service/payments/hooks';
 import TrialCountdownTimer from '@/components/TrialCountdownTimer';
+import TrialBanner from '@/components/TrialBanner';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
@@ -16,7 +17,6 @@ import { Menu, Plus, Minus, Building2, MapPin, Compass, Globe } from 'lucide-rea
 // Main Dashboard Menu Components
 import SideMenu from './component/SideMenu';
 import { MenuContent as SideMenuContent } from './component/MenuContent';
-import { ActivityTimerBadge } from './component/ActivityTimerBadge';
 import { MembershipBadge } from './component/MembershipBadge';
 import { BottomNav } from './component/BottomNav';
 
@@ -167,7 +167,6 @@ export default function DashboardLayout({
                 </div>
                 <div className="flex items-center gap-2">
                   <ProximityHeaderBadge />
-                  <ActivityTimerBadge />
                   <UserNav align="end" />
                 </div>
               </>
@@ -254,6 +253,9 @@ export default function DashboardLayout({
               </>
             )}
           </header>
+
+          {/* Trial indicator — business owners only */}
+          {userRole === 'owner' && <TrialBanner />}
 
           {/* Page Content */}
           <div className={`overflow-y-auto flex-1 min-w-0 min-h-0 w-full max-w-full overflow-x-hidden ${userRole === 'customer' ? 'p-4 pb-20 md:p-6 md:pb-6' : 'sm:p-5 p-2 pb-20 sm:pb-5'}`}>

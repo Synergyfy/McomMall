@@ -14,6 +14,7 @@ import {
 import { SsoService } from './sso.service';
 import { McomCentralService } from './mcom-central.service';
 import { Public } from '../../common/decorators/public.decorator';
+import { UserRole } from '../../common/role.enum';
 import {
   ApiTags,
   ApiOperation,
@@ -106,6 +107,10 @@ export class SsoController {
         state: redirectPath,
       });
 
+      if (result.planId) params.set('planId', result.planId);
+      if (result.accessType) params.set('accessType', result.accessType);
+      if (result.isTrial) params.set('isTrial', 'true');
+
       res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
     } catch (error) {
       const message =
@@ -116,8 +121,20 @@ export class SsoController {
         process.env.MALL_FRONTEND_URL || 'http://localhost:3003';
 
       if (error instanceof ForbiddenException) {
+        const resp = error.getResponse();
+        const reason =
+          typeof resp === 'object' && resp && 'reason' in resp
+            ? (resp as any).reason
+            : 'subscription_required';
+        const upgradeUrl =
+          typeof resp === 'object' && resp && 'upgradeUrl' in resp
+            ? (resp as any).upgradeUrl
+            : `${this.ssoService.getMcomSolutionsFrontendUrl()}/dashboard/memberships`;
+
         res.redirect(
-          `${frontendUrl}/signin?error=${encodeURIComponent('subscription_required')}`,
+          `${frontendUrl}/auth/callback?error=subscription_required&reason=${encodeURIComponent(
+            reason,
+          )}&upgradeUrl=${encodeURIComponent(upgradeUrl)}`,
         );
         return;
       }
@@ -133,7 +150,7 @@ export class SsoController {
   @ApiOperation({
     summary: 'Exchange auth code for MCOM Mall tokens',
     description:
-      'Receives an auth code from the frontend (after MCOM Solutions redirect), exchanges it with MCOM Solutions for user data, creates/updates local user via JIT provisioning, and returns MCOM Mall JWT tokens.',
+      'Receives an auth code from the frontend (after MCOM Solutions redirect), exchanges it with MCOM Solutions for user data, creates/updates local user via JIT provisioning, and returns MCOM Mall JWT tokens and PlatformEntitlement.',
   })
   @ApiResponse({ status: 201, description: 'Tokens returned successfully' })
   @ApiResponse({ status: 401, description: 'Token exchange failed' })
@@ -156,7 +173,14 @@ export class SsoController {
         name: result.name,
         role: result.role,
         email: result.email,
-        packageInfo: null,
+        packageInfo: result.packageInfo,
+        entitlement: result.entitlement,
+        accessType: result.accessType,
+        isTrial: result.isTrial,
+        planId: result.planId,
+        planName: result.planName,
+        quotas: result.quotas,
+        tasks: result.tasks,
       };
     } catch (error) {
       const message =
@@ -167,7 +191,7 @@ export class SsoController {
       );
 
       if (error instanceof ForbiddenException) {
-        throw new ForbiddenException('subscription_required');
+        throw error;
       }
 
       throw new BadRequestException(message);
@@ -218,7 +242,12 @@ export class SsoController {
   @ApiOperation({ summary: 'Get user membership from MCOM Solutions' })
   @ApiResponse({ status: 200, description: 'Returns membership data' })
   @ApiResponse({ status: 400, description: 'Missing userId' })
-  async getUserMembership(@Param('userId') userId: string) {
+  async getUserMembership(@Param('userId') userId: string, @Req() req: any) {
+    if (req.user?.id !== userId && req.user?.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'You are not authorized to view this user membership.',
+      );
+    }
     const membership = await this.mcomCentralService.getUserMembership(userId);
 
     if (!membership) {

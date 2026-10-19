@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, Between } from 'typeorm';
 import { User } from 'src/resources/users/entities/user.entity';
@@ -7,6 +7,7 @@ import { ServiceBooking } from 'src/resources/booking/entities/service-booking.e
 import { MembershipPayment } from 'src/resources/membership/entities/membership-payment.entity';
 import { Business } from 'src/resources/listings/entities/listing.entity';
 import { Activity } from 'src/resources/activities/entities/activity.entity';
+import { UserRole } from 'src/common/role.enum';
 import {
   AdminAnalyticsResponseDto,
   MetricDto,
@@ -32,7 +33,36 @@ export class AdminAnalyticsService {
 
   async getAnalytics(
     range: string = '7days',
+    requester?: { id: string; role?: string },
   ): Promise<AdminAnalyticsResponseDto> {
+    // Defense-in-depth tenant isolation: platform-wide aggregates are
+    // ADMIN-only. Business owners get scoped metrics for their businesses.
+    let businessIds: string[] | null = null;
+    if (requester?.role && requester.role !== UserRole.ADMIN) {
+      if (requester.role !== UserRole.OWNER) {
+        throw new ForbiddenException(
+          'Only platform admins can view platform analytics.',
+        );
+      }
+      const owned = await this.businessRepository.find({
+        where: { user: { id: requester.id } },
+        select: ['id'],
+      });
+      businessIds = owned.map((b) => b.id);
+      if (businessIds.length === 0) {
+        return {
+          visitors: { value: '0', change: '+0.0%', changeType: 'up' },
+          signups: { value: '0', change: '+0.0%', changeType: 'up' },
+          revenue: { value: '£0.0K', change: '+0.0%', changeType: 'up' },
+          conversionRate: { value: '0.0%', change: '+0.0%', changeType: 'up' },
+          visitorChart: [],
+          revenueChart: [],
+          topCategories: [],
+          topBusinesses: [],
+          conversionFunnel: [],
+        };
+      }
+    }
     const now = new Date();
     let startDate: Date;
     let prevStartDate: Date;
@@ -60,6 +90,9 @@ export class AdminAnalyticsService {
     }
 
     // Run all independent metric queries in parallel — was 8 sequential, now 1 round trip
+    // When scoped to a business owner, order/revenue metrics are filtered to
+    // their businesses; platform-wide user/visitor counts are admin-only and
+    // zeroed for owners to avoid cross-tenant leakage.
     const [
       currentSignups,
       prevSignups,
@@ -70,14 +103,20 @@ export class AdminAnalyticsService {
       currentOrders,
       prevOrders,
     ] = await Promise.all([
-      this.userRepository.count({ where: { created_at: MoreThan(startDate) } }),
-      this.userRepository.count({ where: { created_at: Between(prevStartDate, startDate) } }),
-      this.calculateTotalRevenue(startDate, new Date()),
-      this.calculateTotalRevenue(prevStartDate, startDate),
-      this.countDistinctActiveUsers(startDate),
-      this.countDistinctActiveUsers(prevStartDate, startDate),
-      this.orderRepository.count({ where: { created_at: MoreThan(startDate) } }),
-      this.orderRepository.count({ where: { created_at: Between(prevStartDate, startDate) } }),
+      businessIds
+        ? 0
+        : this.userRepository.count({ where: { created_at: MoreThan(startDate) } }),
+      businessIds
+        ? 0
+        : this.userRepository.count({ where: { created_at: Between(prevStartDate, startDate) } }),
+      this.calculateTotalRevenue(startDate, new Date(), businessIds),
+      this.calculateTotalRevenue(prevStartDate, startDate, businessIds),
+      businessIds ? 0 : this.countDistinctActiveUsers(startDate),
+      businessIds
+        ? 0
+        : this.countDistinctActiveUsers(prevStartDate, startDate),
+      this.countOrders(startDate, undefined, businessIds),
+      this.countOrders(prevStartDate, startDate, businessIds),
     ]);
 
     const signupsMetric = this.calculateMetric(currentSignups, prevSignups);
@@ -95,18 +134,20 @@ export class AdminAnalyticsService {
       new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
     );
     const [revenueChart, visitorChart] = await Promise.all([
-      this.getRevenueChartData(chartStartDate),
-      this.getVisitorChartData(chartStartDate),
+      this.getRevenueChartData(chartStartDate, businessIds),
+      businessIds
+        ? []
+        : this.getVisitorChartData(chartStartDate),
     ]);
 
     // 6. Top Categories (This Month)
-    const topCategories = await this.getTopCategories();
+    const topCategories = await this.getTopCategories(businessIds);
 
     // 7. Top Businesses (This Month)
-    const topBusinesses = await this.getTopBusinesses();
+    const topBusinesses = await this.getTopBusinesses(businessIds);
 
     // 8. Conversion Funnel (visitors -> signups -> orders -> paid orders)
-    const paidOrders = await this.countPaidOrders(startDate);
+    const paidOrders = await this.countPaidOrders(startDate, businessIds);
     const conversionFunnel = this.buildConversionFunnel(
       currentVisitors,
       currentSignups,
@@ -142,13 +183,40 @@ export class AdminAnalyticsService {
     return Number(row?.count || 0);
   }
 
-  private async countPaidOrders(start: Date): Promise<number> {
-    const row = await this.orderRepository
+  private async countOrders(
+    start: Date,
+    end?: Date,
+    businessIds?: string[] | null,
+  ): Promise<number> {
+    const qb = this.orderRepository
+      .createQueryBuilder('o')
+      .select('COUNT(o.id)', 'count')
+      .where(
+        end
+          ? 'o.created_at BETWEEN :start AND :end'
+          : 'o.created_at >= :start',
+        end ? { start, end } : { start },
+      );
+    if (businessIds) {
+      qb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
+    }
+    const row = await qb.getRawOne();
+    return Number(row?.count || 0);
+  }
+
+  private async countPaidOrders(
+    start: Date,
+    businessIds?: string[] | null,
+  ): Promise<number> {
+    const qb = this.orderRepository
       .createQueryBuilder('o')
       .select('COUNT(DISTINCT o.id)', 'count')
       .leftJoin('o.payment', 'p')
-      .where('o.created_at >= :start', { start })
-      .getRawOne();
+      .where('o.created_at >= :start', { start });
+    if (businessIds) {
+      qb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
+    }
+    const row = await qb.getRawOne();
     return Number(row?.count || 0);
   }
 
@@ -211,24 +279,40 @@ export class AdminAnalyticsService {
     };
   }
 
-  private async calculateTotalRevenue(start: Date, end: Date): Promise<number> {
+  private async calculateTotalRevenue(
+    start: Date,
+    end: Date,
+    businessIds?: string[] | null,
+  ): Promise<number> {
+    const orderQb = this.orderRepository
+      .createQueryBuilder('o')
+      .select('SUM(o.total)', 'sum')
+      .where('o.created_at BETWEEN :start AND :end', { start, end });
+    if (businessIds) {
+      orderQb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
+    }
+    const bookingQb = this.bookingRepository
+      .createQueryBuilder('b')
+      .leftJoin('b.payment', 'p')
+      .leftJoin('b.service', 's')
+      .select('SUM(p.amount)', 'sum')
+      .where('b.created_at BETWEEN :start AND :end', { start, end });
+    if (businessIds) {
+      bookingQb.andWhere('s."businessId" IN (:...businessIds)', {
+        businessIds,
+      });
+    }
+    // Membership revenue is platform-wide by definition — excluded for owners.
     const [orderSum, bookingSum, membershipSum] = await Promise.all([
-      this.orderRepository
-        .createQueryBuilder('o')
-        .select('SUM(o.total)', 'sum')
-        .where('o.created_at BETWEEN :start AND :end', { start, end })
-        .getRawOne(),
-      this.bookingRepository
-        .createQueryBuilder('b')
-        .leftJoin('b.payment', 'p')
-        .select('SUM(p.amount)', 'sum')
-        .where('b.created_at BETWEEN :start AND :end', { start, end })
-        .getRawOne(),
-      this.membershipRepository
-        .createQueryBuilder('m')
-        .select('SUM(m.amount)', 'sum')
-        .where('m.created_at BETWEEN :start AND :end', { start, end })
-        .getRawOne(),
+      orderQb.getRawOne(),
+      bookingQb.getRawOne(),
+      businessIds
+        ? { sum: 0 }
+        : this.membershipRepository
+            .createQueryBuilder('m')
+            .select('SUM(m.amount)', 'sum')
+            .where('m.created_at BETWEEN :start AND :end', { start, end })
+            .getRawOne(),
     ]);
     return (
       Number(orderSum?.sum || 0) +
@@ -239,11 +323,16 @@ export class AdminAnalyticsService {
 
   private async getRevenueChartData(
     start: Date,
+    businessIds?: string[] | null,
   ): Promise<AnalyticsChartPointDto[]> {
-    const revenueData = await this.orderRepository
+    const qb = this.orderRepository
       .createQueryBuilder('o')
       .select('DATE(o.created_at) as date, SUM(o.total) as total')
-      .where('o.created_at > :start', { start })
+      .where('o.created_at > :start', { start });
+    if (businessIds) {
+      qb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
+    }
+    const revenueData = await qb
       .groupBy('DATE(o.created_at)')
       .orderBy('DATE(o.created_at)', 'ASC')
       .getRawMany();
@@ -275,7 +364,9 @@ export class AdminAnalyticsService {
     }));
   }
 
-  private async getTopCategories(): Promise<TopItemDto[]> {
+  private async getTopCategories(
+    businessIds?: string[] | null,
+  ): Promise<TopItemDto[]> {
     const prevMonthStart = new Date(
       new Date().getFullYear(),
       new Date().getMonth() - 1,
@@ -287,39 +378,39 @@ export class AdminAnalyticsService {
       1,
     );
 
+    const currQb = this.orderRepository
+      .createQueryBuilder('o')
+      .leftJoin('o.items', 'oi')
+      .leftJoin('oi.product', 'p')
+      .select('p.category', 'name')
+      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .where('o.created_at > :monthStart', {
+        monthStart: new Date(
+          new Date().getFullYear(),
+          new Date().getMonth(),
+          1,
+        ),
+      });
+    const prevQb = this.orderRepository
+      .createQueryBuilder('o')
+      .leftJoin('o.items', 'oi')
+      .leftJoin('oi.product', 'p')
+      .select('p.category', 'name')
+      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .where(
+        'o.created_at >= :prevMonthStart AND o.created_at < :currentMonthStart',
+        {
+          prevMonthStart,
+          currentMonthStart,
+        },
+      );
+    if (businessIds) {
+      currQb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
+      prevQb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
+    }
     const [data, prevData] = await Promise.all([
-      this.orderRepository
-        .createQueryBuilder('o')
-        .leftJoin('o.items', 'oi')
-        .leftJoin('oi.product', 'p')
-        .select('p.category', 'name')
-        .addSelect('SUM(oi.price * oi.quantity)', 'value')
-        .where('o.created_at > :monthStart', {
-          monthStart: new Date(
-            new Date().getFullYear(),
-            new Date().getMonth(),
-            1,
-          ),
-        })
-        .groupBy('p.category')
-        .orderBy('value', 'DESC')
-        .limit(5)
-        .getRawMany(),
-      this.orderRepository
-        .createQueryBuilder('o')
-        .leftJoin('o.items', 'oi')
-        .leftJoin('oi.product', 'p')
-        .select('p.category', 'name')
-        .addSelect('SUM(oi.price * oi.quantity)', 'value')
-        .where(
-          'o.created_at >= :prevMonthStart AND o.created_at < :currentMonthStart',
-          {
-            prevMonthStart,
-            currentMonthStart,
-          },
-        )
-        .groupBy('p.category')
-        .getRawMany(),
+      currQb.groupBy('p.category').orderBy('value', 'DESC').limit(5).getRawMany(),
+      prevQb.groupBy('p.category').getRawMany(),
     ]);
 
     const prevMap = new Map(
@@ -343,7 +434,9 @@ export class AdminAnalyticsService {
     });
   }
 
-  private async getTopBusinesses(): Promise<TopItemDto[]> {
+  private async getTopBusinesses(
+    businessIds?: string[] | null,
+  ): Promise<TopItemDto[]> {
     const monthStart = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
@@ -355,32 +448,32 @@ export class AdminAnalyticsService {
       1,
     );
 
+    const currQb = this.orderRepository
+      .createQueryBuilder('o')
+      .leftJoin('o.items', 'oi')
+      .leftJoin('oi.product', 'p')
+      .leftJoin('p.business', 'b')
+      .select('b.businessName', 'name')
+      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .where('o.created_at > :monthStart', { monthStart });
+    const prevQb = this.orderRepository
+      .createQueryBuilder('o')
+      .leftJoin('o.items', 'oi')
+      .leftJoin('oi.product', 'p')
+      .leftJoin('p.business', 'b')
+      .select('b.businessName', 'name')
+      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .where(
+        'o.created_at >= :prevMonthStart AND o.created_at < :monthStart',
+        { prevMonthStart, monthStart },
+      );
+    if (businessIds) {
+      currQb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
+      prevQb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
+    }
     const [data, prevData] = await Promise.all([
-      this.orderRepository
-        .createQueryBuilder('o')
-        .leftJoin('o.items', 'oi')
-        .leftJoin('oi.product', 'p')
-        .leftJoin('p.business', 'b')
-        .select('b.businessName', 'name')
-        .addSelect('SUM(oi.price * oi.quantity)', 'value')
-        .where('o.created_at > :monthStart', { monthStart })
-        .groupBy('b.businessName')
-        .orderBy('value', 'DESC')
-        .limit(5)
-        .getRawMany(),
-      this.orderRepository
-        .createQueryBuilder('o')
-        .leftJoin('o.items', 'oi')
-        .leftJoin('oi.product', 'p')
-        .leftJoin('p.business', 'b')
-        .select('b.businessName', 'name')
-        .addSelect('SUM(oi.price * oi.quantity)', 'value')
-        .where(
-          'o.created_at >= :prevMonthStart AND o.created_at < :monthStart',
-          { prevMonthStart, monthStart },
-        )
-        .groupBy('b.businessName')
-        .getRawMany(),
+      currQb.groupBy('b.businessName').orderBy('value', 'DESC').limit(5).getRawMany(),
+      prevQb.groupBy('b.businessName').getRawMany(),
     ]);
 
     const prevMap = new Map(

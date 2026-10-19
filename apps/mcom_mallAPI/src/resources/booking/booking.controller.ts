@@ -13,6 +13,9 @@ import { BookingService } from './booking.service';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/role.enum';
 import { BlockSlotDto } from './dto/block-slot.dto';
 import { PriceModifierDto } from './dto/price-modifier.dto';
 import { InitiateBookingPaymentDto } from './dto/initiate-booking-payment.dto';
@@ -51,6 +54,12 @@ export class BookingController {
   @Get('customer')
   findAllForCustomer(@Request() req, @Query('days') days: number) {
     return this.bookingService.findAllForCustomer(req.user.id, days);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/rewards/eligible')
+  getEligibleRewards(@Param('id') id: string, @Request() req) {
+    return this.bookingService.getEligibleBookingRewards(id, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -113,9 +122,13 @@ export class BookingController {
     return this.bookingService.completeBooking(id, req.user.id);
   }
 
-  @UseGuards(JwtAuthGuard) // Assuming admin only in real app, keeping simple for this scope
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Post(':id/refund')
   refund(@Param('id') id: string, @Request() req) {
-    return this.bookingService.refundBooking(id, req.user.id);
+    return this.bookingService.refundBooking(id, {
+      id: req.user.id,
+      role: req.user.role,
+    });
   }
 }

@@ -8,7 +8,6 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { useRefreshToken } from '@/service/auth/hook';
-import { MOCK_BYPASS } from '@/lib/mock-data/mock-api-provider';
 
 const AuthRedirect = () => {
   const { accessToken } = useSelector((state: RootState) => state.auth);
@@ -18,8 +17,6 @@ const AuthRedirect = () => {
   const { mutate: refreshTokenFn } = useRefreshToken();
 
   useEffect(() => {
-    if (MOCK_BYPASS) return;
-
     const token = Cookies.get('access');
     const refresh = Cookies.get('refresh');
 
@@ -34,8 +31,6 @@ const AuthRedirect = () => {
   }, [accessToken, dispatch, pathname, refreshTokenFn, router]);
 
   useEffect(() => {
-    if (MOCK_BYPASS) return;
-
     const interval = setInterval(() => {
       const refresh = Cookies.get('refresh');
       if (refresh) {

@@ -112,6 +112,7 @@ export function Step2ServiceType() {
                     <SelectItem value="remote">Remote/Online</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormMessage />
               </FormItem>
             )}
           />

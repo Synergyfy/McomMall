@@ -7,6 +7,7 @@ import { useGetShippingAddresses } from '@/service/shipping/hook';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/lib/form-validation';
 import { toast } from 'sonner';
 
 // Dynamically import DeliveryMap to avoid SSR issues with Leaflet
@@ -20,9 +21,10 @@ interface Props {
   updateFormData: (data: any) => void;
   onNext: () => void;
   onBack: () => void;
+  errors?: Record<string, string>;
 }
 
-export default function Step4bDeliveryPricing({ formData, updateFormData, onNext, onBack }: Props) {
+export default function Step4bDeliveryPricing({ formData, updateFormData, onNext, onBack, errors }: Props) {
   const { data: addressData } = useGetShippingAddresses(1, 100);
   const addresses = addressData?.data || [];
 
@@ -153,10 +155,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
   };
 
   const handleContinue = () => {
-    if (!isFree && !isPaid) {
-      toast.error("Please select at least one delivery option.");
-      return;
-    }
+    // Delivery requirements are validated and surfaced by the wizard page.
     onNext();
   };
 
@@ -231,6 +230,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
                     </SelectItem>
                   </SelectContent>
                 </Select>
+                <FieldError message={errors?.freeDelivery} />
               </div>
 
               {/* Address Search (Visible when adding new or as a helper) */}
@@ -315,6 +315,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
                   value={formData.freeDeliveryRadius || ""}
                   onChange={handleRadiusChange}
                 />
+                <FieldError message={errors?.freeDeliveryRadius} />
                 <p className="text-[11px] text-[#9c7349] mt-1 italic font-medium flex items-center gap-1">
                   <CheckCircle2 size={12} className="text-green-500" />
                   Customers within <span className="text-orange-600 font-bold">{formData.freeDeliveryRadius || 0} miles</span> will receive Free Delivery automatically.
@@ -343,6 +344,9 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
       </div>
 
       {/* Selection Cards */}
+      <div className="px-4">
+        <FieldError message={errors?.delivery} />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
         {/* Free Delivery Card */}
         <div

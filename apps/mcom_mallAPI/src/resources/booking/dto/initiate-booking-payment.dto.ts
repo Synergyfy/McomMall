@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { PaymentMethod } from '../../order/entities/order-payment.entity';
 
 export class InitiateBookingPaymentDto {
@@ -9,4 +9,8 @@ export class InitiateBookingPaymentDto {
   @IsNotEmpty()
   @IsEnum(PaymentMethod)
   paymentProvider: PaymentMethod;
+
+  @IsOptional()
+  @IsString()
+  rewardIssuanceId?: string;
 }

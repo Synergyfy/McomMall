@@ -5,6 +5,7 @@ import {
   UseGuards,
   Req,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -13,9 +14,6 @@ import {
   LogoutAuthDto,
 } from './dto/create-auth.dto';
 import { UsersService } from '../users/users.service';
-import { EmailService } from '../email/email.service';
-import { ResetPasswordDto } from '../email/dto/reset-password.dto';
-import { OtpType } from '../email/entities/otp.entity';
 import { ErrorFactory } from '../../common/errors/error.factory';
 import { Public } from '../../common/decorators/public.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -27,7 +25,6 @@ import {
 } from '@nestjs/swagger';
 import { UserRole } from '../../common/role.enum';
 
-import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { McomCentralService } from '../sso/mcom-central.service';
 
 @ApiTags('auth')
@@ -38,8 +35,6 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly userService: UsersService,
-    private readonly emailService: EmailService,
-    private readonly activityTimerService: ActivityTimerService,
     private readonly mcomCentralService: McomCentralService,
   ) {}
 
@@ -77,16 +72,13 @@ export class AuthController {
 
     await this.userService.updateLastLogin(id);
 
-    const activeTimers =
-      await this.activityTimerService.getUserActiveTasks(user);
-
     return {
       auth,
       name,
       role,
       packageInfo: null,
       userId: id,
-      tasks: activeTimers,
+      tasks: [],
     };
   }
 
@@ -125,9 +117,6 @@ export class AuthController {
 
       await this.userService.updateLastLogin(user.id);
 
-      const activeTimers =
-        await this.activityTimerService.getUserActiveTasks(user);
-
       return {
         auth: {
           accessToken: authData.accessToken,
@@ -137,7 +126,7 @@ export class AuthController {
         role: user.role,
         packageInfo: null,
         userId: user.id,
-        tasks: activeTimers,
+        tasks: [],
       };
     } catch (error) {
       if (error instanceof ForbiddenException) {
@@ -164,36 +153,8 @@ export class AuthController {
       await this.userService.updateLastLogin(result.userId);
       return result;
     } catch (error) {
-      throw ErrorFactory.invalidCredentials();
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
-  }
-
-  @Public()
-  @Post('forgot-password')
-  async forgotPassword(@Body('email') email: string) {
-    return this.emailService.sendOtp({ email, type: OtpType.PASSWORD_RESET });
-  }
-
-  @Public()
-  @Post('reset-password')
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.emailService.resetPassword(resetPasswordDto);
-  }
-
-  @Public()
-  @Post('send-verification-otp')
-  async sendVerificationOtp(@Body('email') email: string) {
-    return this.emailService.sendOtp({ email, type: OtpType.VERIFICATION });
-  }
-
-  @Public()
-  @Post('verify-verification-otp')
-  async verifyVerificationOtp(@Body() body: { email: string; otp: string }) {
-    return this.emailService.validateOtp({
-      email: body.email,
-      otp: body.otp,
-      type: OtpType.VERIFICATION,
-    });
   }
 
   @ApiOperation({ summary: 'Logout and revoke token' })

@@ -19,6 +19,7 @@ import { useAuth } from '@/service/auth/hook';
 import { useGetUserListings } from '@/service/listings/hook';
 import { useGetProductById, useUpdateProduct } from '@/service/store/products/hook';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { toSerializable } from '@/lib/form-validation';
 import { toast } from 'sonner';
 
 export default function EditProductPage() {
@@ -225,7 +226,9 @@ export default function EditProductPage() {
       ...formData,
       id,
       title: formData.productName,
-      description: formData.fullDesc,
+      description: (formData.fullDesc && formData.fullDesc.replace(/<[^>]*>/g, '').trim())
+        ? formData.fullDesc
+        : (formData.shortDesc?.trim() || formData.productName || ''),
       shortDescription: formData.shortDesc,
       category: formData.categoryName || formData.category,
       subCategory: formData.subCategoryName || formData.subCategory,
@@ -243,6 +246,9 @@ export default function EditProductPage() {
       variantConfig,
       fulfillmentType: fulfillmentType,
       shippingMethod: finalShippingMethod,
+      freeDeliveryRadius: formData.isFreeDelivery && formData.freeDeliveryRadius !== ''
+        ? parseFloat(formData.freeDeliveryRadius.toString()) || 0
+        : 0,
       weight: formData.weight ? parseFloat(formData.weight) : 0,
       length: formData.length ? parseFloat(formData.length) : 0,
       width: formData.width ? parseFloat(formData.width) : 0,
@@ -260,7 +266,14 @@ export default function EditProductPage() {
     if (payload.price <= 0) payload.price = 0;
     if (payload.regular_price <= 0) payload.regular_price = 0;
 
-    updateProduct(payload, {
+    // Strip anything JSON can't serialize (Window/DOM handles, functions…)
+    // so the request is never blocked by a SecurityError before it is sent.
+    const { value: safePayload, dropped } = toSerializable<Record<string, unknown>>(payload);
+    if (process.env.NODE_ENV !== 'production' && dropped.length > 0) {
+      console.warn('[edit-product] Dropped non-serializable payload fields:', dropped);
+    }
+
+    updateProduct(safePayload as any, {
       onSuccess: () => {
         setIsUpdated(true);
         toast.success('Product updated successfully!');

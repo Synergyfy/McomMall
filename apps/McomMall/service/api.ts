@@ -1,6 +1,5 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import { MOCK_BYPASS, handleMockRequest, initMockAuth } from '@/lib/mock-data/mock-api-provider';
 
 export const baseURL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'https://mcom-mall-rest.vercel.app/api/v1/';
@@ -12,44 +11,8 @@ const api = axios.create({
   },
 });
 
-if (MOCK_BYPASS && typeof window !== 'undefined') {
-  initMockAuth();
-
-  (api.defaults as any).adapter = (config: any) => {
-    const method = (config.method || 'get').toUpperCase();
-    let url = config.url || '';
-
-    if (url.startsWith('http')) {
-      try {
-        const parsed = new URL(url);
-        url = parsed.pathname;
-        const apiIdx = url.indexOf('/api/v1/');
-        if (apiIdx !== -1) {
-          url = url.substring(apiIdx + '/api/v1/'.length);
-        }
-      } catch {
-        url = url.replace(/^https?:\/\/[^\/]+\/api\/v1\//, '');
-      }
-    }
-
-    url = url.replace(/^\/+/, '').replace(/\/+$/, '');
-
-    let requestData = config.data;
-    if (typeof requestData === 'string') {
-      try { requestData = JSON.parse(requestData); } catch {}
-    }
-
-    const result = handleMockRequest(method, url, requestData);
-
-    return Promise.resolve({
-      data: result.data,
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: config,
-    });
-  };
-}
+// Mock bypass adapter removed: the storefront always talks to the NestJS
+// backend. No NEXT_PUBLIC_MOCK_BYPASS short-circuit remains in production.
 
 // This function sets the bearer token for all subsequent API requests.
 export const setBearerToken = (token: string) => {
@@ -131,8 +94,8 @@ const AUTH_EXEMPT_PATHS = ['/', '/auth/callback', '/auth/sso', '/login', '/signi
 // Request interceptor: ensure a valid token exists before sending any request
 if (typeof window !== 'undefined') {
   api.interceptors.request.use(async (config) => {
-    // Skip for auth endpoints and mock mode
-    if (MOCK_BYPASS || config.url?.includes('/auth/')) {
+    // Skip token injection for auth endpoints (they handle their own flow)
+    if (config.url?.includes('/auth/')) {
       return config;
     }
 
@@ -155,8 +118,6 @@ if (typeof window !== 'undefined') {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (MOCK_BYPASS) return Promise.reject(error);
-
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
 
     if (error.response?.status === 403) {
@@ -169,7 +130,34 @@ api.interceptors.response.use(
     }
     if (error.response?.status === 401) {
       const isExempt = AUTH_EXEMPT_PATHS.some((p) => pathname.startsWith(p));
-      if (!isExempt) {
+      const originalRequest = error.config;
+
+      if (!isExempt && originalRequest && !originalRequest._retry && !originalRequest.url?.includes('/auth/')) {
+        originalRequest._retry = true;
+        return ensureToken().then((refreshed) => {
+          if (refreshed) {
+            const newToken = Cookies.get('access');
+            if (newToken) {
+              originalRequest.headers = originalRequest.headers || {};
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            }
+            return api(originalRequest);
+          }
+          // Refresh failed — clear auth and redirect to login
+          Cookies.remove('access');
+          Cookies.remove('refresh');
+          Cookies.remove('userId');
+          Cookies.remove('userRole');
+          Cookies.remove('packageInfo');
+          setBearerToken('');
+          if (typeof window !== "undefined") {
+            window.location.href = "/signin";
+          }
+          return Promise.reject(error);
+        });
+      }
+
+      if (!isExempt && !originalRequest?.url?.includes('/auth/')) {
         // Token is invalid or expired — clear auth and redirect to login
         Cookies.remove('access');
         Cookies.remove('refresh');

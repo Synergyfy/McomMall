@@ -25,6 +25,9 @@ import {
   useApplyOffer,
 } from '@/service/offers/hook';
 import ApplicableOffers from './ApplicableOffers';
+import MyRewards, { RewardLine } from './MyRewards';
+import { useEligibleRewards } from '@/service/rewards/hook';
+import { RewardApplication } from '@/service/rewards/types';
 import ShippingDetailsForm from './ShippingDetailsForm';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
@@ -112,6 +115,11 @@ export default function CheckoutClient() {
   const [offerDiscount, setOfferDiscount] = useState(0);
   const [isOfferLoading, setOfferLoading] = useState(false);
 
+  const [rewardApplications, setRewardApplications] = useState<
+    RewardApplication[]
+  >([]);
+  const [rewardDiscount, setRewardDiscount] = useState(0);
+
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PaymentMethod.STRIPE
   );
@@ -147,6 +155,52 @@ export default function CheckoutClient() {
     (total, booking) => total + Number(booking?.price || 0),
     0
   );
+
+  const rewardItems = useMemo(() => {
+    if (fromCart) {
+      return (cart?.items || []).map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        selectedVariants: item.selectedVariants,
+      }));
+    }
+    if (product && productId) {
+      return [
+        {
+          productId,
+          quantity,
+          selectedVariants:
+            Object.keys(selectedVariants).length > 0
+              ? selectedVariants
+              : undefined,
+        },
+      ];
+    }
+    return [];
+  }, [fromCart, cart, product, productId, quantity, selectedVariants]);
+
+  const rewardLines: RewardLine[] = useMemo(() => {
+    if (fromCart) {
+      return (cart?.items || []).map((item) => ({
+        lineKey: `product:${item.product.id}`,
+        label: item.product.title,
+      }));
+    }
+    if (product && productId) {
+      return [{ lineKey: `product:${productId}`, label: product.title }];
+    }
+    return [];
+  }, [fromCart, cart, product, productId]);
+
+  const { data: eligibleRewards, isLoading: areRewardsLoading } =
+    useEligibleRewards(
+      rewardItems,
+      serviceBookingsForOrder.map((booking) => ({
+        serviceId: booking.serviceId,
+        price: Number(booking.price),
+        quantity: 1,
+      }))
+    );
 
   const calculateItemPrice = useCallback((item: CartItem) => {
     let price = (item.product.salePrice && item.product.salePrice < item.product.price)
@@ -198,7 +252,11 @@ export default function CheckoutClient() {
   const subtotal = basePrice + servicesTotalPrice;
 
   const totalDiscount =
-    couponDiscount + offerDiscount + giftCardDiscount + voucherDiscount;
+    couponDiscount +
+    offerDiscount +
+    giftCardDiscount +
+    voucherDiscount +
+    rewardDiscount;
   const totalPrice = Math.max(0, subtotal - totalDiscount);
 
   const handleCheckVoucherBalance = async (code: string) => {
@@ -285,6 +343,21 @@ export default function CheckoutClient() {
     }
   };
 
+  const handleApplyRewards = useCallback(
+    (applications: RewardApplication[], total: number) => {
+      setRewardApplications(applications);
+      setRewardDiscount(total);
+      // Rewards and coupon/offer discounts never stack on the same line.
+      if (total > 0) {
+        setCouponDiscount(0);
+        setCouponCode('');
+        setOfferDiscount(0);
+        setSelectedOffer(null);
+      }
+    },
+    []
+  );
+
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
       const currentProductIds = fromCart
@@ -310,6 +383,8 @@ export default function CheckoutClient() {
           serviceBookings.length > 0 ? serviceBookings : undefined,
         giftCardAmount: giftCardDiscount || undefined,
         voucherAmount: voucherDiscount || undefined,
+        rewardApplications:
+          rewardApplications.length > 0 ? rewardApplications : undefined,
       };
 
       if (!fromCart && product) {
@@ -339,7 +414,8 @@ export default function CheckoutClient() {
       productId,
       selectedVariants,
       giftCardDiscount,
-      voucherDiscount
+      voucherDiscount,
+      rewardApplications,
     ]
   );
 
@@ -447,10 +523,29 @@ export default function CheckoutClient() {
                   Discounts & Offers
                 </h2>
                 <div className="space-y-4">
-                  <CouponCodeInput
-                    onApply={handleApplyCoupon}
-                    isLoading={isCouponLoading}
+                  <MyRewards
+                    eligible={eligibleRewards?.rewards || []}
+                    lines={rewardLines}
+                    isLoading={areRewardsLoading}
+                    onApply={handleApplyRewards}
                   />
+                  <div
+                    className={
+                      rewardDiscount > 0
+                        ? 'pointer-events-none opacity-50 space-y-4'
+                        : 'space-y-4'
+                    }
+                  >
+                    <CouponCodeInput
+                      onApply={handleApplyCoupon}
+                      isLoading={isCouponLoading}
+                    />
+                    <ApplicableOffers
+                      offers={applicableOffers || []}
+                      onApply={handleApplyOffer}
+                      isLoading={isOfferLoading || areOffersLoading}
+                    />
+                  </div>
                   <GiftCardInput
                     onCheckBalance={handleCheckGiftCardBalance}
                     onApply={handleApplyGiftCardDiscount}
@@ -460,11 +555,6 @@ export default function CheckoutClient() {
                     onCheckBalance={handleCheckVoucherBalance}
                     onApply={handleApplyVoucherDiscount}
                     isLoading={isVoucherLoading}
-                  />
-                  <ApplicableOffers
-                    offers={applicableOffers || []}
-                    onApply={handleApplyOffer}
-                    isLoading={isOfferLoading || areOffersLoading}
                   />
                 </div>
               </div>
@@ -485,6 +575,7 @@ export default function CheckoutClient() {
                   giftCardDiscount={giftCardDiscount}
                   voucherDiscount={voucherDiscount}
                   offerDiscount={offerDiscount}
+                  rewardDiscount={rewardDiscount}
                   serviceBookings={serviceBookingsForOrder}
                   selectedVariants={selectedVariants}
                 />

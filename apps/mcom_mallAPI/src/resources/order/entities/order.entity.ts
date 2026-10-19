@@ -1,5 +1,6 @@
 import {
   Entity,
+  Index,
   ManyToOne,
   OneToOne,
   Column,
@@ -15,12 +16,16 @@ import { Voucher } from '../../voucher/entities/voucher.entity';
 import { OrderStatus } from '../enums/order-status.enum';
 import { Coupon } from '../../coupon/entities/coupon.entity';
 import { ProductServiceBooking } from './product-service-booking.entity';
+import { OrderItemReward } from './order-item-reward.entity';
 import { ShippingStatus } from '../../shipping/enums/shipping-status.enum';
 import { Business } from '../../listings/entities/listing.entity';
 import { ShippingAddress } from '../../shipping-address/entities/shipping-address.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('orders')
+@Index('IDX_order_user', ['user'])
+@Index('IDX_order_business', ['business'])
+@Index('IDX_order_status', ['status'])
 export class Order extends AbstractBaseEntity {
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User)
@@ -78,6 +83,16 @@ export class Order extends AbstractBaseEntity {
   @ApiPropertyOptional()
   @Column({ nullable: true })
   couponCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Total reward discount applied (MCOM Rewards issuances).',
+  })
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  rewardDiscountApplied: number;
+
+  @ApiProperty({ type: () => [OrderItemReward] })
+  @OneToMany(() => OrderItemReward, (reward) => reward.order)
+  rewardRedemptions: OrderItemReward[];
 
   @ApiProperty({ type: () => [Coupon] })
   @OneToMany(() => Coupon, (coupon) => coupon.order)

@@ -221,7 +221,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = 'register'
               className="w-full h-10 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
             >
               <UserPlus className="w-4 h-4 shrink-0" />
-              Sign Up with MCOM Solutions
+              Sign Up with Central Hub Solution
             </button>
           ) : (
             <button
@@ -230,7 +230,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = 'register'
               className="w-full h-10 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all flex items-center justify-center gap-2 font-bold text-xs text-orange-700 shadow-sm cursor-pointer"
             >
               <LogIn className="w-4 h-4 shrink-0" />
-              Sign In with MCOM Solutions
+              Sign In with Central Hub Solution
             </button>
           )}
 

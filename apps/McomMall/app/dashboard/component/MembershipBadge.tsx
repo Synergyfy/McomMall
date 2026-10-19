@@ -17,12 +17,16 @@ export const MembershipBadge: FC = () => {
     );
   }
 
-  const tierName = membership?.tier?.name || 'Free';
-  const isActive = membership?.isActive || membership?.status === 'active' || membership?.status === 'paid';
+  const isTrial = Boolean(membership?.isTrial || (membership as any)?.accessType === 'TRIAL_PROGRAMME');
+  const tierName = isTrial ? '14-Day Trial' : (membership?.tier?.name || 'Free');
+  const isActive = membership?.isActive || membership?.status === 'active' || membership?.status === 'paid' || isTrial;
 
   // Define styles based on tier name (modern & professional)
   const getTierStyles = (name: string) => {
     const normalizedName = name.toLowerCase();
+    if (isTrial || normalizedName.includes('trial')) {
+      return 'bg-amber-50 border-amber-300 text-amber-800 text-amber-600';
+    }
     if (normalizedName.includes('gold') || normalizedName.includes('premium')) {
       return 'bg-amber-50 border-amber-200 text-amber-700 text-amber-500';
     }

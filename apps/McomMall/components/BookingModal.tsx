@@ -21,6 +21,7 @@ import {
   useCreateBooking,
   useInitiatePayment,
   useVerifyPayment,
+  useGetEligibleBookingRewards,
 } from '@/service/bookings/hook';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -42,7 +43,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 import { CURRENCY } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -79,6 +81,10 @@ export function BookingModal({
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [rewardIssuanceId, setRewardIssuanceId] = useState<string | undefined>();
+  const [amount, setAmount] = useState<number>(0);
+  const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [rewardDiscount, setRewardDiscount] = useState<number>(0);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const initiatePayment = useInitiatePayment();
@@ -88,6 +94,10 @@ export function BookingModal({
       setShowSuccessDialog(true);
     },
   });
+  const { data: rewardData } = useGetEligibleBookingRewards(
+    bookingId,
+    step === 'payment'
+  );
 
   const createBooking = useCreateBooking({
     onSuccess: (data) => {
@@ -96,6 +106,7 @@ export function BookingModal({
         initiatePayment.mutate({
           bookingId: data.id,
           paymentProvider,
+          rewardIssuanceId,
         });
       }
     },
@@ -108,6 +119,11 @@ export function BookingModal({
       } else {
         setOrderId(initiatePayment.data.orderId);
       }
+      setAmount(initiatePayment.data.amount ?? 0);
+      setTotalAmount(
+        initiatePayment.data.totalAmount ?? initiatePayment.data.amount ?? 0
+      );
+      setRewardDiscount(initiatePayment.data.rewardDiscount ?? 0);
       setStep('payment');
     }
   }, [initiatePayment.data]);
@@ -123,6 +139,10 @@ export function BookingModal({
     setBookingId(null);
     setClientSecret(null);
     setOrderId(null);
+    setRewardIssuanceId(undefined);
+    setAmount(0);
+    setTotalAmount(0);
+    setRewardDiscount(0);
     setDate(new Date());
     setStartTime('');
     setEndTime('');
@@ -156,24 +176,32 @@ export function BookingModal({
       serviceId: service.id,
       startTime: startDateTime.toISOString(),
       endTime: endDateTime.toISOString(),
+      addonIds: selectedAddons,
     });
   };
 
   const handlePaymentSuccess = (transactionId: string) => {
     if (bookingId && service && paymentProvider) {
-      const totalAddonPrice = service.configurableAddons ? selectedAddons.reduce((acc, addonId) => {
-        const addon = service.configurableAddons.find(a => a.id === addonId);
-        return acc + (addon ? parseFloat(addon.price) : 0);
-      }, 0) : 0;
-       const totalAmount = parseFloat(service.fixedPrice || '0') + totalAddonPrice;
-
       verifyPayment.mutate({
         bookingId,
-        amount: totalAmount,
+        amount,
         paymentProvider,
         transactionId,
       });
     }
+  };
+
+  const handleRewardChange = (value: string) => {
+    const next = value || undefined;
+    if (next === rewardIssuanceId || !bookingId || !paymentProvider) return;
+    setRewardIssuanceId(next);
+    setClientSecret(null);
+    setOrderId(null);
+    initiatePayment.mutate({
+      bookingId,
+      paymentProvider,
+      rewardIssuanceId: next,
+    });
   };
 
 
@@ -387,7 +415,52 @@ export function BookingModal({
                       <h3 className="text-2xl font-black text-gray-900 mb-2">Finalize Your Payment</h3>
                       <p className="text-gray-500 font-bold text-sm mb-10 max-w-xs">Your slot is reserved! Complete the payment below to confirm your booking.</p>
                       
-                      <div className="w-full max-w-md p-6 bg-white rounded-[2rem] border border-gray-100 shadow-xl">
+                      <div className="w-full max-w-md p-6 bg-white rounded-[2rem] border border-gray-100 shadow-xl space-y-4">
+                        {rewardData?.rewards?.length > 0 && (
+                          <div className="space-y-2 text-left">
+                            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                              <Sparkles size={14} className="text-[#f58220]" />
+                              Apply a reward
+                            </label>
+                            <select
+                              value={rewardIssuanceId || ''}
+                              onChange={(e) => handleRewardChange(e.target.value)}
+                              className="w-full h-11 rounded-xl border-2 border-gray-100 bg-white px-3 text-sm font-semibold text-gray-800 focus:outline-none focus:border-[#f58220]"
+                            >
+                              <option value="">No reward</option>
+                              {rewardData.rewards.map((reward: any) => {
+                                const discount =
+                                  reward.applicableLines?.[0]?.discountAmount ?? 0;
+                                return (
+                                  <option
+                                    key={reward.issuanceId}
+                                    value={reward.issuanceId}
+                                  >
+                                    {reward.rewardTitle} (−{CURRENCY}
+                                    {discount.toFixed(2)})
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center bg-orange-50/60 rounded-2xl px-4 py-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                            Total
+                          </span>
+                          <div className="text-right">
+                            <span className="text-xl font-black text-[#f58220]">
+                              {CURRENCY}
+                              {amount.toFixed(2)}
+                            </span>
+                            {rewardDiscount > 0 && (
+                              <p className="text-[11px] font-bold text-green-600">
+                                You save {CURRENCY}
+                                {rewardDiscount.toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                         {paymentProvider === 'stripe' && clientSecret && (
                           <Elements stripe={stripePromise} options={{ clientSecret }}>
                             <StripeCheckoutForm clientSecret={clientSecret} onPaymentSuccess={handlePaymentSuccess} />

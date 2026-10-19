@@ -237,6 +237,32 @@ export class DigitalValueService {
     }, manager);
   }
 
+  /**
+   * Redeem a customer instrument on behalf of a specific merchant.
+   * Enforces that the instrument is explicitly linked to that merchant,
+   * preventing an owner from draining arbitrary (unlinked) instruments
+   * by UUID.
+   */
+  async redeemAtMerchant(
+    id: string,
+    merchantId: string,
+    redeemDto: RedeemDigitalValueDto,
+  ): Promise<DigitalValueMaster> {
+    const instrument = await this.digitalValueRepository.findOne({
+      where: { id },
+      relations: ['merchant'],
+    });
+    if (!instrument) {
+      throw new NotFoundException('Digital value instrument not found');
+    }
+    if (!instrument.merchantId || instrument.merchantId !== merchantId) {
+      throw new ForbiddenException(
+        'This instrument is not linked to the specified merchant.',
+      );
+    }
+    return this.redeem(id, { ...redeemDto, merchantId });
+  }
+
   async getById(id: string): Promise<DigitalValueMaster> {
     const digitalValue = await this.digitalValueRepository.findOne({
       where: { id },

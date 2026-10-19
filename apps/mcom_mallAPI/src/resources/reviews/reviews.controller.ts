@@ -15,6 +15,9 @@ import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/role.enum';
 import { Public } from '../../common/decorators/public.decorator';
 import {
   ApiTags,
@@ -56,7 +59,8 @@ export class ReviewsController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Get('admin')
   @ApiOperation({ summary: 'Admin: Get all reviews (paginated)' })
   @ApiResponse({
@@ -75,7 +79,8 @@ export class ReviewsController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Put(':id/publish')
   @ApiOperation({ summary: 'Admin: Publish a review' })
   @ApiResponse({ status: 200, description: 'Review published.', type: Review })
@@ -84,7 +89,8 @@ export class ReviewsController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Put(':id/unpublish')
   @ApiOperation({ summary: 'Admin: Unpublish a review' })
   @ApiResponse({

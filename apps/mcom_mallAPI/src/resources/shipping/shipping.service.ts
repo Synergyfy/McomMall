@@ -147,7 +147,9 @@ export class ShippingService {
   }
 
   /**
-   * Background task to update tracking statuses
+   * Background task to update tracking statuses.
+   * Chunked concurrent polling to avoid sequential N+1 external calls
+   * blocking for minutes as order volume grows.
    */
   async pollTrackingUpdates() {
     this.logger.log('Polling Royal Mail tracking updates...');
@@ -158,26 +160,44 @@ export class ShippingService {
           In([ShippingStatus.DELIVERED, ShippingStatus.PENDING]),
         ),
       },
+      take: 200,
+      order: { updated_at: 'DESC' },
     });
 
-    for (const order of activeOrders) {
-      if (!order.trackingNumber) continue;
-
-      const tracking = await this.royalMailService.getTrackingSummary(
-        order.trackingNumber,
+    const withTracking = activeOrders.filter((o) => !!o.trackingNumber);
+    const CONCURRENCY = 5;
+    for (let i = 0; i < withTracking.length; i += CONCURRENCY) {
+      const chunk = withTracking.slice(i, i + CONCURRENCY);
+      const results = await Promise.allSettled(
+        chunk.map((order) =>
+          this.royalMailService.getTrackingSummary(order.trackingNumber),
+        ),
       );
-      if (tracking && tracking.status !== order.shippingStatus) {
-        this.logger.log(
-          `Updating Order ${order.id} status: ${order.shippingStatus} -> ${tracking.status}`,
-        );
-        order.shippingStatus = tracking.status;
-        await this.orderRepository.save(order);
+      for (let j = 0; j < chunk.length; j++) {
+        const order = chunk[j];
+        const result = results[j];
+        if (result.status !== 'fulfilled' || !result.value) {
+          if (result.status === 'rejected') {
+            this.logger.warn(
+              `Tracking lookup failed for order ${order.id}: ${result.reason}`,
+            );
+          }
+          continue;
+        }
+        const tracking = result.value;
+        if (tracking && tracking.status !== order.shippingStatus) {
+          this.logger.log(
+            `Updating Order ${order.id} status: ${order.shippingStatus} -> ${tracking.status}`,
+          );
+          order.shippingStatus = tracking.status;
+          await this.orderRepository.save(order);
 
-        this.eventEmitter.emit('SHIPPING_STATUS_UPDATED', {
-          orderId: order.id,
-          status: tracking.status,
-          trackingNumber: order.trackingNumber,
-        });
+          this.eventEmitter.emit('SHIPPING_STATUS_UPDATED', {
+            orderId: order.id,
+            status: tracking.status,
+            trackingNumber: order.trackingNumber,
+          });
+        }
       }
     }
   }

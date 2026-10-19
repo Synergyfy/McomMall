@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -198,6 +199,7 @@ export class CreateProductDto {
     example: 5,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   freeDeliveryRadius?: number;

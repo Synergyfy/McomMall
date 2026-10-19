@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../../common/role.enum';
 import { Membership } from '../membership/entities/membership.entity';
 import { MembershipPayment } from '../membership/entities/membership-payment.entity';
 import { IntegrationSetting } from './entities/integration-setting.entity';
@@ -33,7 +38,32 @@ export class SettingsService {
     private readonly appIntegrationRepository: Repository<AppIntegration>,
   ) {}
 
-  async getIntegrations(businessId: string): Promise<IntegrationSetting> {
+  private async assertBusinessAccess(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<void> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
+    });
+    if (!business) {
+      throw new NotFoundException(`Business with ID ${businessId} not found`);
+    }
+    if (
+      requester.role !== UserRole.ADMIN &&
+      business.user?.id !== requester.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to access this business.',
+      );
+    }
+  }
+
+  async getIntegrations(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<IntegrationSetting> {
+    await this.assertBusinessAccess(businessId, requester);
     let settings = await this.integrationRepository.findOne({
       where: { businessId },
     });
@@ -47,8 +77,9 @@ export class SettingsService {
   async updateIntegrations(
     businessId: string,
     dto: UpdateIntegrationSettingsDto,
+    requester: { id: string; role?: string },
   ): Promise<IntegrationSetting> {
-    const settings = await this.getIntegrations(businessId);
+    const settings = await this.getIntegrations(businessId, requester);
     Object.assign(settings, dto);
     return this.integrationRepository.save(settings);
   }

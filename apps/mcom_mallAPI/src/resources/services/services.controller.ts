@@ -9,6 +9,7 @@ import {
   Request,
   UseGuards,
   Query,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,6 +27,7 @@ import {
   ConfigurableAddonDto,
 } from './dto/create-service.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import { UserRole } from '../../common/role.enum';
 import { ServiceSearchDto } from './dto/service-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { Service } from './entities/service.entity';
@@ -99,7 +101,13 @@ export class ServicesController {
 
   @Get('/user/:userId')
   @ApiOperation({ summary: 'Get all services for a specific user' })
-  findAllForSpecificUser(@Param('userId') userId: string) {
+  findAllForSpecificUser(@Param('userId') userId: string, @Request() req) {
+    const caller = req.user as any;
+    if (caller?.id !== userId && caller?.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        "You do not have permission to access this user's services.",
+      );
+    }
     return this.servicesService.findAllForUser(userId);
   }
 

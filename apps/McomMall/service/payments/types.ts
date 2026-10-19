@@ -153,6 +153,7 @@ export interface SubscriptionStatusResponse {
   paygOption: PaygOption | null;
   trialEndDate: string | null;
   tasks?: TrialTasks;
+  programmeTasks?: any[];
 }
 
 export interface TrialTasks {
@@ -174,6 +175,7 @@ export interface TrialStatusResponse {
   remainingTime: number;
   expiresAt?: string;
   tasks: TrialTasks;
+  programmeTasks?: any[];
   pauses: TrialPause[];
   // The following fields are derived in the hook for UI convenience
   isPaused?: boolean;

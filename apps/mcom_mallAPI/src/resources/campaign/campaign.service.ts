@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { Business } from '../listings/entities/listing.entity';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../../common/role.enum';
 import { MarketingCampaign } from './entities/marketing-campaign.entity';
 import {
   CreateMarketingCampaignDto,
@@ -35,7 +37,52 @@ export class CampaignService {
 
   // --- Old Ad Campaigns ---
 
-  async create(createCampaignDto: CreateCampaignDto): Promise<Campaign> {
+  private async assertBusinessAccess(
+    businessId: string,
+    requester: { id: string; role?: string },
+  ): Promise<Business> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
+    });
+    if (!business) {
+      throw new NotFoundException(`Business with ID ${businessId} not found`);
+    }
+    if (
+      requester.role !== UserRole.ADMIN &&
+      business.user?.id !== requester.id
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this business.',
+      );
+    }
+    return business;
+  }
+
+  private async assertCampaignAccess(
+    id: string,
+    requester: { id: string; role?: string },
+  ): Promise<Campaign> {
+    const campaign = await this.campaignRepository.findOne({
+      where: { id },
+      relations: ['business', 'business.user'],
+    });
+    if (!campaign) {
+      throw new NotFoundException(`Campaign with ID ${id} not found`);
+    }
+    const ownerId = (campaign.business as any)?.user?.id;
+    if (requester.role !== UserRole.ADMIN && ownerId !== requester.id) {
+      throw new ForbiddenException(
+        'You do not have permission to manage this campaign.',
+      );
+    }
+    return campaign;
+  }
+
+  async create(
+    createCampaignDto: CreateCampaignDto,
+    requester: { id: string; role?: string },
+  ): Promise<Campaign> {
     const { businessId, startDate, endDate, ...campaignData } =
       createCampaignDto;
 
@@ -43,12 +90,7 @@ export class CampaignService {
       throw new BadRequestException('End date must be after start date');
     }
 
-    const business = await this.businessRepository.findOne({
-      where: { id: businessId },
-    });
-    if (!business) {
-      throw new NotFoundException(`Business with ID ${businessId} not found`);
-    }
+    const business = await this.assertBusinessAccess(businessId, requester);
     const campaign = this.campaignRepository.create({
       ...campaignData,
       startDate,
@@ -76,8 +118,9 @@ export class CampaignService {
   async update(
     id: string,
     updateCampaignDto: UpdateCampaignDto,
+    requester: { id: string; role?: string },
   ): Promise<Campaign> {
-    const campaignToUpdate = await this.findOne(id);
+    const campaignToUpdate = await this.assertCampaignAccess(id, requester);
     const { businessId, startDate, endDate, ...campaignData } =
       updateCampaignDto;
 
@@ -100,20 +143,20 @@ export class CampaignService {
     }
 
     if (businessId) {
-      const business = await this.businessRepository.findOne({
-        where: { id: businessId },
-      });
-      if (!business) {
-        throw new NotFoundException(`Business with ID ${businessId} not found`);
-      }
-      campaignToUpdate.business = business;
+      campaignToUpdate.business = await this.assertBusinessAccess(
+        businessId,
+        requester,
+      );
     }
 
     return this.campaignRepository.save(campaignToUpdate);
   }
 
-  async remove(id: string): Promise<void> {
-    const campaign = await this.findOne(id);
+  async remove(
+    id: string,
+    requester: { id: string; role?: string },
+  ): Promise<void> {
+    const campaign = await this.assertCampaignAccess(id, requester);
     await this.campaignRepository.remove(campaign);
   }
 

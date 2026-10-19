@@ -9,6 +9,7 @@ import {
   Req,
   Query,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -21,6 +22,7 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../../common/role.enum';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { ProductSearchDto } from './dto/product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
@@ -98,7 +100,13 @@ export class ProductController {
 
   @Get('/user/:userId')
   @ApiOperation({ summary: 'Get all products for a specific user' })
-  findAllBySpecificUser(@Param('userId') userId: string) {
+  findAllBySpecificUser(@Param('userId') userId: string, @Req() req: Request) {
+    const caller = req.user as any;
+    if (caller?.id !== userId && caller?.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        "You do not have permission to access this user's products.",
+      );
+    }
     return this.productService.findAllByUser(userId);
   }
 

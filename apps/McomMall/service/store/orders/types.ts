@@ -11,6 +11,18 @@ export interface OrderItem {
   product: Product;
 }
 
+export interface OrderRewardRedemption {
+  id: string;
+  rewardIssuanceId: string;
+  rewardType?: string | null;
+  targetType?: 'PRODUCT' | 'SERVICE';
+  targetId?: string;
+  discountAmount: string;
+  status: 'RESERVED' | 'COMMITTED' | 'RELEASED';
+  committedAt?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
 export interface Order {
   id: string;
   createdAt: string;
@@ -21,6 +33,10 @@ export interface Order {
   status: string;
   giftCardAmountApplied: number | null;
   giftCardCode: string | null;
+  couponDiscountApplied?: number | null;
+  couponCode?: string | null;
+  rewardDiscountApplied?: number | string | null;
+  rewardRedemptions?: OrderRewardRedemption[];
   shippingStatus: string;
   estimatedShippingFee: string;
   actualShippingCost: string | null;
@@ -39,4 +55,5 @@ export interface OrderStats {
   totalEarnings: number;
   grossSales: number;
   balance: number;
+  rewardDiscountTotal?: number;
 }
