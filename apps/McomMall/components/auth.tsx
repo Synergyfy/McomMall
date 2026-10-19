@@ -34,6 +34,7 @@ import { SuccessDialog } from './SuccessDialog';
 import { ErrorDialog } from './ErrorDialog';
 import { useAddShippingAddress } from '@/service/shipping/hook';
 import Cookies from 'js-cookie';
+import { setAuthTokens, setUserMeta } from '@/lib/auth-cookies';
 import Link from 'next/link';
 
 type Mode = 'login' | 'register' | 'forgot-password' | 'verify-email';
@@ -102,16 +103,12 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       // Set headers and standard auth cookies
       if (auth?.accessToken) {
         setBearerToken(auth.accessToken);
-        Cookies.set('access', auth.accessToken, { expires: 1 / 48 });
+        setAuthTokens(auth.accessToken, auth.refreshToken);
+      } else if (auth?.refreshToken) {
+        setAuthTokens(undefined, auth.refreshToken);
       }
-      if (auth?.refreshToken) {
-        Cookies.set('refresh', auth.refreshToken, { expires: 7 });
-      }
-      if (user?.id) {
-        Cookies.set('userId', user.id, { expires: 7 });
-      }
-      if (user?.role) {
-        Cookies.set('userRole', user.role, { expires: 7 });
+      if (user?.id || user?.role) {
+        setUserMeta({ userId: user?.id, userRole: user?.role });
       }
 
       toast.success('Google Login successful');

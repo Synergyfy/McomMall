@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import React, { useEffect } from 'react';
-import Cookies from 'js-cookie';
+import { getAccessToken } from '@/lib/auth-cookies';
 import { setBearerToken } from '@/service/api';
 import { Provider, useDispatch } from 'react-redux';
 import { store } from '@/service/store/store';
@@ -23,7 +23,7 @@ const AuthLoader = ({ children }: { children: React.ReactNode }) => {
   useTokenRefresh();
 
   useEffect(() => {
-    const token = Cookies.get('access');
+    const token = getAccessToken();
     if (token) {
       setBearerToken(token);
       dispatch(loadAuthFromCookies());

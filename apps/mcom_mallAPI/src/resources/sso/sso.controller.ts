@@ -51,7 +51,7 @@ export class SsoController {
     const csrfState = this.ssoService.generateState();
     const authorizeUrl = this.ssoService.getAuthorizeUrl(csrfState);
 
-    res.cookie('sso_state', csrfState, {
+    res.cookie('mcom_mall_sso_state', csrfState, {
       httpOnly: true,
       signed: true,
       secure: process.env.NODE_ENV === 'production',
@@ -60,7 +60,7 @@ export class SsoController {
     });
 
     if (redirectPath) {
-      res.cookie('sso_redirect_path', redirectPath, {
+      res.cookie('mcom_mall_sso_redirect_path', redirectPath, {
         httpOnly: true,
         signed: true,
         secure: process.env.NODE_ENV === 'production',
@@ -85,16 +85,17 @@ export class SsoController {
     @Res() res: Response,
   ) {
     try {
-      const cookieState = req.signedCookies?.sso_state;
-      const redirectPath = req.signedCookies?.sso_redirect_path || '/dashboard';
+      const cookieState = req.signedCookies?.mcom_mall_sso_state;
+      const redirectPath =
+        req.signedCookies?.mcom_mall_sso_redirect_path || '/dashboard';
       const result = await this.ssoService.handleCallback(
         query.code,
         query.state,
         cookieState,
       );
 
-      res.clearCookie('sso_state');
-      res.clearCookie('sso_redirect_path');
+      res.clearCookie('mcom_mall_sso_state');
+      res.clearCookie('mcom_mall_sso_redirect_path');
 
       const frontendUrl =
         process.env.MALL_FRONTEND_URL || 'http://localhost:3003';

@@ -14,9 +14,9 @@ const customerAllowedPaths = [
 ];
 
 export function proxy(request: NextRequest) {
-  const accessToken = request.cookies.get('access')?.value;
-  const refreshToken = request.cookies.get('refresh')?.value;
-  const userRole = request.cookies.get('userRole')?.value;
+  const accessToken = request.cookies.get('mcom_mall_access')?.value;
+  const refreshToken = request.cookies.get('mcom_mall_refresh')?.value;
+  const userRole = request.cookies.get('mcom_mall_userRole')?.value;
   const { pathname } = request.nextUrl;
 
   // Protect both /dashboard and /admin routes if user is not logged in

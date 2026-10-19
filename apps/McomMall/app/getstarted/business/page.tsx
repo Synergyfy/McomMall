@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { useCreateUser, useLogin, useSendOtp, useValidateOtp, useCheckEmail } from '@/service/auth/hook';
-import Cookies from 'js-cookie';
+import { getAccessToken, setAuthTokens as setAuthCookieTokens, setUserMeta } from '@/lib/auth-cookies';
 import { useDispatch } from 'react-redux';
 import { setAuthTokens, setUserData, loadAuthFromCookies } from '@/service/store/authSlice';
 import { UserRole } from '@/service/auth/types';
@@ -5813,11 +5813,9 @@ function WelcomeChecklistPage({ onComplete }: { onComplete: () => void }) {
 
   useEffect(() => {
     // Ensure we set mock cookies so the dashboard auth redirects don't kick them out
-    if (!Cookies.get('access')) {
-      Cookies.set('access', 'mock_access_token', { expires: 1 / 72 }); // 20 minutes
-      Cookies.set('refresh', 'mock_refresh_token', { expires: 7 });
-      Cookies.set('userId', 'mock_user_id', { expires: 7 });
-      Cookies.set('userRole', 'owner', { expires: 7 });
+    if (!getAccessToken()) {
+      setAuthCookieTokens('mock_access_token', 'mock_refresh_token');
+      setUserMeta({ userId: 'mock_user_id', userRole: 'owner' });
       localStorage.setItem('user-name', 'Merchant Onboarding');
       
       // Also load auth into Redux store immediately

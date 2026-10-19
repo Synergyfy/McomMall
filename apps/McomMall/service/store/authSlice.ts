@@ -1,5 +1,15 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import Cookies from 'js-cookie';
+import {
+  clearAuthCookies,
+  getAccessToken,
+  getIsTrial,
+  getPackageInfo,
+  getPlanId,
+  getUserId,
+  getUserRole,
+  setAuthTokens as persistAuthTokens,
+  setUserMeta,
+} from '@/lib/auth-cookies';
 
 interface AuthState {
   accessToken: string | null;
@@ -41,10 +51,12 @@ const authSlice = createSlice({
       }>
     ) => {
       state.accessToken = action.payload.accessToken;
-      Cookies.set('access', action.payload.accessToken, { expires: 1 / 72 }); // 20 minutes
-
-      Cookies.set('refresh', action.payload.refreshToken, { expires: 7 });
-
+      // The JWT `exp` claim governs validity (see service/api.ts). The helper
+      // keeps the cookie longer than the token so it doesn't vanish mid-session.
+      persistAuthTokens(
+        action.payload.accessToken,
+        action.payload.refreshToken
+      );
     },
     setUserData: (
       state,
@@ -72,16 +84,14 @@ const authSlice = createSlice({
       state.tasks = action.payload.tasks || [];
       state.entitlement = action.payload.entitlement || null;
 
-      Cookies.set('userId', action.payload.id, { expires: 7 });
-      Cookies.set('userRole', action.payload.userRole, { expires: 7 });
-      Cookies.set('is_trial', action.payload.isTrial ? 'true' : 'false', { expires: 7 });
-      if (action.payload.planId) {
-        Cookies.set('mcom_plan', action.payload.planId, { expires: 7 });
-      }
+      setUserMeta({
+        userId: action.payload.id,
+        userRole: action.payload.userRole,
+        isTrial: Boolean(action.payload.isTrial),
+        planId: action.payload.planId,
+        packageInfo: action.payload.packageInfo,
+      });
       localStorage.setItem('user-name', action.payload.userName);
-      if (action.payload.packageInfo) {
-        Cookies.set('packageInfo', JSON.stringify(action.payload.packageInfo), { expires: 7 });
-      }
       if (action.payload.tasks) {
         localStorage.setItem('mcom_tasks', JSON.stringify(action.payload.tasks));
       }
@@ -100,23 +110,21 @@ const authSlice = createSlice({
       state.planName = null;
       state.tasks = [];
       state.entitlement = null;
-      Cookies.remove('access');
-      Cookies.remove('refresh');
-      Cookies.remove('userId');
-      Cookies.remove('userRole');
-      Cookies.remove('packageInfo');
-      Cookies.remove('is_trial');
-      Cookies.remove('mcom_plan');
+      clearAuthCookies();
       localStorage.removeItem('user-name');
       localStorage.removeItem('mcom_tasks');
       localStorage.removeItem('mcom_entitlement');
     },
     loadAuthFromCookies: state => {
-      const accessToken = Cookies.get('access');
-      const userId = Cookies.get('userId');
-      const userRole = Cookies.get('userRole');
-      const userName = localStorage.getItem('user-name') || (Cookies.get('userName') ? decodeURIComponent(Cookies.get('userName')!) : null);
-      const packageInfo = Cookies.get('packageInfo');
+      const accessToken = getAccessToken();
+      const userId = getUserId();
+      const userRole = getUserRole();
+      const userName = localStorage.getItem('user-name');
+      const packageInfo = getPackageInfo();
+      const isTrial = getIsTrial();
+      const planId = getPlanId();
+      const tasks = localStorage.getItem('mcom_tasks');
+      const entitlement = localStorage.getItem('mcom_entitlement');
 
       if (accessToken) {
         state.accessToken = accessToken;
@@ -132,6 +140,26 @@ const authSlice = createSlice({
       }
       if (packageInfo) {
         state.packageInfo = JSON.parse(packageInfo);
+      }
+      if (isTrial !== undefined) {
+        state.isTrial = isTrial === 'true';
+      }
+      if (planId) {
+        state.planId = planId;
+      }
+      if (tasks) {
+        try {
+          state.tasks = JSON.parse(tasks);
+        } catch {
+          state.tasks = [];
+        }
+      }
+      if (entitlement) {
+        try {
+          state.entitlement = JSON.parse(entitlement);
+        } catch {
+          state.entitlement = null;
+        }
       }
     },
   },

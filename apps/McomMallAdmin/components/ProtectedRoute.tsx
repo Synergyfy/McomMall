@@ -2,11 +2,11 @@
 
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import Cookies from 'js-cookie';
+import { getRefreshToken } from '@/lib/auth-cookies';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { accessToken } = useSelector((state: RootState) => state.auth);
-  const refreshToken = Cookies.get('refresh');
+  const refreshToken = getRefreshToken();
 
   if (!accessToken && refreshToken) {
     // If we have a refresh token but no access token, it means we're likely

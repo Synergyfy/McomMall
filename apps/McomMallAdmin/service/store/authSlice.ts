@@ -1,5 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import Cookies from 'js-cookie';
+import {
+  clearAuthCookies,
+  getAccessToken,
+  getPackageInfo,
+  getUserId,
+  getUserRole,
+  setAuthTokens as persistAuthTokens,
+  setUserMeta,
+} from '@/lib/auth-cookies';
 
 interface AuthState {
   accessToken: string | null;
@@ -31,10 +39,10 @@ const authSlice = createSlice({
       }>
     ) => {
       state.accessToken = action.payload.accessToken;
-      Cookies.set('access', action.payload.accessToken, { expires: 1 / 72 }); // 20 minutes
-
-      Cookies.set('refresh', action.payload.refreshToken, { expires: 7 });
-
+      persistAuthTokens(
+        action.payload.accessToken,
+        action.payload.refreshToken
+      );
     },
     setUserData: (
       state,
@@ -51,12 +59,12 @@ const authSlice = createSlice({
       state.userName = action.payload.userName;
       state.userRole = action.payload.userRole;
       state.packageInfo = action.payload.packageInfo;
-      Cookies.set('userId', action.payload.id, { expires: 7 });
-      Cookies.set('userRole', action.payload.userRole, { expires: 7 });
+      setUserMeta({
+        userId: action.payload.id,
+        userRole: action.payload.userRole,
+        packageInfo: action.payload.packageInfo,
+      });
       localStorage.setItem('user-name', action.payload.userName);
-      if (action.payload.packageInfo) {
-        Cookies.set('packageInfo', JSON.stringify(action.payload.packageInfo), { expires: 7 });
-      }
     },
     logout: state => {
       state.accessToken = null;
@@ -64,19 +72,15 @@ const authSlice = createSlice({
       state.userName = null;
       state.userRole = null;
       state.packageInfo = null;
-      Cookies.remove('access');
-      Cookies.remove('refresh');
-      Cookies.remove('userId');
-      Cookies.remove('userRole');
-      Cookies.remove('packageInfo');
+      clearAuthCookies();
       localStorage.removeItem('user-name');
     },
     loadAuthFromCookies: state => {
-      const accessToken = Cookies.get('access');
-      const userId = Cookies.get('userId');
-      const userRole = Cookies.get('userRole');
+      const accessToken = getAccessToken();
+      const userId = getUserId();
+      const userRole = getUserRole();
       const userName = localStorage.getItem('user-name');
-      const packageInfo = Cookies.get('packageInfo');
+      const packageInfo = getPackageInfo();
 
       if (accessToken) {
         state.accessToken = accessToken;

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { setAuthTokens, setUserData, logout } from '@/service/store/authSlice';
 import { setBearerToken } from '@/service/api';
-import Cookies from 'js-cookie';
+import { clearAuthCookies } from '@/lib/auth-cookies';
 import {
   Loader2,
   AlertCircle,
@@ -56,13 +56,7 @@ function AuthCallbackContent() {
 
     // Clear stale auth state
     setBearerToken('');
-    Cookies.remove('access');
-    Cookies.remove('refresh');
-    Cookies.remove('userId');
-    Cookies.remove('userRole');
-    Cookies.remove('packageInfo');
-    Cookies.remove('is_trial');
-    Cookies.remove('mcom_plan');
+    clearAuthCookies();
     dispatch(logout());
 
     // Legacy flow: MCOM Solutions backend redirected with tokens as URL params
