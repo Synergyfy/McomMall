@@ -6,7 +6,7 @@ import { loadAuthFromCookies } from '@/service/store/authSlice';
 import { setLoginModalOpen } from '@/service/store/uiSlice';
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
+import { getAccessToken, getRefreshToken } from '@/lib/auth-cookies';
 import { useRefreshToken } from '@/service/auth/hook';
 
 const AuthRedirect = () => {
@@ -17,8 +17,8 @@ const AuthRedirect = () => {
   const { mutate: refreshTokenFn } = useRefreshToken();
 
   useEffect(() => {
-    const token = Cookies.get('access');
-    const refresh = Cookies.get('refresh');
+    const token = getAccessToken();
+    const refresh = getRefreshToken();
 
     if (!token && refresh) {
       refreshTokenFn(refresh);
@@ -32,7 +32,7 @@ const AuthRedirect = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const refresh = Cookies.get('refresh');
+      const refresh = getRefreshToken();
       if (refresh) {
         refreshTokenFn(refresh);
       }

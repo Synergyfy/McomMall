@@ -2,13 +2,13 @@
 
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import Cookies from 'js-cookie';
+import { getRefreshToken } from '@/lib/auth-cookies';
 import { useState, useEffect } from 'react';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [mounted, setMounted] = useState(false);
   const { accessToken } = useSelector((state: RootState) => state.auth);
-  const refreshToken = Cookies.get('refresh');
+  const refreshToken = getRefreshToken();
 
   useEffect(() => {
     setMounted(true);

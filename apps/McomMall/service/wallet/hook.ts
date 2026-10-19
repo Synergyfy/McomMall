@@ -11,5 +11,8 @@ export const useWallet = () => {
   return useQuery({
     queryKey: ['wallet'],
     queryFn: fetchWalletData,
+    staleTime: 15_000,
+    refetchOnWindowFocus: 'always',
+    retry: 1,
   });
 };

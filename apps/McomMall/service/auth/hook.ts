@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import Cookies from 'js-cookie';
-import api, { setBearerToken } from '../api';
+import { getAccessToken } from '@/lib/auth-cookies';
+import api, { refreshSession, setBearerToken } from '../api';
 import { useSelector } from 'react-redux';
 import {
   UserInterface,
@@ -286,37 +286,17 @@ export function redirectToMcomSolutionsSubscription(callbackPath: string = '/das
 }
 
 export const useRefreshToken = () => {
-  const dispatch: AppDispatch = useDispatch();
-  const refresh = async (
-    refreshToken: string
-  ): Promise<LoginResponse['auth']> => {
-    try {
-      const response = await api.post('auth/refresh', {
-        refreshToken,
-      });
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      throw new Error(
-        err.response?.data?.message || err.message || 'Failed to refresh token'
-      );
-    }
+  const refresh = async (): Promise<LoginResponse['auth'] | null> => {
+    const tokens = await refreshSession();
+    return tokens;
   };
 
   const mutation = useMutation({
     mutationFn: refresh,
-    onSuccess: data => {
-      dispatch(
-        setAuthTokens({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-        })
-      );
-      setBearerToken(data.accessToken);
-    },
-    onError: () => {
-      dispatch(logoutAction());
-    },
+    // Session state is synchronised by the SESSION_EVENTS listeners in
+    // AuthInitializer. `refreshSession` only clears the session when the
+    // refresh token is explicitly rejected, so we must not log out here on
+    // transient network/server errors.
   });
   return mutation;
 };
@@ -324,7 +304,7 @@ export const useRefreshToken = () => {
 export const useLogout = () => {
   const dispatch: AppDispatch = useDispatch();
   const logout = () => {
-    const accessToken = Cookies.get('access');
+    const accessToken = getAccessToken();
     if (accessToken) {
       fetch(`${api.defaults.baseURL}auth/logout`, {
         method: 'POST',

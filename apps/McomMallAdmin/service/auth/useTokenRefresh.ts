@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
-import Cookies from 'js-cookie';
+import { getAccessToken, getRefreshToken } from '@/lib/auth-cookies';
 import api, { setBearerToken } from '../api';
 import { AppDispatch } from '../store/store';
 import { setAuthTokens, logout } from '../store/authSlice';
@@ -20,7 +20,7 @@ export const useTokenRefresh = () => {
       return;
     }
 
-    const refreshToken = Cookies.get('refresh');
+    const refreshToken = getRefreshToken();
     if (!refreshToken) {
       return;
     }
@@ -35,8 +35,9 @@ export const useTokenRefresh = () => {
       const { accessToken, refreshToken: newRefreshToken } = response.data;
 
       setBearerToken(accessToken);
-      dispatch(setAuthTokens({ accessToken, refreshToken }));
-      Cookies.set('refresh', newRefreshToken, { expires: 7 }); // Assuming refresh token is valid for 7 days
+      dispatch(
+        setAuthTokens({ accessToken, refreshToken: newRefreshToken })
+      );
 
       // Reset the timer
       if (intervalId.current) {
@@ -55,8 +56,8 @@ export const useTokenRefresh = () => {
   };
 
   useEffect(() => {
-    const accessToken = Cookies.get('access');
-    const refreshTokenExists = !!Cookies.get('refresh');
+    const accessToken = getAccessToken();
+    const refreshTokenExists = !!getRefreshToken();
 
     if (!accessToken && refreshTokenExists) {
       refreshToken();

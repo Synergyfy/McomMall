@@ -29,7 +29,8 @@ export class WalletController {
   @ApiUnauthorizedResponse({ description: 'Missing or expired JWT token' })
   async getWallet(@Req() request: Request) {
     const userId = request.user.id;
-    return this.walletService.getWalletDetails(userId);
+    const centralUserId = (request.user as any)?.centralUserId;
+    return this.walletService.getWalletDetails(userId, centralUserId);
   }
 
   @Post('fund/initiate')

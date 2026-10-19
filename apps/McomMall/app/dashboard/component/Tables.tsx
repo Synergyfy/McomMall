@@ -110,7 +110,9 @@ export const TransactionHistoryTable = () => {
           </div>
           <h4 className="text-base font-semibold text-gray-900">No transactions yet</h4>
           <p className="text-sm text-gray-500 max-w-sm mt-1">
-            Purchases, cashbacks, refunds, and subscriptions made in MCOM Mall will automatically record here.
+            Purchases, cashbacks, refunds, and subscriptions made in MCOM Mall
+            will automatically record here. Wallet top-ups are managed in the
+            MCOM Central portal.
           </p>
         </div>
       ) : (

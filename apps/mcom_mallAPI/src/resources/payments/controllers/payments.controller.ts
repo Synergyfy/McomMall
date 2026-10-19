@@ -102,7 +102,12 @@ export class PaymentsController {
     }
     try {
       const balance = await this.mcomWalletService.getBalance(centralUserId);
-      return { ...balance, topUpUrl: this.mcomWalletService.getTopUpUrl() };
+      return {
+        ...balance,
+        linked: true,
+        centralUserId,
+        topUpUrl: this.mcomWalletService.getTopUpUrl(),
+      };
     } catch (err: any) {
       throw this.mcomWalletService.toHttpException(err);
     }

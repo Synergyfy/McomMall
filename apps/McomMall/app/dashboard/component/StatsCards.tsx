@@ -192,14 +192,21 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, role }) => {
     <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
       {statsMap.map(({ key, label, icon: Icon, color, isCurrency, href }) => {
         let value: number | string | undefined | null = (stats as Record<string, any>)?.[key];
+        let displayValue: string | null = null;
 
-        // Ensure wallet balance matches central wallet source of truth in real-time
+        // Ensure wallet balance matches the central wallet source of truth in
+        // real-time. Never render a misleading 0 when the load failed.
         if (key === "totalWalletBalance" && walletData) {
           const liveBalance =
             walletData.centralWallet?.balance ??
             walletData.wallet?.balance;
-          if (liveBalance !== undefined && liveBalance !== null) {
-            value = Number(liveBalance);
+          const numericBalance =
+            typeof liveBalance === "number" ? liveBalance : Number(liveBalance);
+
+          if (walletData.success !== false && Number.isFinite(numericBalance)) {
+            value = numericBalance;
+          } else {
+            displayValue = "—";
           }
         }
 
@@ -231,7 +238,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, role }) => {
             </div>
 
             <div className="text-sm min-[360px]:text-base sm:text-lg md:text-xl font-black text-slate-800 tracking-tight">
-              {formatStatValue(value as number, isCurrency)}
+              {displayValue ?? formatStatValue(value as number, isCurrency)}
             </div>
           </div>
         );

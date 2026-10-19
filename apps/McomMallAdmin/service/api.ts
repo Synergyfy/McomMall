@@ -1,5 +1,5 @@
 import axios from 'axios';
-import Cookies from 'js-cookie';
+import { getAccessToken } from '@/lib/auth-cookies';
 
 export const baseURL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'https://mcom-mall-rest.vercel.app/api/v1';
@@ -14,7 +14,7 @@ const api = axios.create({
 // Add a request interceptor to inject the token automatically
 api.interceptors.request.use(
   (config) => {
-    const token = Cookies.get('access');
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

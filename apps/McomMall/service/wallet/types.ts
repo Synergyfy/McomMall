@@ -2,8 +2,8 @@ export interface CentralWallet {
   enabled: boolean;
   linked: boolean;
   centralUserId?: string | null;
-  balance?: number;
-  availableBalance?: number;
+  balance?: number | null;
+  availableBalance?: number | null;
   currency?: string;
   status?: string;
   topUpUrl?: string;
@@ -15,10 +15,10 @@ export interface Wallet {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
-  balance: string | number;
+  balance: string | number | null;
   totalOrders: number;
   earningsBalance: string | number;
-  spendableBalance: string | number;
+  spendableBalance: string | number | null;
   earningsFromOrders: string | number;
   earningsFromGiftCard: string | number;
   earningsFromVoucher: string | number;
@@ -50,6 +50,16 @@ export interface CashbackBreakdown {
 }
 
 export interface WalletData {
+  success?: boolean;
+  status?: string;
+  balance?: number | null;
+  availableBalance?: number | null;
+  currency?: string;
+  centralUserId?: string | null;
+  errorCode?: string;
+  message?: string;
+  transactionHistoryError?: string;
+  lastSyncedAt?: string | null;
   centralWallet?: CentralWallet;
   wallet: Wallet;
   cashbackBreakdown?: CashbackBreakdown;

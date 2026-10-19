@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import Cookies from 'js-cookie';
 import api, { setBearerToken } from '../api';
 import { useSelector } from 'react-redux';
 import {
