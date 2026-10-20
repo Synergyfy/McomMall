@@ -30,6 +30,12 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const logout = useLogout();
+  const visibleMainMenuItems =
+    String(userRole).toLowerCase() === 'customer'
+      ? mainMenuItems.filter(
+          (item) => item.href !== '/dashboard/activity-timer',
+        )
+      : mainMenuItems;
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -171,7 +177,7 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
             )
           )}
         </div>
-        {(isCollapsed || expandedSection === 'Main') && renderMenuItems(mainMenuItems)}
+        {(isCollapsed || expandedSection === 'Main') && renderMenuItems(visibleMainMenuItems)}
       </nav>
       {userRole !== 'customer' && renderSection('Storefront', storefrontMenuItems)}
       {userRole !== 'customer' && renderSection('Listing', listingMenuItems)}

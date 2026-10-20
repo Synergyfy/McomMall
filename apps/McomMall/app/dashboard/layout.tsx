@@ -17,6 +17,7 @@ import { Menu, Plus, Minus, Building2, MapPin, Compass, Globe } from 'lucide-rea
 // Main Dashboard Menu Components
 import SideMenu from './component/SideMenu';
 import { MenuContent as SideMenuContent } from './component/MenuContent';
+import { ActivityTimerBadge } from './component/ActivityTimerBadge';
 import { MembershipBadge } from './component/MembershipBadge';
 import { BottomNav } from './component/BottomNav';
 
@@ -244,6 +245,7 @@ export default function DashboardLayout({
                     {trialStatus?.isActive && (
                       <TrialCountdownTimer trialStatus={trialStatus} />
                     )}
+                    {userRole === 'owner' && <ActivityTimerBadge />}
                     <ProximityHeaderBadge />
                   </div>
 
