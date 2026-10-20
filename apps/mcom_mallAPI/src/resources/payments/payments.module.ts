@@ -5,11 +5,13 @@ import { PaymentsWebhookController } from './controllers/payments-webhook.contro
 import { CashbackController } from './controllers/cashback.controller';
 import { PaymentsService } from './services/payments.service';
 import { PaymentHistory } from './entities/payment-history.entity';
+import { McomPayCharge } from './entities/mcom-pay-charge.entity';
 import { User } from '../users/entities/user.entity';
 import { OrderPayment } from '../order/entities/order-payment.entity';
 import { Order } from '../order/entities/order.entity';
 import { PaymentProviderService } from './services/payment-provider.service';
 import { McomWalletService } from './services/mcom-wallet.service';
+import { McomPayService } from './services/mcom-pay.service';
 import { WalletTopUpProxyService } from './services/wallet-topup-proxy.service';
 import { SolutionsPaymentProxyService } from './services/solutions-payment-proxy.service';
 import { CentralIntegrationService } from './services/central-integration.service';
@@ -18,7 +20,13 @@ import { PlansModule } from '../plans/plans.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PaymentHistory, User, OrderPayment, Order]),
+    TypeOrmModule.forFeature([
+      PaymentHistory,
+      McomPayCharge,
+      User,
+      OrderPayment,
+      Order,
+    ]),
     forwardRef(() => MembershipModule),
     PlansModule,
   ],
@@ -31,6 +39,7 @@ import { PlansModule } from '../plans/plans.module';
     PaymentsService,
     PaymentProviderService,
     McomWalletService,
+    McomPayService,
     CentralIntegrationService,
     WalletTopUpProxyService,
     SolutionsPaymentProxyService,
@@ -39,6 +48,7 @@ import { PlansModule } from '../plans/plans.module';
     PaymentsService,
     PaymentProviderService,
     McomWalletService,
+    McomPayService,
     CentralIntegrationService,
     SolutionsPaymentProxyService,
   ],

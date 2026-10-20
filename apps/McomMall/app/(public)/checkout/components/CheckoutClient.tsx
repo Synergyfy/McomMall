@@ -359,7 +359,8 @@ export default function CheckoutClient() {
   );
 
   const handlePaymentSuccess = useCallback(
-    (transactionId: string, paymentMethod: PaymentMethod) => {
+    (transactionId: string, methodOverride?: PaymentMethod) => {
+      const method = methodOverride ?? paymentMethod;
       const currentProductIds = fromCart
         ? cart?.items.map(item => item.product.id) || []
         : productId ? [productId] : [];
@@ -371,7 +372,7 @@ export default function CheckoutClient() {
 
       const checkoutData: CreateCheckoutDto = {
         payment: {
-          paymentMethod,
+          paymentMethod: method,
           amount: totalPrice,
           transactionId,
         },
@@ -416,6 +417,7 @@ export default function CheckoutClient() {
       giftCardDiscount,
       voucherDiscount,
       rewardApplications,
+      paymentMethod,
     ]
   );
 
@@ -509,8 +511,8 @@ export default function CheckoutClient() {
                 ) : (
                   <PaymentForm
                     totalPrice={totalPrice}
-                    onPaymentSuccess={(transactionId) =>
-                      handlePaymentSuccess(transactionId, paymentMethod)
+                    onPaymentSuccess={(transactionId, method) =>
+                      handlePaymentSuccess(transactionId, method ?? paymentMethod)
                     }
                     setPaymentMethod={setPaymentMethod}
                     clientSecret={clientSecret}

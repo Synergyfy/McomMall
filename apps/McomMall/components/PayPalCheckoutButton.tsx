@@ -28,9 +28,9 @@ export function PayPalCheckoutButton({
           }}
           onApprove={async (data, actions) => {
             if (actions.order) {
-              const details = await actions.order.capture();
-              if (details.id) {
-                onPaymentSuccess(details.id);
+              await actions.order.capture();
+              if (data.orderID) {
+                onPaymentSuccess(data.orderID);
               } else {
                 toast.error('Transaction ID not found.');
               }

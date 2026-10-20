@@ -8,37 +8,113 @@ import {
   User,
   ChevronDown,
   Heart,
+  LogOut,
   Menu as MenuIcon,
   X as XIcon,
 } from 'lucide-react';
 import { Suspense, useState } from 'react';
 import { NavMenu, menuItems, ListItem } from './NavMenu';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import UserNav from './UserNav';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useLogout, redirectToMcomSolutionsLogin } from '@/service/auth/hook';
 import { useGetMyMembership } from '@/service/membership/hooks';
+import { useGetUserProfile } from '@/service/user/hook';
+import {
+  getInitials,
+  getUserMenuLinks,
+  getUserRoleLabel,
+} from '@/lib/user-menu';
 
 const mobileMenuVariants: Variants = {
   closed: { x: '100%', transition: { duration: 0.3, ease: 'easeInOut' } },
   open: { x: '0%', transition: { duration: 0.3, ease: 'easeInOut' } },
 };
+
+interface MobileAccountSectionProps {
+  onNavigate: () => void;
+}
+
+function MobileAccountSection({ onNavigate }: MobileAccountSectionProps) {
+  const router = useRouter();
+  const logout = useLogout();
+  const { userName, userRole } = useSelector((state: RootState) => state.auth);
+  const { data: profile } = useGetUserProfile();
+
+  const displayName = profile?.name || userName || 'User';
+  const links = getUserMenuLinks(userRole);
+
+  const handleLogout = () => {
+    logout();
+    onNavigate();
+    router.push('/');
+  };
+
+  return (
+    <div className="border-t border-gray-200 my-2 pt-2">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Avatar className="h-10 w-10 shrink-0">
+          {profile?.profilePictureUrl ? (
+            <AvatarImage src={profile.profilePictureUrl} alt={displayName} />
+          ) : null}
+          <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-gray-900">
+            {displayName}
+          </p>
+          {profile?.email ? (
+            <p className="truncate text-xs text-gray-500">{profile.email}</p>
+          ) : null}
+          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-600">
+            {getUserRoleLabel(userRole)}
+          </p>
+        </div>
+      </div>
+      <Link
+        href="/dashboard/my-profile"
+        onClick={onNavigate}
+        className="block rounded-md px-4 py-2 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-100"
+      >
+        My Profile
+      </Link>
+      {links.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          onClick={onNavigate}
+          className="block rounded-md px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+        >
+          {link.title}
+        </Link>
+      ))}
+      <button
+        onClick={handleLogout}
+        className="flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-gray-100"
+      >
+        <LogOut className="h-4 w-4" />
+        Log out
+      </button>
+    </div>
+  );
+}
+
 export default function Header() {
   const pathname = usePathname();
   const { cart } = useSelector((state: RootState) => state.cart);
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
   const { wishlistCount } = useWishlist();
-  const { accessToken, userRole, userName, packageInfo } = useSelector(
+  const { accessToken, userRole } = useSelector(
     (state: RootState) => state.auth
   );
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openMobileSubMenu, setOpenMobileSubMenu] = useState<string | null>(
     null
   );
-  const logout = useLogout();
   const { data: membership } = useGetMyMembership();
 
   if (
@@ -153,59 +229,9 @@ export default function Header() {
                   </Link>
                 </>
               ) : (
-                <>
-                  <div className="border-t border-gray-200 my-2 pt-2">
-                    <p className="px-4 text-sm font-semibold text-gray-500 mb-2">My Account ({userName})</p>
-                    {userRole === 'owner' && (
-                      <>
-                        <Link
-                          href="/dashboard/bookings"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
-                        >
-                          Bookings
-                        </Link>
-                        <Link
-                          href="/dashboard/store/orders"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
-                        >
-                          Orders
-                        </Link>
-                        <Link
-                          href="/dashboard/messages"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
-                        >
-                          Messages
-                        </Link>
-                      </>
-                    )}
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
-                    >
-                      Dashboard
-                    </Link>
-                    <Link
-                      href="/dashboard/wishlist"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
-                    >
-                      My Wishlist
-                    </Link>
-                    <button
-                      onClick={() => {
-                        logout();
-                        setMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-left rounded-md px-4 py-2 text-lg text-red-600 transition-colors hover:bg-gray-100"
-                    >
-                      Log out
-                    </button>
-                  </div>
-                </>
+                <MobileAccountSection
+                  onNavigate={() => setMobileMenuOpen(false)}
+                />
               )}
             </nav>
           </motion.div>

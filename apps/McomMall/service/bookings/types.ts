@@ -14,6 +14,7 @@ export enum PaymentMethod {
   PAYPAL = 'paypal',
   BANK_TRANSFER = 'bank_transfer',
   STRIPE = 'stripe',
+  MCOM_WALLET = 'mcom_wallet',
 }
 
 export interface Service {

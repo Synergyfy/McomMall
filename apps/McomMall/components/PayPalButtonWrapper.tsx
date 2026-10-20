@@ -6,7 +6,8 @@ import {
 } from '@paypal/react-paypal-js';
 
 const PAYPAL_CLIENT_ID =
-  'AdMnk_v1AaH8-ntOEM6y58zDTWkb5VzOAn285XcoSwDxnecLJb0OcPFCSUYGmiRQHR8x2o97JHnYXPuJ';
+  process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ||
+  'AeHmWJvBfMkb15hjVIrL88K8mLO9zzaCVC_b53EXSQ-6c163aYzXuV05QZtMsENzoaXK_G0lqyIDDpAY';
 
 interface PayPalButtonWrapperProps {
   orderId: string;
