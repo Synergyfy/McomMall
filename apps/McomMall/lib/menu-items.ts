@@ -19,6 +19,7 @@ import {
   CreditCard,
   History,
   Users,
+  Timer,
   Scan,
   Gift,
   Coins,
@@ -46,6 +47,11 @@ export interface MenuItem {
 export const mainMenuItems: MenuItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'LocalMall', href: '/dashboard/localmall', icon: MapPin },
+  {
+    title: 'Activity Timer',
+    href: '/dashboard/activity-timer',
+    icon: Timer,
+  },
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
