@@ -16,6 +16,7 @@ import { Public } from '../../../common/decorators/public.decorator';
 import { WebhookSourceGuard } from '../../../common/guards/webhook-source.guard';
 import { PaymentsService } from '../services/payments.service';
 import { PaymentProviderService } from '../services/payment-provider.service';
+import { McomPayService } from '../services/mcom-pay.service';
 
 @ApiTags('payments-webhooks')
 @Controller('payments')
@@ -25,7 +26,53 @@ export class PaymentsWebhookController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly mcomPayService: McomPayService,
   ) {}
+
+  /**
+   * MCOM Pay lifecycle webhook (payment.succeeded / payment.refunded).
+   * Signed with the app's webhook secret; used as a backstop for payments whose
+   * browser confirmation was interrupted.
+   */
+  @Public()
+  @Post('mcom/webhook')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'MCOM Pay webhook receiver (signature verified)' })
+  async mcomPayWebhook(
+    @Req() req: any,
+    @Headers('x-mcom-webhook-signature') signature?: string,
+  ) {
+    const rawBody =
+      req.rawBody ||
+      (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+    if (!this.mcomPayService.verifyWebhookSignature(rawBody, signature)) {
+      this.logger.warn('Rejected MCOM Pay webhook: invalid signature');
+      throw new UnauthorizedException('Invalid MCOM Pay webhook signature');
+    }
+
+    const event = req.body?.event;
+    const chargeId =
+      req.body?.data?.chargeId ||
+      req.body?.data?.id ||
+      req.body?.chargeId;
+    const status = req.body?.data?.status;
+
+    if (chargeId && typeof chargeId === 'string') {
+      if (event === 'payment.succeeded') {
+        await this.mcomPayService.updateLocalStatus(chargeId, 'paid');
+      } else if (event === 'payment.refunded') {
+        await this.mcomPayService.updateLocalStatus(
+          chargeId,
+          status || 'refunded',
+        );
+      }
+    }
+
+    this.logger.log(
+      `MCOM Pay webhook "${event ?? 'unknown'}"${chargeId ? ` for charge ${chargeId}` : ''}`,
+    );
+    return { received: true, event: event ?? 'unknown' };
+  }
 
   @Public()
   @UseGuards(WebhookSourceGuard)

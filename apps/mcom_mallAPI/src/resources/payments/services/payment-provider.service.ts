@@ -7,6 +7,7 @@ import {
 import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
+import { McomPayService } from './mcom-pay.service';
 import {
   Client,
   Environment,
@@ -45,18 +46,32 @@ export class PaymentProviderService {
   private ordersController: OrdersController;
   private paymentsController: PaymentsController;
 
-  constructor(private configService: ConfigService) {
+  constructor(private configService: ConfigService, private readonly mcomPay: McomPayService) {
     const stripeKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    if (!stripeKey) {
-      throw new Error('STRIPE_SECRET_KEY is required');
+    const useDirectProviders = !this.mcomPay.isEnabled();
+
+    // MCOM Pay is the default rail. Direct provider credentials are only
+    // required when the integration is explicitly disabled.
+    if (stripeKey) {
+      this.stripe = new Stripe(stripeKey);
+    } else if (useDirectProviders) {
+      throw new Error('STRIPE_SECRET_KEY is required when MCOM Pay is disabled');
+    } else {
+      this.stripe = null as unknown as Stripe;
     }
-    this.stripe = new Stripe(stripeKey);
 
     const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
     const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');
 
     if (!clientId || !clientSecret) {
-      throw new Error('PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are required');
+      if (useDirectProviders) {
+        throw new Error(
+          'PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are required when MCOM Pay is disabled',
+        );
+      }
+      this.ordersController = null as unknown as OrdersController;
+      this.paymentsController = null as unknown as PaymentsController;
+      return;
     }
 
     const usesSandboxPaypal = clientId?.startsWith('sb-') ?? false;
@@ -90,6 +105,38 @@ export class PaymentProviderService {
     currency: string,
     metadata?: Record<string, any>,
   ): Promise<Stripe.PaymentIntent> {
+    if (this.mcomPay.isEnabled()) {
+      const reference = this.paymentReference(metadata, 'stripe');
+      try {
+        const result = await this.mcomPay.createCharge({
+          amountMinor: this.mcomPay.toMinorUnits(amount),
+          currency,
+          method: 'stripe',
+          reference,
+          description: metadata?.description,
+          externalCustomerId: metadata?.userId
+            ? String(metadata.userId)
+            : undefined,
+          metadata,
+          idempotencyKey: this.paymentIdempotencyKey(metadata, 'stripe', amount),
+        });
+        const charge = result.charge;
+
+        // Shape-compatible with Stripe.PaymentIntent for existing callers.
+        return {
+          id: charge.id,
+          client_secret: result.clientSecret ?? null,
+          amount: Number(charge.amountMinor),
+          currency: charge.currency.toLowerCase(),
+          status:
+            charge.status === 'paid' ? 'succeeded' : 'requires_payment_method',
+          metadata,
+        } as unknown as Stripe.PaymentIntent;
+      } catch (err) {
+        throw this.mcomPay.toHttpException(err);
+      }
+    }
+
     try {
       return await this.stripe.paymentIntents.create({
         amount: Math.round(amount * 100),
@@ -109,6 +156,38 @@ export class PaymentProviderService {
     currency: string,
     metadata?: Record<string, any>,
   ): Promise<any> {
+    if (this.mcomPay.isEnabled()) {
+      const reference = this.paymentReference(metadata, 'paypal');
+      try {
+        const result = await this.mcomPay.createCharge({
+          amountMinor: this.mcomPay.toMinorUnits(amount),
+          currency,
+          method: 'paypal',
+          reference,
+          description: metadata?.description,
+          externalCustomerId: metadata?.userId
+            ? String(metadata.userId)
+            : undefined,
+          metadata,
+          idempotencyKey: this.paymentIdempotencyKey(metadata, 'paypal', amount),
+        });
+        const charge = result.charge;
+
+        return {
+          // Existing frontend passes this to the PayPal Buttons SDK.
+          id: charge.providerRef || charge.id,
+          chargeId: charge.id,
+          approvalUrl: result.approvalUrl ?? null,
+          status: 'CREATED',
+          links: result.approvalUrl
+            ? [{ rel: 'approve', href: result.approvalUrl }]
+            : [],
+        };
+      } catch (err) {
+        throw this.mcomPay.toHttpException(err);
+      }
+    }
+
     try {
       const request: OrderRequest = {
         intent: CheckoutPaymentIntent.Capture,
@@ -133,6 +212,17 @@ export class PaymentProviderService {
   }
 
   async capturePaypalOrder(orderId: string): Promise<any> {
+    if (this.mcomPay.isEnabled()) {
+      const chargeId = await this.mcomPay.resolveChargeId(orderId);
+      if (!chargeId) {
+        throw new Error(
+          `No MCOM Pay charge found for PayPal order ${orderId}`,
+        );
+      }
+      const result = await this.mcomPay.confirmCharge(chargeId, { orderId });
+      return result.charge;
+    }
+
     const response = await this.ordersController.captureOrder({ id: orderId });
     return response.result;
   }
@@ -142,6 +232,22 @@ export class PaymentProviderService {
     expectedAmount: number,
     currency: string,
   ): Promise<{ ok: boolean; details?: any; reason?: string }> {
+    if (this.mcomPay.isEnabled()) {
+      const chargeId = await this.mcomPay.resolveChargeId(intentId);
+      if (!chargeId) {
+        return {
+          ok: false,
+          reason: 'No MCOM Pay charge found for this payment',
+        };
+      }
+      return this.verifyMcomPayCharge(
+        chargeId,
+        expectedAmount,
+        currency,
+        'stripe',
+      );
+    }
+
     const intent = await this.stripe.paymentIntents.retrieve(intentId);
     if (!intent) {
       return { ok: false, reason: 'Stripe payment intent not found' };
@@ -179,6 +285,22 @@ export class PaymentProviderService {
     expectedAmount: number,
     currency: string,
   ): Promise<{ ok: boolean; details?: any; reason?: string }> {
+    if (this.mcomPay.isEnabled()) {
+      const chargeId = await this.mcomPay.resolveChargeId(orderId);
+      if (!chargeId) {
+        return {
+          ok: false,
+          reason: 'No MCOM Pay charge found for this PayPal payment',
+        };
+      }
+      return this.verifyMcomPayCharge(
+        chargeId,
+        expectedAmount,
+        currency,
+        'paypal',
+      );
+    }
+
     const result = await this.capturePaypalOrder(orderId);
     // Basic validations based on PayPal capture response
     const status = result?.status;
@@ -216,6 +338,107 @@ export class PaymentProviderService {
     return { ok: true, details: result };
   }
 
+  /**
+   * Confirm an MCOM Pay charge (if necessary) and verify its settled amount and
+   * currency. All card/PayPal money is handled by MCOM Central; the mall only
+   * records the result.
+   */
+  private async verifyMcomPayCharge(
+    chargeId: string,
+    expectedAmount: number,
+    currency: string,
+    method: 'stripe' | 'paypal',
+  ): Promise<{ ok: boolean; details?: any; reason?: string }> {
+    let charge: any;
+    try {
+      charge = await this.mcomPay.getCharge(chargeId);
+    } catch (err: any) {
+      return {
+        ok: false,
+        reason: err?.message || 'Could not load the MCOM Pay charge',
+      };
+    }
+
+    if (charge.status !== 'paid') {
+      const handle =
+        method === 'stripe'
+          ? { paymentIntentId: charge.providerRef ?? undefined }
+          : { orderId: charge.providerRef ?? undefined };
+      try {
+        const confirmed = await this.mcomPay.confirmCharge(chargeId, handle);
+        charge = confirmed.charge;
+      } catch (err: any) {
+        return {
+          ok: false,
+          details: charge,
+          reason: err?.message || 'MCOM Pay could not confirm the payment',
+        };
+      }
+    }
+
+    if (charge.status !== 'paid') {
+      return {
+        ok: false,
+        details: charge,
+        reason: `MCOM Pay charge status ${charge.status}`,
+      };
+    }
+
+    const expectedMinor = BigInt(Math.round(expectedAmount * 100));
+    const actualMinor = BigInt(charge.amountMinor);
+    if (actualMinor !== expectedMinor) {
+      return {
+        ok: false,
+        details: charge,
+        reason: `Amount mismatch: expected ${expectedMinor} minor units, received ${actualMinor}`,
+      };
+    }
+    if (charge.currency.toLowerCase() !== currency.toLowerCase()) {
+      return {
+        ok: false,
+        details: charge,
+        reason: `Currency mismatch: expected ${currency}, received ${charge.currency}`,
+      };
+    }
+
+    return { ok: true, details: charge };
+  }
+
+  /** Build a stable-ish reference for an MCOM Pay charge. */
+  private paymentReference(
+    metadata: Record<string, any> | undefined,
+    method: string,
+  ): string {
+    const base =
+      metadata?.reference ||
+      metadata?.orderId ||
+      metadata?.bookingId ||
+      metadata?.purchaseReference ||
+      metadata?.planVariantId ||
+      metadata?.tierId ||
+      metadata?.userId;
+    return `${base ? `${base}-` : ''}${method}-${randomUUID()}`.slice(0, 190);
+  }
+
+  /** Idempotency key scoped to the business event and amount. */
+  private paymentIdempotencyKey(
+    metadata: Record<string, any> | undefined,
+    method: string,
+    amount: number,
+  ): string {
+    const base =
+      metadata?.idempotencyKey ||
+      metadata?.reference ||
+      metadata?.orderId ||
+      metadata?.bookingId ||
+      metadata?.purchaseReference ||
+      metadata?.planVariantId ||
+      metadata?.tierId ||
+      metadata?.userId ||
+      randomUUID();
+    return this.mcomPay.buildKey('pay', method, base, amount.toFixed(2));
+  }
+
   async createStripeTransfer(
     amount: number,
     currency: string,
@@ -234,6 +457,18 @@ export class PaymentProviderService {
     paymentIntentId: string,
     amount?: number,
   ): Promise<Stripe.Refund> {
+    if (this.mcomPay.isEnabled()) {
+      const chargeId = await this.mcomPay.resolveChargeId(paymentIntentId);
+      if (chargeId) {
+        const charge = await this.mcomPay.refundCharge(
+          chargeId,
+          amount ? this.mcomPay.toMinorUnits(amount) : undefined,
+          'MCOM Mall refund',
+        );
+        return charge as unknown as Stripe.Refund;
+      }
+    }
+
     const refundParams: Stripe.RefundCreateParams = {
       payment_intent: paymentIntentId,
     };
@@ -309,6 +544,18 @@ export class PaymentProviderService {
     amount?: number,
     currency = 'GBP',
   ): Promise<Refund> {
+    if (this.mcomPay.isEnabled()) {
+      const chargeId = await this.mcomPay.resolveChargeId(captureId);
+      if (chargeId) {
+        const charge = await this.mcomPay.refundCharge(
+          chargeId,
+          amount ? this.mcomPay.toMinorUnits(amount) : undefined,
+          'MCOM Mall refund',
+        );
+        return charge as unknown as Refund;
+      }
+    }
+
     try {
       const response = await this.paymentsController.refundCapturedPayment({
         captureId,

@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { Search, ShoppingBag, Store, Flower2, Utensils, Coffee, Scissors, Wheat, Play, X, Sparkles, MapPin, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { redirectToMcomSolutionsLogin } from '@/service/auth/hook';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
+import UserNav from '@/components/UserNav';
 
 const SLIDES = [
   {
@@ -24,6 +27,7 @@ const SLIDES = [
 
 export default function RootLandingPage() {
   const router = useRouter();
+  const { accessToken } = useSelector((state: RootState) => state.auth);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +64,7 @@ export default function RootLandingPage() {
           </div>
           <span className="text-xl md:text-2xl font-black tracking-tight text-slate-800">MCOM</span>
         </div>
+        {accessToken ? <UserNav /> : null}
       </header>
 
       {/* Main Content */}

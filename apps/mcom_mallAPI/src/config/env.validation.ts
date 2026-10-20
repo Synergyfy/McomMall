@@ -8,9 +8,11 @@ export const envValidationSchema = Joi.object({
 
   // Mandatory secrets - the application must fail fast if these are missing.
   COOKIE_SECRET: Joi.string().required(),
-  STRIPE_SECRET_KEY: Joi.string().required(),
-  PAYPAL_CLIENT_ID: Joi.string().required(),
-  PAYPAL_CLIENT_SECRET: Joi.string().required(),
+  // Optional direct-provider credentials. MCOM Pay (Central Hub) is the
+  // default payment rail and owns the Stripe/PayPal merchant accounts.
+  STRIPE_SECRET_KEY: Joi.string().allow('').optional(),
+  PAYPAL_CLIENT_ID: Joi.string().allow('').optional(),
+  PAYPAL_CLIENT_SECRET: Joi.string().allow('').optional(),
 
   // MCOM Wallet (centralized payments via MCOM Solutions) — required when
   // MCOM_WALLET_ENABLED is not explicitly 'false'.
@@ -32,6 +34,11 @@ export const envValidationSchema = Joi.object({
     .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
     .allow('')
     .optional(),
+  MCOM_PAY_ENABLED: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  MCOM_WEBHOOK_SECRET: Joi.string().allow('').optional(),
   // Embedded Solutions card top-up (proxied user-scoped top-up APIs).
   TOKEN_ENCRYPTION_KEY: Joi.string().allow('').optional(),
   MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY: Joi.string().allow('').optional(),

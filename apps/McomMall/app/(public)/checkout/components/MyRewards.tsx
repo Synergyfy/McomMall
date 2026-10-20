@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Loader, Sparkles } from 'lucide-react';
 import { EligibleReward, RewardApplication } from '@/service/rewards/types';
@@ -30,6 +30,10 @@ export default function MyRewards({
 }: MyRewardsProps) {
   // lineKey -> issuanceId
   const [assignment, setAssignment] = useState<Record<string, string>>({});
+  // Lines we've auto-applied a reward to, and lines the shopper has touched.
+  // This prevents auto-application from overriding an explicit "No reward".
+  const autoSelectedLines = useRef<Set<string>>(new Set());
+  const userTouchedLines = useRef<Set<string>>(new Set());
 
   const rewardById = useMemo(() => {
     const map = new Map<string, EligibleReward>();
@@ -71,6 +75,45 @@ export default function MyRewards({
       return changed ? next : prev;
     });
   }, [discountFor]);
+
+  // Auto-apply the best available reward per line so an eligible reward is
+  // visible immediately instead of leaving the order total unchanged until
+  // the shopper discovers the dropdown.
+  useEffect(() => {
+    setAssignment((prev) => {
+      const next = { ...prev };
+      const usedIssuances = new Set(Object.values(next));
+      let changed = false;
+
+      for (const line of lines || []) {
+        if (next[line.lineKey]) continue;
+        if (userTouchedLines.current.has(line.lineKey)) continue;
+        if (autoSelectedLines.current.has(line.lineKey)) continue;
+
+        const options = optionsForLine(line.lineKey).filter(
+          (reward) => !usedIssuances.has(reward.issuanceId)
+        );
+        if (options.length === 0) continue;
+
+        const best = options.reduce((current, reward) => {
+          const amount =
+            reward.applicableLines.find((l) => l.lineKey === line.lineKey)
+              ?.discountAmount ?? 0;
+          const bestAmount =
+            current?.applicableLines.find((l) => l.lineKey === line.lineKey)
+              ?.discountAmount ?? 0;
+          return amount > bestAmount ? reward : current;
+        }, options[0]);
+
+        next[line.lineKey] = best.issuanceId;
+        usedIssuances.add(best.issuanceId);
+        autoSelectedLines.current.add(line.lineKey);
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    });
+  }, [lines, optionsForLine]);
 
   useEffect(() => {
     const applications: RewardApplication[] = [];
@@ -119,7 +162,9 @@ export default function MyRewards({
         Your rewards
       </div>
       <p className="text-xs text-gray-500">
-        Pick which item each reward should discount. One reward per item.
+        {Object.keys(assignment).length > 0
+          ? "We've applied your best available reward. Change or remove it below."
+          : 'Pick which item each reward should discount. One reward per item.'}
       </p>
 
       {lines
@@ -146,14 +191,15 @@ export default function MyRewards({
               </div>
               <select
                 value={selected}
-                onChange={(e) =>
+                onChange={(e) => {
+                  userTouchedLines.current.add(line.lineKey);
                   setAssignment((prev) => {
                     const next = { ...prev };
                     if (e.target.value) next[line.lineKey] = e.target.value;
                     else delete next[line.lineKey];
                     return next;
-                  })
-                }
+                  });
+                }}
                 className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">No reward</option>

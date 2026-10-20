@@ -214,7 +214,9 @@ export default function PricingCheckoutClient({
           paymentGateway:
             paymentMethod === PaymentMethod.STRIPE
               ? PaymentGateway.STRIPE
-              : PaymentGateway.PAYPAL,
+              : paymentMethod === PaymentMethod.MCOM_WALLET
+                ? PaymentGateway.MCOM_WALLET
+                : PaymentGateway.PAYPAL,
           transactionId,
           currency: 'gbp',
           tierId: isPayg ? undefined : tierId,
@@ -562,6 +564,7 @@ export default function PricingCheckoutClient({
                 clientSecret={stripeIntent?.clientSecret}
                 orderID={payPalOrder?.id}
                 setPaymentMethod={setPaymentMethod}
+                allowWallet={false}
               />
               )}
             </div>
