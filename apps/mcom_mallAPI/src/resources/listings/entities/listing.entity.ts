@@ -62,6 +62,35 @@ export class Business extends AbstractBaseEntity {
   @IsOptional()
   vatNumber?: string;
 
+  // -------------------------------------------------------------------------
+  // MCOM Central business-profile mirror
+  // -------------------------------------------------------------------------
+  // Central owns these values; they are refreshed on every SSO login.
+  @Column({ nullable: true })
+  businessType?: string;
+
+  @Column({ nullable: true })
+  industry?: string;
+
+  @Column({ nullable: true })
+  centralCategory?: string;
+
+  @Column({ nullable: true })
+  centralSubCategory?: string;
+
+  @Column({ type: 'text', nullable: true })
+  openingHours?: string;
+
+  @Column({ nullable: true })
+  centralBusinessId?: string;
+
+  /** Full canonical businessProfile payload from MCOM Central. */
+  @Column({ type: 'jsonb', nullable: true })
+  centralProfile?: Record<string, unknown> | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  centralProfileSyncedAt?: Date | null;
+
   @Column()
   @Length(20, 180)
   shortDescription: string;

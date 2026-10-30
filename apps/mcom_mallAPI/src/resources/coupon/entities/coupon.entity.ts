@@ -9,6 +9,9 @@ import { Order } from '../../order/entities/order.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('coupons')
+@Index('UQ_coupons_source_issuance', ['sourceApp', 'issuanceId'], {
+  unique: true,
+})
 export class Coupon extends AbstractBaseEntity {
   @ApiProperty({ example: 'SAVE20' })
   @Index({ unique: true })
@@ -71,6 +74,25 @@ export class Coupon extends AbstractBaseEntity {
   @ApiPropertyOptional()
   @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date | null;
+
+  /** Rewards issuance this coupon was materialised from. */
+  @Column({ name: 'issuance_id', nullable: true })
+  issuanceId: string | null;
+
+  /** Issuing app, e.g. `mcom-rewards`. */
+  @Column({ name: 'source_app', nullable: true })
+  sourceApp: string | null;
+
+  /** Free-form partner metadata echoed back on reads. */
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, any> | null;
+
+  /**
+   * Optional restriction copied onto the coupon template. Used to reject an
+   * instrument scope broader than its template.
+   */
+  @Column({ name: 'scope_config', type: 'jsonb', nullable: true })
+  scopeConfig: Record<string, any> | null;
 
   @ApiPropertyOptional({ type: () => Business })
   @Index()

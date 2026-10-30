@@ -20,6 +20,10 @@ import { RewardRedemptionOutbox } from '../order/entities/reward-redemption-outb
 import { User } from '../users/entities/user.entity';
 import { IntegrationSetting } from '../settings/entities/integration-setting.entity';
 import { RewardsIntegrationModule } from '../rewards-integration/rewards-integration.module';
+import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
+import { CouponModule } from '../coupon/coupon.module';
+import { GiftCardModule } from '../gift-card/gift-card.module';
+import { VoucherModule } from '../voucher/voucher.module';
 
 @Module({
   imports: [
@@ -43,6 +47,10 @@ import { RewardsIntegrationModule } from '../rewards-integration/rewards-integra
     EmailModule,
     forwardRef(() => WalletModule),
     forwardRef(() => RewardsIntegrationModule),
+    PartnerInstrumentsModule,
+    forwardRef(() => CouponModule),
+    forwardRef(() => GiftCardModule),
+    forwardRef(() => VoucherModule),
   ],
   controllers: [BookingController],
   providers: [BookingService],

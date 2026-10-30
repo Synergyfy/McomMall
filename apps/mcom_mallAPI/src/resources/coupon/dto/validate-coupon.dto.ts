@@ -1,5 +1,10 @@
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
 
 export class ValidateCouponDto {
   @ApiProperty({
@@ -17,4 +22,14 @@ export class ValidateCouponDto {
   @IsOptional()
   @IsString()
   existingCouponCode?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Current cart subtotal in GBP. When supplied, the response includes the server-computed `discountAmount` for the summary line.',
+    example: 49.99,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  subtotal?: number;
 }

@@ -129,3 +129,13 @@ export interface VerifyReloadDto {
   paymentProvider: 'stripe' | 'paypal';
   transactionId: string;
 }
+/** Balance of a voucher the signed-in user is entitled to (checkout). */
+export interface VoucherBalance {
+  code: string;
+  status: string;
+  balance: number;
+  currency: string;
+  initialValue: number;
+  expiresAt: string | null;
+  allowPartialRedemption: boolean;
+}

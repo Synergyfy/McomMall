@@ -10,17 +10,15 @@ import { Repository, DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { createTokenInterface } from '../../common/types/auth.interface';
-import { UserRole } from '../../common/role.enum';
-import { Business } from '../listings/entities/listing.entity';
-import { Location } from '../listings/entities/location.entity';
-import { ListingType, BusinessStatus } from '../listings/listing.enum';
-import { LocalMall } from '../localmall/entities/localmall.entity';
-import { ActivatedRegion } from '../localmall/entities/activated-region.entity';
 import { Membership } from '../membership/entities/membership.entity';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { McomCentralService } from './mcom-central.service';
 import { encryptToken } from './token-crypto';
+import {
+  buildNewUserIdentity,
+  syncCentralIdentity,
+} from './central-profile-sync';
 
 @Injectable()
 export class SsoService {
@@ -48,7 +46,9 @@ export class SsoService {
   }
 
   getClientId(): string {
-    return process.env.SSO_CLIENT_ID || process.env.MCOM_CLIENT_ID || 'mcom-mall';
+    return (
+      process.env.SSO_CLIENT_ID || process.env.MCOM_CLIENT_ID || 'mcom-mall'
+    );
   }
 
   private getClientSecret(): string {
@@ -379,64 +379,30 @@ export class SsoService {
     }
     // --- End entitlement resolution ---
 
-    let localUser = await this.userRepository.findOne({
-      where: { email: centralUser.email },
+    // Resolve the local account by Central ID first, then by email (case
+    // insensitive). Provisioning is idempotent so concurrent SSO callbacks
+    // cannot violate the users.email unique constraint.
+    const identity = buildNewUserIdentity(centralUser);
+
+    let localUser = await this.userService.findOrCreateFromCentralIdentity({
+      email: centralUser.email,
+      centralUserId,
+      firstName: identity.firstName,
+      lastName: identity.lastName,
+      phoneNumber: identity.phoneNumber,
+      role: identity.role,
     });
 
-    if (!localUser) {
-      const role = centralUser.role?.toLowerCase();
-      const password = Math.random().toString(36).slice(-10) + 'Aa1!';
-      const fullName = centralUser.name || centralUser.email.split('@')[0];
-      const nameParts = fullName.split(' ');
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(' ') || 'User';
-
-      localUser = await this.userService.create({
-        email: centralUser.email,
-        firstName,
-        lastName,
-        password,
-        confirm_password: password,
-        phoneNumber:
-          centralUser.phoneNumber ||
-          `00000000${Math.floor(1000 + Math.random() * 9000)}`,
-        role: role === 'business' ? UserRole.OWNER : UserRole.CUSTOMER,
-      });
-    } else {
-      const newName =
-        centralUser.name || `${localUser.firstName} ${localUser.lastName}`;
-      const nameParts = newName.split(' ');
-      const newFirstName = nameParts[0] || localUser.firstName;
-      const newLastName = nameParts.slice(1).join(' ') || localUser.lastName;
-
-      const centralRole = centralUser.role?.toLowerCase();
-      const newRole =
-        centralRole === 'business' ? UserRole.OWNER : UserRole.CUSTOMER;
-
-      const needsUpdate =
-        localUser.firstName !== newFirstName ||
-        localUser.lastName !== newLastName ||
-        localUser.role !== newRole;
-
-      if (needsUpdate) {
-        localUser.firstName = newFirstName;
-        localUser.lastName = newLastName;
-        localUser.fullName = `${newFirstName} ${newLastName}`;
-        localUser.role = newRole;
-        await this.userRepository.update(localUser.id, {
-          firstName: newFirstName,
-          lastName: newLastName,
-          fullName: `${newFirstName} ${newLastName}`,
-          role: newRole,
-        });
-      }
-    }
-
-    // Store the Mcom Solutions user ID for future subscription lookups
-    if (centralUserId && localUser.centralUserId !== centralUserId) {
-      localUser.centralUserId = centralUserId;
-      await this.userRepository.update(localUser.id, { centralUserId });
-    }
+    // MCOM Central is the identity source of truth. Diff and refresh every
+    // local field (person, contact, business profile, storefront) on login.
+    const synced = await syncCentralIdentity({
+      userRepository: this.userRepository,
+      dataSource: this.dataSource,
+      localUser,
+      centralUser,
+      logger: this.logger,
+    });
+    localUser = synced.user;
 
     // Store the Solutions SSO refresh token (encrypted at rest) so the mall
     // can proxy user-scoped Solutions calls (embedded wallet card top-ups).
@@ -453,10 +419,6 @@ export class SsoService {
           'TOKEN_ENCRYPTION_KEY is not configured — Solutions refresh token not stored; embedded card top-up unavailable.',
         );
       }
-    }
-
-    if (localUser.role === UserRole.OWNER) {
-      await this.jitStorefrontSync(localUser, centralUser);
     }
 
     const tokenPayload: createTokenInterface = {
@@ -496,114 +458,6 @@ export class SsoService {
       quotas,
       tasks,
     };
-  }
-
-  private async jitStorefrontSync(localUser: User, centralUser: any) {
-    const businessRepository = this.dataSource.getRepository(Business);
-    const existingBusiness = await businessRepository.findOne({
-      select: ['id'],
-      where: { user: { id: localUser.id } },
-    });
-
-    if (existingBusiness) return;
-
-    const locationRepository = this.dataSource.getRepository(Location);
-    const cleanPostcode = (centralUser.postcode || 'SW1A 1AA')
-      .trim()
-      .toUpperCase();
-    const address = centralUser.address || 'High Street';
-
-    let lat = 51.5074;
-    let lon = -0.1278;
-    let borough = 'London';
-
-    try {
-      const postcodeResponse = await fetch(
-        `https://api.postcodes.io/postcodes/${encodeURIComponent(
-          cleanPostcode.replace(/\s+/g, ''),
-        )}`,
-      );
-      if (postcodeResponse.ok) {
-        const body = await postcodeResponse.json();
-        if (body && body.status === 200 && body.result) {
-          lat = body.result.latitude;
-          lon = body.result.longitude;
-          const rawBorough =
-            body.result.admin_district || body.result.region || '';
-          borough = rawBorough
-            .replace(/London Borough of /i, '')
-            .replace(/Borough of /i, '')
-            .replace(/City of /i, '')
-            .replace(/Royal Borough of /i, '')
-            .trim();
-        }
-      }
-    } catch (err) {
-      this.logger.error('Postcodes.io lookup error in JIT:', err);
-    }
-
-    const mallName = `${borough} Local Mall`;
-    const localMallRepository = this.dataSource.getRepository(LocalMall);
-    let localMall = await localMallRepository.findOne({
-      select: ['id', 'name'],
-      where: { name: mallName },
-    });
-
-    if (!localMall) {
-      localMall = localMallRepository.create({
-        name: mallName,
-        latitude: lat,
-        longitude: lon,
-      });
-      await localMallRepository.save(localMall);
-    }
-
-    const activatedRegionRepository =
-      this.dataSource.getRepository(ActivatedRegion);
-    let activeRegion = await activatedRegionRepository.findOne({
-      select: ['id', 'name', 'isActive'],
-      where: { name: borough },
-    });
-    if (!activeRegion) {
-      activeRegion = activatedRegionRepository.create({
-        name: borough,
-        isActive: true,
-      });
-      await activatedRegionRepository.save(activeRegion);
-    } else if (!activeRegion.isActive) {
-      activeRegion.isActive = true;
-      await activatedRegionRepository.save(activeRegion);
-    }
-
-    const newBusiness = businessRepository.create({
-      user: { id: localUser.id } as User,
-      businessName: centralUser.name || 'Hyperlocal Merchant',
-      businessPhone: centralUser.phoneNumber || '0000000000',
-      businessEmail: localUser.email,
-      shortDescription:
-        'Hyperlocal business listing imported from MCOM Ecosystem.',
-      listingType: [ListingType.PRODUCT, ListingType.SERVICE],
-      status: BusinessStatus.PUBLISHED,
-      isVerified: true,
-      isGoogleVerified: true,
-      localMall: localMall ? ({ id: localMall.id } as LocalMall) : undefined,
-    });
-
-    const savedBusiness = await businessRepository.save(newBusiness);
-
-    const newLocation = locationRepository.create({
-      business: { id: savedBusiness.id } as Business,
-      postcode: cleanPostcode,
-      addressLine1: address,
-      city: borough,
-      countryCode: 'GB',
-      showPublicly: true,
-    });
-
-    await locationRepository.save(newLocation);
-    this.logger.log(
-      `[SSO JIT] Provisioned business listing for ${localUser.email}`,
-    );
   }
 
   private createToken(payload: createTokenInterface) {

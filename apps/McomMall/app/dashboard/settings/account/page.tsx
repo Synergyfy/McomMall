@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Save, User, Mail, Phone, Globe, Trash2, Plus, ArrowLeft } from 'lucide-react';
 import { uploadFile } from '@/lib/upload';
+import CentralManagedProfileNotice from '@/components/CentralManagedProfileNotice';
 
 export default function AccountSettingsPage() {
   const router = useRouter();
@@ -102,7 +103,7 @@ export default function AccountSettingsPage() {
   }
 
   return (
-    <form onSubmit={handleSave} className="space-y-6">
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
       <div className="flex items-center justify-between border-b pb-4 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <Button 
@@ -116,22 +117,30 @@ export default function AccountSettingsPage() {
           </Button>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Account Details</h1>
-            <p className="text-xs text-gray-500">Update your name, contacts, and public social links.</p>
+            <p className="text-xs text-gray-500">Your MCOM Central identity, synced automatically on every sign-in.</p>
           </div>
         </div>
         <Button
           type="submit"
-          disabled={isSaving}
-          className="bg-[#ff6900] hover:bg-[#a14000] text-white font-semibold flex items-center gap-2 rounded-xl"
+          disabled
+          className="bg-gray-300 text-gray-600 font-semibold flex items-center gap-2 rounded-xl cursor-not-allowed"
         >
           <Save size={16} />
-          {isSaving ? 'Saving...' : 'Save Profile'}
+          Managed by MCOM Central
         </Button>
       </div>
 
+      <CentralManagedProfileNotice
+        centralPath={
+          profile?.role === 'customer'
+            ? '/customer'
+            : '/dashboard/business-profile'
+        }
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Section: Details */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 pointer-events-none opacity-80">
           {/* Identity details */}
           <Card className="bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 shadow-sm rounded-2xl">
             <CardHeader>
@@ -192,6 +201,65 @@ export default function AccountSettingsPage() {
                   />
                   <Phone className="absolute left-3.5 top-3.5 h-4 w-4 text-gray-400" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Central contact details (read-only mirror) */}
+          <Card className="bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 shadow-sm rounded-2xl">
+            <CardHeader>
+              <CardTitle className="text-base font-bold text-gray-900 dark:text-white">Central Contact Details</CardTitle>
+              <CardDescription>Synced from MCOM Central on every sign-in.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="jobTitle">Job Title</Label>
+                <Input
+                  id="jobTitle"
+                  value={profile?.jobTitle || ''}
+                  disabled
+                  placeholder="Not set on MCOM Central"
+                  className="rounded-xl border-gray-200/80 bg-gray-50/85 text-gray-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  value={profile?.country || ''}
+                  disabled
+                  placeholder="Not set on MCOM Central"
+                  className="rounded-xl border-gray-200/80 bg-gray-50/85 text-gray-500"
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  value={profile?.address || ''}
+                  disabled
+                  placeholder="Not set on MCOM Central"
+                  className="rounded-xl border-gray-200/80 bg-gray-50/85 text-gray-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postcode">Postcode</Label>
+                <Input
+                  id="postcode"
+                  value={profile?.postcode || ''}
+                  disabled
+                  placeholder="Not set on MCOM Central"
+                  className="rounded-xl border-gray-200/80 bg-gray-50/85 text-gray-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>MCOM User ID</Label>
+                <Input
+                  value={profile?.centralUserId || ''}
+                  disabled
+                  placeholder="Not linked"
+                  className="rounded-xl border-gray-200/80 bg-gray-50/85 text-gray-500"
+                />
               </div>
             </CardContent>
           </Card>
@@ -259,7 +327,7 @@ export default function AccountSettingsPage() {
 
         {/* Right Section: Picture */}
         <div className="space-y-6">
-          <Card className="bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 shadow-sm rounded-2xl">
+          <Card className="bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 shadow-sm rounded-2xl pointer-events-none opacity-80">
             <CardHeader>
               <CardTitle className="text-base font-bold text-gray-900 dark:text-white">Profile Photo</CardTitle>
             </CardHeader>

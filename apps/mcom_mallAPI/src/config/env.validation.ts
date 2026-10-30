@@ -30,6 +30,21 @@ export const envValidationSchema = Joi.object({
   MCOM_REWARDS_CLIENT_ID: Joi.string().allow('').optional(),
   MCOM_ALLOWED_CALLERS: Joi.string().allow('').optional(),
   MCOM_SERVICE_SCOPES: Joi.string().allow('').optional(),
+  // Partner instrument/template/catalogue rollout flags (default: off).
+  MALL_PARTNER_TEMPLATES_ENABLED: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  MALL_PARTNER_SCOPED_INSTRUMENTS_ENABLED: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  MALL_PARTNER_GLOBAL_CATALOG_ENABLED: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  MCOM_PLATFORM_CALLERS: Joi.string().allow('').optional(),
+  MALL_PARTNER_RATE_LIMIT_PER_MINUTE: Joi.number().min(1).optional(),
   MCOM_WALLET_ENABLED: Joi.string()
     .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
     .allow('')

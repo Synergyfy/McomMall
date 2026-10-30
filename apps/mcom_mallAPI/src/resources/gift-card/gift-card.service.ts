@@ -4,11 +4,15 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   InternalServerErrorException,
+  UnprocessableEntityException,
   Inject,
+  Optional,
   forwardRef,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Repository,
@@ -71,6 +75,14 @@ import { WalletTransactionType } from '../wallet/entities/wallet-transaction.ent
 import { GiftCardTemplateSearchDto } from './dto/gift-card-template-search.dto';
 import { DigitalValueService } from '../digital-value/digital-value.service';
 import { DigitalValueType } from '../digital-value/digital-value.enums';
+import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
+import {
+  InstrumentType,
+  PARTNER_INSTRUMENT_CONSUMED_EVENT,
+} from '../partner-instruments/enums';
+import { InstrumentScopeDto } from '../partner-instruments/dto/instrument-scope.dto';
+import { PartnerRequestContext } from '../partner-instruments/instrument-scope.service';
+import { markReplayed } from '../partner-instruments/replay';
 
 const generateNanoId = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -110,6 +122,10 @@ export class GiftCardService {
     private readonly digitalValueService: DigitalValueService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
+    @Optional()
+    private readonly eventEmitter?: EventEmitter2,
+    @Optional()
+    private readonly instrumentScopeService?: InstrumentScopeService,
   ) {}
 
   // --- Partner (ecosystem M2M) Integration Methods ---
@@ -126,50 +142,140 @@ export class GiftCardService {
     message?: string;
     businessName: string;
     code?: string;
+    issuanceId?: string;
+    templateId?: string;
+    businessId?: string;
+    scope?: InstrumentScopeDto;
+    metadata?: Record<string, any>;
+    context?: PartnerRequestContext;
   }): Promise<GiftCard> {
-    const amount = Number(payload.amount);
-    const { recipientEmail, recipientName, message, businessName } = payload;
+    const amount = roundMoney(Number(payload.amount));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Gift card amount must be positive.');
+    }
+    const {
+      recipientEmail,
+      recipientName,
+      message,
+      businessName,
+      issuanceId,
+    } = payload;
+    const sourceApp = 'mcom-rewards';
 
-    // Find User to link
-    const user = await this.businessRepository.manager
-      .getRepository(User)
-      .findOne({ where: { email: recipientEmail } });
+    // ── Idempotency: replaying an issuance returns the original instrument ──
+    if (issuanceId) {
+      const existing = await this.giftCardRepository.findOne({
+        where: { sourceApp, issuanceId },
+      });
+      if (existing) return markReplayed(existing);
+    }
 
-    // We need an "Owner" for the GiftCard entity constraints.
-    // If User exists, use them. If not... GiftCard entity says `owner` is User.
-    // If user doesn't exist, we can't easily create a valid GiftCard entity without violating FK or logical constraints
-    // unless we create a shadow user or make owner nullable (which it isn't in entity definition: @Column() ownerId: string;).
-    // Strategy: If user missing, CREATE them as a customer (auto-onboard).
+    const providedCode = (payload.code || '').trim();
+    if (providedCode) {
+      const existingCode = await this.giftCardRepository.findOne({
+        where: { code: providedCode },
+      });
+      if (existingCode) {
+        if (issuanceId && existingCode.issuanceId !== issuanceId) {
+          throw new ConflictException(
+            'CODE_ALREADY_USED: this code belongs to a different issuance.',
+          );
+        }
+        return markReplayed(existingCode);
+      }
+    }
 
+    // ── Template + business binding ─────────────────────────────────────────
+    let template: GiftCardTemplate | null = null;
+    if (payload.templateId) {
+      template = await this.templateRepository.findOne({
+        where: { id: payload.templateId },
+        relations: ['owner'],
+        withDeleted: false,
+      });
+      if (!template) {
+        throw new NotFoundException('Gift-card template not found.');
+      }
+      if (!template.isActive) {
+        throw new UnprocessableEntityException('TEMPLATE_INACTIVE');
+      }
+    }
+
+    let business: Business | null = null;
+    if (payload.businessId) {
+      business = await this.businessRepository.findOne({
+        where: { id: payload.businessId },
+        relations: ['user'],
+      });
+      if (!business) throw new NotFoundException('Business not found.');
+    } else if (template?.ownerId) {
+      business = await this.businessRepository.findOne({
+        where: { user: { id: template.ownerId } },
+        relations: ['user'],
+      });
+    }
+
+    if (
+      template &&
+      business &&
+      template.ownerId &&
+      template.ownerId !== business.user?.id
+    ) {
+      throw new ForbiddenException(
+        'TEMPLATE_NOT_OWNED: the template is not owned by the bound business.',
+      );
+    }
+
+    // ── Template amount rules ───────────────────────────────────────────────
+    if (template) {
+      const fixed = (template.fixedAmounts || []).map((value) => Number(value));
+      const matchesFixed = fixed.includes(amount);
+      const withinCustom =
+        template.allowCustomAmount &&
+        (template.minCustomAmount === null ||
+          template.minCustomAmount === undefined ||
+          amount >= Number(template.minCustomAmount)) &&
+        (template.maxCustomAmount === null ||
+          template.maxCustomAmount === undefined ||
+          amount <= Number(template.maxCustomAmount));
+      if (!matchesFixed && !withinCustom) {
+        throw new UnprocessableEntityException(
+          'AMOUNT_OUT_OF_RANGE: amount is not allowed by the gift-card template.',
+        );
+      }
+    }
+
+    // Find or create the recipient; link by central id first when available.
+    const userRepo = this.businessRepository.manager.getRepository(User);
+    let user: User | null = null;
+    if (recipientEmail) {
+      user = await userRepo.findOne({ where: { email: recipientEmail } });
+    }
     let ownerId = user ? user.id : null;
 
     if (!ownerId) {
-      // Auto-create user
-      // Note: This logic duplicates SSO/Auth logic slightly but necessary for system integrity.
-      // Ideally inject UsersService but to avoid circular deps, use Repo.
-      // Using a random password and stub data.
       const nameStr = recipientName || 'Loyalty Recipient';
       const nameParts = nameStr.split(' ');
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || '';
 
-      const newUser = this.businessRepository.manager
-        .getRepository(User)
-        .create({
-          email: recipientEmail,
-          firstName,
-          lastName,
-          password: randomBytes(16).toString('hex'), // Random password
-          phoneNumber: `0000000000${Math.floor(Math.random() * 1000)}`, // Placeholder
-          isActive: true,
-          isEmailVerified: true, // Trusted system
-          role: UserRole.CUSTOMER,
-        });
-      const savedUser = await this.businessRepository.manager
-        .getRepository(User)
-        .save(newUser);
+      const newUser = userRepo.create({
+        email: recipientEmail,
+        firstName,
+        lastName,
+        password: randomBytes(16).toString('hex'),
+        phoneNumber: `0000000000${Math.floor(Math.random() * 1000)}`,
+        isActive: true,
+        isEmailVerified: true,
+        role: UserRole.CUSTOMER,
+      });
+      const savedUser = await userRepo.save(newUser);
       ownerId = savedUser.id;
     }
+
+    const expiresAt = template?.expiryPeriodDays
+      ? new Date(Date.now() + Number(template.expiryPeriodDays) * 86_400_000)
+      : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
 
     const dv = await this.digitalValueService.create(
       {
@@ -181,32 +287,72 @@ export class GiftCardService {
           recipientName,
           personalMessage: message,
           businessName,
+          issuanceId: issuanceId ?? null,
+          templateId: template?.id ?? null,
+          businessId: business?.id ?? null,
         },
-        expiryDate: new Date(
-          new Date().setFullYear(new Date().getFullYear() + 1),
-        ).toISOString(),
+        expiryDate: expiresAt.toISOString(),
       },
       ownerId,
     );
 
     const giftCard = this.giftCardRepository.create({
-      code: (payload.code && payload.code.trim()) || dv.code,
+      code: providedCode || dv.code,
       initialBalance: amount,
       currentBalance: amount,
       currency: 'GBP',
-      ownerId: ownerId,
-      // No template ID? This might break FK constraint if templateId is required.
-      // Checking entity: @Column({ nullable: true }) templateId: string; -> It is nullable. Good.
+      ownerId,
       isActive: true,
       recipientEmail,
       recipientName,
       personalMessage: message || `Reward from ${businessName}`,
       deliveryStatus: GiftCardDeliveryStatus.DELIVERED,
       deliveryDate: new Date(),
-      expiryDate: dv.expiryDate, // 1 year
+      expiryDate: expiresAt,
+      purchaseBusinessId: business?.id ?? null,
+      templateId: template?.id ?? null,
+      issuanceId: issuanceId ?? null,
+      sourceApp: issuanceId ? sourceApp : null,
+      metadata: {
+        ...(payload.metadata ?? {}),
+        businessName,
+        templateId: template?.id ?? null,
+        allowReloading: template?.allowReloading ?? false,
+        bonusThreshold: template?.bonusThreshold ?? null,
+        bonusAmount: template?.bonusAmount ?? null,
+        backgroundColor: template?.backgroundColor ?? null,
+        textColor: template?.textColor ?? null,
+        backgroundImageUrl: template?.backgroundImageUrl ?? null,
+      },
     });
 
-    const savedGiftCard = await this.giftCardRepository.save(giftCard);
+    let savedGiftCard: GiftCard;
+    try {
+      savedGiftCard = await this.giftCardRepository.save(giftCard);
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        const existing = issuanceId
+          ? await this.giftCardRepository.findOne({
+              where: { sourceApp, issuanceId },
+            })
+          : await this.giftCardRepository.findOne({
+              where: { code: providedCode },
+            });
+        if (existing) {
+          if (
+            issuanceId &&
+            existing.issuanceId &&
+            existing.issuanceId !== issuanceId
+          ) {
+            throw new ConflictException(
+              'CODE_ALREADY_USED: this code belongs to a different issuance.',
+            );
+          }
+          return markReplayed(existing);
+        }
+      }
+      throw err;
+    }
 
     await this.transactionRepository.save(
       this.transactionRepository.create({
@@ -216,6 +362,22 @@ export class GiftCardService {
         notes: `Loyalty Reward from ${businessName}`,
       }),
     );
+
+    if (
+      this.instrumentScopeService &&
+      payload.context?.scopeEnabled !== false &&
+      (payload.scope || business || template?.scopeConfig)
+    ) {
+      await this.instrumentScopeService.saveScope({
+        instrumentType: InstrumentType.GIFT_CARD,
+        instrumentId: savedGiftCard.id,
+        businessId: business?.id ?? null,
+        scope: payload.scope,
+        context: payload.context,
+        templateScope: (template?.scopeConfig as any) ?? null,
+        tenantBusinessId: business?.id ?? null,
+      });
+    }
 
     return savedGiftCard;
   }
@@ -847,10 +1009,10 @@ export class GiftCardService {
   async checkBalance(code: string): Promise<CheckBalanceResponseDto> {
     const giftCard = await this.findActiveCardByCode(code);
     return {
-      currentBalance: giftCard.currentBalance,
+      currentBalance: this.toMoney(giftCard.currentBalance),
       currency: giftCard.currency,
       expiryDate: giftCard.expiryDate,
-      initialBalance: giftCard.initialBalance,
+      initialBalance: this.toMoney(giftCard.initialBalance),
     };
   }
 
@@ -867,48 +1029,33 @@ export class GiftCardService {
     order: Order,
     redeemingBusinessId?: string,
     manager?: EntityManager,
+    /**
+     * Pre-instrument payable total (line subtotal + shipping). `order.total`
+     * is already net of every instrument, so comparing against it capped a
+     * gift card at roughly half the order. Defaults to `order.total` for
+     * callers that have not been updated yet.
+     */
+    orderTotalOverride?: number,
   ): Promise<GiftCardTransaction> {
     const giftCard = await this.findActiveCardByCode(redeemDto.code);
+    const amount = this.toMoney(redeemDto.amount);
 
-    if (giftCard.templateId) {
-      if (!redeemingBusinessId) {
-        throw new BadRequestException(
-          'Redeeming business ID is required for this gift card.',
-        );
-      }
-      const redeemingBusiness = await this.businessRepository.findOne({
-        where: { id: redeemingBusinessId },
-        relations: ['user'],
-      });
-      if (
-        !redeemingBusiness ||
-        redeemingBusiness.user.id !== giftCard.ownerId
-      ) {
-        throw new ForbiddenException(
-          'This gift card cannot be redeemed at this business.',
-        );
-      }
-    } else {
-      // System/loyalty gift cards are bound to their owner (the recipient).
-      // Only that owner may redeem them, so knowing a code is not enough to
-      // drain another customer's stored value.
-      const orderOwnerId = (order as any)?.user?.id || (order as any)?.userId;
-      if (!orderOwnerId || orderOwnerId !== giftCard.ownerId) {
-        throw new ForbiddenException(
-          'This gift card cannot be redeemed for this order.',
-        );
-      }
-    }
+    await this.assertRedemptionOwnership(giftCard, {
+      businessId: redeemingBusinessId ?? (order as any)?.business?.id ?? null,
+      userId: (order as any)?.user?.id || (order as any)?.userId,
+    });
 
     const settings = await this.getSettings(giftCard.ownerId);
 
-    if (redeemDto.amount <= 0) {
+    if (amount <= 0) {
       throw new BadRequestException('Redemption amount must be positive.');
     }
-    if (redeemDto.amount > giftCard.currentBalance) {
+    const balance = this.toMoney(giftCard.currentBalance);
+    if (amount > balance) {
       throw new BadRequestException('Redemption amount exceeds balance.');
     }
-    if (order.total < redeemDto.amount) {
+    const orderTotal = this.toMoney(orderTotalOverride ?? order.total);
+    if (orderTotal < amount) {
       throw new BadRequestException(
         'Redemption amount cannot exceed order total.',
       );
@@ -917,7 +1064,7 @@ export class GiftCardService {
 
     const entityManager = manager || this.dataSource.manager;
 
-    return entityManager.transaction(async (transactionalManager) => {
+    const result = await entityManager.transaction(async (transactionalManager) => {
       const lockedCard = await transactionalManager.findOne(GiftCard, {
         where: { id: giftCard.id },
         lock: { mode: 'pessimistic_write' },
@@ -925,7 +1072,8 @@ export class GiftCardService {
       if (!lockedCard || !lockedCard.isActive) {
         throw new BadRequestException('This gift card is not active.');
       }
-      if (redeemDto.amount > lockedCard.currentBalance) {
+      const lockedBalance = this.toMoney(lockedCard.currentBalance);
+      if (amount > lockedBalance) {
         throw new BadRequestException('Redemption amount exceeds balance.');
       }
 
@@ -935,7 +1083,7 @@ export class GiftCardService {
         await this.digitalValueService.redeem(
           dv.id,
           {
-            amount: redeemDto.amount,
+            amount,
             merchantId: redeemingBusinessId,
           },
           transactionalManager,
@@ -948,18 +1096,102 @@ export class GiftCardService {
         }
       }
 
-      lockedCard.currentBalance -= redeemDto.amount;
+      lockedCard.currentBalance = roundMoney(lockedBalance - amount);
 
       const transaction = this.transactionRepository.create({
         giftCardId: lockedCard.id,
         orderId: order.id,
         type: GiftCardTransactionType.REDEEM,
-        amount: -redeemDto.amount,
+        amount: -amount,
       });
 
       await transactionalManager.save(lockedCard);
       return transactionalManager.save(transaction);
     });
+
+    if (!manager && giftCard.issuanceId) {
+      this.eventEmitter?.emit(PARTNER_INSTRUMENT_CONSUMED_EVENT, {
+        issuanceId: giftCard.issuanceId,
+        code: giftCard.code,
+        instrumentType: InstrumentType.GIFT_CARD,
+        instrumentId: giftCard.id,
+        amount,
+        note: 'gift_card_redeemed_at_checkout',
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Consume a gift card against a service booking. Mirrors `redeem()` but
+   * does not require an `Order` row (bookings have their own payment model).
+   */
+  async consumeForBooking(
+    input: {
+      code: string;
+      amount: number;
+      userId: string;
+      businessId?: string;
+      bookingId?: string;
+    },
+    manager?: EntityManager,
+  ): Promise<void> {
+    const amount = this.toMoney(input.amount);
+    if (amount <= 0) {
+      throw new BadRequestException('Redemption amount must be positive.');
+    }
+    const giftCard = await this.findActiveCardByCode(input.code);
+    await this.assertRedemptionOwnership(giftCard, {
+      businessId: input.businessId ?? null,
+      userId: input.userId,
+    });
+
+    const entityManager = manager || this.dataSource.manager;
+    await entityManager.transaction(async (transactionalManager) => {
+      const locked = await transactionalManager.findOne(GiftCard, {
+        where: { id: giftCard.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!locked || !locked.isActive) {
+        throw new BadRequestException('This gift card is not active.');
+      }
+      const balance = this.toMoney(locked.currentBalance);
+      if (amount > balance) {
+        throw new BadRequestException('Redemption amount exceeds balance.');
+      }
+      try {
+        const dv = await this.digitalValueService.getByCode(input.code);
+        await this.digitalValueService.redeem(
+          dv.id,
+          { amount, merchantId: input.businessId },
+          transactionalManager,
+        );
+      } catch (e) {
+        if (!(e instanceof NotFoundException)) throw e;
+      }
+      locked.currentBalance = roundMoney(balance - amount);
+      await transactionalManager.save(locked);
+      await transactionalManager.save(
+        this.transactionRepository.create({
+          giftCardId: locked.id,
+          type: GiftCardTransactionType.REDEEM,
+          amount: -amount,
+          notes: `Redeemed for booking ${input.bookingId ?? ''}`.trim(),
+        }),
+      );
+    });
+
+    if (!manager && giftCard.issuanceId) {
+      this.eventEmitter?.emit(PARTNER_INSTRUMENT_CONSUMED_EVENT, {
+        issuanceId: giftCard.issuanceId,
+        code: giftCard.code,
+        instrumentType: InstrumentType.GIFT_CARD,
+        instrumentId: giftCard.id,
+        amount,
+        note: 'gift_card_redeemed_for_booking',
+      });
+    }
   }
 
   async processScheduledDeliveries(): Promise<{
@@ -1002,7 +1234,7 @@ export class GiftCardService {
     return { delivered, failed };
   }
 
-  private async findActiveCardByCode(code: string): Promise<GiftCard> {
+  async findActiveCardByCode(code: string): Promise<GiftCard> {
     const giftCard = await this.giftCardRepository.findOne({ where: { code } });
     if (!giftCard) {
       throw new NotFoundException('Gift card not found.');
@@ -1087,6 +1319,98 @@ export class GiftCardService {
     };
 
     throw new BadRequestException(buildErrorMessage());
+  }
+
+  /**
+   * Coerce decimal columns (Postgres returns `numeric` as strings) to a
+   * two-decimal number before any comparison or arithmetic.
+   */
+  private toMoney(value: unknown): number {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      throw new BadRequestException('Invalid monetary amount.');
+    }
+    return roundMoney(numeric);
+  }
+
+  /**
+   * Business a card is bound to, for scope fallback when no explicit
+   * `instrument_scopes` row exists. Platform cards return null.
+   */
+  async getBusinessBinding(
+    giftCard: Pick<GiftCard, 'templateId' | 'purchaseBusinessId'>,
+  ): Promise<string | null> {
+    if (!this.isBusinessBoundCard(giftCard)) return null;
+    if (giftCard.purchaseBusinessId) return giftCard.purchaseBusinessId;
+    const ids = await this.businessBoundBusinessIds(giftCard);
+    return ids.values().next().value ?? null;
+  }
+
+  /** Public consumption check shared by checkout and booking initiation. */
+  async assertCanRedeem(
+    giftCard: GiftCard,
+    context: { businessId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    await this.assertRedemptionOwnership(giftCard, context);
+  }
+
+  private isBusinessBoundCard(
+    giftCard: Pick<GiftCard, 'templateId' | 'purchaseBusinessId'>,
+  ): boolean {
+    return Boolean(giftCard.templateId || giftCard.purchaseBusinessId);
+  }
+
+  /**
+   * Businesses that may redeem a templated/business-bound card. Business cards
+   * are authorised by the *business*, never by the recipient customer's
+   * `ownerId` (partners set ownerId to the recipient).
+   */
+  private async businessBoundBusinessIds(
+    giftCard: Pick<GiftCard, 'templateId' | 'purchaseBusinessId'>,
+  ): Promise<Set<string>> {
+    const ids = new Set<string>();
+    if (giftCard.purchaseBusinessId) ids.add(giftCard.purchaseBusinessId);
+
+    if (giftCard.templateId) {
+      const template = await this.templateRepository.findOne({
+        where: { id: giftCard.templateId },
+        relations: ['owner'],
+      });
+      const ownerId = template?.ownerId ?? template?.owner?.id;
+      if (ownerId) {
+        const business = await this.businessRepository.findOne({
+          where: { user: { id: ownerId } },
+        });
+        if (business?.id) ids.add(business.id);
+      }
+    }
+    return ids;
+  }
+
+  /**
+   * Shared checkout/booking rule:
+   *  - templated or business-bound card → caller's business must own it;
+   *  - platform/system card → only the recipient (`ownerId`) may spend it.
+   */
+  private async assertRedemptionOwnership(
+    giftCard: GiftCard,
+    context: { businessId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    if (this.isBusinessBoundCard(giftCard)) {
+      const ids = await this.businessBoundBusinessIds(giftCard);
+      if (!context.businessId || !ids.has(context.businessId)) {
+        throw new ForbiddenException(
+          'This gift card cannot be redeemed at this business.',
+        );
+      }
+      return;
+    }
+
+    if (!context.userId || context.userId !== giftCard.ownerId) {
+      throw new ForbiddenException(
+        'This gift card cannot be redeemed for this order.',
+      );
+    }
   }
 
   private validateRedemptionRules(settings: GiftCardSettings, order: Order) {
@@ -1846,4 +2170,8 @@ export class GiftCardService {
       expiryDate: giftCard.expiryDate ?? null,
     };
   }
+}
+
+function roundMoney(value: number): number {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }

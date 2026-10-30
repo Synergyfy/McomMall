@@ -6,9 +6,12 @@ import {
   ConflictException,
   ForbiddenException,
   InternalServerErrorException,
+  UnprocessableEntityException,
   Inject,
+  Optional,
   forwardRef,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 import * as crypto from 'crypto';
@@ -48,6 +51,14 @@ import { VoucherProductSearchDto } from './dto/voucher-product-search.dto';
 import { DigitalValueService } from '../digital-value/digital-value.service';
 import { DigitalValueType } from '../digital-value/digital-value.enums';
 import { UserRole } from '../../common/role.enum';
+import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
+import {
+  InstrumentType,
+  PARTNER_INSTRUMENT_CONSUMED_EVENT,
+} from '../partner-instruments/enums';
+import { InstrumentScopeDto } from '../partner-instruments/dto/instrument-scope.dto';
+import { PartnerRequestContext } from '../partner-instruments/instrument-scope.service';
+import { markReplayed } from '../partner-instruments/replay';
 
 @Injectable()
 export class VoucherService {
@@ -74,6 +85,10 @@ export class VoucherService {
     private readonly walletService: WalletService,
     private readonly dataSource: DataSource,
     private readonly digitalValueService: DigitalValueService,
+    @Optional()
+    private readonly eventEmitter?: EventEmitter2,
+    @Optional()
+    private readonly instrumentScopeService?: InstrumentScopeService,
   ) {}
 
   // --- Business Owner Methods ---
@@ -670,17 +685,7 @@ export class VoucherService {
 
     return this.dataSource.transaction(async (manager) => {
       const voucherRepo = manager.getRepository(Voucher);
-      const voucher = await voucherRepo.findOne({
-        where: { code },
-        relations: [
-          'voucherProduct',
-          'voucherProduct.user',
-          'owner',
-          'buyer',
-          'recipient',
-        ],
-        lock: { mode: 'pessimistic_write' },
-      });
+      const voucher = await this.lockAndLoadVoucher(voucherRepo, { code });
 
       if (!voucher) {
         throw new NotFoundException('Voucher not found.');
@@ -726,7 +731,10 @@ export class VoucherService {
         );
       }
 
-      if (amount && !product.allowPartialRedemption) {
+      // Partner-issued vouchers may not have a Mall voucher-product template.
+      // They behave as spend-like balances, so partial redemption is allowed
+      // unless an attached template explicitly forbids it.
+      if (amount && product && product.allowPartialRedemption === false) {
         throw new BadRequestException(
           'This voucher does not allow partial redemption.',
         );
@@ -784,19 +792,9 @@ export class VoucherService {
     const { code, amount } = redeemDto;
 
     const entityManager = manager || this.dataSource.manager;
-    return entityManager.transaction(async (transactionalManager) => {
+    const result = await entityManager.transaction(async (transactionalManager) => {
       const voucherRepo = transactionalManager.getRepository(Voucher);
-      const voucher = await voucherRepo.findOne({
-        where: { code },
-        relations: [
-          'voucherProduct',
-          'voucherProduct.user',
-          'owner',
-          'buyer',
-          'recipient',
-        ],
-        lock: { mode: 'pessimistic_write' },
-      });
+      const voucher = await this.lockAndLoadVoucher(voucherRepo, { code });
 
       if (!voucher) {
         throw new NotFoundException('Voucher not found.');
@@ -838,7 +836,10 @@ export class VoucherService {
         );
       }
 
-      if (amount && !product.allowPartialRedemption) {
+      // Partner-issued vouchers may not have a Mall voucher-product template.
+      // They behave as spend-like balances, so partial redemption is allowed
+      // unless an attached template explicitly forbids it.
+      if (amount && product && product.allowPartialRedemption === false) {
         throw new BadRequestException(
           'This voucher does not allow partial redemption.',
         );
@@ -886,6 +887,19 @@ export class VoucherService {
 
       return voucherRepo.save(voucher);
     });
+
+    if (!manager && result.issuanceId) {
+      this.eventEmitter?.emit(PARTNER_INSTRUMENT_CONSUMED_EVENT, {
+        issuanceId: result.issuanceId,
+        code: result.code,
+        instrumentType: InstrumentType.VOUCHER,
+        instrumentId: result.id,
+        amount: amount ?? Number(result.initialValue),
+        note: 'voucher_redeemed_at_checkout',
+      });
+    }
+
+    return result;
   }
 
   async findUserVouchers(userId: string): Promise<Voucher[]> {
@@ -913,6 +927,49 @@ export class VoucherService {
     return voucher;
   }
 
+  /**
+   * Balance for a voucher the authenticated user is entitled to see.
+   *
+   * The public `GET /vouchers/:code` endpoint deliberately masks the balance.
+   * Checkout needs it to let a shopper apply the voucher, so this method
+   * authorises the caller first: they must own the voucher, or their account
+   * email must match the reward recipient (covers vouchers materialised before
+   * the shopper signed up).
+   */
+  async getOwnedVoucherBalance(code: string, user: User) {
+    const voucher = await this.voucherRepository.findOne({
+      where: { code },
+      relations: ['voucherProduct', 'owner'],
+    });
+    if (!voucher) {
+      throw new NotFoundException('Voucher not found.');
+    }
+
+    const ownerMatch = Boolean(voucher.owner?.id && voucher.owner.id === user.id);
+    const emailMatch = Boolean(
+      voucher.recipientEmail &&
+        user.email &&
+        voucher.recipientEmail.trim().toLowerCase() ===
+          user.email.trim().toLowerCase(),
+    );
+    if (!ownerMatch && !emailMatch) {
+      throw new ForbiddenException(
+        'You do not have permission to view this voucher.',
+      );
+    }
+
+    return {
+      code: voucher.code,
+      status: voucher.status,
+      balance: Number(voucher.balance),
+      currency: 'GBP',
+      initialValue: Number(voucher.initialValue),
+      expiresAt: voucher.expiresAt,
+      allowPartialRedemption:
+        voucher.voucherProduct?.allowPartialRedemption ?? true,
+    };
+  }
+
   async findPublicVoucherByCode(code: string) {
     const voucher = await this.voucherRepository.findOne({
       where: { code },
@@ -938,17 +995,116 @@ export class VoucherService {
     };
   }
 
+  /**
+   * Consume a voucher against a service booking without requiring an Order.
+   */
+  async consumeForBooking(
+    input: {
+      code: string;
+      amount: number;
+      userId: string;
+      businessId?: string;
+      bookingId?: string;
+    },
+    manager?: EntityManager,
+  ): Promise<void> {
+    const amount = roundMoney(input.amount);
+    if (amount <= 0) {
+      throw new BadRequestException('Redemption amount must be positive.');
+    }
+    const entityManager = manager || this.dataSource.manager;
+    let consumed: Voucher | null = null;
+
+    await entityManager.transaction(async (transactionalManager) => {
+      const voucherRepo = transactionalManager.getRepository(Voucher);
+      const voucher = await this.lockAndLoadVoucher(voucherRepo, {
+        code: input.code,
+      });
+      if (!voucher) throw new NotFoundException('Voucher not found.');
+
+      const isOwner =
+        voucher.owner?.id === input.userId ||
+        voucher.buyer?.id === input.userId ||
+        (voucher as any).recipient?.id === input.userId ||
+        (voucher as any).ownerId === input.userId ||
+        (voucher as any).buyerId === input.userId;
+      if (!isOwner) {
+        throw new ForbiddenException(
+          'You are not authorized to redeem this voucher.',
+        );
+      }
+
+      await this.validateVoucherForRedemption(voucher, transactionalManager);
+
+      if (amount > Number(voucher.balance)) {
+        throw new BadRequestException(
+          'Redemption amount exceeds voucher balance.',
+        );
+      }
+      if (
+        voucher.voucherProduct &&
+        !voucher.voucherProduct.allowPartialRedemption &&
+        amount < Number(voucher.balance)
+      ) {
+        throw new BadRequestException(
+          'This voucher does not allow partial redemption.',
+        );
+      }
+
+      try {
+        const dv = await this.digitalValueService.getByCode(input.code);
+        await this.digitalValueService.redeem(
+          dv.id,
+          { amount, merchantId: input.businessId },
+          transactionalManager,
+        );
+      } catch (e) {
+        if (!(e instanceof NotFoundException)) throw e;
+      }
+
+      const balanceBefore = Number(voucher.balance);
+      voucher.balance = roundMoney(balanceBefore - amount);
+      const balanceAfter = Number(voucher.balance);
+      voucher.status =
+        balanceAfter === 0
+          ? VoucherStatus.REDEEMED
+          : VoucherStatus.PARTIALLY_REDEEMED;
+
+      await this.createTransaction(
+        {
+          voucher,
+          amount,
+          type: TransactionType.REDEMPTION,
+          balanceBefore,
+          balanceAfter,
+          processedById: input.userId,
+          notes: `Redeemed for booking ${input.bookingId ?? ''}`.trim(),
+        },
+        transactionalManager,
+      );
+
+      consumed = await voucherRepo.save(voucher);
+    });
+
+    if (!manager && consumed?.issuanceId) {
+      this.eventEmitter?.emit(PARTNER_INSTRUMENT_CONSUMED_EVENT, {
+        issuanceId: consumed.issuanceId,
+        code: consumed.code,
+        instrumentType: InstrumentType.VOUCHER,
+        instrumentId: consumed.id,
+        amount,
+        note: 'voucher_redeemed_for_booking',
+      });
+    }
+  }
+
   async manuallyMarkAsRedeemed(
     code: string,
     staffId: string,
   ): Promise<Voucher> {
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const voucherRepo = manager.getRepository(Voucher);
-      const voucher = await voucherRepo.findOne({
-        where: { code },
-        relations: ['voucherProduct', 'voucherProduct.user'],
-        lock: { mode: 'pessimistic_write' },
-      });
+      const voucher = await this.lockAndLoadVoucher(voucherRepo, { code });
 
       if (!voucher) {
         throw new NotFoundException('Voucher not found.');
@@ -1006,6 +1162,19 @@ export class VoucherService {
       voucher.status = VoucherStatus.REDEEMED;
       return voucherRepo.save(voucher);
     });
+
+    if (result.issuanceId) {
+      this.eventEmitter?.emit(PARTNER_INSTRUMENT_CONSUMED_EVENT, {
+        issuanceId: result.issuanceId,
+        code: result.code,
+        instrumentType: InstrumentType.VOUCHER,
+        instrumentId: result.id,
+        amount: Number(result.initialValue),
+        note: 'voucher_redeemed_manually',
+      });
+    }
+
+    return result;
   }
 
   // --- Statistics and History ---
@@ -1200,6 +1369,36 @@ export class VoucherService {
     return new PageDto(history, pageMeta);
   }
 
+  /**
+   * Lock a voucher row without joins, then load its nullable relations.
+   *
+   * Postgres rejects `FOR UPDATE` on the nullable side of an outer join, which
+   * TypeORM emits for `relations: [...]` + `pessimistic_write`. Locking the base
+   * row first keeps redemption atomic without hitting that error.
+   */
+  private async lockAndLoadVoucher(
+    voucherRepo: Repository<Voucher>,
+    where: { code?: string; id?: string },
+  ): Promise<Voucher | null> {
+    const locked = await voucherRepo.findOne({
+      where,
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!locked) return null;
+    return (
+      (await voucherRepo.findOne({
+        where: { id: locked.id },
+        relations: [
+          'voucherProduct',
+          'voucherProduct.user',
+          'owner',
+          'buyer',
+          'recipient',
+        ],
+      })) ?? locked
+    );
+  }
+
   private async findActiveVoucherByCode(code: string): Promise<Voucher> {
     const voucher = await this.voucherRepository.findOne({
       where: { code },
@@ -1230,25 +1429,102 @@ export class VoucherService {
    */
   async createPartnerVoucher(payload: {
     amount: number;
-    recipientEmail: string;
+    recipientEmail?: string;
     recipientName?: string;
     message?: string;
-    businessName: string;
+    businessName?: string;
     code?: string;
+    issuanceId?: string;
+    templateId?: string;
+    businessId?: string;
+    scope?: InstrumentScopeDto;
+    metadata?: Record<string, any>;
+    context?: PartnerRequestContext;
+    expiresAt?: string;
   }): Promise<Voucher> {
-    const amount = Number(payload.amount);
-    const { recipientEmail, recipientName, message, businessName } = payload;
+    const amount = roundMoney(Number(payload.amount));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Voucher amount must be positive.');
+    }
+    const {
+      recipientEmail,
+      recipientName,
+      message,
+      businessName,
+      issuanceId,
+    } = payload;
+    const sourceApp = 'mcom-rewards';
 
-    // Default expiry 1 year for loyalty rewards
-    const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    if (issuanceId) {
+      const existing = await this.voucherRepository.findOne({
+        where: { sourceApp, issuanceId },
+      });
+      if (existing) return markReplayed(existing);
+    }
 
-    // Try to find existing user to link
-    const owner = await this.userRepository.findOne({
-      where: { email: recipientEmail },
-    });
+    const providedCode = (payload.code || '').trim();
+    if (providedCode) {
+      const existingCode = await this.voucherRepository.findOne({
+        where: { code: providedCode },
+      });
+      if (existingCode) {
+        if (issuanceId && existingCode.issuanceId !== issuanceId) {
+          throw new ConflictException(
+            'CODE_ALREADY_USED: this code belongs to a different issuance.',
+          );
+        }
+        return markReplayed(existingCode);
+      }
+    }
 
-    // Use Digital Value Engine
+    let product: VoucherProduct | null = null;
+    if (payload.templateId) {
+      product = await this.voucherProductRepository.findOne({
+        where: { id: payload.templateId },
+        relations: ['user'],
+      });
+      if (!product) throw new NotFoundException('Voucher product not found.');
+      if (!product.isEnabled || product.status === 'inactive') {
+        throw new UnprocessableEntityException('TEMPLATE_INACTIVE');
+      }
+      this.assertVoucherAmount(amount, product);
+    }
+
+    let business: Business | null = null;
+    if (payload.businessId) {
+      business = await this.businessRepository.findOne({
+        where: { id: payload.businessId },
+        relations: ['user'],
+      });
+      if (!business) throw new NotFoundException('Business not found.');
+    } else if (product?.user?.id) {
+      business = await this.businessRepository.findOne({
+        where: { user: { id: product.user.id } },
+        relations: ['user'],
+      });
+    }
+
+    if (
+      product &&
+      business &&
+      product.user?.id &&
+      product.user.id !== business.user?.id
+    ) {
+      throw new ForbiddenException(
+        'TEMPLATE_NOT_OWNED: the voucher product is not owned by the bound business.',
+      );
+    }
+
+    const expiresAt = payload.expiresAt
+      ? new Date(payload.expiresAt)
+      : product?.expiryDays
+        ? new Date(Date.now() + Number(product.expiryDays) * 86_400_000)
+        : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+
+    const owner = recipientEmail
+      ? await this.userRepository.findOne({ where: { email: recipientEmail } })
+      : null;
+
     const dv = await this.digitalValueService.create({
       type: DigitalValueType.VOUCHER,
       initialValue: amount,
@@ -1258,38 +1534,115 @@ export class VoucherService {
         recipientName,
         personalMessage: message,
         businessName,
+        issuanceId: issuanceId ?? null,
+        templateId: product?.id ?? null,
+        businessId: business?.id ?? null,
       },
       expiryDate: expiresAt.toISOString(),
     });
 
     const newVoucher = this.voucherRepository.create({
-      code: (payload.code && payload.code.trim()) || dv.code,
+      code: providedCode || dv.code,
       initialValue: amount,
       balance: amount,
       status: VoucherStatus.UNREDEEMED,
       expiresAt,
-      // If user exists, link them as owner/buyer (so they see it in their list)
-      // If not, it remains floating (only email linked) until they sign up or claim it
       owner: owner || null,
-      buyer: owner || null, // Conceptually "bought" by system for them
+      buyer: owner || null,
       recipientEmail,
       recipientName,
-      personalMessage: message || `Reward from ${businessName}`,
+      personalMessage: message || `Reward from ${businessName || 'MCOM Rewards'}`,
+      voucherProduct: product || null,
+      business: business || null,
+      businessId: business?.id ?? null,
+      issuanceId: issuanceId ?? null,
+      sourceApp: issuanceId ? sourceApp : null,
+      metadata: {
+        ...(payload.metadata ?? {}),
+        businessName,
+        templateId: product?.id ?? null,
+        allowPartialRedemption: product?.allowPartialRedemption ?? true,
+        allowReloading: product?.allowReloading ?? false,
+        usage: product?.usage ?? null,
+      },
     });
 
-    const savedVoucher = await this.voucherRepository.save(newVoucher);
+    let savedVoucher: Voucher;
+    try {
+      savedVoucher = await this.voucherRepository.save(newVoucher);
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        const existing = issuanceId
+          ? await this.voucherRepository.findOne({
+              where: { sourceApp, issuanceId },
+            })
+          : await this.voucherRepository.findOne({
+              where: { code: providedCode },
+            });
+        if (existing) {
+          if (
+            issuanceId &&
+            existing.issuanceId &&
+            existing.issuanceId !== issuanceId
+          ) {
+            throw new ConflictException(
+              'CODE_ALREADY_USED: this code belongs to a different issuance.',
+            );
+          }
+          return markReplayed(existing);
+        }
+      }
+      throw err;
+    }
 
-    // Create a transaction record
     await this.createTransaction({
       voucher: savedVoucher,
       amount,
       type: TransactionType.PURCHASE,
       balanceBefore: 0,
       balanceAfter: amount,
-      notes: `Generated by Loyalty System for ${businessName}`,
+      notes: `Generated by Loyalty System for ${businessName || 'MCOM Rewards'}`,
     });
 
+    if (
+      this.instrumentScopeService &&
+      payload.context?.scopeEnabled !== false &&
+      (payload.scope || business || product?.scopeConfig)
+    ) {
+      await this.instrumentScopeService.saveScope({
+        instrumentType: InstrumentType.VOUCHER,
+        instrumentId: savedVoucher.id,
+        businessId: business?.id ?? null,
+        scope: payload.scope,
+        context: payload.context,
+        templateScope: (product?.scopeConfig as any) ?? null,
+        tenantBusinessId: business?.id ?? null,
+      });
+    }
+
     return savedVoucher;
+  }
+
+  private assertVoucherAmount(
+    amount: number,
+    product: VoucherProduct,
+  ): void {
+    const fixed = (product.fixedAmounts || []).map((value) => Number(value));
+    const matchesFixed = fixed.includes(amount);
+    const withinCustom =
+      product.allowCustomAmount &&
+      (product.minCustomAmount === null ||
+        product.minCustomAmount === undefined ||
+        amount >= Number(product.minCustomAmount)) &&
+      (product.maxCustomAmount === null ||
+        product.maxCustomAmount === undefined ||
+        amount <= Number(product.maxCustomAmount));
+
+    if (!matchesFixed && !withinCustom) {
+      throw new UnprocessableEntityException(
+        'AMOUNT_OUT_OF_RANGE: amount is not allowed by the voucher product.',
+      );
+    }
   }
 
   // --- Private Helper Methods ---
@@ -1499,4 +1852,8 @@ export class VoucherService {
 
     return product;
   }
+}
+
+function roundMoney(value: number): number {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { Repository, DataSource } from 'typeorm';
@@ -6,17 +6,17 @@ import { HashService } from '../../common/hash/hash.service';
 import { createTokenInterface } from '../../common/types/auth.interface';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { UserRole } from '../../common/role.enum';
-import { Business } from '../listings/entities/listing.entity';
-import { Location } from '../listings/entities/location.entity';
-import { ListingType, BusinessStatus } from '../listings/listing.enum';
-import { LocalMall } from '../localmall/entities/localmall.entity';
-import { ActivatedRegion } from '../localmall/entities/activated-region.entity';
 import { RevokedToken } from './entities/revoked-token.entity';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  buildNewUserIdentity,
+  syncCentralIdentity,
+} from '../sso/central-profile-sync';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -154,172 +154,50 @@ export class AuthService {
         throw new Error('MCOM Solutions user ID not found in SSO token');
       }
 
-      let user = await this.userRepository.findOne({ where: { email } });
+      // Resolve by Central ID first so an email change on MCOM Central does
+      // not create a duplicate local account. Provisioning is idempotent and
+      // safe under concurrent SSO callbacks.
+      const identity = buildNewUserIdentity(payload);
 
-      if (!user) {
-        // Create User using transaction to ensure wallet and trial are created
-        const role = payload.role?.toLowerCase();
-        const password = Math.random().toString(36).slice(-10) + 'Aa1!';
+      const user = await this.userService.findOrCreateFromCentralIdentity({
+        email,
+        centralUserId,
+        firstName: identity.firstName,
+        lastName: identity.lastName,
+        phoneNumber: identity.phoneNumber,
+        role: identity.role,
+      });
 
-        const fullName = payload.name || 'Loyalty User';
-        const nameParts = fullName.split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ') || 'User'; // Default last name if missing
-
-        user = await this.userService.create({
-          email,
-          firstName,
-          lastName,
-          password: password,
-          confirm_password: password,
-          phoneNumber:
-            payload.phoneNumber ||
-            `00000000${Math.floor(1000 + Math.random() * 9000)}`,
-          role: role === 'business' ? UserRole.OWNER : UserRole.CUSTOMER,
-        });
-      }
-
-      // Store the Mcom Solutions user ID for future subscription lookups
-      if (centralUserId && user.centralUserId !== centralUserId) {
-        user.centralUserId = centralUserId;
-        await this.userRepository.save(user);
-      }
-
-      // Check if Business listing exists for this user (JIT Storefront Sync)
-      // Fire-and-forget: don't block the response on JIT provisioning
-      if (user.role === UserRole.OWNER) {
-        const businessRepository = this.dataSource.getRepository(Business);
-        const existingBusiness = await businessRepository.findOne({
-          where: { user: { id: user.id } },
-        });
-
-        if (!existingBusiness) {
-          this.jitStorefrontSync(user, payload).catch((err) => {
-            console.error('[SSO JIT] Background sync failed:', err);
-          });
-        }
-      }
+      // MCOM Central is the identity source of truth. Diff and refresh every
+      // local field (person, contact, business profile, storefront) on login.
+      const synced = await syncCentralIdentity({
+        userRepository: this.userRepository,
+        dataSource: this.dataSource,
+        localUser: user,
+        centralUser: payload,
+        logger: this.logger,
+      });
+      const syncedUser = synced.user;
 
       // Generate Mall Token
       const tokenPayload: createTokenInterface = {
-        sub: user.id,
-        role: user.role,
-        email: user.email,
-        name: `${user.firstName} ${user.lastName}`,
-        userId: user.id,
+        sub: syncedUser.id,
+        role: syncedUser.role,
+        email: syncedUser.email,
+        name: `${syncedUser.firstName} ${syncedUser.lastName}`,
+        userId: syncedUser.id,
         centralUserId: centralUserId,
       };
 
       const tokens = this.createToken(tokenPayload);
       return {
         ...tokens,
-        email: user.email,
+        email: syncedUser.email,
         centralUserId: centralUserId,
       };
     } catch (error) {
       console.error('SSO Error', error);
       throw new Error('SSO Failed');
-    }
-  }
-
-  private async jitStorefrontSync(user: User, payload: any) {
-    try {
-      const locationRepository = this.dataSource.getRepository(Location);
-      const cleanPostcode = (payload.postcode || 'SW1A 1AA')
-        .trim()
-        .toUpperCase();
-      const address = payload.address || 'High Street';
-
-      let lat = 51.5074;
-      let lon = -0.1278;
-      let borough = 'London';
-
-      try {
-        const postcodeResponse = await fetch(
-          `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode.replace(/\s+/g, ''))}`,
-        );
-        if (postcodeResponse.ok) {
-          const body = await postcodeResponse.json();
-          if (body && body.status === 200 && body.result) {
-            lat = body.result.latitude;
-            lon = body.result.longitude;
-            const rawBorough =
-              body.result.admin_district || body.result.region || '';
-            borough = rawBorough
-              .replace(/London Borough of /i, '')
-              .replace(/Borough of /i, '')
-              .replace(/City of /i, '')
-              .replace(/Royal Borough of /i, '')
-              .trim();
-          }
-        }
-      } catch (err) {
-        console.error('Postcodes.io lookup error in JIT:', err);
-      }
-
-      const mallName = `${borough} Local Mall`;
-      const localMallRepository = this.dataSource.getRepository(LocalMall);
-      let localMall = await localMallRepository.findOne({
-        where: { name: mallName },
-      });
-
-      if (!localMall) {
-        localMall = localMallRepository.create({
-          name: mallName,
-          latitude: lat,
-          longitude: lon,
-        });
-        await localMallRepository.save(localMall);
-      }
-
-      const activatedRegionRepository =
-        this.dataSource.getRepository(ActivatedRegion);
-      let activeRegion = await activatedRegionRepository.findOne({
-        where: { name: borough },
-      });
-      if (!activeRegion) {
-        activeRegion = activatedRegionRepository.create({
-          name: borough,
-          isActive: true,
-        });
-        await activatedRegionRepository.save(activeRegion);
-      } else if (!activeRegion.isActive) {
-        activeRegion.isActive = true;
-        await activatedRegionRepository.save(activeRegion);
-      }
-
-      const businessRepository = this.dataSource.getRepository(Business);
-      const newBusiness = businessRepository.create({
-        user,
-        businessName: payload.name || 'Hyperlocal Merchant',
-        businessPhone: payload.phoneNumber || '0000000000',
-        businessEmail: user.email,
-        shortDescription:
-          'Hyperlocal business listing imported from MCOM Ecosystem.',
-        listingType: [ListingType.PRODUCT, ListingType.SERVICE],
-        status: BusinessStatus.PUBLISHED,
-        isVerified: true,
-        isGoogleVerified: true,
-        localMall,
-      });
-
-      const savedBusiness = await businessRepository.save(newBusiness);
-
-      const newLocation = locationRepository.create({
-        business: savedBusiness,
-        postcode: cleanPostcode,
-        addressLine1: address,
-        city: borough,
-        countryCode: 'GB',
-        showPublicly: true,
-      });
-
-      await locationRepository.save(newLocation);
-      console.log(
-        `[SSO JIT] Automatically provisioned business listing & location for ${user.email} with postcode ${cleanPostcode} under ${mallName}`,
-      );
-    } catch (err) {
-      console.error('[SSO JIT] Failed to provision storefront:', err);
     }
   }
 }

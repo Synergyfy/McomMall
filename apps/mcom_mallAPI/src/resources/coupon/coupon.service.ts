@@ -1,11 +1,15 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
+  UnprocessableEntityException,
   forwardRef,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import * as crypto from 'crypto';
@@ -22,6 +26,7 @@ import { MarketingCampaign } from '../campaign/entities/marketing-campaign.entit
 import { Business } from '../listings/entities/listing.entity';
 import { BusinessStatus } from '../listings/listing.enum';
 import { BrandingAssociation } from './entities/branding-association.entity';
+import { computeCouponDiscount } from '../partner-instruments/pricing';
 import { User } from '../users/entities/user.entity';
 import {
   MarketingCampaignStatus,
@@ -41,6 +46,14 @@ import { SavedCoupon } from './entities/saved-coupon.entity';
 import { CouponStatsDto } from './dto/coupon-stats.dto';
 import { CouponChartDataDto } from './dto/coupon-chart-data.dto';
 import { CouponTransactionHistoryDto } from './dto/coupon-transaction-history.dto';
+import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
+import {
+  InstrumentType,
+  PARTNER_INSTRUMENT_CONSUMED_EVENT,
+} from '../partner-instruments/enums';
+import { InstrumentScopeDto } from '../partner-instruments/dto/instrument-scope.dto';
+import { PartnerRequestContext } from '../partner-instruments/instrument-scope.service';
+import { markReplayed } from '../partner-instruments/replay';
 
 @Injectable()
 export class CouponService {
@@ -62,6 +75,10 @@ export class CouponService {
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
+    @Optional()
+    private readonly eventEmitter?: EventEmitter2,
+    @Optional()
+    private readonly instrumentScopeService?: InstrumentScopeService,
   ) {}
 
   async create(dto: CreateCouponDto, creator?: User): Promise<Coupon> {
@@ -189,7 +206,8 @@ export class CouponService {
     code: string,
     user: User,
     existingCouponCode?: string,
-  ): Promise<Coupon> {
+    subtotal?: number,
+  ): Promise<Coupon & { discountAmount: number | null }> {
     const coupon = await this.couponRepository.findOne({
       where: { code },
       relations: [
@@ -302,7 +320,44 @@ export class CouponService {
       }
     }
 
-    return coupon;
+    // The storefront uses this response to render the discount line before
+    // checkout. Compute the amount server-side so the client never has to
+    // re-implement coupon maths (and can pass the cart subtotal, if known).
+    const validated = coupon as Coupon & { discountAmount: number | null };
+    const cartSubtotal = Number(subtotal);
+    validated.discountAmount =
+      Number.isFinite(cartSubtotal) && cartSubtotal > 0
+        ? computeCouponDiscount({
+            base: cartSubtotal,
+            discountType: coupon.discountType,
+            discountValue: Number(coupon.discountValue) || 0,
+            maxDiscount: (coupon as any).maxDiscount,
+          })
+        : null;
+
+    return validated;
+  }
+
+  /**
+   * Lock the coupon row without joins, then load its (nullable) relations in a
+   * separate read. Postgres cannot apply `FOR UPDATE` to the nullable side of
+   * an outer join, which `relations: [...]` + `pessimistic_write` produces.
+   */
+  private async lockAndLoadCoupon(
+    couponRepo: Repository<Coupon>,
+    code: string,
+  ): Promise<Coupon | null> {
+    const locked = await couponRepo.findOne({
+      where: { code },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!locked) return null;
+    return (
+      (await couponRepo.findOne({
+        where: { id: locked.id },
+        relations: ['campaign', 'business', 'business.user'],
+      })) ?? locked
+    );
   }
 
   private async assertCouponEligibleForRedemption(
@@ -369,7 +424,8 @@ export class CouponService {
     user: User,
     order?: Order,
   ): Promise<RedemptionLog> {
-    return this.dataSource.transaction(async (manager) => {
+    let consumedCoupon: Coupon | null = null;
+    const log = await this.dataSource.transaction(async (manager) => {
       const couponRepo = manager.getRepository(Coupon);
       const logRepo = manager.getRepository(RedemptionLog);
 
@@ -384,24 +440,34 @@ export class CouponService {
         if (existingLog) return existingLog;
       }
 
-      const coupon = await couponRepo.findOne({
-        where: { code },
-        relations: ['campaign', 'business', 'business.user'],
-        lock: { mode: 'pessimistic_write' },
-      });
+      const coupon = await this.lockAndLoadCoupon(couponRepo, code);
 
       if (!coupon) throw new NotFoundException('Coupon not found');
 
       await this.assertCouponEligibleForRedemption(coupon, user, logRepo);
+      consumedCoupon = coupon;
 
-      const log = logRepo.create({
+      const redemptionLog = logRepo.create({
         coupon,
         user,
         orderId: order?.id || null,
         status: RedemptionStatus.REDEEMED,
       });
-      return await logRepo.save(log);
+      return await logRepo.save(redemptionLog);
     });
+
+    if (consumedCoupon?.issuanceId) {
+      this.eventEmitter?.emit(PARTNER_INSTRUMENT_CONSUMED_EVENT, {
+        issuanceId: consumedCoupon.issuanceId,
+        code: consumedCoupon.code,
+        instrumentType: InstrumentType.COUPON,
+        instrumentId: consumedCoupon.id,
+        amount: Number(consumedCoupon.discountValue),
+        note: 'coupon_redeemed',
+      });
+    }
+
+    return log;
   }
 
   async findCouponByCode(code: string): Promise<Coupon> {
@@ -414,7 +480,14 @@ export class CouponService {
   }
 
   async redeemForOrder(
-    payload: { code: string; amount?: number },
+    payload: {
+      code: string;
+      amount?: number;
+      eligibleSubtotal?: number;
+      appliedAmount?: number;
+      issuanceId?: string | null;
+      metadata?: Record<string, any>;
+    },
     order: Order,
     manager?: any,
   ): Promise<void> {
@@ -434,11 +507,7 @@ export class CouponService {
         if (existingLog) return;
       }
 
-      const coupon = await couponRepo.findOne({
-        where: { code: payload.code },
-        relations: ['campaign', 'business', 'business.user'],
-        lock: { mode: 'pessimistic_write' },
-      });
+      const coupon = await this.lockAndLoadCoupon(couponRepo, payload.code);
       if (!coupon) throw new NotFoundException('Coupon not found');
 
       await this.assertCouponEligibleForRedemption(coupon, user, logRepo);
@@ -448,6 +517,16 @@ export class CouponService {
         user,
         orderId: order?.id || null,
         status: RedemptionStatus.REDEEMED,
+        issuanceId: payload.issuanceId ?? coupon.issuanceId ?? null,
+        eligibleSubtotal:
+          payload.eligibleSubtotal !== undefined
+            ? roundMoney(payload.eligibleSubtotal)
+            : null,
+        appliedAmount:
+          payload.appliedAmount !== undefined
+            ? roundMoney(payload.appliedAmount)
+            : null,
+        metadata: payload.metadata ?? null,
       });
       await logRepo.save(log);
     } else {
@@ -744,42 +823,160 @@ export class CouponService {
     expiresAt?: string | Date;
     usageLimit?: number;
     perUserLimit?: number;
+    issuanceId?: string;
+    templateId?: string;
+    businessId?: string;
+    scope?: InstrumentScopeDto;
+    metadata?: Record<string, any>;
+    context?: PartnerRequestContext;
   }): Promise<Coupon> {
-    const amount = Number(payload.amount);
+    const amount = roundMoney(Number(payload.amount));
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new BadRequestException('Coupon amount must be a positive number.');
     }
+    const sourceApp = 'mcom-rewards';
+    const issuanceId = payload.issuanceId ?? null;
+
+    if (issuanceId) {
+      const existing = await this.couponRepository.findOne({
+        where: { sourceApp, issuanceId },
+      });
+      if (existing) return markReplayed(existing);
+    }
 
     const providedCode = (payload.code || '').trim();
+    if (providedCode) {
+      const existing = await this.couponRepository.findOne({
+        where: { code: providedCode },
+      });
+      if (existing) {
+        if (issuanceId && existing.issuanceId !== issuanceId) {
+          throw new ConflictException(
+            'CODE_ALREADY_USED: this code belongs to a different issuance.',
+          );
+        }
+        return markReplayed(existing);
+      }
+    }
+
+    let template: Coupon | null = null;
+    if (payload.templateId) {
+      template = await this.couponRepository.findOne({
+        where: { id: payload.templateId },
+        relations: ['business', 'business.user'],
+      });
+      if (!template) throw new NotFoundException('Coupon template not found.');
+      if (template.status === CouponStatus.ARCHIVED) {
+        throw new UnprocessableEntityException('TEMPLATE_INACTIVE');
+      }
+    }
+
+    let business: Business | null = template?.business ?? null;
+    if (payload.businessId) {
+      business = await this.businessRepository.findOne({
+        where: { id: payload.businessId },
+        relations: ['user'],
+      });
+      if (!business) throw new NotFoundException('Business not found.');
+    }
+
+    if (
+      template?.business?.id &&
+      business?.id &&
+      template.business.id !== business.id
+    ) {
+      throw new ForbiddenException(
+        'TEMPLATE_NOT_OWNED: the coupon template is not owned by the bound business.',
+      );
+    }
+
     const code = (
       providedCode || `MC${crypto.randomBytes(6).toString('hex').toUpperCase()}`
     ).slice(0, 20);
 
-    const existing = await this.couponRepository.findOne({ where: { code } });
-    if (existing) {
-      return existing;
-    }
-
     const expiresAt = payload.expiresAt
       ? new Date(payload.expiresAt)
-      : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+      : (template?.expiresAt ?? null) ||
+        new Date(new Date().setFullYear(new Date().getFullYear() + 1));
 
     const coupon = this.couponRepository.create({
       code,
-      title: payload.message || `Reward from ${payload.businessName || 'MCOM Rewards'}`,
+      title:
+        payload.message ||
+        template?.title ||
+        `Reward from ${payload.businessName || business?.businessName || 'MCOM Rewards'}`,
       description:
         payload.message ||
-        `Reward coupon from ${payload.businessName || 'MCOM Rewards'}`,
-      sourceType: CouponSourceType.PLATFORM,
-      discountType: DiscountType.FIXED,
+        template?.description ||
+        `Reward coupon from ${payload.businessName || business?.businessName || 'MCOM Rewards'}`,
+      sourceType:
+        template?.sourceType ??
+        (business ? CouponSourceType.BUSINESS : CouponSourceType.PLATFORM),
+      discountType: template?.discountType ?? DiscountType.FIXED,
       discountValue: amount,
-      usageLimit: payload.usageLimit ?? 1,
-      perUserLimit: payload.perUserLimit ?? 1,
-      startDate: new Date(),
+      usageLimit: payload.usageLimit ?? template?.usageLimit ?? 1,
+      perUserLimit: payload.perUserLimit ?? template?.perUserLimit ?? 1,
+      startDate: template?.startDate ?? new Date(),
       expiresAt,
-      status: CouponStatus.ACTIVE,
+      status: template?.status ?? CouponStatus.ACTIVE,
+      business: business ?? undefined,
+      issuanceId,
+      sourceApp: issuanceId ? sourceApp : null,
+      metadata: {
+        ...(payload.metadata ?? {}),
+        recipientEmail: payload.recipientEmail ?? null,
+        recipientName: payload.recipientName ?? null,
+        businessName: payload.businessName ?? business?.businessName ?? null,
+        templateId: template?.id ?? null,
+      },
     });
 
-    return this.couponRepository.save(coupon);
+    let savedCoupon: Coupon;
+    try {
+      savedCoupon = await this.couponRepository.save(coupon);
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        const existing = issuanceId
+          ? await this.couponRepository.findOne({
+              where: { sourceApp, issuanceId },
+            })
+          : await this.couponRepository.findOne({ where: { code } });
+        if (existing) {
+          if (
+            issuanceId &&
+            existing.issuanceId &&
+            existing.issuanceId !== issuanceId
+          ) {
+            throw new ConflictException(
+              'CODE_ALREADY_USED: this code belongs to a different issuance.',
+            );
+          }
+          return markReplayed(existing);
+        }
+      }
+      throw err;
+    }
+
+    if (
+      this.instrumentScopeService &&
+      payload.context?.scopeEnabled !== false &&
+      (payload.scope || business || template?.scopeConfig)
+    ) {
+      await this.instrumentScopeService.saveScope({
+        instrumentType: InstrumentType.COUPON,
+        instrumentId: savedCoupon.id,
+        businessId: business?.id ?? null,
+        scope: payload.scope,
+        context: payload.context,
+        templateScope: (template?.scopeConfig as any) ?? null,
+        tenantBusinessId: business?.id ?? null,
+      });
+    }
+
+    return savedCoupon;
   }
+}
+
+function roundMoney(value: number): number {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }

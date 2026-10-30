@@ -32,7 +32,7 @@ export class MembershipController {
   constructor(private readonly membershipService: MembershipService) {}
 
   @Get('my')
-  @Roles(UserRole.OWNER)
+  @Roles(UserRole.OWNER, UserRole.CUSTOMER, UserRole.ADMIN)
   @ApiOperation({ summary: "Get the current user's membership details" })
   @ApiResponse({
     status: 200,

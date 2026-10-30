@@ -99,6 +99,18 @@ export class VoucherConsumerController {
     );
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get(':code/balance')
+  @ApiOperation({
+    summary: 'Get the balance of a voucher the signed-in user is entitled to',
+  })
+  async getVoucherBalance(
+    @Param('code') code: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.voucherService.getOwnedVoucherBalance(code, user);
+  }
+
   @Get(':code')
   @Public()
   @ApiOperation({ summary: 'Get public details of a specific voucher (masked)' })

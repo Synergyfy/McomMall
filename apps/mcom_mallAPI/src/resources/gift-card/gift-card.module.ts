@@ -23,10 +23,12 @@ import { AssetCategoryService } from './asset-category.service';
 import { User } from '../users/entities/user.entity';
 import { CapabilityModule } from '../capability/capability.module';
 import { DigitalValueModule } from '../digital-value/digital-value.module';
+import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
 
 @Module({
   imports: [
     DigitalValueModule,
+    PartnerInstrumentsModule,
     forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       GiftCard,

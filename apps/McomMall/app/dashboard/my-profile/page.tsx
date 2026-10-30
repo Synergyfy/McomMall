@@ -36,6 +36,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AddressList from './components/AddressList';
 import MediaCropper from '../add-listing/components/steps/shared/MediaCropper';
+import CentralManagedProfileNotice from '@/components/CentralManagedProfileNotice';
 
 type SocialPlatform =
   | 'twitter'
@@ -569,7 +570,16 @@ const MyProfilePage: NextPage = () => {
           </TabsList>
 
           <TabsContent value="profile">
+            <CentralManagedProfileNotice
+              centralPath={
+                profile?.role === 'customer'
+                  ? '/customer'
+                  : '/dashboard/business-profile'
+              }
+              className="mb-6"
+            />
             <main className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <fieldset disabled className="contents">
               <form
                 onSubmit={handleProfileSubmit}
                 className="space-y-6 lg:col-span-2"
@@ -689,6 +699,7 @@ const MyProfilePage: NextPage = () => {
                   </div>
                 </div>
               </form>
+              </fieldset>
 
               <div className="lg:col-span-1">
                 <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">

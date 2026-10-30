@@ -7,7 +7,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { User } from './entities/user.entity';
-import { Brackets, DataSource, IsNull, Not, Repository } from 'typeorm';
+import { Brackets, DataSource, ILike, IsNull, Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SearchOwnerDto } from './dto/search-owner.dto';
 import { ServiceProviderProfile } from '../service-provider-profile/entities/service-provider-profile.entity';
@@ -142,8 +142,77 @@ export class UsersService {
     return createdUser;
   }
 
-  async createByAdmin(payload: CreateUserDto): Promise<User> {
-    // Validate provision code before transaction if present
+  /**
+   * Idempotent user provisioning for MCOM Central SSO.
+   *
+   * The lookup-then-insert pattern used to race when the SSO callback was
+   * processed twice (double-submit / React strict mode / retry). Two requests
+   * could both miss and then one hit the `users.email` unique constraint. This
+   * helper normalises the email, links `centralUserId` at insert time, and
+   * recovers gracefully from a concurrent insert.
+   */
+  async findOrCreateFromCentralIdentity(input: {
+    email: string;
+    centralUserId?: string | null;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    role: UserRole;
+  }): Promise<User> {
+    const email = (input.email || '').trim().toLowerCase();
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
+
+    const lookup: Array<Record<string, unknown>> = [{ email: ILike(email) }];
+    if (input.centralUserId) {
+      lookup.unshift({ centralUserId: input.centralUserId });
+    }
+
+    let user = await this.userRepository.findOne({
+      where: lookup as any,
+      withDeleted: true,
+    });
+
+    if (user?.deleted_at) {
+      await this.userRepository.restore(user.id);
+      user = await this.userRepository.findOne({ where: { id: user.id } });
+    }
+    if (user) return user as User;
+
+    const password = Math.random().toString(36).slice(-10) + 'Aa1!';
+    try {
+      return await this.create({
+        email,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        password,
+        confirm_password: password,
+        phoneNumber: input.phoneNumber,
+        role: input.role,
+        centralUserId: input.centralUserId ?? undefined,
+      } as CreateUserDto);
+    } catch (error: any) {
+      const code = error?.code ?? error?.driverError?.code;
+      if (code !== '23505') throw error;
+
+      // A concurrent callback won the insert. Return the winner.
+      const existing = await this.userRepository.findOne({
+        where: lookup as any,
+        withDeleted: true,
+      });
+      if (existing?.deleted_at) {
+        await this.userRepository.restore(existing.id);
+        return (await this.userRepository.findOne({
+          where: { id: existing.id },
+        })) as User;
+      }
+      if (existing) return existing as User;
+      throw error;
+    }
+  }
+
+  async createByAdmin(payload: CreateUserDto): Promise<User> {    // Validate provision code before transaction if present
     let provision = null;
     if (payload.provisionCode) {
       provision = await this.provisionService.findByCode(payload.provisionCode);

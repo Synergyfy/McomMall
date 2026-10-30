@@ -5,6 +5,7 @@ import {
   OneToMany,
   JoinColumn,
   DeleteDateColumn,
+  Index,
 } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { GiftCardTransaction } from './gift-card-transaction.entity';
@@ -21,6 +22,9 @@ export enum GiftCardDeliveryStatus {
 }
 
 @Entity('gift_cards')
+@Index('UQ_gift_cards_source_issuance', ['sourceApp', 'issuanceId'], {
+  unique: true,
+})
 export class GiftCard extends AbstractBaseEntity {
   @Column({ unique: true, length: 16 })
   code: string;
@@ -95,6 +99,18 @@ export class GiftCard extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   templateId: string;
+
+  /** Rewards issuance this instrument was materialised from. */
+  @Column({ name: 'issuance_id', nullable: true })
+  issuanceId: string | null;
+
+  /** Issuing app, e.g. `mcom-rewards`. */
+  @Column({ name: 'source_app', nullable: true })
+  sourceApp: string | null;
+
+  /** Free-form partner metadata echoed back on reads. */
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, any> | null;
 
   @ManyToOne(() => Order, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'purchaseOrderId' })

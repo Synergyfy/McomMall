@@ -14,10 +14,12 @@ import { VoucherService } from './voucher.service';
 import { WalletModule } from '../wallet/wallet.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { DigitalValueModule } from '../digital-value/digital-value.module';
+import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
 
 @Module({
   imports: [
     DigitalValueModule,
+    PartnerInstrumentsModule,
     TypeOrmModule.forFeature([
       Voucher,
       VoucherProduct,

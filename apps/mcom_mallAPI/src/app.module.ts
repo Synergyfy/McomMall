@@ -75,6 +75,7 @@ import { TeamModule } from './resources/team/team.module';
 import { SsoModule } from './resources/sso/sso.module';
 import { ServiceMeshModule } from './resources/service-mesh/service-mesh.module';
 import { RewardsIntegrationModule } from './resources/rewards-integration/rewards-integration.module';
+import { PartnerInstrumentsModule } from './resources/partner-instruments/partner-instruments.module';
 import { DiscoverModule } from './resources/discover/discover.module';
 import { HotspotModule } from './resources/hotspot/hotspot.module';
 import { CustomerDirectoryModule } from './resources/customer-directory/customer-directory.module';
@@ -200,6 +201,7 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     SeasonsModule,
     SsoModule,
     ServiceMeshModule,
+    PartnerInstrumentsModule,
     RewardsIntegrationModule,
     DiscoverModule,
   ],

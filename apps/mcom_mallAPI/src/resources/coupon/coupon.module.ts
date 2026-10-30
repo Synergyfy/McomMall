@@ -13,10 +13,12 @@ import { RedemptionLog } from './entities/redemption-log.entity';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 import { SavedCoupon } from './entities/saved-coupon.entity';
 import { BusinessCouponController } from './business-coupon.controller';
+import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
 
 @Module({
   imports: [
     forwardRef(() => CapabilityModule),
+    PartnerInstrumentsModule,
     TypeOrmModule.forFeature([
       Coupon,
       SavedCoupon,

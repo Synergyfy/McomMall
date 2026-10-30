@@ -40,6 +40,29 @@ export class InitiateCheckoutDto {
   giftCardCode?: string;
 
   @ApiPropertyOptional({
+    description: 'The amount to redeem from the gift card (defaults to full balance).',
+  })
+  @IsNumber()
+  @IsPositive()
+  @IsOptional()
+  giftCardAmount?: number;
+
+  @ApiPropertyOptional({
+    description: 'The code of the voucher to apply to the checkout.',
+  })
+  @IsString()
+  @IsOptional()
+  voucherCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'The amount to redeem from the voucher (defaults to full balance).',
+  })
+  @IsNumber()
+  @IsPositive()
+  @IsOptional()
+  voucherAmount?: number;
+
+  @ApiPropertyOptional({
     description: 'The ID of the coupon to apply to the checkout.',
   })
   @IsString()
