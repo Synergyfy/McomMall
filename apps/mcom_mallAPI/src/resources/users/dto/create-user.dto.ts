@@ -73,6 +73,14 @@ export class CreateUserDto {
 
   @ApiProperty({
     required: false,
+    description: 'Central (MCOM Solutions) user id, when provisioned via SSO.',
+  })
+  @IsString()
+  @IsOptional()
+  centralUserId?: string;
+
+  @ApiProperty({
+    required: false,
     description: 'Code for pre-provisioned rewards (e.g. Extended Trial).',
   })
   @IsString()

@@ -134,4 +134,13 @@ export class VoucherProduct {
   @Expose()
   @Column({ type: 'varchar', length: 20, default: 'active' })
   status: string;
+
+  /**
+   * Optional restriction inherited by partner instruments. Shape mirrors an
+   * instrument scope (`mode`, `businessId`, `listingIds`, `productIds`,
+   * `serviceIds`).
+   */
+  @Expose()
+  @Column({ name: 'scope_config', type: 'jsonb', nullable: true })
+  scopeConfig: Record<string, any> | null;
 }

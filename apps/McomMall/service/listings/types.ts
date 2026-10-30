@@ -150,6 +150,14 @@ export interface UserListing {
   logoAltText: string;
   bannerAltText: string;
   status: string;
+  // MCOM Central business-profile mirror (read-only in the mall).
+  businessType?: string | null;
+  industry?: string | null;
+  centralCategory?: string | null;
+  centralSubCategory?: string | null;
+  openingHours?: string | null;
+  centralBusinessId?: string | null;
+  centralProfileSyncedAt?: string | null;
   categories: Category[];
   category?: Category;
   subCategory?: Category;

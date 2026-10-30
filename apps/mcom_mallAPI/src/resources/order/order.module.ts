@@ -32,6 +32,7 @@ import { ShippingAddress } from '../shipping-address/entities/shipping-address.e
 import { ShippingModule } from '../shipping/shipping.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { RewardsIntegrationModule } from '../rewards-integration/rewards-integration.module';
+import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { RewardsIntegrationModule } from '../rewards-integration/rewards-integra
     ShippingModule,
     forwardRef(() => PaymentsModule),
     forwardRef(() => RewardsIntegrationModule),
+    PartnerInstrumentsModule,
   ],
   controllers: [OrderController],
   providers: [

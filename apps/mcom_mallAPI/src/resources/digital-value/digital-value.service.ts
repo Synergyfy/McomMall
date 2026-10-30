@@ -124,7 +124,7 @@ export class DigitalValueService {
     fundDto: FundDigitalValueDto,
     manager?: EntityManager,
   ): Promise<DigitalValueMaster> {
-    const { amount } = fundDto;
+    const amount = toMoney(fundDto.amount);
     if (amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
@@ -177,20 +177,25 @@ export class DigitalValueService {
     redeemDto: RedeemDigitalValueDto,
     manager?: EntityManager,
   ): Promise<DigitalValueMaster> {
-    const { amount, merchantId } = redeemDto;
+    const amount = toMoney(redeemDto.amount);
+    const merchantId = redeemDto.merchantId;
     if (amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
 
     return this.runInTransaction(async (transactionalManager) => {
-      const digitalValue = await transactionalManager.findOne(
-        DigitalValueMaster,
-        {
-          where: { id },
-          relations: ['merchant'],
-          lock: { mode: 'pessimistic_write' },
-        },
-      );
+      // Lock the base row only: TypeORM emits LEFT JOINs for `relations`, and
+      // Postgres cannot `FOR UPDATE` the nullable side of an outer join.
+      const locked = await transactionalManager.findOne(DigitalValueMaster, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      const digitalValue = locked
+        ? ((await transactionalManager.findOne(DigitalValueMaster, {
+            where: { id: locked.id },
+            relations: ['merchant'],
+          })) ?? locked)
+        : null;
 
       if (!digitalValue) {
         throw new NotFoundException('Digital value instrument not found');
@@ -215,7 +220,7 @@ export class DigitalValueService {
       }
 
       digitalValue.currentBalance =
-        Number(digitalValue.currentBalance) - Number(amount);
+        toMoney(Number(digitalValue.currentBalance) - amount);
 
       if (digitalValue.currentBalance === 0) {
         digitalValue.status = DigitalValueStatus.FULLY_REDEEMED;
@@ -396,4 +401,10 @@ export class DigitalValueService {
       await queryRunner.release();
     }
   }
+}
+
+function toMoney(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return NaN;
+  return Math.round((numeric + Number.EPSILON) * 100) / 100;
 }

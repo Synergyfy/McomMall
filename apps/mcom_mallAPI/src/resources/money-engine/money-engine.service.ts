@@ -241,11 +241,16 @@ export class MoneyEngineService {
   // --- Logic 3: The Spending Guard (The Lock) ---
   async spend(dto: SpendDto): Promise<UserVoucher> {
     return await this.dataSource.transaction(async (manager) => {
-      const voucher = await manager.findOne(UserVoucher, {
+      const lockedVoucher = await manager.findOne(UserVoucher, {
         where: { id: dto.userVoucherId },
-        relations: ['definition', 'definition.validShops'],
         lock: { mode: 'pessimistic_write' },
       });
+      const voucher = lockedVoucher
+        ? ((await manager.findOne(UserVoucher, {
+            where: { id: lockedVoucher.id },
+            relations: ['definition', 'definition.validShops'],
+          })) ?? lockedVoucher)
+        : null;
 
       if (!voucher) {
         throw new NotFoundException('User Voucher not found');

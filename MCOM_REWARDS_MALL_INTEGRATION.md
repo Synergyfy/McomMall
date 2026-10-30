@@ -1709,3 +1709,121 @@ interface PartnerInstrumentResponse {
 - [ ] Env configured on both apps (§17).
 - [ ] §18 conformance tests green in staging.
 - [ ] Stale-reservation sweeper running.
+
+---
+
+## Appendix E — Partner templates, scoped instruments & global catalogue (additive)
+
+This appendix extends the v3 contract. Existing endpoints and payloads are
+unchanged; every new field is optional and every new endpoint is gated by a
+feature flag.
+
+### E.1 Template discovery (`mall:read`)
+
+```
+GET /api/v1/partner/templates/gift-cards
+GET /api/v1/partner/templates/vouchers
+GET /api/v1/partner/templates/coupons
+GET /api/v1/partner/templates/:kind/:id        # kind = gift-cards | vouchers | coupons
+```
+
+Query: `businessId` (preferred) or `mcomUserId` or `email` (at least one is
+required, otherwise `400`). Platform callers may pass `includePlatform=true`
+and `includeInactive=true`. Inactive templates are excluded by default.
+Response: `{ business: { id, name, mcomUserId }, templates: [...] }` (or
+`{ business, template }` for the single-item route). Empty lists are returned
+as `200` with `templates: []`, never `404`.
+
+### E.2 Instrument creation extensions (`mall:write`)
+
+The existing `POST /api/v1/partner/instruments/{gift-cards,vouchers,coupons}`
+accept new optional fields:
+
+```jsonc
+{
+  "amount": 30,
+  "recipientEmail": "jane@example.com",
+  "businessName": "Acme Ltd",
+  "code": "SHARED-CODE",
+  "issuanceId": "rewards-issuance-uuid",
+  "templateId": "template-uuid",
+  "businessId": "mall-business-uuid",
+  "scope": {
+    "mode": "ITEMS",                 // ALL | LISTINGS | ITEMS | NO_SCOPE
+    "productIds": ["product-uuid"],
+    "serviceIds": []
+  },
+  "metadata": { "campaignId": "..." }
+}
+```
+
+Response is additive:
+
+```jsonc
+{
+  "type": "voucher",
+  "id": "v-uuid",
+  "code": "MCOM-AB12CD34EF",
+  "issuanceId": "rewards-issuance-uuid",
+  "status": "unredeemed",
+  "scope": { "mode": "ITEMS", "businessId": "b-uuid", "listingIds": [], "productIds": ["p1"], "serviceIds": [] },
+  "balance": 30,
+  "currency": "GBP",
+  "expiresAt": "2027-10-29T00:00:00.000Z"
+}
+```
+
+Idempotency: replaying an `issuanceId` returns the original instrument. Reusing
+a `code` with a different `issuanceId` returns `409 CODE_ALREADY_USED`.
+
+### E.3 Instrument status & revoke
+
+```
+GET  /api/v1/partner/instruments/:kind/:code          # mall:read
+POST /api/v1/partner/instruments/:kind/:code/revoke   # mall:write
+```
+
+`GET` returns status/balance/expiry/scope/issuanceId without consuming.
+`revoke` zeroes unused balance, disables the instrument, returns
+`409 CODE_ALREADY_CONSUMED` when exhausted, and queues a Rewards callback.
+
+### E.4 Global catalogue (`mall:read`, platform callers only)
+
+```
+GET /api/v1/partner/catalog/listings?query=&page=1&limit=20&businessId=&status=published
+GET /api/v1/partner/catalog/listings/:id
+GET /api/v1/partner/catalog/products?query=&page=1&limit=20&businessId=
+GET /api/v1/partner/catalog/services?query=&page=1&limit=20&businessId=
+```
+
+`limit` is capped at 100. Non-platform callers receive
+`403 CROSS_TENANT_SCOPE`. Response meta:
+
+```json
+{ "meta": { "itemCount": 20, "totalItems": 240, "itemsPerPage": 20, "totalPages": 12, "currentPage": 1 } }
+```
+
+### E.5 Consumption callbacks (Mall → Rewards)
+
+On successful consumption Mall calls:
+
+```
+POST /api/v1/partner/issuances/:id/redeem   { code, note }
+POST /api/v1/partner/issuances/:id/revoke   { code, note }
+```
+
+with a minted `aud=mcom-rewards` token and `rewards:issue`. Delivery is queued
+in `partner_redemption_outbox` (never blocks checkout), retried with
+exponential backoff, and dead-lettered after 8 attempts. `reward.redeemed` /
+`reward.revoked` are also sent best-effort to `/api/v1/partner/events`.
+
+### E.6 Deep link
+
+```
+https://<mall-web-host>/listings/<businessId>?reward=<code>
+&products=<p1,p2>&services=<s1>&utm_source=mcom-rewards&utm_medium=reward
+```
+
+The storefront validates via `GET /api/v1/public/rewards/instruments/:code?listingId=<id>`
+(no consumption, no PII, no issuance id) and shows a reward banner. Ownership
+is enforced when the code is consumed at checkout/booking.

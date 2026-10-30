@@ -99,6 +99,24 @@ export class ServiceBooking extends AbstractBaseEntity {
   @Column({ type: 'float', default: 0 })
   rewardDiscountApplied: number;
 
+  @Column({ type: 'float', default: 0 })
+  couponDiscountApplied: number;
+
+  @Column({ nullable: true })
+  couponCode: string;
+
+  @Column({ type: 'float', default: 0 })
+  giftCardAmountApplied: number;
+
+  @Column({ nullable: true })
+  giftCardCode: string;
+
+  @Column({ type: 'float', default: 0 })
+  voucherAmountApplied: number;
+
+  @Column({ nullable: true })
+  voucherCode: string;
+
   @Column({ nullable: true })
   paymentIntentId: string; // Stripe PaymentIntent or PayPal Order ID
 

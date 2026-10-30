@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
@@ -24,12 +25,23 @@ import { OrderStatus } from '../order/enums/order-status.enum';
 import { CompleteCheckoutDto } from './dto/complete-checkout.dto';
 import { RedeemGiftCardDto } from '../gift-card/dto/redeem-gift-card.dto';
 import { CouponService } from '../coupon/coupon.service';
-import { DiscountType } from '../coupon/coupon.enum';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 import {
   ShippingItemInput,
   ShippingPricingService,
 } from '../shipping/shipping-pricing.service';
+import { InstrumentScopeService, round2 } from '../partner-instruments/instrument-scope.service';
+import {
+  InstrumentType,
+  ScopeLine,
+  ScopeMode,
+} from '../partner-instruments/enums';
+import {
+  computeCouponDiscount,
+  computeInstrumentApplication,
+} from '../partner-instruments/pricing';
+import { VoucherService } from '../voucher/voucher.service';
+import { VoucherStatus } from '../voucher/entities/voucher.entity';
 
 @Injectable()
 export class CheckoutService {
@@ -55,14 +67,24 @@ export class CheckoutService {
     private readonly productService: ProductService,
     private readonly couponService: CouponService,
     private readonly shippingPricingService: ShippingPricingService,
+    private readonly instrumentScopeService: InstrumentScopeService,
+    private readonly voucherService: VoucherService,
   ) {}
 
   async initiateCheckout(
     userId: string,
     initiateCheckoutDto: InitiateCheckoutDto,
   ) {
-    const { items, giftCardCode, couponCode, shippingAddressId, carrierCode } =
-      initiateCheckoutDto;
+    const {
+      items,
+      giftCardCode,
+      giftCardAmount,
+      couponCode,
+      voucherCode,
+      voucherAmount,
+      shippingAddressId,
+      carrierCode,
+    } = initiateCheckoutDto;
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
@@ -118,15 +140,63 @@ export class CheckoutService {
       );
     }
 
-    // Apply Coupon if provided
+    // Canonical line list used by the shared instrument-scope matcher. The
+    // same service is used by booking, so product checkout and booking cannot
+    // drift on scope semantics.
+    const scopeLines: ScopeLine[] = orderItems.map((item, index) => ({
+      lineKey: `product:${item.product.id}:${index}`,
+      kind: 'product',
+      id: item.product.id,
+      businessId: item.product.business?.id ?? null,
+      unitPrice: round2(Number(item.price)),
+      quantity: item.quantity,
+      lineTotal: round2(Number(item.price) * item.quantity),
+    }));
+    const itemSubtotalForInstruments = round2(
+      scopeLines.reduce((sum, line) => sum + line.lineTotal, 0),
+    );
+
+    // Apply Coupon if provided (scope-aware)
     let couponDiscount = 0;
+    let couponEligibleSubtotal: number | null = null;
+    let couponScopeMode: ScopeMode = ScopeMode.NO_SCOPE;
     if (couponCode) {
       const coupon = await this.couponService.validateCoupon(couponCode, user);
-      if (coupon.discountType === DiscountType.FIXED) {
-        couponDiscount = Math.min(subtotal, Number(coupon.discountValue));
-      } else {
-        couponDiscount = subtotal * (Number(coupon.discountValue) / 100);
+      const couponScope = await this.instrumentScopeService.getEffectiveScope(
+        InstrumentType.COUPON,
+        { id: coupon.id, businessId: coupon.business?.id ?? null },
+      );
+      const isScoped =
+        !!couponScope && couponScope.scopeMode !== ScopeMode.NO_SCOPE;
+      couponScopeMode = couponScope?.scopeMode ?? ScopeMode.NO_SCOPE;
+
+      let base = subtotal;
+      if (isScoped) {
+        const eligible = this.instrumentScopeService.computeEligible(
+          couponScope,
+          scopeLines,
+        );
+        couponEligibleSubtotal = round2(
+          eligible.lines.reduce(
+            (sum, line) =>
+              sum + Math.max(0, line.lineTotal - (line.discount ?? 0)),
+            0,
+          ),
+        );
+        if (couponEligibleSubtotal <= 0) {
+          throw new UnprocessableEntityException(
+            'SCOPE_NO_ELIGIBLE_LINES: this coupon does not apply to any item in the cart.',
+          );
+        }
+        base = couponEligibleSubtotal;
       }
+
+      couponDiscount = computeCouponDiscount({
+        discountType: coupon.discountType,
+        discountValue: Number(coupon.discountValue),
+        base,
+        maxDiscount: Number((coupon as any).maxDiscount),
+      });
     }
 
     const totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
@@ -154,19 +224,104 @@ export class CheckoutService {
       }
     }
 
-    // Apply gift card if provided
+    const totalWithShipping = round2(
+      totalAfterCoupon + estimatedShippingFee,
+    );
+
+    // Apply gift card if provided (scope-aware)
     let giftCardAmountToApply = 0;
     if (giftCardCode) {
-      const balanceResponse =
-        await this.giftCardService.checkBalance(giftCardCode);
-      giftCardAmountToApply = Math.min(
-        totalAfterCoupon + estimatedShippingFee,
-        balanceResponse.currentBalance,
+      const giftCard = await this.giftCardService.findActiveCardByCode(
+        giftCardCode,
       );
+      const balance = round2(Number(giftCard.currentBalance));
+      const bindingBusinessId =
+        await this.giftCardService.getBusinessBinding(giftCard);
+      const giftCardScope =
+        await this.instrumentScopeService.getEffectiveScope(
+          InstrumentType.GIFT_CARD,
+          {
+            id: giftCard.id,
+            businessId: bindingBusinessId,
+          },
+        );
+      const isScoped =
+        !!giftCardScope && giftCardScope.scopeMode !== ScopeMode.NO_SCOPE;
+      const eligible = this.instrumentScopeService.computeEligiblePayable(
+        giftCardScope,
+        scopeLines,
+        itemSubtotalForInstruments,
+        totalWithShipping,
+      );
+      if (isScoped && eligible.eligibleSubtotal <= 0) {
+        throw new UnprocessableEntityException(
+          'SCOPE_NO_ELIGIBLE_LINES: this gift card does not apply to any item in the cart.',
+        );
+      }
+      giftCardAmountToApply = computeInstrumentApplication({
+        requested: giftCardAmount,
+        balance,
+        eligiblePayable: isScoped ? eligible.eligibleSubtotal : totalWithShipping,
+        remainingPayable: totalWithShipping,
+      });
     }
 
-    const remainingTotal =
-      totalAfterCoupon + estimatedShippingFee - giftCardAmountToApply;
+    const totalAfterGiftCard = round2(
+      totalWithShipping - giftCardAmountToApply,
+    );
+
+    // Apply voucher if provided (scope-aware, spend-like balance)
+    let voucherAmountToApply = 0;
+    if (voucherCode) {
+      const voucher = await this.voucherService.findVoucherByCode(voucherCode);
+      if (
+        voucher.status === VoucherStatus.REDEEMED ||
+        voucher.status === VoucherStatus.DISABLED ||
+        (voucher.expiresAt && new Date() > voucher.expiresAt)
+      ) {
+        throw new BadRequestException('Voucher is invalid or expired.');
+      }
+      if ((voucher.voucherProduct as any)?.usage === 'instore_only') {
+        throw new BadRequestException(
+          'This voucher can only be redeemed in store.',
+        );
+      }
+      const balance = round2(Number(voucher.balance));
+      const voucherScope =
+        await this.instrumentScopeService.getEffectiveScope(
+          InstrumentType.VOUCHER,
+          {
+            id: voucher.id,
+            businessId:
+              voucher.businessId ?? (voucher as any).business?.id ?? null,
+          },
+        );
+      const isScoped =
+        !!voucherScope && voucherScope.scopeMode !== ScopeMode.NO_SCOPE;
+      const eligible = this.instrumentScopeService.computeEligiblePayable(
+        voucherScope,
+        scopeLines,
+        itemSubtotalForInstruments,
+        totalAfterGiftCard,
+      );
+      if (isScoped && eligible.eligibleSubtotal <= 0) {
+        throw new UnprocessableEntityException(
+          'SCOPE_NO_ELIGIBLE_LINES: this voucher does not apply to any item in the cart.',
+        );
+      }
+      voucherAmountToApply = computeInstrumentApplication({
+        requested: voucherAmount,
+        balance,
+        eligiblePayable: isScoped
+          ? eligible.eligibleSubtotal
+          : totalAfterGiftCard,
+        remainingPayable: totalAfterGiftCard,
+      });
+    }
+
+    const remainingTotal = round2(
+      totalWithShipping - giftCardAmountToApply - voucherAmountToApply,
+    );
 
     // Create pending order in a transaction
     const newOrder = await this.dataSource.transaction(async (manager) => {
@@ -182,6 +337,8 @@ export class CheckoutService {
         giftCardCode: giftCardAmountToApply > 0 ? giftCardCode : null,
         couponCode: couponDiscount > 0 ? couponCode : null,
         couponDiscountApplied: couponDiscount,
+        voucherCode: voucherAmountToApply > 0 ? voucherCode : null,
+        voucherAmountApplied: voucherAmountToApply,
         shippingAddress,
         carrierCode,
         estimatedShippingFee,
@@ -261,7 +418,8 @@ export class CheckoutService {
     const remainingTotal =
       order.total -
       (order.giftCardAmountApplied || 0) -
-      (order.couponDiscountApplied || 0);
+      (order.couponDiscountApplied || 0) -
+      (order.voucherAmountApplied || 0);
 
     // Verify payment if one was made
     if (remainingTotal > 0) {
@@ -310,9 +468,12 @@ export class CheckoutService {
     return this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(Order);
 
+      // Lock the order row only. Postgres cannot apply `FOR UPDATE` to the
+      // nullable side of an outer join, which is what `relations: ['user']`
+      // produces here. Ownership was already verified above, and order
+      // ownership never changes, so locking by id is sufficient.
       const lockedOrder = await orderRepo.findOne({
-        where: { id: orderId, user: { id: userId } },
-        relations: ['user'],
+        where: { id: orderId },
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -321,6 +482,11 @@ export class CheckoutService {
           'Pending order not found or already processed.',
         );
       }
+
+      // Redemption helpers authorise against `order.user`; we intentionally
+      // locked only the order row (see above), so attach the already-verified
+      // caller identity without joining.
+      lockedOrder.user = { id: userId } as User;
 
       // Decrement stock with a compare-and-set so concurrent checkouts cannot
       // oversell. Runs in the same transaction as the order status change.
@@ -351,7 +517,7 @@ export class CheckoutService {
       if (lockedOrder.giftCardCode && lockedOrder.giftCardAmountApplied > 0) {
         const redeemDto: RedeemGiftCardDto = {
           code: lockedOrder.giftCardCode,
-          amount: lockedOrder.giftCardAmountApplied,
+          amount: round2(Number(lockedOrder.giftCardAmountApplied)),
         };
 
         // Fetch order items to get a potential business ID for non-system gift cards
@@ -377,7 +543,19 @@ export class CheckoutService {
         await this.couponService.redeemForOrder(
           {
             code: lockedOrder.couponCode,
-            amount: lockedOrder.couponDiscountApplied,
+            amount: Number(lockedOrder.couponDiscountApplied),
+          },
+          lockedOrder,
+          manager,
+        );
+      }
+
+      // Redeem Voucher (same transaction, after coupon/gift card)
+      if (lockedOrder.voucherCode && lockedOrder.voucherAmountApplied > 0) {
+        await this.voucherService.redeemForOrder(
+          {
+            code: lockedOrder.voucherCode,
+            amount: round2(Number(lockedOrder.voucherAmountApplied)),
           },
           lockedOrder,
           manager,

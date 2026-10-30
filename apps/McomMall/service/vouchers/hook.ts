@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import api from '../api';
-import { Voucher } from './types';
+import { Voucher, VoucherBalance } from './types';
 
 const getVoucherByCode = async (code: string): Promise<Voucher> => {
   const { data } = await api.get<Voucher>(`/vouchers/${code}`);
@@ -12,6 +12,22 @@ const getVoucherByCode = async (code: string): Promise<Voucher> => {
 export const useApplyVoucher = () => {
   return useMutation<Voucher, Error, string>({
     mutationFn: getVoucherByCode,
+  });
+};
+
+/**
+ * Authenticated balance lookup. The public `/vouchers/:code` endpoint masks the
+ * balance, so the checkout must use this route to decide whether a voucher can
+ * be applied.
+ */
+export const useVoucherBalance = () => {
+  return useMutation<VoucherBalance, Error, string>({
+    mutationFn: async (code: string) => {
+      const { data } = await api.get<VoucherBalance>(
+        `/vouchers/${encodeURIComponent(code)}/balance`,
+      );
+      return data;
+    },
   });
 };
 

@@ -80,7 +80,8 @@ export default function OrderSummaryCard({
     amount: number,
     icon: React.ReactNode
   ) => {
-    if (amount <= 0) return null;
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) return null;
     return (
       <div className="flex items-center justify-between text-green-600">
         <div className="flex items-center space-x-2">
@@ -89,7 +90,7 @@ export default function OrderSummaryCard({
         </div>
         <p className="font-semibold">
           -{CURRENCY}
-          {amount.toFixed(2)}
+          {value.toFixed(2)}
         </p>
       </div>
     );

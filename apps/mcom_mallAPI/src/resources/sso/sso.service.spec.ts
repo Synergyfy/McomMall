@@ -17,6 +17,9 @@ describe('SsoService - Entitlement & Trial Integration', () => {
   let mcomCentralService: Partial<McomCentralService>;
 
   beforeEach(() => {
+    jest.restoreAllMocks();
+    (global as any).fetch = jest.fn().mockResolvedValue({ ok: false });
+
     userRepository = {
       findOne: jest.fn().mockResolvedValue({
         id: 'user-123',
@@ -26,6 +29,7 @@ describe('SsoService - Entitlement & Trial Integration', () => {
         role: UserRole.OWNER,
       }),
       save: jest.fn().mockImplementation((u) => Promise.resolve(u)),
+      update: jest.fn().mockResolvedValue(undefined),
     };
 
     jwtService = {
@@ -34,12 +38,16 @@ describe('SsoService - Entitlement & Trial Integration', () => {
 
     userService = {
       create: jest.fn(),
+      findOrCreateFromCentralIdentity: jest
+        .fn()
+        .mockImplementation(() => userRepository.findOne({ where: {} })),
     };
 
     const mockRepo = {
       findOne: jest.fn().mockResolvedValue({ id: 'existing-biz' }),
       create: jest.fn(),
       save: jest.fn(),
+      update: jest.fn().mockResolvedValue(undefined),
     };
 
     dataSource = {
@@ -118,6 +126,261 @@ describe('SsoService - Entitlement & Trial Integration', () => {
     expect(result.planId).toBe('mall-pro-vendor');
     expect(result.planName).toBe('Vendor Pro Plan');
     expect(result.quotas).toEqual({ productLimit: 100 });
+  });
+
+  it('syncs explicit first/last name and business name from Central', async () => {
+    const entitlement: PlatformEntitlement = {
+      version: '2026-10-01',
+      targetPlatform: {
+        clientId: 'mcom-mall',
+        platformSlug: 'mall',
+        name: 'MCOM Mall',
+      },
+      access: {
+        hasAccess: true,
+        accessType: 'PAID_MEMBERSHIP',
+        upgradeUrl: 'http://localhost:3010/dashboard/memberships',
+      },
+      plan: {
+        planId: 'mall-pro-vendor',
+        planName: 'Vendor Pro Plan',
+        source: 'membership',
+        status: 'active',
+        quotas: {},
+        limits: {},
+        features: [],
+      },
+      membershipContext: {
+        membershipPlanName: 'Gold',
+        membershipLevel: 'Gold',
+        membershipStatus: 'active',
+        isIncludedInMembership: true,
+      },
+      trialContext: {
+        isInTrial: false,
+        hasPaidVerificationFee: false,
+        trialExpiresAt: null,
+        daysRemaining: 0,
+        programmeTasks: [],
+      },
+    };
+
+    const tokenData = {
+      accessToken: 'sso-access-token',
+      entitlement,
+      user: {
+        id: 'usr_central_sync',
+        email: 'merchant@store.com',
+        role: 'business',
+        name: 'Acme Ltd',
+        firstName: 'Alice',
+        lastName: 'Smith',
+        businessName: 'Acme Ltd',
+      },
+    };
+
+    const businessRepo = {
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 'biz-1', businessName: 'Old Biz' }),
+      update: jest.fn().mockResolvedValue(undefined),
+    };
+    const MembershipEntity =
+      require('../membership/entities/membership.entity').Membership;
+
+    dataSource.getRepository = jest.fn().mockImplementation((entity) => {
+      if (entity === MembershipEntity) {
+        return { findOne: jest.fn().mockResolvedValue(null) };
+      }
+      return businessRepo;
+    });
+
+    jest.spyOn(service, 'exchangeCode').mockResolvedValue(tokenData);
+
+    const result = await service.handleCallbackFromCode('test-code');
+
+    expect(userRepository.update).toHaveBeenCalledWith(
+      'user-123',
+      expect.objectContaining({
+        firstName: 'Alice',
+        lastName: 'Smith',
+        fullName: 'Alice Smith',
+      }),
+    );
+    expect(businessRepo.update).toHaveBeenCalledWith(
+      'biz-1',
+      expect.objectContaining({ businessName: 'Acme Ltd' }),
+    );
+    expect(result.name).toBe('Alice Smith');
+  });
+
+  it('does not overwrite local names when a legacy token has no explicit name claims', async () => {
+    const entitlement = {
+      access: { hasAccess: true, accessType: 'PAID_MEMBERSHIP' },
+      plan: null,
+      membershipContext: {},
+      trialContext: { programmeTasks: [] },
+    };
+
+    const tokenData = {
+      accessToken: 'sso-access-token',
+      entitlement,
+      user: {
+        id: 'usr_central_legacy',
+        email: 'merchant@store.com',
+        role: 'business',
+        name: 'Jane Merchant',
+      },
+    };
+
+    const businessRepo = {
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 'biz-1', businessName: 'Jane Merchant' }),
+      update: jest.fn().mockResolvedValue(undefined),
+    };
+    const MembershipEntity =
+      require('../membership/entities/membership.entity').Membership;
+
+    dataSource.getRepository = jest.fn().mockImplementation((entity) => {
+      if (entity === MembershipEntity) {
+        return { findOne: jest.fn().mockResolvedValue(null) };
+      }
+      return businessRepo;
+    });
+
+    jest.spyOn(service, 'exchangeCode').mockResolvedValue(tokenData);
+
+    await service.handleCallbackFromCode('test-code');
+
+    const nameUpdate = (userRepository.update as jest.Mock).mock.calls.find(
+      ([, data]) => data && 'firstName' in data,
+    );
+    expect(nameUpdate).toBeUndefined();
+    expect(businessRepo.update).not.toHaveBeenCalledWith(
+      'biz-1',
+      expect.objectContaining({ businessName: 'Jane Merchant' }),
+    );
+  });
+
+  it('syncs full business and customer profile details from Central', async () => {
+    const entitlement = {
+      access: { hasAccess: true, accessType: 'PAID_MEMBERSHIP' },
+      plan: null,
+      membershipContext: {},
+      trialContext: { programmeTasks: [] },
+    };
+
+    const tokenData = {
+      accessToken: 'sso-access-token',
+      entitlement,
+      user: {
+        id: 'usr_central_full',
+        sub: 'usr_central_full',
+        email: 'merchant@store.com',
+        role: 'BUSINESS',
+        profileType: 'BUSINESS',
+        name: 'Acme Coffee',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        fullName: 'Jane Doe',
+        jobTitle: 'Managing Director',
+        phone: '+44 20 1234 5678',
+        address: '1 High Street, London',
+        postcode: 'EC1A 1BB',
+        country: 'United Kingdom',
+        avatarUrl: 'https://cdn.mcom.com/logo.png',
+        businessId: 'biz_456',
+        businessName: 'Acme Coffee',
+        businessProfile: {
+          id: 'biz_456',
+          businessName: 'Acme Coffee',
+          businessType: 'Limited Company',
+          phone: '+44 20 1234 5678',
+          email: 'hello@acmecoffee.co.uk',
+          address: '1 High Street, London',
+          postcode: 'EC1A 1BB',
+          country: 'United Kingdom',
+          industry: 'Food & Beverage',
+          category: 'Coffee Shop',
+          subCategory: 'Cafe',
+          description: 'Speciality coffee roastery in central London.',
+          website: 'https://acmecoffee.co.uk',
+          logoUrl: 'https://cdn.mcom.com/logo.png',
+          openingHours: 'Mon-Sat 8am-6pm',
+          socialMedia: '{"instagram":"https://instagram.com/acmecoffee"}',
+        },
+      },
+    };
+
+    const businessRepo = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'biz-1',
+        businessName: 'Old Coffee',
+        businessPhone: '+44 0000 000000',
+        businessEmail: 'old@acmecoffee.co.uk',
+        location: {
+          id: 'loc-1',
+          addressLine1: 'Old Street',
+          postcode: 'OLD 1AA',
+          countryCode: 'GB',
+        },
+      }),
+      update: jest.fn().mockResolvedValue(undefined),
+      create: jest.fn().mockImplementation((value) => value),
+      save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
+    };
+    const socialRepo = {
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockImplementation((value) => value),
+      save: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
+    };
+    const MembershipEntity =
+      require('../membership/entities/membership.entity').Membership;
+
+    dataSource.getRepository = jest.fn().mockImplementation((entity) => {
+      if (entity === MembershipEntity) {
+        return { findOne: jest.fn().mockResolvedValue(null) };
+      }
+      if (entity?.name === 'SocialLink') return socialRepo;
+      return businessRepo;
+    });
+
+    jest.spyOn(service, 'exchangeCode').mockResolvedValue(tokenData);
+
+    await service.handleCallbackFromCode('test-code');
+
+    expect(userRepository.update).toHaveBeenCalledWith(
+      'user-123',
+      expect.objectContaining({
+        lastName: 'Doe',
+        fullName: 'Jane Doe',
+        jobTitle: 'Managing Director',
+        address: '1 High Street, London',
+        postcode: 'EC1A 1BB',
+        country: 'United Kingdom',
+        profilePictureUrl: 'https://cdn.mcom.com/logo.png',
+      }),
+    );
+    expect(businessRepo.update).toHaveBeenCalledWith(
+      'biz-1',
+      expect.objectContaining({
+        businessName: 'Acme Coffee',
+        businessType: 'Limited Company',
+        industry: 'Food & Beverage',
+        centralCategory: 'Coffee Shop',
+        centralSubCategory: 'Cafe',
+        website: 'https://acmecoffee.co.uk',
+        openingHours: 'Mon-Sat 8am-6pm',
+      }),
+    );
+    expect(socialRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        platform: 'instagram',
+        url: 'https://instagram.com/acmecoffee',
+      }),
+    );
   });
 
   it('grants access when user is on TRIAL_PROGRAMME with active tasks', async () => {
@@ -425,9 +688,11 @@ describe('SsoService - Entitlement & Trial Integration', () => {
 
     const businessMockRepo = {
       findOne: jest.fn().mockResolvedValue({ id: 'existing-biz' }),
+      update: jest.fn().mockResolvedValue(undefined),
     };
 
-    const MembershipEntity = require('../membership/entities/membership.entity').Membership;
+    const MembershipEntity =
+      require('../membership/entities/membership.entity').Membership;
 
     dataSource.getRepository = jest.fn().mockImplementation((entity) => {
       if (entity === MembershipEntity) return membershipMockRepo;

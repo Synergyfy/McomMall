@@ -19,6 +19,15 @@ export interface User {
   role: string;
   socials: Socials;
   profilePictureUrl?: string;
+  // Canonical MCOM Central identity mirror (read-only in the mall).
+  jobTitle?: string | null;
+  address?: string | null;
+  postcode?: string | null;
+  country?: string | null;
+  isAffiliate?: boolean;
+  centralUserId?: string | null;
+  centralProfile?: Record<string, unknown> | null;
+  centralProfileSyncedAt?: string | null;
   giftCard: boolean;
   voucher: boolean;
   promotion: boolean;

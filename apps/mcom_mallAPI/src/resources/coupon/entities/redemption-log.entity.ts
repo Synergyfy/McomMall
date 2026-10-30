@@ -52,4 +52,32 @@ export class RedemptionLog {
   @Index()
   @Column({ nullable: true })
   orderId: string;
+
+  @ApiPropertyOptional()
+  @Column({ name: 'issuance_id', nullable: true })
+  issuanceId: string | null;
+
+  @ApiPropertyOptional()
+  @Column({
+    name: 'eligible_subtotal',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  eligibleSubtotal: number | null;
+
+  @ApiPropertyOptional()
+  @Column({
+    name: 'applied_amount',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  appliedAmount: number | null;
+
+  @ApiPropertyOptional({ type: Object })
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, any> | null;
 }

@@ -84,6 +84,16 @@ export class Order extends AbstractBaseEntity {
   @Column({ nullable: true })
   couponCode?: string;
 
+  @ApiPropertyOptional({ description: 'Voucher code applied to this order.' })
+  @Column({ nullable: true })
+  voucherCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Amount redeemed from the voucher for this order.',
+  })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  voucherAmountApplied: number;
+
   @ApiPropertyOptional({
     description: 'Total reward discount applied (MCOM Rewards issuances).',
   })

@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  UnprocessableEntityException,
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -62,11 +63,47 @@ import { User } from '../users/entities/user.entity';
 import { RewardsClientService } from '../rewards-integration/rewards-client.service';
 import { RewardsEligibilityService } from '../rewards-integration/rewards-eligibility.service';
 import { EligibilityLine } from '../rewards-integration/interfaces/reward-issuance.interface';
+import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
+import { PartnerCallbackService } from '../partner-instruments/partner-callback.service';
+import { InstrumentType, ScopeLine, ScopeMode } from '../partner-instruments/enums';
+import { CouponService } from '../coupon/coupon.service';
+import {
+  computeCouponDiscount,
+  computeInstrumentApplication,
+} from '../partner-instruments/pricing';
+import { GiftCardService } from '../gift-card/gift-card.service';
+import { VoucherService } from '../voucher/voucher.service';
+import { VoucherStatus } from '../voucher/entities/voucher.entity';
 import { randomUUID } from 'crypto';
+
+const DAY_NAMES = [
+  'SUNDAY',
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+] as const;
 
 @Injectable()
 export class BookingService {
   private readonly logger = new Logger(BookingService.name);
+
+  /**
+   * `DayOfWeek` is a numeric enum, but business hours can legitimately be
+   * persisted as either the enum value (`1`) or its label (`"MONDAY"`)
+   * depending on which client wrote the row. Compare against the date's
+   * numeric day so both representations match.
+   */
+  private isDayMatch(value: unknown, targetDate: Date): boolean {
+    const targetIndex = targetDate.getDay();
+    if (typeof value === 'number') return value === targetIndex;
+    if (value === null || value === undefined || value === '') return false;
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric === targetIndex;
+    return String(value).trim().toUpperCase() === DAY_NAMES[targetIndex];
+  }
 
   constructor(
     @InjectRepository(BlockedSlot)
@@ -98,6 +135,14 @@ export class BookingService {
     private readonly rewardsEligibility: RewardsEligibilityService,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
+    private readonly instrumentScopeService: InstrumentScopeService,
+    private readonly partnerCallbacks: PartnerCallbackService,
+    @Inject(forwardRef(() => CouponService))
+    private readonly couponService: CouponService,
+    @Inject(forwardRef(() => GiftCardService))
+    private readonly giftCardService: GiftCardService,
+    @Inject(forwardRef(() => VoucherService))
+    private readonly voucherService: VoucherService,
   ) {}
 
   async checkAvailability(checkAvailabilityDto: CheckAvailabilityDto): Promise<{
@@ -133,17 +178,6 @@ export class BookingService {
       throw new BadRequestException('End time must be after start time.');
     }
 
-    const days = [
-      'SUNDAY',
-      'MONDAY',
-      'TUESDAY',
-      'WEDNESDAY',
-      'THURSDAY',
-      'FRIDAY',
-      'SATURDAY',
-    ];
-    const dayOfWeekName = days[start.getDay()];
-
     // Get Capacity (max concurrent bookings) for this day
     let maxConcurrent = 1;
     let isOpen = false;
@@ -152,8 +186,8 @@ export class BookingService {
     let is24h = false;
 
     // 1. Check from Business Hours
-    const businessHour = service.business.businessHours?.find(
-      (bh) => bh.dayOfWeek === (dayOfWeekName as any),
+    const businessHour = service.business.businessHours?.find((bh) =>
+      this.isDayMatch(bh.dayOfWeek, start),
     );
 
     if (businessHour) {
@@ -165,8 +199,8 @@ export class BookingService {
 
     // 2. Check Service Level Availability JSON (granular day settings)
     if (service.availability?.schedule) {
-      const daySched = service.availability.schedule.find(
-        (s: any) => s.day.toUpperCase() === dayOfWeekName,
+      const daySched = service.availability.schedule.find((s: any) =>
+        this.isDayMatch(s.day, start),
       );
       if (daySched) {
         isOpen = daySched.enabled;
@@ -296,35 +330,24 @@ export class BookingService {
     const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
     const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
 
-    const days = [
-      'SUNDAY',
-      'MONDAY',
-      'TUESDAY',
-      'WEDNESDAY',
-      'THURSDAY',
-      'FRIDAY',
-      'SATURDAY',
-    ];
-    const dayOfWeekName = days[targetDate.getDay()];
-
     let openTimeStr = '';
     let closeTimeStr = '';
     let is24h = false;
 
     // 1. Try to get from Business Hours relation
-    const businessHour = service.business.businessHours?.find(
-      (bh) => bh.dayOfWeek === (dayOfWeekName as any),
+    const businessHour = service.business.businessHours?.find((bh) =>
+      this.isDayMatch(bh.dayOfWeek, targetDate),
     );
 
-    if (businessHour && businessHour.dayOfWeek === (dayOfWeekName as any)) {
+    if (businessHour) {
       openTimeStr = businessHour.openTime;
       closeTimeStr = businessHour.closeTime;
       is24h = businessHour.is24h;
     }
     // 2. Fallback to Service level availability JSON if it exists
     else if (service.availability?.schedule) {
-      const sched = service.availability.schedule.find(
-        (s: any) => s.day.toUpperCase() === dayOfWeekName,
+      const sched = service.availability.schedule.find((s: any) =>
+        this.isDayMatch(s.day, targetDate),
       );
       if (sched && sched.enabled) {
         openTimeStr = sched.startTime;
@@ -748,7 +771,7 @@ export class BookingService {
    * This method is wrapped in a transaction for consistency.
    */
   async cancel(bookingId: string, userId: string): Promise<ServiceBooking> {
-    return this.dataSource.transaction(async (manager) => {
+    const cancelled = await this.dataSource.transaction(async (manager) => {
       const booking = await manager.findOne(ServiceBooking, {
         where: { id: bookingId },
         relations: ['user', 'payment'],
@@ -812,6 +835,19 @@ export class BookingService {
 
       return manager.save(booking);
     });
+
+    // A cancelled booking can never be paid, so any reward held for it must be
+    // freed immediately instead of waiting for the stale-reservation sweep.
+    // The helper only touches RESERVED rows and is idempotent.
+    try {
+      await this.releasePendingBookingRewards(bookingId, 'booking_cancelled');
+    } catch (err: any) {
+      this.logger.warn(
+        `[booking] failed to release reward after cancelling ${bookingId}: ${err?.message ?? err}`,
+      );
+    }
+
+    return cancelled;
   }
 
   async blockSlot(
@@ -1289,7 +1325,12 @@ export class BookingService {
 
     const booking = await this.bookingRepository.findOne({
       where: { id: bookingId, user: { id: userId } },
-      relations: ['service', 'service.business', 'service.business.user'],
+      relations: [
+        'user',
+        'service',
+        'service.business',
+        'service.business.user',
+      ],
     });
 
     if (!booking) {
@@ -1318,7 +1359,139 @@ export class BookingService {
       totalAmount,
       initiateDto.rewardIssuanceId,
     );
-    const payableAmount = this.toMoney(totalAmount - rewardDiscount);
+
+    // ── Scoped coupons / gift cards / vouchers ────────────────────────────
+    const scopeLine: ScopeLine = {
+      lineKey: `service:${booking.service.id}`,
+      kind: 'service',
+      id: booking.service.id,
+      businessId:
+        (booking.service as any).businessId ?? booking.service.business?.id ?? null,
+      unitPrice: totalAmount,
+      quantity: 1,
+      lineTotal: totalAmount,
+      discount: rewardDiscount,
+    };
+
+    let couponDiscount = 0;
+    if (initiateDto.couponCode) {
+      const coupon = await this.couponService.validateCoupon(
+        initiateDto.couponCode,
+        booking.user,
+      );
+      const couponScope = await this.instrumentScopeService.getEffectiveScope(
+        InstrumentType.COUPON,
+        { id: coupon.id, businessId: coupon.business?.id ?? null },
+      );
+      const isScoped =
+        !!couponScope && couponScope.scopeMode !== ScopeMode.NO_SCOPE;
+      if (isScoped && !this.instrumentScopeService.matches(couponScope, scopeLine)) {
+        throw new UnprocessableEntityException(
+          'SCOPE_NO_ELIGIBLE_LINES: this coupon does not apply to this booking.',
+        );
+      }
+      const base = Math.max(0, round2(totalAmount - rewardDiscount));
+      couponDiscount = computeCouponDiscount({
+        discountType: coupon.discountType,
+        discountValue: Number(coupon.discountValue),
+        base,
+        maxDiscount: Number((coupon as any).maxDiscount),
+      });
+      couponDiscount = round2(Math.max(0, couponDiscount));
+    }
+
+    const afterCoupon = round2(totalAmount - rewardDiscount - couponDiscount);
+    let giftCardAmount = 0;
+    if (initiateDto.giftCardCode) {
+      const card = await this.giftCardService.findActiveCardByCode(
+        initiateDto.giftCardCode,
+      );
+      await this.giftCardService.assertCanRedeem(card, {
+        businessId: business.id,
+        userId: booking.user?.id ?? null,
+      });
+      const bindingBusinessId =
+        await this.giftCardService.getBusinessBinding(card);
+      const scope = await this.instrumentScopeService.getEffectiveScope(
+        InstrumentType.GIFT_CARD,
+        { id: card.id, businessId: bindingBusinessId },
+      );
+      const isScoped = !!scope && scope.scopeMode !== ScopeMode.NO_SCOPE;
+      if (isScoped && !this.instrumentScopeService.matches(scope, scopeLine)) {
+        throw new UnprocessableEntityException(
+          'SCOPE_NO_ELIGIBLE_LINES: this gift card does not apply to this booking.',
+        );
+      }
+      const balance = Number(card.currentBalance);
+      giftCardAmount = computeInstrumentApplication({
+        requested: initiateDto.giftCardAmount,
+        balance,
+        eligiblePayable: afterCoupon,
+        remainingPayable: afterCoupon,
+      });
+    }
+
+    const afterGiftCard = round2(afterCoupon - giftCardAmount);
+    let voucherAmount = 0;
+    if (initiateDto.voucherCode) {
+      const voucher = await this.voucherService.findVoucherByCode(
+        initiateDto.voucherCode,
+      );
+      if (
+        voucher.status === VoucherStatus.REDEEMED ||
+        voucher.status === VoucherStatus.DISABLED ||
+        (voucher.expiresAt && new Date() > voucher.expiresAt)
+      ) {
+        throw new BadRequestException('Voucher is invalid or expired.');
+      }
+      const voucherOwnerId =
+        (voucher.owner as any)?.id ||
+        (voucher.buyer as any)?.id ||
+        (voucher as any).ownerId ||
+        (voucher as any).buyerId;
+      if (voucherOwnerId && voucherOwnerId !== booking.user?.id) {
+        throw new ForbiddenException(
+          'This voucher cannot be redeemed for this booking.',
+        );
+      }
+      if (
+        voucher.voucherProduct &&
+        !voucher.voucherProduct.allowPartialRedemption &&
+        Number(voucher.balance) < afterGiftCard
+      ) {
+        throw new BadRequestException(
+          'This voucher does not allow partial redemption.',
+        );
+      }
+      const scope = await this.instrumentScopeService.getEffectiveScope(
+        InstrumentType.VOUCHER,
+        {
+          id: voucher.id,
+          businessId:
+            voucher.businessId ?? (voucher as any).business?.id ?? null,
+        },
+      );
+      const isScoped = !!scope && scope.scopeMode !== ScopeMode.NO_SCOPE;
+      if (isScoped && !this.instrumentScopeService.matches(scope, scopeLine)) {
+        throw new UnprocessableEntityException(
+          'SCOPE_NO_ELIGIBLE_LINES: this voucher does not apply to this booking.',
+        );
+      }
+      const balance = Number(voucher.balance);
+      voucherAmount = computeInstrumentApplication({
+        requested: initiateDto.voucherAmount,
+        balance,
+        eligiblePayable: afterGiftCard,
+        remainingPayable: afterGiftCard,
+      });
+    }
+
+    const payableAmount = round2(
+      totalAmount - rewardDiscount - couponDiscount - giftCardAmount - voucherAmount,
+    );
+    if (payableAmount < 0) {
+      throw new BadRequestException('Payable amount cannot be negative.');
+    }
     if (payableAmount <= 0) {
       throw new BadRequestException(
         'This reward covers the full booking value. Full-value reward redemptions are not supported in the payment flow yet.',
@@ -1329,6 +1502,12 @@ export class BookingService {
     booking.commissionAmount = pricing.commissionAmount;
     booking.providerAmount = pricing.providerAmount;
     booking.rewardDiscountApplied = rewardDiscount;
+    booking.couponDiscountApplied = couponDiscount;
+    booking.couponCode = initiateDto.couponCode ?? null;
+    booking.giftCardAmountApplied = giftCardAmount;
+    booking.giftCardCode = initiateDto.giftCardCode ?? null;
+    booking.voucherAmountApplied = voucherAmount;
+    booking.voucherCode = initiateDto.voucherCode ?? null;
     const currency = 'GBP';
 
     if (paymentProvider === PaymentMethod.STRIPE) {
@@ -1435,7 +1614,10 @@ export class BookingService {
     // Server-side amount check: the client must pay the post-reward total.
     const expectedAmount = this.toMoney(
       Number(booking.totalAmount || 0) -
-        Number(booking.rewardDiscountApplied || 0),
+        Number(booking.rewardDiscountApplied || 0) -
+        Number(booking.couponDiscountApplied || 0) -
+        Number(booking.giftCardAmountApplied || 0) -
+        Number(booking.voucherAmountApplied || 0),
     );
     if (expectedAmount > 0 && Math.abs(Number(amount) - expectedAmount) > 0.01) {
       throw new BadRequestException(
@@ -1492,6 +1674,36 @@ export class BookingService {
 
         booking.payment = savedPayment;
         booking.status = BookingStatus.CONFIRMED; // Mark booking as CONFIRMED upon successful payment
+
+        // Consume any scoped instruments bound to this booking. Failures
+        // propagate so the compensating refund path runs.
+        if (booking.couponCode && Number(booking.couponDiscountApplied) > 0) {
+          await this.couponService.redeem(booking.couponCode, booking.user);
+        }
+        if (booking.giftCardCode && Number(booking.giftCardAmountApplied) > 0) {
+          await this.giftCardService.consumeForBooking(
+            {
+              code: booking.giftCardCode,
+              amount: Number(booking.giftCardAmountApplied),
+              userId: booking.user.id,
+              businessId: booking.service.business.id,
+              bookingId: booking.id,
+            },
+            manager,
+          );
+        }
+        if (booking.voucherCode && Number(booking.voucherAmountApplied) > 0) {
+          await this.voucherService.consumeForBooking(
+            {
+              code: booking.voucherCode,
+              amount: Number(booking.voucherAmountApplied),
+              userId: booking.user.id,
+              businessId: booking.service.business.id,
+              bookingId: booking.id,
+            },
+            manager,
+          );
+        }
 
         // Ensure amounts are synced to the booking entity if they weren't set during initiation
         if (!booking.totalAmount || booking.totalAmount === 0) {
@@ -1559,6 +1771,7 @@ export class BookingService {
       });
 
       await this.commitBookingReward(confirmedBooking);
+      await this.enqueueBookingInstrumentCallbacks(confirmedBooking);
       return confirmedBooking;
     } catch (dbErr) {
       this.logger.error(
@@ -1826,4 +2039,97 @@ export class BookingService {
       return manager.save(booking);
     });
   }
+
+  private async enqueueBookingInstrumentCallbacks(
+    booking: ServiceBooking,
+  ): Promise<void> {
+    const jobs: Array<{
+      issuanceId: string;
+      code: string;
+      instrumentType: InstrumentType;
+      instrumentId: string;
+      amount: number;
+      note: string;
+    }> = [];
+
+    try {
+      if (booking.couponCode && Number(booking.couponDiscountApplied) > 0) {
+        const coupon = await this.couponService.findCouponByCode(
+          booking.couponCode,
+        );
+        if (coupon.issuanceId) {
+          jobs.push({
+            issuanceId: coupon.issuanceId,
+            code: coupon.code,
+            instrumentType: InstrumentType.COUPON,
+            instrumentId: coupon.id,
+            amount: Number(booking.couponDiscountApplied),
+            note: `booking:${booking.id}:coupon`,
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `Could not resolve coupon callback for booking ${booking.id}: ${err?.message}`,
+      );
+    }
+
+    try {
+      if (booking.giftCardCode && Number(booking.giftCardAmountApplied) > 0) {
+        const card = await this.giftCardService.findActiveCardByCode(
+          booking.giftCardCode,
+        );
+        if (card.issuanceId) {
+          jobs.push({
+            issuanceId: card.issuanceId,
+            code: card.code,
+            instrumentType: InstrumentType.GIFT_CARD,
+            instrumentId: card.id,
+            amount: Number(booking.giftCardAmountApplied),
+            note: `booking:${booking.id}:gift_card`,
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `Could not resolve gift-card callback for booking ${booking.id}: ${err?.message}`,
+      );
+    }
+
+    try {
+      if (booking.voucherCode && Number(booking.voucherAmountApplied) > 0) {
+        const voucher = await this.voucherService.findVoucherByCode(
+          booking.voucherCode,
+        );
+        if (voucher.issuanceId) {
+          jobs.push({
+            issuanceId: voucher.issuanceId,
+            code: voucher.code,
+            instrumentType: InstrumentType.VOUCHER,
+            instrumentId: voucher.id,
+            amount: Number(booking.voucherAmountApplied),
+            note: `booking:${booking.id}:voucher`,
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `Could not resolve voucher callback for booking ${booking.id}: ${err?.message}`,
+      );
+    }
+
+    for (const job of jobs) {
+      try {
+        await this.partnerCallbacks.enqueueRedeem(job);
+      } catch (err: any) {
+        this.logger.warn(
+          `Failed to enqueue booking callback for issuance ${job.issuanceId}: ${err?.message}`,
+        );
+      }
+    }
+  }
+}
+
+function round2(value: number): number {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }

@@ -168,6 +168,34 @@ export class User extends AbstractBaseEntity {
   @Column({ type: 'text', nullable: true })
   centralRefreshToken: string | null;
 
+  // -------------------------------------------------------------------------
+  // MCOM Central identity mirror
+  // -------------------------------------------------------------------------
+  // MCOM Central is the source of truth for identity and business details.
+  // These columns hold the canonical central values so the mall can render a
+  // complete profile without calling Central on every page load.
+  @Column({ nullable: true })
+  jobTitle?: string | null;
+
+  @Column({ nullable: true })
+  address?: string | null;
+
+  @Column({ nullable: true })
+  postcode?: string | null;
+
+  @Column({ nullable: true })
+  country?: string | null;
+
+  @Column({ default: false })
+  isAffiliate: boolean;
+
+  /** Full canonical SSO identity payload (all role profiles). */
+  @Column({ type: 'jsonb', nullable: true })
+  centralProfile?: Record<string, unknown> | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  centralProfileSyncedAt?: Date | null;
+
   @Column({ type: 'int', default: 100 })
   trustScore: number;
 

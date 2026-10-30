@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Building2, Save, ArrowLeft, Plus, Trash2, Calendar } from 'lucide-react';
 import { DESCRIPTION_PRESETS, getDefaultPresets } from './components/DescriptionPresets';
 import { uploadFile } from '@/lib/upload';
+import CentralManagedProfileNotice from '@/components/CentralManagedProfileNotice';
 
 const PlatformIcons: Record<string, string> = {
   instagram: '📸',
@@ -194,21 +195,23 @@ const BusinessProfilePage: React.FC = () => {
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Edit Business Profile</h1>
-            <p className="text-xs text-gray-500">Update your public storefront information.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Business Profile</h1>
+            <p className="text-xs text-gray-500">Your public storefront information, synced from MCOM Central.</p>
           </div>
         </div>
         <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-orange-600 hover:bg-orange-700 text-white font-semibold flex items-center gap-2"
+          disabled
+          className="bg-gray-300 text-gray-600 font-semibold flex items-center gap-2 cursor-not-allowed"
         >
           <Save size={16} />
-          {isSaving ? 'Saving...' : 'Save Changes'}
+          Managed by MCOM Central
         </Button>
       </header>
 
+      <CentralManagedProfileNotice centralPath="/dashboard/business-profile" />
+
       {/* Main Form Fields */}
+      <fieldset disabled className="contents">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Section: Details */}
@@ -272,6 +275,44 @@ const BusinessProfilePage: React.FC = () => {
                   onChange={(e) => setAbout(e.target.value)}
                   placeholder="Tell your business story in detail, specify what makes your shop unique."
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Central business details (read-only mirror) */}
+          <Card className="bg-white border-gray-200/60 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold">MCOM Central Details</CardTitle>
+              <CardDescription>Synced automatically every time you sign in.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Business Type</Label>
+                <Input value={listing.businessType || ''} disabled placeholder="Not set on MCOM Central" />
+              </div>
+              <div className="space-y-2">
+                <Label>Industry</Label>
+                <Input value={listing.industry || ''} disabled placeholder="Not set on MCOM Central" />
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Input value={listing.centralCategory || listing.category?.name || ''} disabled placeholder="Not set on MCOM Central" />
+              </div>
+              <div className="space-y-2">
+                <Label>Sub-category</Label>
+                <Input value={listing.centralSubCategory || listing.subCategory?.name || ''} disabled placeholder="Not set on MCOM Central" />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Address</Label>
+                <Input value={listing.location?.addressLine1 || ''} disabled placeholder="Not set on MCOM Central" />
+              </div>
+              <div className="space-y-2">
+                <Label>Postcode</Label>
+                <Input value={listing.location?.postcode || ''} disabled placeholder="Not set on MCOM Central" />
+              </div>
+              <div className="space-y-2">
+                <Label>Opening Hours</Label>
+                <Input value={listing.openingHours || ''} disabled placeholder="Not set on MCOM Central" />
               </div>
             </CardContent>
           </Card>
@@ -410,6 +451,7 @@ const BusinessProfilePage: React.FC = () => {
 
         </div>
       </div>
+      </fieldset>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { useGetBusinessData, useGetGoogleListing } from '@/service/listings/hook
 import { InHouseBusiness, GooglePlaceResult } from '@/service/listings/types';
 
 import HeroSection from './redesign/HeroSection';
+import RewardBanner from './RewardBanner';
 
 import AboutSection from './redesign/AboutSection';
 
@@ -23,7 +24,6 @@ import Footer from '@/components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSearchParams } from 'next/navigation';
-
 import {
 
   Info,
@@ -306,6 +306,7 @@ export default function ClientListingDetail({
   return (
     <div className="min-h-screen bg-[#FDFDFD]">
       <HeroSection listing={inHouseListing} />
+      <RewardBanner listingId={placeId} />
 
       {/* Sub-Navigation */}
       <div

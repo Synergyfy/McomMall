@@ -1,0 +1,11 @@
+# MCOM Mall API — partner reward flags (example)
+#
+# Copy the relevant values into your real .env. No secrets are stored here.
+MCOM_REWARDS_MESH_ENABLED=true
+MALL_PARTNER_TEMPLATES_ENABLED=false
+MALL_PARTNER_SCOPED_INSTRUMENTS_ENABLED=false
+MALL_PARTNER_GLOBAL_CATALOG_ENABLED=false
+# Optional comma-separated platform callers (e.g. mcom-rewards-admin,mcom-ops)
+MCOM_PLATFORM_CALLERS=
+# Best-effort per-caller partner rate limit (requests/minute)
+MALL_PARTNER_RATE_LIMIT_PER_MINUTE=120

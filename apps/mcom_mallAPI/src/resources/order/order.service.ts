@@ -7,6 +7,7 @@ import {
   Inject,
   forwardRef,
   Logger,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -44,6 +45,14 @@ import { BusinessStatus } from '../listings/listing.enum';
 import { VoucherService } from '../voucher/voucher.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
 import { DiscountType } from '../coupon/coupon.enum';
+import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
+import { PartnerCallbackService } from '../partner-instruments/partner-callback.service';
+import { ScopeLine, ScopeMode } from '../partner-instruments/enums';
+import { InstrumentType } from '../partner-instruments/enums';
+import {
+  computeCouponDiscount,
+  computeInstrumentApplication,
+} from '../partner-instruments/pricing';
 import { BookingService } from '../booking/booking.service';
 import { PartnershipService } from '../partnership/partnership.service';
 import { ProductServiceBooking } from './entities/product-service-booking.entity';
@@ -137,6 +146,8 @@ export class OrderService {
     private readonly rewardsIntegrationService: RewardsIntegrationService,
     private readonly rewardsClient: RewardsClientService,
     private readonly rewardReconcileService: RewardRedemptionReconcileService,
+    private readonly instrumentScopeService: InstrumentScopeService,
+    private readonly partnerCallbacks: PartnerCallbackService,
   ) {}
 
   private validateBusinessAndOwner(business: Business) {
@@ -363,7 +374,23 @@ export class OrderService {
     );
     const rewardDiscountTotal = rewardResolution.total;
 
+    // Canonical line list used for instrument scope matching. Reward
+    // discounts are allocated per line so a scoped coupon can never stack on
+    // value a reward already removed.
+    const scopeLines = this.buildCheckoutScopeLines({
+      isDirectPurchase,
+      directPurchaseProduct,
+      directPurchase,
+      isCartCheckout,
+      cart,
+      rewardApplications: rewardResolution.applications,
+    });
+
     let couponAmountToApply = 0;
+    let couponEligibleSubtotal: number | null = null;
+    let couponIssuanceId: string | null = null;
+    let couponScopeMode: string | null = null;
+    let appliedCoupon: { id: string; code: string; issuanceId: string | null } | null = null;
     if (createCheckoutDto.couponCode) {
       try {
         const user = await this.userRepository.findOne({
@@ -373,27 +400,65 @@ export class OrderService {
           createCheckoutDto.couponCode,
           user,
         );
-
-        const couponBase = Math.max(
-          0,
-          totalBeforeRedemption - rewardDiscountTotal,
+        couponIssuanceId = coupon.issuanceId ?? null;
+        appliedCoupon = {
+          id: coupon.id,
+          code: coupon.code,
+          issuanceId: coupon.issuanceId ?? null,
+        };
+        const couponScope = await this.instrumentScopeService.getEffectiveScope(
+          InstrumentType.COUPON,
+          { id: coupon.id, businessId: coupon.business?.id ?? null },
         );
+        couponScopeMode = couponScope?.scopeMode ?? ScopeMode.NO_SCOPE;
+        const isScoped =
+          !!couponScope && couponScope.scopeMode !== ScopeMode.NO_SCOPE;
+
+        let couponBase = Math.max(0, totalBeforeRedemption - rewardDiscountTotal);
+        if (isScoped) {
+          const eligible = this.instrumentScopeService.computeEligible(
+            couponScope,
+            scopeLines,
+          );
+          couponEligibleSubtotal = round2(
+            eligible.lines.reduce(
+              (sum, line) =>
+                sum + Math.max(0, line.lineTotal - (line.discount ?? 0)),
+              0,
+            ),
+          );
+          if (couponEligibleSubtotal <= 0) {
+            throw new UnprocessableEntityException(
+              'SCOPE_NO_ELIGIBLE_LINES: this coupon does not apply to any item in the cart.',
+            );
+          }
+          couponBase = couponEligibleSubtotal;
+        }
 
         if (coupon.discountType === DiscountType.FIXED) {
-          couponAmountToApply = Math.min(
-            couponBase,
-            Number(coupon.discountValue),
-          );
+          couponAmountToApply = computeCouponDiscount({
+            discountType: 'fixed',
+            discountValue: Number(coupon.discountValue),
+            base: couponBase,
+          });
         } else {
-          couponAmountToApply = couponBase * (Number(coupon.discountValue) / 100);
+          couponAmountToApply = computeCouponDiscount({
+            discountType: 'percentage',
+            discountValue: Number(coupon.discountValue),
+            base: couponBase,
+            maxDiscount: Number((coupon as any).maxDiscount),
+          });
         }
+        couponAmountToApply = round2(Math.max(0, couponAmountToApply));
       } catch (error) {
+        if (error instanceof UnprocessableEntityException) throw error;
         throw new BadRequestException(`Invalid coupon: ${error.message}`);
       }
     }
 
-    const totalAfterDiscounts =
-      totalBeforeRedemption - couponAmountToApply - rewardDiscountTotal;
+    const totalAfterDiscounts = round2(
+      totalBeforeRedemption - couponAmountToApply - rewardDiscountTotal,
+    );
 
     // Dynamic Shipping Fee Calculation (Royal Mail pricing API with DB fallback)
     const shippingItems: ShippingItemInput[] = [];
@@ -442,43 +507,95 @@ export class OrderService {
       }
     }
 
-    const totalWithShipping = totalAfterDiscounts + estimatedShippingFee;
+    const totalWithShipping = round2(totalAfterDiscounts + estimatedShippingFee);
+
+    const itemSubtotalForInstruments = round2(
+      scopeLines.reduce((sum, line) => sum + line.lineTotal, 0),
+    );
 
     let giftCardAmountToApply = 0;
+    let appliedGiftCard:
+      | { id: string; code: string; issuanceId: string | null }
+      | null = null;
     if (createCheckoutDto.giftCardCode) {
       try {
-        const balance = await this.giftCardService.checkBalance(
+        const giftCard = await this.giftCardService.findActiveCardByCode(
           createCheckoutDto.giftCardCode,
         );
+        appliedGiftCard = {
+          id: giftCard.id,
+          code: giftCard.code,
+          issuanceId: giftCard.issuanceId ?? null,
+        };
+        const balance = {
+          currentBalance: Number(giftCard.currentBalance),
+        };
+        const giftCardBinding =
+          await this.giftCardService.getBusinessBinding(giftCard);
+        const giftCardScope =
+          await this.instrumentScopeService.getEffectiveScope(
+            InstrumentType.GIFT_CARD,
+            { id: giftCard.id, businessId: giftCardBinding },
+          );
+        const isScoped =
+          !!giftCardScope && giftCardScope.scopeMode !== ScopeMode.NO_SCOPE;
+        const eligible = this.instrumentScopeService.computeEligiblePayable(
+          giftCardScope,
+          scopeLines,
+          itemSubtotalForInstruments,
+          totalWithShipping,
+        );
+        if (isScoped && eligible.eligibleSubtotal <= 0) {
+          throw new UnprocessableEntityException(
+            'SCOPE_NO_ELIGIBLE_LINES: this gift card does not apply to any item in the cart.',
+          );
+        }
+        const maxApplicable = isScoped
+          ? eligible.eligibleSubtotal
+          : totalWithShipping;
+
         if (createCheckoutDto.giftCardAmount) {
           if (createCheckoutDto.giftCardAmount > balance.currentBalance) {
             throw new BadRequestException('Gift card amount exceeds balance.');
           }
-          giftCardAmountToApply = Math.min(
-            totalWithShipping,
-            createCheckoutDto.giftCardAmount,
-          );
+          giftCardAmountToApply = computeInstrumentApplication({
+            requested: createCheckoutDto.giftCardAmount,
+            balance: balance.currentBalance,
+            eligiblePayable: maxApplicable,
+            remainingPayable: totalWithShipping,
+          });
         } else {
-          giftCardAmountToApply = Math.min(
-            totalWithShipping,
-            balance.currentBalance,
-          );
+          giftCardAmountToApply = computeInstrumentApplication({
+            balance: balance.currentBalance,
+            eligiblePayable: maxApplicable,
+            remainingPayable: totalWithShipping,
+          });
         }
+        giftCardAmountToApply = round2(Math.max(0, giftCardAmountToApply));
       } catch (error) {
+        if (error instanceof UnprocessableEntityException) throw error;
         throw new BadRequestException(
           `Invalid or expired gift card: ${error.message}`,
         );
       }
     }
 
-    const totalAfterGiftCard = totalWithShipping - giftCardAmountToApply;
+    const totalAfterGiftCard = round2(totalWithShipping - giftCardAmountToApply);
 
     let voucherAmountToApply = 0;
+    let appliedVoucher:
+      | { id: string; code: string; issuanceId: string | null }
+      | null = null;
     if (createCheckoutDto.voucherCode) {
       try {
         const voucher = await this.voucherService.findVoucherByCode(
           createCheckoutDto.voucherCode,
         );
+        appliedVoucher = {
+          id: voucher.id,
+          code: voucher.code,
+          issuanceId: voucher.issuanceId ?? null,
+        };
         if (
           voucher.status === VoucherStatus.REDEEMED ||
           voucher.status === VoucherStatus.DISABLED ||
@@ -486,23 +603,77 @@ export class OrderService {
         ) {
           throw new BadRequestException('Voucher is invalid or expired.');
         }
+        if (
+          (voucher.voucherProduct as any)?.usage === 'instore_only'
+        ) {
+          throw new BadRequestException(
+            'This voucher can only be redeemed in store.',
+          );
+        }
+        const voucherScope = await this.instrumentScopeService.getEffectiveScope(
+          InstrumentType.VOUCHER,
+          {
+            id: voucher.id,
+            businessId:
+              voucher.businessId ?? (voucher as any).business?.id ?? null,
+          },
+        );
+        const isScoped =
+          !!voucherScope && voucherScope.scopeMode !== ScopeMode.NO_SCOPE;
+        const eligible = this.instrumentScopeService.computeEligiblePayable(
+          voucherScope,
+          scopeLines,
+          itemSubtotalForInstruments,
+          totalAfterGiftCard,
+        );
+        if (isScoped && eligible.eligibleSubtotal <= 0) {
+          throw new UnprocessableEntityException(
+            'SCOPE_NO_ELIGIBLE_LINES: this voucher does not apply to any item in the cart.',
+          );
+        }
+        const maxApplicable = isScoped
+          ? eligible.eligibleSubtotal
+          : totalAfterGiftCard;
+
         if (createCheckoutDto.voucherAmount) {
           if (createCheckoutDto.voucherAmount > voucher.balance) {
             throw new BadRequestException('Voucher amount exceeds balance.');
           }
-          voucherAmountToApply = Math.min(
-            totalAfterGiftCard,
-            createCheckoutDto.voucherAmount,
-          );
+          voucherAmountToApply = computeInstrumentApplication({
+            requested: createCheckoutDto.voucherAmount,
+            balance: Number(voucher.balance),
+            eligiblePayable: maxApplicable,
+            remainingPayable: totalAfterGiftCard,
+          });
         } else {
-          voucherAmountToApply = Math.min(totalAfterGiftCard, voucher.balance);
+          voucherAmountToApply = computeInstrumentApplication({
+            balance: Number(voucher.balance),
+            eligiblePayable: maxApplicable,
+            remainingPayable: totalAfterGiftCard,
+          });
         }
+        voucherAmountToApply = round2(Math.max(0, voucherAmountToApply));
       } catch (error) {
+        if (error instanceof UnprocessableEntityException) throw error;
         throw new BadRequestException(`Invalid voucher: ${error.message}`);
       }
     }
 
-    const finalAmount = totalAfterGiftCard - voucherAmountToApply;
+    const finalAmount = round2(totalAfterGiftCard - voucherAmountToApply);
+
+    this.logger.log(
+      `[checkout] instruments ${JSON.stringify({
+        couponIssuanceId,
+        couponScopeMode,
+        couponEligibleSubtotal,
+        couponApplied: couponAmountToApply,
+        giftCardIssuanceId: appliedGiftCard?.issuanceId ?? null,
+        giftCardApplied: giftCardAmountToApply,
+        voucherIssuanceId: appliedVoucher?.issuanceId ?? null,
+        voucherApplied: voucherAmountToApply,
+        finalAmount,
+      })}`,
+    );
 
     if (
       createCheckoutDto.payment.amount.toFixed(2) !== finalAmount.toFixed(2)
@@ -622,7 +793,7 @@ export class OrderService {
       throw preOrderErr;
     }
 
-    return this.entityManager
+    const savedOrder = await this.entityManager
       .transaction(async (manager) => {
         const orderPayment = manager.create(OrderPayment, {
           paymentMethod: createCheckoutDto.payment.paymentMethod,
@@ -646,6 +817,18 @@ export class OrderService {
           carrierCode,
           estimatedShippingFee,
           rewardDiscountApplied: rewardDiscountTotal,
+          couponCode:
+            couponAmountToApply > 0
+              ? (appliedCoupon?.code ?? createCheckoutDto.couponCode ?? null)
+              : null,
+          couponDiscountApplied: couponAmountToApply,
+          giftCardCode:
+            giftCardAmountToApply > 0
+              ? (createCheckoutDto.giftCardCode ?? null)
+              : null,
+          giftCardAmountApplied: giftCardAmountToApply,
+          voucherCode: voucherAmountToApply > 0 ? createCheckoutDto.voucherCode ?? null : null,
+          voucherAmountApplied: voucherAmountToApply,
         };
         if (offer) {
           orderData.appliedOffer = offer;
@@ -662,6 +845,7 @@ export class OrderService {
             savedOrder,
             businessContextId || undefined,
             manager,
+            totalWithShipping,
           );
         }
 
@@ -678,7 +862,17 @@ export class OrderService {
 
         if (createCheckoutDto.couponCode && couponAmountToApply > 0) {
           await this.couponService.redeemForOrder(
-            { code: createCheckoutDto.couponCode, amount: couponAmountToApply },
+            {
+              code: createCheckoutDto.couponCode,
+              amount: couponAmountToApply,
+              appliedAmount: couponAmountToApply,
+              eligibleSubtotal:
+                couponEligibleSubtotal ?? totalBeforeRedemption,
+              issuanceId: couponIssuanceId,
+              metadata: {
+                scopeMode: couponEligibleSubtotal !== null ? 'SCOPED' : 'NO_SCOPE',
+              },
+            },
             savedOrder,
             manager,
           );
@@ -996,6 +1190,80 @@ export class OrderService {
         }
         throw dbErr;
       });
+
+    // Consumption callbacks are queued only after the order transaction has
+    // committed, so a rolled-back checkout can never report a false redeem.
+    await this.enqueueInstrumentCallbacks({
+      giftCard: giftCardAmountToApply > 0 ? appliedGiftCard : null,
+      voucher: voucherAmountToApply > 0 ? appliedVoucher : null,
+      coupon: couponAmountToApply > 0 ? appliedCoupon : null,
+      amounts: {
+        giftCard: giftCardAmountToApply,
+        voucher: voucherAmountToApply,
+        coupon: couponAmountToApply,
+      },
+      orderId: savedOrder.id,
+    });
+
+    return savedOrder;
+  }
+
+  private async enqueueInstrumentCallbacks(input: {
+    giftCard: { id: string; code: string; issuanceId: string | null } | null;
+    voucher: { id: string; code: string; issuanceId: string | null } | null;
+    coupon: { id: string; code: string; issuanceId: string | null } | null;
+    amounts: { giftCard: number; voucher: number; coupon: number };
+    orderId: string;
+  }): Promise<void> {
+    const jobs: Array<{
+      issuanceId: string;
+      code: string;
+      instrumentType: InstrumentType;
+      instrumentId: string;
+      amount: number;
+      note: string;
+    }> = [];
+
+    if (input.giftCard?.issuanceId) {
+      jobs.push({
+        issuanceId: input.giftCard.issuanceId,
+        code: input.giftCard.code,
+        instrumentType: InstrumentType.GIFT_CARD,
+        instrumentId: input.giftCard.id,
+        amount: input.amounts.giftCard,
+        note: `order:${input.orderId}:gift_card`,
+      });
+    }
+    if (input.voucher?.issuanceId) {
+      jobs.push({
+        issuanceId: input.voucher.issuanceId,
+        code: input.voucher.code,
+        instrumentType: InstrumentType.VOUCHER,
+        instrumentId: input.voucher.id,
+        amount: input.amounts.voucher,
+        note: `order:${input.orderId}:voucher`,
+      });
+    }
+    if (input.coupon?.issuanceId) {
+      jobs.push({
+        issuanceId: input.coupon.issuanceId,
+        code: input.coupon.code,
+        instrumentType: InstrumentType.COUPON,
+        instrumentId: input.coupon.id,
+        amount: input.amounts.coupon,
+        note: `order:${input.orderId}:coupon`,
+      });
+    }
+
+    for (const job of jobs) {
+      try {
+        await this.partnerCallbacks.enqueueRedeem(job);
+      } catch (err: any) {
+        this.logger.warn(
+          `Failed to enqueue reward callback for issuance ${job.issuanceId}: ${err?.message}`,
+        );
+      }
+    }
   }
 
   /**
@@ -1003,6 +1271,65 @@ export class OrderService {
    * fetched issuances and the cart lines, returning the authoritative
    * per-line discount. Throws BadRequestException on any inconsistency.
    */
+  private buildCheckoutScopeLines(params: {
+    isDirectPurchase: boolean;
+    directPurchaseProduct: Product | null;
+    directPurchase?: { productId: string; quantity: number; variant?: Record<string, string> };
+    isCartCheckout: boolean;
+    cart: any;
+    rewardApplications: AppliedReward[];
+  }): ScopeLine[] {
+    const rewardByLine = new Map(
+      (params.rewardApplications || []).map((app) => [
+        app.lineKey,
+        Number(app.discountAmount) || 0,
+      ]),
+    );
+    const scopeLines: ScopeLine[] = [];
+
+    if (params.isDirectPurchase && params.directPurchaseProduct && params.directPurchase) {
+      const product = params.directPurchaseProduct;
+      const price = this.productService.calculatePrice(
+        product,
+        params.directPurchase.variant || {},
+      );
+      const quantity = params.directPurchase.quantity;
+      scopeLines.push({
+        lineKey: `product:${product.id}`,
+        kind: 'product',
+        id: product.id,
+        businessId:
+          (product as any).businessId ?? (product as any).business?.id ?? null,
+        unitPrice: price,
+        quantity,
+        lineTotal: round2(price * quantity),
+        discount: rewardByLine.get(`product:${product.id}`) ?? 0,
+      });
+    } else if (params.isCartCheckout) {
+      for (const cartItem of params.cart.items) {
+        const price = this.productService.calculatePrice(
+          cartItem.product,
+          cartItem.selectedVariants || {},
+        );
+        const lineTotal = round2(price * cartItem.quantity);
+        scopeLines.push({
+          lineKey: `product:${cartItem.product.id}`,
+          kind: 'product',
+          id: cartItem.product.id,
+          businessId:
+            (cartItem.product as any).businessId ??
+            (cartItem.product as any).business?.id ??
+            null,
+          unitPrice: price,
+          quantity: cartItem.quantity,
+          lineTotal,
+          discount: rewardByLine.get(`product:${cartItem.product.id}`) ?? 0,
+        });
+      }
+    }
+    return scopeLines;
+  }
+
   private async resolveRewardApplications(
     userId: string,
     rawApplications: { issuanceId: string; lineKey: string }[] | undefined,
@@ -1385,4 +1712,8 @@ export class OrderService {
     if (dto.carrierCode !== undefined) order.carrierCode = dto.carrierCode;
     return this.orderRepository.save(order);
   }
+}
+
+function round2(value: number): number {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }

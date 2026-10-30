@@ -16,6 +16,8 @@ import { PaymentsModule } from '../payments/payments.module';
 import { CouponModule } from '../coupon/coupon.module';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 import { ShippingModule } from '../shipping/shipping.module';
+import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
+import { VoucherModule } from '../voucher/voucher.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { ShippingModule } from '../shipping/shipping.module';
     PaymentsModule,
     CouponModule,
     ShippingModule,
+    PartnerInstrumentsModule,
+    VoucherModule,
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],

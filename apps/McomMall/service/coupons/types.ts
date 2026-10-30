@@ -78,9 +78,11 @@ export type UpdateCouponDto = Partial<CreateCouponDto>;
 
 export interface ValidateCouponDto {
   code: string;
-  productIds?: string[];
+  existingCouponCode?: string;
+  /** Cart subtotal in GBP; lets the server return a ready-to-render discount. */
+  subtotal?: number;
 }
 
 export interface ValidateCouponResponse extends Coupon {
-  discountAmount: number;
+  discountAmount: number | null;
 }

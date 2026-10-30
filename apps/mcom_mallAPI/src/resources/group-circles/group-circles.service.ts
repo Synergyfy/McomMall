@@ -585,11 +585,16 @@ export class GroupCirclesService {
     }
 
     return this.dataSource.transaction(async (manager) => {
-      const memberToUpdate = await manager.findOne(GroupMember, {
+      const lockedMember = await manager.findOne(GroupMember, {
         where: { groupId, userId: user.id },
-        relations: ['group'],
         lock: { mode: 'pessimistic_write' },
       });
+      const memberToUpdate = lockedMember
+        ? ((await manager.findOne(GroupMember, {
+            where: { id: lockedMember.id },
+            relations: ['group'],
+          })) ?? lockedMember)
+        : lockedMember;
 
       const groupWallet = await manager.findOne(GroupWallet, {
         where: { group: { id: groupId } },

@@ -89,6 +89,7 @@ export class CouponController {
       validateDto.code,
       req.user,
       validateDto.existingCouponCode,
+      validateDto.subtotal,
     );
   }
 
