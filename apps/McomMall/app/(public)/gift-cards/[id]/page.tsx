@@ -45,17 +45,9 @@ export default function GiftCardPage() {
     const [spendingLocations, setSpendingLocations] = useState<any[]>([]);
 
     useEffect(() => {
-        if (id) {
-            const stored = localStorage.getItem(`spending-locations-${id}`);
-            if (stored) {
-                try {
-                    setSpendingLocations(JSON.parse(stored));
-                } catch (e) {
-                    console.error("Failed to parse spending locations", e);
-                }
-            }
-        }
-    }, [id]);
+        const locations = (displayGiftCard as any)?.spendingLocations;
+        setSpendingLocations(Array.isArray(locations) ? locations : []);
+    }, [displayGiftCard]);
 
     if (!displayGiftCard && isLoading) {
         return <div className="flex justify-center items-center h-screen bg-gray-50 pt-16"><Loader className="animate-spin text-orange-600" size={48} /></div>;

@@ -51,8 +51,11 @@ export class VoucherConsumerController {
 
   @Post('initiate-purchase')
   @UseGuards(JwtAuthGuard)
-  async initiatePurchase(@Body() initiateDto: InitiateVoucherPurchaseDto) {
-    return this.voucherService.initiateVoucherPurchase(initiateDto);
+  async initiatePurchase(
+    @CurrentUser() user: User,
+    @Body() initiateDto: InitiateVoucherPurchaseDto,
+  ) {
+    return this.voucherService.initiateVoucherPurchase(initiateDto, user.id);
   }
 
   @Post('verify-purchase')
@@ -79,10 +82,15 @@ export class VoucherConsumerController {
   @Post(':code/initiate-reload')
   @UseGuards(JwtAuthGuard)
   async initiateReload(
+    @CurrentUser() user: User,
     @Param('code') code: string,
     @Body() initiateDto: InitiateReloadDto,
   ) {
-    return this.voucherService.initiateVoucherReload(code, initiateDto);
+    return this.voucherService.initiateVoucherReload(
+      code,
+      initiateDto,
+      user.id,
+    );
   }
 
   @Post(':code/verify-reload')

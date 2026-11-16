@@ -6,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { Coupon } from './coupon.entity';
 import { User } from '../../users/entities/user.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -58,23 +59,11 @@ export class RedemptionLog {
   issuanceId: string | null;
 
   @ApiPropertyOptional()
-  @Column({
-    name: 'eligible_subtotal',
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    nullable: true,
-  })
+  @Column({ name: 'eligible_subtotal', type: 'bigint', nullable: true, transformer: moneyTransformer })
   eligibleSubtotal: number | null;
 
   @ApiPropertyOptional()
-  @Column({
-    name: 'applied_amount',
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    nullable: true,
-  })
+  @Column({ name: 'applied_amount', type: 'bigint', nullable: true, transformer: moneyTransformer })
   appliedAmount: number | null;
 
   @ApiPropertyOptional({ type: Object })

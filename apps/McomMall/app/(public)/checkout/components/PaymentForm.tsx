@@ -8,6 +8,7 @@ import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 import { Button } from '@/components/ui/button';
 import { PaymentMethod } from '@/service/bookings/types';
 import { useWalletBalance } from '@/service/payments/hooks';
+import { formatCurrency } from '@/lib/utils';
 
 interface PaymentFormProps {
   totalPrice: number;
@@ -172,10 +173,10 @@ export default function PaymentForm({
                     Available balance
                   </p>
                   <p className="text-2xl font-black text-gray-900">
-                    £{Number(wallet?.availableBalance ?? 0).toFixed(2)}
+                    {formatCurrency(Number(wallet?.availableBalance ?? 0))}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Order total £{totalPrice.toFixed(2)}
+                    Order total {formatCurrency(totalPrice)}
                   </p>
                 </div>
                 <Button

@@ -2,10 +2,11 @@ import { useMutation } from '@tanstack/react-query';
 import api from '@/service/api';
 import { useMemo } from 'react';
 
-const createPayPalOrder = async (amount: number) => {
-  const { data } = await api.post('/payments/paypal/create-order', {
-    amount,
-  });
+const createPayPalOrder = async (payload: {
+  amount: number;
+  idempotencyKey?: string;
+}) => {
+  const { data } = await api.post('/payments/paypal/create-order', payload);
   return data;
 };
 

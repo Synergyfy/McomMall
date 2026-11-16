@@ -156,3 +156,28 @@ export const useGetBusinessCouponChartData = () => {
   const { data: chartData, error } = useSWR('/business/coupons/chart-data', fetcher);
   return { chartData, isLoading: !error && !chartData, isError: error };
 };
+
+// --- Merchant redemption & sold-coupon history ---
+
+export const useGetSoldCoupons = () => {
+  const token = useSelector((state: RootState) => state.auth.accessToken);
+  const { data, error, mutate } = useSWR<any[]>(
+    token ? '/business/coupons/sold' : null,
+    fetcher
+  );
+
+  return {
+    soldCoupons: Array.isArray(data) ? data : [],
+    isLoading: !error && !data,
+    isError: error,
+    mutate,
+  };
+};
+
+export const useRedeemCouponManual = () => {
+  const redeem = async (code: string) => {
+    const response = await api.post('/business/coupons/redeem/manual', { code });
+    return response.data;
+  };
+  return redeem;
+};

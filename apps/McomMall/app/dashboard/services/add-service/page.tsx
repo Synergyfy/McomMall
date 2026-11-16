@@ -192,6 +192,17 @@ function AddServicePageContent() {
         })
       );
 
+      if (!mediaUrls.some((item) => item.type === 'image')) {
+        setIsUploading(false);
+        form.setError('media', {
+          type: 'server',
+          message: 'Upload at least one image of your service.',
+        });
+        setCurrentStep(6);
+        toast.error('Upload at least one image of your service before publishing.');
+        return;
+      }
+
       // Transform CSV strings to arrays
       const targetAudience = data.targetAudience?.split(',').map((s: string) => s.trim()).filter(Boolean);
       const tags = data.tags?.split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -450,7 +461,7 @@ function AddServicePageContent() {
         message="Your service has been successfully created and is now live."
         primaryAction={{
           label: 'View on LocalMall',
-          onClick: () => router.push(`/listings/${createdServiceId}`)
+          onClick: () => router.push(`/services/${createdServiceId}`)
         }}
         secondaryAction={{
           label: 'Add Another Service',

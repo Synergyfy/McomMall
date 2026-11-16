@@ -1,198 +1,212 @@
-import { Gift, Coins, Award } from 'lucide-react';
+'use client';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CURRENCY } from '@/lib/utils';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, Coins, Gift, Search, Star } from 'lucide-react';
+import { useBusinessId } from '@/hooks/useBusinessId';
+import { useCustomerDirectory } from '@/service/customers/hook';
+import { useLoyaltyCustomer } from '@/service/loyalty/hook';
 
-interface EarnOffer {
-  id: number;
-  title: string;
-  description: string;
-}
+const formatDate = (value?: string | null) =>
+  value ? new Date(value).toLocaleDateString('en-GB') : '—';
 
-interface ClaimableReward {
-  id: number;
-  title: string;
-  description: string;
-  points: number;
-}
+export default function LoyaltyCustomerPage() {
+  const { businessId } = useBusinessId();
+  const directory = useCustomerDirectory(businessId, { limit: 100 });
+  const [customerId, setCustomerId] = useState<string | undefined>();
+  const [search, setSearch] = useState('');
+  const loyalty = useLoyaltyCustomer(businessId, customerId);
 
-interface RedeemedReward {
-  id: number;
-  title: string;
-  description: string;
-}
+  const customers = useMemo(
+    () =>
+      (directory.data?.customers ?? []).filter((customer) =>
+        `${customer.name} ${customer.email}`
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      ),
+    [directory.data, search]
+  );
 
-const userPoints = 8000;
-
-const earnOffers: EarnOffer[] = [
-  {
-    id: 1,
-    title: 'Earn 10 points',
-    description: `For every ${CURRENCY}1.00 you spend on your total purchase`,
-  },
-  { id: 2, title: 'Earn 2X points', description: 'On all Bookings' },
-];
-
-const claimableRewards: ClaimableReward[] = [
-  {
-    id: 1,
-    title: `Save ${CURRENCY}1`,
-    description: 'On your total purchase',
-    points: 1000,
-  },
-  {
-    id: 2,
-    title: `Save ${CURRENCY}5`,
-    description: 'On your total purchase',
-    points: 5000,
-  },
-  {
-    id: 3,
-    title: `Save ${CURRENCY}15`,
-    description: 'On your total purchase',
-    points: 15000,
-  },
-];
-
-const redeemedRewards: RedeemedReward[] = [
-  { id: 1, title: `Save ${CURRENCY}1`, description: 'On your total purchase' },
-];
-
-const RewardsHeader = ({ points }: { points: number }) => (
-  <header className="bg-orange-600 text-white p-6 rounded-lg">
-    <div className="flex justify-between items-center">
-      <div className="flex items-center space-x-4">
-        <Gift size={48} />
-        <div>
-          <h1 className="text-2xl font-bold">Rewards</h1>
-        </div>
-      </div>
-      <div className="text-right">
-        <p className="text-3xl font-bold">{points.toLocaleString()}</p>
-        <p className="text-sm">Points</p>
-      </div>
-    </div>
-    <div className="mt-4">
-      <Button
-        variant="secondary"
-        className="w-auto px-4 py-2 h-auto text-sm bg-white text-orange-600 hover:bg-gray-100"
-      >
-        View Points History
-      </Button>
-    </div>
-  </header>
-);
-
-const EarnTab = () => (
-  <div className="space-y-6">
-    <div>
-      <h2 className="text-2xl font-bold text-gray-800">
-        Shop more to earn points and claim rewards
-      </h2>
-      <p className="text-gray-600 mt-1">
-        Start earning points and rewards by buying qualifying items or opting
-        into hand-picked savings.
-      </p>
-    </div>
-    <div className="space-y-4">
-      {earnOffers.map(offer => (
-        <Card key={offer.id}>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-4">
-              <Coins className="text-gray-700" size={32} />
-              <div>
-                <h3 className="font-bold text-lg text-gray-800">
-                  {offer.title}
-                </h3>
-                <p className="text-gray-600">{offer.description}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  </div>
-);
-
-const ClaimTab = ({ userPoints }: { userPoints: number }) => (
-  <div className="space-y-4">
-    {claimableRewards.map(reward => (
-      <Card key={reward.id}>
-        <CardContent className="pt-6 space-y-4">
-          <div className="flex items-center space-x-4">
-            <Award className="text-gray-700" size={32} />
-            <div>
-              <h3 className="font-bold text-lg text-gray-800">
-                {reward.title}
-              </h3>
-              <p className="text-gray-600">{reward.description}</p>
-            </div>
+  if (!customerId) {
+    return (
+      <div className="min-h-full bg-[#fff8f5] p-4 sm:p-6">
+        <div className="mx-auto max-w-3xl space-y-4">
+          <Link
+            href="/dashboard/loyalty"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to loyalty
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Customer Loyalty View</h1>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search customers…"
+              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm"
+            />
           </div>
-          <Button disabled={userPoints < reward.points} className="w-full">
-            Claim for {reward.points.toLocaleString()}
-          </Button>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-);
+          <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 bg-white shadow-sm">
+            {directory.isLoading ? (
+              <p className="p-6 text-center text-sm text-gray-400">Loading customers…</p>
+            ) : customers.length === 0 ? (
+              <p className="p-6 text-center text-sm text-gray-500">
+                No engaged customers found. Customers appear here once they book,
+                review or join a promotion.
+              </p>
+            ) : (
+              customers.map((customer) => (
+                <button
+                  key={customer.id}
+                  onClick={() => setCustomerId(customer.id)}
+                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-orange-50"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-900">{customer.name}</p>
+                    <p className="text-xs text-gray-500">{customer.email}</p>
+                  </div>
+                  <span className="text-sm font-bold text-orange-600">
+                    {customer.points} pts
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-const RewardsTab = () => (
-  <div className="space-y-6">
-    <div>
-      <h2 className="text-2xl font-bold text-gray-800">
-        You have {redeemedRewards.length} reward ready to use!
-      </h2>
-      <p className="text-gray-600 mt-1">
-        You can apply rewards to your cart or save them for later.
-      </p>
-    </div>
-    <div className="space-y-4">
-      {redeemedRewards.map(reward => (
-        <Card key={reward.id} className="border-orange-600 border-2">
-          <CardContent className="pt-6 space-y-4">
-            <div className="flex items-center space-x-4">
-              <Award className="text-gray-700" size={32} />
-              <div>
-                <h3 className="font-bold text-lg text-gray-800">
-                  {reward.title}
-                </h3>
-                <p className="text-gray-600">{reward.description}</p>
+  return (
+    <div className="min-h-full bg-[#fff8f5] p-4 sm:p-6">
+      <div className="mx-auto max-w-4xl space-y-5">
+        <button
+          onClick={() => setCustomerId(undefined)}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900"
+        >
+          <ArrowLeft className="h-4 w-4" /> All customers
+        </button>
+
+        {loyalty.isLoading ? (
+          <p className="py-16 text-center text-sm text-gray-400">Loading loyalty profile…</p>
+        ) : loyalty.isError || !loyalty.data ? (
+          <p className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+            Could not load this customer&apos;s loyalty profile.
+          </p>
+        ) : (
+          <>
+            <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 text-xl font-bold text-orange-700">
+                    {loyalty.data.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-gray-900">{loyalty.data.name}</h1>
+                    <p className="text-sm text-gray-500">{loyalty.data.email}</p>
+                  </div>
+                </div>
+                <div className="flex gap-6">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400">Points</p>
+                    <p className="text-2xl font-bold text-gray-900">{loyalty.data.points}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400">Tier</p>
+                    <p
+                      className="text-lg font-bold"
+                      style={{ color: loyalty.data.tierColor || '#ea580c' }}
+                    >
+                      {loyalty.data.tier ?? '—'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-            <Button className="w-full">Apply discount to cart</Button>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  </div>
-);
 
-export default function RewardsPage() {
-  return (
-    <div className="bg-gray-50 min-h-screen font-sans">
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="space-y-8">
-          <RewardsHeader points={userPoints} />
-          <Tabs defaultValue="earn" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="rewards">Rewards</TabsTrigger>
-              <TabsTrigger value="earn">Earn</TabsTrigger>
-              <TabsTrigger value="claim">Claim</TabsTrigger>
-            </TabsList>
-            <TabsContent value="rewards" className="mt-6">
-              <RewardsTab />
-            </TabsContent>
-            <TabsContent value="earn" className="mt-6">
-              <EarnTab />
-            </TabsContent>
-            <TabsContent value="claim" className="mt-6">
-              <ClaimTab userPoints={userPoints} />
-            </TabsContent>
-          </Tabs>
-        </div>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-gray-900">
+                  <Coins className="h-5 w-5 text-orange-600" /> Points History
+                </h2>
+                {loyalty.data.pointTransactions.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-500">No points activity yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {loyalty.data.pointTransactions.map((transaction) => (
+                      <li
+                        key={transaction.id}
+                        className="flex items-center justify-between border-b border-gray-50 py-2 text-sm"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-800">
+                            {transaction.reason || transaction.promotion?.name || transaction.offer?.name || transaction.type}
+                          </p>
+                          <p className="text-xs text-gray-400">{formatDate(transaction.created_at)}</p>
+                        </div>
+                        <span
+                          className={`font-bold ${
+                            transaction.type === 'EARNED' ? 'text-emerald-600' : 'text-blue-600'
+                          }`}
+                        >
+                          {transaction.type === 'EARNED' ? '+' : ''}
+                          {transaction.points}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-gray-900">
+                  <Gift className="h-5 w-5 text-orange-600" /> Claimable Rewards
+                </h2>
+                {loyalty.data.claimableRewards.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-500">No rewards configured.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {loyalty.data.claimableRewards.map((reward) => (
+                      <li
+                        key={reward.id}
+                        className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2"
+                      >
+                        <div>
+                          <p className="font-semibold text-gray-800">{reward.title}</p>
+                          <p className="text-xs text-gray-500">
+                            {reward.description || `${reward.points} points`}
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold text-orange-600">
+                          {reward.points} pts
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm lg:col-span-2">
+                <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-gray-900">
+                  <Star className="h-5 w-5 text-orange-600" /> Earning Rules
+                </h2>
+                {loyalty.data.earnOffers.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-gray-500">No active rules.</p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {loyalty.data.earnOffers.map((rule) => (
+                      <div key={rule.id} className="rounded-lg border border-gray-100 p-3">
+                        <p className="font-semibold text-gray-800">{rule.title}</p>
+                        <p className="text-xs text-gray-500">{rule.description || rule.ruleType}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

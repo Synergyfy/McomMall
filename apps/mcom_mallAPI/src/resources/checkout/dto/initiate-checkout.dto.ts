@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -9,6 +10,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaymentMethod } from '../../order/entities/order-payment.entity';
 
 class CheckoutItemDto {
   @ApiProperty({ description: 'The ID of the product.' })
@@ -26,6 +28,15 @@ class CheckoutItemDto {
 }
 
 export class InitiateCheckoutDto {
+  @ApiProperty({
+    description: 'The payment method the shopper wants to use.',
+    enum: PaymentMethod,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentProvider?: PaymentMethod;
+
   @ApiProperty({ type: [CheckoutItemDto] })
   @IsArray()
   @ValidateNested({ each: true })

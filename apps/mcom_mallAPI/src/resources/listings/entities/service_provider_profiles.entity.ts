@@ -1,4 +1,5 @@
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
+import { moneyTransformer } from '../../../common/money/money';
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import {
   IsBoolean,
@@ -19,13 +20,13 @@ export class BusinessServiceProviderProfile extends AbstractBaseEntity {
   bookingUrl?: string;
 
   // Pricing Model
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   @IsOptional()
   @IsNumber()
   @Min(0)
   fixedPriceFrom?: number;
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   @IsOptional()
   @IsNumber()
   @Min(0)

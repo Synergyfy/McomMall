@@ -28,16 +28,16 @@ export class AdminTransactionsService {
       await Promise.all([
         this.ordersRepository
           .createQueryBuilder('o')
-          .select('SUM(o.total)', 'sum')
+          .select('SUM(o.total) / 100.0', 'sum')
           .getRawOne(),
         this.bookingsRepository
           .createQueryBuilder('b')
           .leftJoin('b.payment', 'p')
-          .select('SUM(p.amount)', 'sum')
+          .select('SUM(p.amount) / 100.0', 'sum')
           .getRawOne(),
         this.membershipPaymentsRepository
           .createQueryBuilder('m')
-          .select('SUM(m.amount)', 'sum')
+          .select('SUM(m.amount) / 100.0', 'sum')
           .getRawOne(),
         this.ordersRepository.count({ where: { status: OrderStatus.PENDING } }),
         this.bookingsRepository.count({ where: { status: 'pending' as any } }),

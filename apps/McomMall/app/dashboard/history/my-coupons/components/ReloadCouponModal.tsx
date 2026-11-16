@@ -29,14 +29,14 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 
 const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 const formSchema = z.object({
   amount: z.coerce.number().min(1, {
     message: 'Amount must be at least 1.',
   }),
-  paymentMethod: z.enum(['stripe', 'paypal']),
+  paymentMethod: z.enum(['stripe', 'paypal', 'mcom_wallet']),
 });
 
 interface ReloadCouponModalProps {
@@ -52,16 +52,40 @@ export const ReloadCouponModal: React.FC<ReloadCouponModalProps> = ({
 }) => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const form = useForm<{ amount: number; paymentMethod: 'stripe' | 'paypal' }>({
+  const form = useForm<{
+    amount: number;
+    paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet';
+  }>({
     resolver: zodResolver(formSchema),
   });
 
   const initiateReload = useInitiateCouponReload(coupon?.code || '');
   const verifyReload = useVerifyCouponReload(coupon?.code || '');
 
-  const onSubmit = (values: { amount: number; paymentMethod: 'stripe' | 'paypal' }) => {
+  const onSubmit = (values: { amount: number; paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet' }) => {
     initiateReload.mutate(values, {
       onSuccess: (response) => {
+        if (values.paymentMethod === 'mcom_wallet' && response.data.transactionId) {
+          verifyReload.mutate(
+            {
+              transactionId: response.data.transactionId,
+              amount: values.amount,
+              paymentProvider: 'mcom_wallet',
+            },
+            {
+              onSuccess: () => {
+                toast.success('Coupon reloaded successfully!');
+                onClose();
+              },
+              onError: () => {
+                toast.error(
+                  'Wallet payment succeeded but the coupon could not be reloaded. Please contact support.'
+                );
+              },
+            }
+          );
+          return;
+        }
         if (values.paymentMethod === 'stripe') {
           setClientSecret(response.data.clientSecret);
         } else {
@@ -128,8 +152,9 @@ export const ReloadCouponModal: React.FC<ReloadCouponModalProps> = ({
                       <FormLabel>Payment Method</FormLabel>
                       <FormControl>
                         <select {...field}>
-                          <option value="stripe">Stripe</option>
+                          <option value="stripe">Card</option>
                           <option value="paypal">PayPal</option>
+                          <option value="mcom_wallet">MCOM Wallet</option>
                         </select>
                       </FormControl>
                       <FormMessage />

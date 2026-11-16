@@ -5,6 +5,7 @@ import {
   JoinColumn,
   DeleteDateColumn,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Service } from './service.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -48,13 +49,13 @@ export class SpareCapacityOffer extends AbstractBaseEntity {
     description: 'The discounted price in pence/minor currency unit',
     nullable: true,
   })
-  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   discountedPrice?: number;
 
   @ApiProperty({
     description: 'Original/base price of the service at time of publishing',
   })
-  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   originalPrice?: number;
 
   @ApiProperty({

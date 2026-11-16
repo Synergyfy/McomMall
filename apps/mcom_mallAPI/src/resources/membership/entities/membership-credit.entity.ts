@@ -1,4 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 
@@ -35,7 +36,7 @@ export class MembershipCredit extends AbstractBaseEntity {
   })
   type: MembershipCreditType;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @Column({ length: 255 })

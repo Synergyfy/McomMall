@@ -19,7 +19,15 @@ export const getMyMembership = async (): Promise<Membership | null> => {
 
 export const initiateMembershipPayment = async (
   dto: CreateMembershipDto
-): Promise<{ clientSecret?: string; holdId?: string; expiresAt?: string; provider?: string }> => {
+): Promise<{
+  clientSecret?: string;
+  orderId?: string;
+  approvalUrl?: string;
+  transactionId?: string;
+  holdId?: string;
+  expiresAt?: string;
+  provider?: string;
+}> => {
   const response = await api.post('/membership/initiate-payment', dto);
   return response.data;
 };

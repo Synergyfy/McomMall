@@ -7,6 +7,8 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { moneyJsonTransformer } from '../../../common/money/money';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Service } from '../../services/entities/service.entity';
@@ -53,7 +55,7 @@ export class ServiceBooking extends AbstractBaseEntity {
   @Column({ type: 'int', default: 1 })
   numberOfStaff: number;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, transformer: moneyJsonTransformer })
   addonDetails: any; // Stores name and price of selected addons at time of booking
 
   @Column({ nullable: true })
@@ -87,31 +89,31 @@ export class ServiceBooking extends AbstractBaseEntity {
   productServiceBooking: ProductServiceBooking;
 
   // --- Escrow & Payment Tracking Fields ---
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   totalAmount: number;
 
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   commissionAmount: number;
 
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   providerAmount: number;
 
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   rewardDiscountApplied: number;
 
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   couponDiscountApplied: number;
 
   @Column({ nullable: true })
   couponCode: string;
 
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   giftCardAmountApplied: number;
 
   @Column({ nullable: true })
   giftCardCode: string;
 
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   voucherAmountApplied: number;
 
   @Column({ nullable: true })

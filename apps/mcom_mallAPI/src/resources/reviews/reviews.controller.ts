@@ -125,6 +125,18 @@ export class ReviewsController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Patch(':id/reply')
+  @ApiOperation({ summary: 'Reply to a review as the business owner' })
+  reply(
+    @Param('id') id: string,
+    @Body('reply') reply: string,
+    @Request() req,
+  ) {
+    return this.reviewsService.replyAsOwner(id, reply, req.user);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Update a review' })
   @ApiResponse({

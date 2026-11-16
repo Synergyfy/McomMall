@@ -29,6 +29,10 @@ export class CreateOfferDto {
   @IsString()
   description?: string;
 
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
   @IsInt()
   points: number;
 

@@ -1,4 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -31,14 +32,14 @@ export class TerminalCashbackClaim extends AbstractBaseEntity {
   ownerId: string;
 
   @ApiProperty({ example: 3.5, description: 'Cashback amount claimed' })
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @ApiProperty({
     example: 15.0,
     description: 'Total spend amount on the receipt',
   })
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   spendAmount: number;
 
   @ApiProperty({

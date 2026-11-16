@@ -74,7 +74,7 @@ export class StatsService {
 
     const productOrdersQuery = this.orderRepository
       .createQueryBuilder('order')
-      .select('SUM(order.total)', 'sum')
+      .select('SUM(order.total) / 100.0', 'sum')
       .leftJoin('order.items', 'item')
       .leftJoin('item.product', 'product')
       .leftJoin('product.business', 'business')
@@ -83,7 +83,7 @@ export class StatsService {
 
     const giftCardQuery = this.giftCardRepository
       .createQueryBuilder('gift_card')
-      .select('SUM(gift_card.initialBalance)', 'sum')
+      .select('SUM(gift_card.initialBalance) / 100.0', 'sum')
       .where('gift_card.owner = :userId', { userId })
       .getRawOne();
 
@@ -102,7 +102,7 @@ export class StatsService {
 
     const voucherQuery = this.voucherRepository
       .createQueryBuilder('voucher')
-      .select('SUM(voucher.initialValue)', 'sum')
+      .select('SUM(voucher.initialValue) / 100.0', 'sum')
       .where('voucher.owner = :userId', { userId })
       .getRawOne();
 
@@ -168,7 +168,7 @@ export class StatsService {
   private async getCustomerStats(userId: string): Promise<CustomerStatsDto> {
     const productOrdersQuery = this.orderRepository
       .createQueryBuilder('order')
-      .select('SUM(order.total)', 'sum')
+      .select('SUM(order.total) / 100.0', 'sum')
       .where('order.userId = :userId', { userId })
       .getRawOne();
 
@@ -205,13 +205,13 @@ export class StatsService {
 
     const voucherQuery = this.voucherRepository
       .createQueryBuilder('voucher')
-      .select('SUM(voucher.initialValue)', 'sum')
+      .select('SUM(voucher.initialValue) / 100.0', 'sum')
       .where('voucher.buyer = :userId', { userId })
       .getRawOne();
 
     const giftCardQuery = this.giftCardRepository
       .createQueryBuilder('gift_card')
-      .select('SUM(gift_card.initialBalance)', 'sum')
+      .select('SUM(gift_card.initialBalance) / 100.0', 'sum')
       .where('gift_card.purchaser = :userId', { userId })
       .getRawOne();
 
@@ -275,7 +275,7 @@ export class StatsService {
     const giftCardSalesQuery = this.giftCardRepository
       .createQueryBuilder('gift_card')
       .select('DATE(gift_card.created_at)', 'date')
-      .addSelect('SUM(gift_card.initialBalance)', 'total')
+      .addSelect('SUM(gift_card.initialBalance) / 100.0', 'total')
       .where('gift_card.owner = :userId', { userId })
       .andWhere('gift_card.created_at BETWEEN :startDate AND :endDate', {
         startDate,
@@ -287,7 +287,7 @@ export class StatsService {
     const voucherSalesQuery = this.voucherRepository
       .createQueryBuilder('voucher')
       .select('DATE(voucher.createdAt)', 'date')
-      .addSelect('SUM(voucher.initialValue)', 'total')
+      .addSelect('SUM(voucher.initialValue) / 100.0', 'total')
       .where('voucher.owner = :userId', { userId })
       .andWhere('voucher.createdAt BETWEEN :startDate AND :endDate', {
         startDate,
@@ -299,7 +299,7 @@ export class StatsService {
     const orderSalesQuery = this.orderRepository
       .createQueryBuilder('order')
       .select('DATE(order.created_at)', 'date')
-      .addSelect('SUM(order.total)', 'total')
+      .addSelect('SUM(order.total) / 100.0', 'total')
       .leftJoin('order.items', 'item')
       .leftJoin('item.product', 'product')
       .leftJoin('product.business', 'business')
@@ -317,7 +317,7 @@ export class StatsService {
       .leftJoin('booking.service', 'service')
       .leftJoin('service.business', 'business')
       .select('DATE(booking.updated_at)', 'date')
-      .addSelect('SUM(payment.amount)', 'total')
+      .addSelect('SUM(payment.amount) / 100.0', 'total')
       .where('business.user = :userId', { userId })
       .andWhere('booking.customerCompleted = true')
       .andWhere('booking.businessOwnerCompleted = true')

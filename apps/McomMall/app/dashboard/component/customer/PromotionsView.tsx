@@ -40,6 +40,13 @@ import { cn } from '@/lib/utils';
 import { RootState } from '@/service/store/store';
 import { usePublicPromotions } from '@/hooks/useMarketplace';
 import {
+  useGetMyParticipations,
+  useGetSavedPromotions,
+  useParticipateInPromotion,
+  useSavePromotion,
+  useUnsavePromotion,
+} from '@/service/promotions/hook';
+import {
   PROMOTION_TYPE_CONFIG,
   type PromotionItem,
   type PromotionTypeTag,
@@ -494,46 +501,30 @@ export const PromotionsView: React.FC = () => {
 
   const [subView, setSubView] = useState<SubView>('dashboard');
   const [activeTab, setActiveTab] = useState<PromotionsTab>('all');
-  const [selectedPromoId, setSelectedPromoId] = useState<string>('flash-1');
-  const [savedIds, setSavedIds] = useState<Record<string, boolean>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('promotions_saved');
-        return stored ? JSON.parse(stored) : {};
-      } catch { return {}; }
-    }
-    return {};
-  });
-  const [redeemedIds, setRedeemedIds] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('promotions_redeemed');
-        return stored ? JSON.parse(stored) : [];
-      } catch { return []; }
-    }
-    return [];
-  });
-  const [joinedCampaignIds, setJoinedCampaignIds] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('promotions_joined');
-        return stored ? JSON.parse(stored) : [];
-      } catch { return []; }
-    }
-    return [];
-  });
-  const [unlockedPromoIds, setUnlockedPromoIds] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('promotions_unlocked');
-        return stored ? JSON.parse(stored) : [];
-      } catch { return []; }
-    }
-    return [];
-  });
+  const [selectedPromoId, setSelectedPromoId] = useState<string>('');
+
+  const { data: savedPromotions } = useGetSavedPromotions();
+  const { data: myParticipations } = useGetMyParticipations();
+  const participate = useParticipateInPromotion();
+  const savePromotion = useSavePromotion();
+  const unsavePromotion = useUnsavePromotion();
+
+  const savedIds = useMemo(
+    () =>
+      Object.fromEntries(
+        (savedPromotions ?? []).map((promotion) => [promotion.id, true])
+      ) as Record<string, boolean>,
+    [savedPromotions]
+  );
+  const joinedCampaignIds = useMemo(
+    () => (myParticipations ?? []).map((promotion) => promotion.id),
+    [myParticipations]
+  );
+  // A participation is the persisted "active" state. The UI reuses it for the
+  // redeemed/unlocked badges so those indicators are not local-only.
+  const redeemedIds = joinedCampaignIds;
+  const unlockedPromoIds = joinedCampaignIds;
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [codeInput, setCodeInput] = useState('');
-  const [codeResult, setCodeResult] = useState<{ success: boolean; message: string } | null>(null);
   const [scanConfirm, setScanConfirm] = useState<PromotionItem | null>(null);
 
   const [shareModalPromo, setShareModalPromo] = useState<PromotionItem | null>(null);
@@ -549,6 +540,12 @@ export const PromotionsView: React.FC = () => {
   }, []);
 
   const allPromotions = useMemo(() => Object.values(PROMOTIONS_MOCK_DATA), [PROMOTIONS_MOCK_DATA]);
+
+  React.useEffect(() => {
+    if (!selectedPromoId && allPromotions.length > 0) {
+      setSelectedPromoId(allPromotions[0].id);
+    }
+  }, [allPromotions, selectedPromoId]);
 
   const knownBoroughs = useMemo(() => {
     const boroughs = new Set<string>();
@@ -627,65 +624,59 @@ export const PromotionsView: React.FC = () => {
     setSubView('details');
   }, []);
 
-  const toggleSaved = useCallback((id: string, e?: React.MouseEvent) => {
+  const toggleSaved = useCallback(async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setSavedIds(prev => {
-      const next = { ...prev, [id]: !prev[id] };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('promotions_saved', JSON.stringify(next));
+    try {
+      if (savedIds[id]) {
+        await unsavePromotion.mutateAsync(id);
+        showToast('Removed from saved!', 'info');
+      } else {
+        await savePromotion.mutateAsync(id);
+        showToast('Promotion saved!', 'success');
       }
-      showToast(next[id] ? 'Promotion saved!' : 'Removed from saved!', 'info');
-      return next;
-    });
-  }, [showToast]);
-
-  const handleRedeem = useCallback((promo: PromotionItem) => {
-    if (redeemedIds.includes(promo.id)) {
-      showToast('Already redeemed!', 'info');
-      return;
+    } catch {
+      showToast('Could not update saved promotions.', 'error');
     }
-    setRedeemedIds(prev => {
-      const next = [...prev, promo.id];
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('promotions_redeemed', JSON.stringify(next));
-      }
-      return next;
-    });
+  }, [savedIds, savePromotion, unsavePromotion, showToast]);
+
+  const joinPromotion = useCallback(async (promo: PromotionItem) => {
+    if (joinedCampaignIds.includes(promo.id)) {
+      showToast('Already joined this promotion!', 'info');
+      return false;
+    }
+    try {
+      await participate.mutateAsync(promo.id);
+      return true;
+    } catch (error: any) {
+      showToast(
+        error?.response?.data?.message || 'Could not join this promotion.',
+        'error'
+      );
+      return false;
+    }
+  }, [joinedCampaignIds, participate, showToast]);
+
+  const handleRedeem = useCallback(async (promo: PromotionItem) => {
+    const joined = await joinPromotion(promo);
+    if (!joined) return;
     setScanConfirm(promo);
     showToast(`"${promo.title}" activated! Show at counter.`, 'success');
-  }, [redeemedIds, showToast]);
+  }, [joinPromotion, showToast]);
 
-  const handleJoinCampaign = useCallback((promo: PromotionItem) => {
-    if (joinedCampaignIds.includes(promo.id)) {
-      showToast('Already joined this campaign!', 'info');
-      return;
+  const handleJoinCampaign = useCallback(async (promo: PromotionItem) => {
+    const joined = await joinPromotion(promo);
+    if (joined) {
+      showToast(`Joined "${promo.campaignName ?? promo.title}"!`, 'success');
     }
-    setJoinedCampaignIds(prev => {
-      const next = [...prev, promo.id];
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('promotions_joined', JSON.stringify(next));
-      }
-      return next;
-    });
-    showToast(`Joined "${promo.campaignName ?? promo.title}"!`, 'success');
-  }, [joinedCampaignIds, showToast]);
+  }, [joinPromotion, showToast]);
 
-  const handleUnlock = useCallback((promo: PromotionItem) => {
-    if (unlockedPromoIds.includes(promo.id)) {
-      showToast('Reward already unlocked!', 'info');
-      return;
-    }
-    setUnlockedPromoIds(prev => {
-      const next = [...prev, promo.id];
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('promotions_unlocked', JSON.stringify(next));
-      }
-      return next;
-    });
+  const handleUnlock = useCallback(async (promo: PromotionItem) => {
+    const joined = await joinPromotion(promo);
+    if (!joined) return;
     setUnlockModalPromo(null);
     setScanConfirm(promo);
     showToast(`"${promo.unlockRewardDescription ?? promo.title}" unlocked!`, 'success');
-  }, [unlockedPromoIds, showToast]);
+  }, [joinPromotion, showToast]);
 
   const handleQrScanResult = useCallback((promo: PromotionItem) => {
     setSelectedPromoId(promo.id);
@@ -1067,51 +1058,6 @@ export const PromotionsView: React.FC = () => {
         <Scan className="w-6 h-6" />
       </button>
 
-      {/* ===== CODE INPUT ===== */}
-      <div className="mt-6" style={{ marginBottom: '5rem' }}>
-        <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(136,115,106,0.08)] border border-[#e2bfb0]/30 p-4 flex items-center gap-2 backdrop-blur-sm">
-          <input
-            type="text"
-            value={codeInput}
-            onChange={e => setCodeInput(e.target.value.toUpperCase())}
-            placeholder="Enter promo code..."
-            className="flex-1 px-3 py-2 rounded-xl border border-[#e2bfb0] text-xs font-medium text-[#261812] bg-[#fff8f6] placeholder:text-[#8e7164] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/20 focus:border-[#a23f00] transition-all"
-          />
-          <button
-            onClick={() => {
-              const trimmed = codeInput.trim().toUpperCase();
-              const match = Object.values(PROMOTIONS_MOCK_DATA).find(p => p.redeemCode === trimmed);
-              if (match) {
-                handleRedeem(match);
-                setCodeResult({ success: true, message: `Promo "${match.title}" activated!` });
-                setCodeInput('');
-              } else {
-                setCodeResult({ success: false, message: 'Invalid promo code.' });
-              }
-              window.setTimeout(() => setCodeResult(null), 3000);
-            }}
-            disabled={!codeInput.trim()}
-            className={cn(
-              'px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1',
-              codeInput.trim() ? 'bg-[#a23f00] text-white shadow-sm' : 'bg-[#e2bfb0]/30 text-[#8e7164] cursor-not-allowed',
-            )}
-          >
-            Redeem
-          </button>
-        </div>
-        {codeResult && (
-          <div className={cn(
-            'mt-2 px-4 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1.5',
-            codeResult.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200',
-          )}>
-            {codeResult.success ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-            {codeResult.message}
-          </div>
-        )}
-        <p className="mt-2 text-[8px] text-[#8e7164] text-center font-medium">
-          Try codes: BURGER50, BOGOCOFFEE
-        </p>
-      </div>
     </div>
   );
 };

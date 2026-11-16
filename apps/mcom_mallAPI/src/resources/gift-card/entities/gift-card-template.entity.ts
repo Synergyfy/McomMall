@@ -6,6 +6,7 @@ import {
   OneToMany,
   DeleteDateColumn,
 } from 'typeorm';
+import { moneyArrayTransformer, moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { GiftCard } from './gift-card.entity';
@@ -34,7 +35,7 @@ export class GiftCardTemplate extends AbstractBaseEntity {
   textColor: string;
 
   @Expose()
-  @Column({ type: 'decimal', array: true, nullable: true })
+  @Column({ type: 'bigint', array: true, nullable: true, transformer: moneyArrayTransformer })
   fixedAmounts: number[];
 
   @Expose()
@@ -42,11 +43,11 @@ export class GiftCardTemplate extends AbstractBaseEntity {
   allowCustomAmount: boolean;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   minCustomAmount: number;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   maxCustomAmount: number;
 
   @Expose()
@@ -63,11 +64,11 @@ export class GiftCardTemplate extends AbstractBaseEntity {
   allowReloading: boolean;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   bonusThreshold: number;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   bonusAmount: number;
 
   /**
@@ -78,6 +79,19 @@ export class GiftCardTemplate extends AbstractBaseEntity {
   @Expose()
   @Column({ name: 'scope_config', type: 'jsonb', nullable: true })
   scopeConfig: Record<string, any> | null;
+
+  @Expose()
+  @Column({ name: 'logo_url', type: 'varchar', length: 500, nullable: true })
+  logoUrl?: string | null;
+
+  /** Merchant-defined spending locations (business/listings/products/services). */
+  @Expose()
+  @Column({ name: 'spending_locations', type: 'jsonb', nullable: true })
+  spendingLocations?: Record<string, any>[] | null;
+
+  @Expose()
+  @Column({ name: 'preview_svg', type: 'text', nullable: true })
+  previewSvg?: string | null;
 
   @Expose()
   @ManyToOne(() => User, { onDelete: 'CASCADE' })

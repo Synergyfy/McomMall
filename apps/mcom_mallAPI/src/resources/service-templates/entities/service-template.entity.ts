@@ -1,4 +1,5 @@
 import { Column, Entity, Index } from 'typeorm';
+import { moneyJsonTransformer } from '../../../common/money/money';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 
@@ -26,7 +27,7 @@ export class ServiceTemplate extends AbstractBaseEntity {
   description?: string;
 
   @ApiProperty({ description: ' Tiered packages included in the template' })
-  @Column({ type: 'jsonb', default: [] })
+  @Column({ type: 'jsonb', default: [], transformer: moneyJsonTransformer })
   packages: ServiceTemplatePackage[];
 
   @ApiProperty({ description: 'Booking requirements (e.g. Safety Gear)' })

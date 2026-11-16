@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 import { useGetMyMembership } from '@/service/membership/hooks';
 import { useGetPlans } from '@/service/plans/hooks';
 import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
@@ -55,6 +57,9 @@ function findVariant(
 }
 
 export default function MembershipPlansDashboard() {
+  const { userRole } = useSelector((state: RootState) => state.auth);
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
   const { data: membership, isLoading: isMemberLoading } = useGetMyMembership();
   const { data: plans, isLoading: isPlansLoading } = useGetPlans();
 
@@ -65,13 +70,34 @@ export default function MembershipPlansDashboard() {
   const [variantTier, setVariantTier] =
     useState<PlanTierLevelName>('STANDARD');
 
-  const isLoading = isMemberLoading || isPlansLoading;
+  const isLoading = !isMounted || isMemberLoading || isPlansLoading;
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] gap-2">
         <div className="w-8 h-8 border-4 border-t-[#ff6900] border-orange-100 rounded-full animate-spin" />
         <span className="text-xs text-gray-400 font-medium">Fetching membership configurations...</span>
+      </div>
+    );
+  }
+
+  // Business plans are only purchasable by business accounts. Customers keep
+  // read-only access to their plan status; no upgrade/payment UI is shown.
+  if (userRole === 'customer') {
+    return (
+      <div className="max-w-2xl mx-auto my-10 bg-white border rounded-2xl p-8 shadow-sm text-center space-y-3">
+        <h1 className="text-2xl font-bold text-gray-900">Membership</h1>
+        <p className="text-sm text-gray-600">
+          Membership plans are available to business accounts only. Customer
+          accounts do not need a paid membership to shop, book services, or use
+          their MCOM Wallet.
+        </p>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center justify-center rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-700"
+        >
+          Back to Dashboard
+        </Link>
       </div>
     );
   }
@@ -327,7 +353,6 @@ export default function MembershipPlansDashboard() {
                   { key: 'advancedAnalytics', title: 'Advanced Analytics CRM', text: 'Realtime customer conversion and journey details.' },
                   { key: 'dedicatedSupport', title: 'Dedicated Support', text: 'A named agent for billing and storefront help.' },
                   { key: 'allowCustomBranding', title: 'Custom Branding Styling', text: 'Tailor background cards and color codes for storefronts.' },
-                  { key: 'allowGroupCreation', title: 'Group Buying & Automations', text: 'Group offers and marketing automations for loyal customers.' },
                 ].filter((item) => !(privilegeFlags as Record<string, boolean> | undefined)?.[item.key]).map((item) => (
                   <div key={item.key} className="flex justify-between items-center bg-amber-50/30 border border-amber-100 p-3 rounded-xl">
                     <div>
@@ -529,7 +554,6 @@ export default function MembershipPlansDashboard() {
                 { label: 'Advanced Analytics', key: 'advancedAnalytics' },
                 { label: 'Dedicated Support', key: 'dedicatedSupport' },
                 { label: 'Custom Branding', key: 'allowCustomBranding' },
-                { label: 'Group Creation', key: 'allowGroupCreation' },
               ].map((row) => (
                 <tr key={row.label} className="hover:bg-gray-50/50">
                   <td className="py-4 font-semibold text-gray-700">{row.label}</td>

@@ -75,7 +75,6 @@ export const navItems: NavItem[] = [
     { title: 'Memberships', href: '/admin/memberships', icon: Users, description: 'VIP and community memberships' },
     { title: 'Community', href: '/admin/community-activity', icon: Users, description: 'Monitor community engagement' },
     { title: 'Analytics', href: '/admin/analytics', icon: BarChart3, description: 'Deep dive into platform data' },
-    { title: 'Automations', href: '/admin/automations', icon: Rocket, description: 'Workflow and task automations' },
     { title: 'Billing', href: '/admin/billing', icon: CreditCard, description: 'Subscription billing and invoices' },
     { title: 'Data', href: '/admin/data', icon: Package, description: 'Master data management' },
     { title: 'Expo Promo', href: '/admin/expo-promo', icon: Megaphone, description: 'Event and expo promotions' },

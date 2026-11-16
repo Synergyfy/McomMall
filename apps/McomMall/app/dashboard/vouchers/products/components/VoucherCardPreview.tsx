@@ -3,7 +3,6 @@
 import React from 'react';
 import { useWatch, Control } from 'react-hook-form';
 import { CreateVoucherProductDto } from '@/service/vouchers/types';
-import { QRCode } from 'react-qrcode-logo';
 import { ShieldCheck, Tag } from 'lucide-react';
 
 interface VoucherCardPreviewProps {
@@ -106,8 +105,10 @@ export const VoucherCardPreview: React.FC<VoucherCardPreviewProps> = ({
             </div>
             <p className="text-[7px] text-gray-400 font-bold tracking-widest pl-5 uppercase">Digital Marketing</p>
           </div>
-          <div className="bg-white p-1 rounded-md shadow-sm border border-gray-100 scale-75 origin-top-right">
-            <QRCode value="DUMMY-CODE" size={48} />
+          <div className="bg-white p-1.5 rounded-md shadow-sm border border-gray-100 scale-75 origin-top-right">
+            <div className="flex h-12 w-12 items-center justify-center rounded bg-gray-100 text-center text-[6px] font-bold uppercase leading-tight text-gray-400">
+              QR on publish
+            </div>
           </div>
         </div>
 

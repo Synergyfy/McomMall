@@ -6,13 +6,12 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
-  Camera,
   Star,
   CheckCircle,
-  Plus,
   ArrowRight,
 } from 'lucide-react';
 import { useAddOffer } from '@/service/offers/hook';
+import { useGetMyProducts } from '@/service/store/products/hook';
 import { CreateOfferDto } from '@/service/offers/types';
 
 export default function CreateOfferPage() {
@@ -27,6 +26,12 @@ export default function CreateOfferPage() {
   const [rewardCost, setRewardCost] = useState('500');
   const [expiryDate, setExpiryDate] = useState('');
   const [quantityLimit, setQuantityLimit] = useState('');
+  const [discountPercent, setDiscountPercent] = useState('20');
+  const [discountAmount, setDiscountAmount] = useState('10');
+  const [bonusPoints, setBonusPoints] = useState('100');
+  const [freeProductId, setFreeProductId] = useState('');
+  const { data: productsData } = useGetMyProducts();
+  const products = productsData ?? [];
 
   const types = ['Discount', 'Free Item', 'Voucher', 'Event Access'] as const;
 
@@ -67,8 +72,14 @@ export default function CreateOfferPage() {
       excludedProductIds: [],
       offerScope: 'ALL_LISTINGS',
       businessIds: [],
-      discountPercentage: offerType === 'Discount' ? 20 : undefined,
-      discountAmount: offerType === 'Voucher' ? 10 : undefined,
+      discountPercentage:
+        offerType === 'Discount' ? Number(discountPercent) || 0 : undefined,
+      discountAmount:
+        offerType === 'Voucher' ? Number(discountAmount) || 0 : undefined,
+      bonusPoints:
+        offerType === 'Event Access' ? Number(bonusPoints) || 0 : undefined,
+      freeProductId:
+        offerType === 'Free Item' && freeProductId ? freeProductId : undefined,
       limitPerCustomer: limit,
     };
 
@@ -195,14 +206,66 @@ export default function CreateOfferPage() {
                 className="w-full px-4 py-2.5 bg-[#fff8f5] border border-[#e2bfb0] rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-800 transition-all font-medium"
               />
             </div>
+
+            {offerType === 'Discount' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Discount (%)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#fff8f5] border border-[#e2bfb0] rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-800 transition-all font-bold"
+                />
+              </div>
+            )}
+
+            {offerType === 'Voucher' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Discount Amount (£)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={discountAmount}
+                  onChange={(e) => setDiscountAmount(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#fff8f5] border border-[#e2bfb0] rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-800 transition-all font-bold"
+                />
+              </div>
+            )}
+
+            {offerType === 'Event Access' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Bonus Points</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={bonusPoints}
+                  onChange={(e) => setBonusPoints(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#fff8f5] border border-[#e2bfb0] rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-800 transition-all font-bold"
+                />
+              </div>
+            )}
+
+            {offerType === 'Free Item' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Free Product</label>
+                <select
+                  value={freeProductId}
+                  onChange={(e) => setFreeProductId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#fff8f5] border border-[#e2bfb0] rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-800 transition-all font-medium"
+                >
+                  <option value="">Select a product…</option>
+                  {products.map((product: any) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* Offer Image Upload Box */}
-          <div className="bg-white p-5 rounded-2xl border border-dashed border-[#e2bfb0] shadow-[0_4px_12px_rgba(0,0,0,0.01)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50/50 transition-colors py-8">
-            <Camera className="w-8 h-8 text-[#a14000] mb-2" />
-            <p className="font-bold text-xs text-gray-800">Click to upload image</p>
-            <p className="text-[9px] text-gray-400 font-semibold mt-1">JPG, PNG or WEBP (Max 5MB)</p>
-          </div>
 
           {/* Live Preview Card */}
           <div className="space-y-3">
@@ -212,14 +275,8 @@ export default function CreateOfferPage() {
               whileHover={{ y: -2 }}
               className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#f7ece7] relative"
             >
-              <div className="h-44 bg-slate-100 relative">
-                {/* Mock image fallback */}
-                <img
-                  alt="Preview"
-                  src="https://lh3.googleusercontent.com/aida/AP1WRLtH66VWXb3rP7Q3V8B3awwyuBNCuMkEXl1bSM6T_KvNm8snGkln4MsJ6W91yQqVmj2jBn8Xa47JaovuZnZERl0CqNWeS1_8saOU01iTjJT8HWmJyv6eksf6F1YhdVCiuoctt0Z0U9QTTOc_QjYANctFNiB2uRd3n0NFlgDvUgYQXV2xYZduWfnw19pHZ3Zlq9g4pDI1ckkFK1aIzdXihlizFwSnlXRSAWYJaHJ4zW-vy3spJbiTzHc6Vw"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent flex flex-col justify-end p-4 text-white">
+              <div className="h-44 bg-gradient-to-br from-orange-500 to-amber-600 relative">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex flex-col justify-end p-4 text-white">
                   <div className="flex items-center gap-1.5">
                     <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-orange-600 text-white">
                       {offerType}
@@ -243,20 +300,6 @@ export default function CreateOfferPage() {
 
           {/* Form CTAs */}
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                className="py-3.5 bg-white border border-[#e2bfb0] text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-50 active:scale-95 transition-all"
-              >
-                Preview
-              </button>
-              <button
-                type="button"
-                className="py-3.5 bg-[#fff8f5] border border-[#e2bfb0] text-[#a14000] rounded-xl font-bold text-xs hover:bg-orange-50 active:scale-95 transition-all"
-              >
-                Save Draft
-              </button>
-            </div>
             <button
               type="submit"
               disabled={createOffer.isPending || !offerTitle.trim()}

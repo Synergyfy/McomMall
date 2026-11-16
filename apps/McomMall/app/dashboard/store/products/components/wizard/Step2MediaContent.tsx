@@ -258,10 +258,11 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
                         <div className="flex justify-between items-center">
-                            <h2 className="text-md md:text-lg font-bold">Product Images</h2>
+                            <h2 className="text-md md:text-lg font-bold">Product Images <span className="text-red-500">*</span></h2>
                             <span className="text-[10px] md:text-xs text-[#9c7349]">Max 5MB per file</span>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">Upload high-quality images to showcase your product.</p>
+                        <FieldError message={errors?.images} className="mt-2" />
                     </div>
 
                     <div className="relative group">

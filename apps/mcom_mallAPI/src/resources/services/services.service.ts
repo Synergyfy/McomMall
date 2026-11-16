@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  BadRequestException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
@@ -25,6 +26,7 @@ import {
   SpareCapacityStatus,
 } from './entities/spare-capacity-offer.entity';
 import { PublishSpareCapacityDto } from './dto/publish-spare-capacity.dto';
+import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { ActivitiesService } from '../activities/activities.service';
 import { SearchServiceDto } from './dto/search-service.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -35,6 +37,7 @@ import {
 import { ServiceSearchDto } from './dto/service-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
+import { UserRole } from '../../common/role.enum';
 
 @Injectable()
 export class ServicesService {
@@ -122,13 +125,27 @@ export class ServicesService {
 
     const { bundledServices, configurableAddons, ...serviceData } =
       createServiceDto;
+    delete (serviceData as Record<string, unknown>).adminDisabled;
+
+    const hasServiceImage =
+      (serviceData.images?.length ?? 0) > 0 ||
+      (serviceData.media ?? []).some(
+        (url) =>
+          typeof url === 'string' &&
+          !/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(url),
+      );
+
+    if (!hasServiceImage) {
+      throw new BadRequestException(
+        'At least one service image is required to create a service.',
+      );
+    }
 
     // Map frontend fields to backend
     if (serviceData.images || serviceData.media) {
-      serviceData.media = [
-        ...(serviceData.images || []),
-        ...(serviceData.media || []),
-      ];
+      serviceData.media = Array.from(
+        new Set([...(serviceData.images || []), ...(serviceData.media || [])]),
+      );
     }
     if (serviceData.shortDesc && !serviceData.shortDescription) {
       serviceData.shortDescription = serviceData.shortDesc;
@@ -179,6 +196,7 @@ export class ServicesService {
   async findAllForBusiness(
     businessId: string,
     paginationDto: PaginationDto,
+    user?: User,
   ): Promise<{
     data: Service[];
     total: number;
@@ -186,14 +204,27 @@ export class ServicesService {
     limit: number;
   }> {
     const { page = 1, limit = 10 } = paginationDto;
-    const business = await this.businessRepository.findOneBy({
-      id: businessId,
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
     });
     if (!business) {
       throw new NotFoundException(`Business with ID ${businessId} not found`);
     }
+
+    const isOwner = !!user && business.user?.id === user.id;
+    const isAdmin = user?.role === UserRole.ADMIN;
+    const canSeeAll = isOwner || isAdmin;
+
+    const where: Record<string, unknown> = { businessId };
+    if (!canSeeAll) {
+      where.status = 'published';
+      where.isActive = true;
+      where.adminDisabled = false;
+    }
+
     const [data, total] = await this.serviceRepository.findAndCount({
-      where: { businessId },
+      where,
       relations: ['bundledServices', 'configurableAddons'],
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
@@ -231,6 +262,54 @@ export class ServicesService {
     return service;
   }
 
+  /**
+   * Public-facing lookup. Draft or paused services are only returned to the
+   * business that owns them (or an admin).
+   */
+  async findOneForViewer(id: string, user?: User): Promise<Service | null> {
+    const service = await this.serviceRepository.findOne({
+      where: { id },
+      relations: [
+        'bundledServices',
+        'configurableAddons',
+        'business',
+        'business.user',
+      ],
+    });
+
+    if (!service) {
+      return null;
+    }
+
+    const isOwner = !!user && service.business?.user?.id === user.id;
+    const isAdmin = user?.role === UserRole.ADMIN;
+    const isPubliclyVisible =
+      service.status === 'published' &&
+      service.isActive === true &&
+      !service.adminDisabled;
+
+    if (isOwner || isAdmin || isPubliclyVisible) {
+      return service;
+    }
+
+    // An admin-disabled service stays visible to the customer who already
+    // booked it so they can still access their booking details.
+    if (service.adminDisabled && user) {
+      const hasBooked = await this.serviceRepository.manager
+        .getRepository(ServiceBooking)
+        .createQueryBuilder('booking')
+        .where('booking.service = :serviceId', { serviceId: id })
+        .andWhere('booking.user = :userId', { userId: user.id })
+        .getExists();
+
+      if (hasBooked) {
+        return service;
+      }
+    }
+
+    return null;
+  }
+
   async update(
     id: string,
     updateServiceDto: UpdateServiceDto,
@@ -260,13 +339,14 @@ export class ServicesService {
 
     const { bundledServices, configurableAddons, ...serviceData } =
       updateServiceDto;
+    // Admin moderation is not writable by merchants, even if they send it.
+    delete (serviceData as Record<string, unknown>).adminDisabled;
 
     // Map frontend fields to backend
     if (serviceData.images || serviceData.media) {
-      serviceData.media = [
-        ...(serviceData.images || []),
-        ...(serviceData.media || []),
-      ];
+      serviceData.media = Array.from(
+        new Set([...(serviceData.images || []), ...(serviceData.media || [])]),
+      );
     }
     if (serviceData.shortDesc && !serviceData.shortDescription) {
       serviceData.shortDescription = serviceData.shortDesc;
@@ -470,8 +550,16 @@ export class ServicesService {
     const { term } = searchServiceDto;
     return this.serviceRepository.find({
       where: [
-        { name: ILike(`%${term}%`) },
-        { description: ILike(`%${term}%`) },
+        {
+          name: ILike(`%${term}%`),
+          status: 'published',
+          isActive: true,
+        },
+        {
+          description: ILike(`%${term}%`),
+          status: 'published',
+          isActive: true,
+        },
       ],
       relations: ['bundledServices', 'configurableAddons', 'business'],
     });
@@ -485,7 +573,10 @@ export class ServicesService {
     queryBuilder
       .leftJoinAndSelect('service.business', 'business')
       .where('service.isActive = :isActive', { isActive: true })
-      .andWhere('service.status = :status', { status: 'published' });
+      .andWhere('service.status = :status', { status: 'published' })
+      .andWhere('service.adminDisabled = :adminDisabled', {
+        adminDisabled: false,
+      });
 
     if (search) {
       queryBuilder.andWhere(

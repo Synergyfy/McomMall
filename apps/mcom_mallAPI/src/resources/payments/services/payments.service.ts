@@ -56,6 +56,8 @@ export class PaymentsService {
     const metadata: any = {
       purpose: dto.purpose || PaymentPurpose.MEMBERSHIP,
       mallUserId: userId,
+      reference: dto.idempotencyKey || `mall-payment-${userId}`,
+      ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
     };
 
     const variantId = dto.planVariantId || dto.tierId;
@@ -90,6 +92,8 @@ export class PaymentsService {
     const metadata: any = {
       purpose: dto.purpose || PaymentPurpose.MEMBERSHIP,
       mallUserId: userId,
+      reference: dto.idempotencyKey || `mall-payment-${userId}`,
+      ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
     };
 
     const variantId = dto.planVariantId || dto.tierId;
@@ -134,7 +138,7 @@ export class PaymentsService {
       tierId,
       planVariantId,
     } = recordPaymentDto;
-    const walletHoldId =
+    const walletChargeId =
       paymentGateway === PaymentGateway.MCOM_WALLET
         ? recordPaymentDto.holdId || transactionId
         : undefined;
@@ -173,9 +177,20 @@ export class PaymentsService {
       (paymentGateway === PaymentGateway.STRIPE ||
         paymentGateway === PaymentGateway.PAYPAL);
     if (paymentGateway === PaymentGateway.MCOM_WALLET) {
-      if (!walletHoldId) {
+      if (!walletChargeId) {
         throw new BadRequestException(
-          'A wallet hold ID is required for MCOM Wallet payments.',
+          'A wallet payment reference is required for MCOM Wallet payments.',
+        );
+      }
+      const verification =
+        await this.paymentProviderService.verifyWalletCharge(
+          walletChargeId,
+          decimalAmount,
+          'GBP',
+        );
+      if (!verification.ok) {
+        throw new BadRequestException(
+          `MCOM Wallet verification failed: ${verification.reason || 'unknown reason'}`,
         );
       }
     } else if (paymentGateway === PaymentGateway.STRIPE) {
@@ -249,8 +264,8 @@ export class PaymentsService {
       await this.membershipService.verifyAndCreateMembership(
         {
           paymentProvider: pMethod,
-          transactionId: walletHoldId || transactionId,
-          holdId: walletHoldId,
+          transactionId: walletChargeId || transactionId,
+          holdId: walletChargeId,
           purchaseDetails: {
             tierId,
             planVariantId,

@@ -9,6 +9,12 @@ export interface Promotion {
   beginDate?: string; // ISO timestamp
   endDate?: string; // ISO timestamp
   promotionType: 'MULTIPLIER' | 'BONUS_POINTS';
+  promoType?: string | null;
+  targetSegment?: string | null;
+  boroughVisibility?: boolean;
+  highStreetVisibility?: boolean;
+  featuredPlacement?: boolean;
+  addExtraGift?: boolean;
   promotionScope:
     | 'ALL_LISTINGS'
     | 'SPECIFIC_LISTINGS'
@@ -36,6 +42,12 @@ export interface CreatePromotionDto {
   beginDate?: Date;
   endDate?: Date;
   promotionType: 'MULTIPLIER' | 'BONUS_POINTS';
+  promoType?: string;
+  targetSegment?: string;
+  boroughVisibility?: boolean;
+  highStreetVisibility?: boolean;
+  featuredPlacement?: boolean;
+  addExtraGift?: boolean;
   promotionScope:
     | 'ALL_LISTINGS'
     | 'SPECIFIC_LISTINGS'
@@ -79,4 +91,25 @@ export interface Participant {
 
 export interface UpdatePointsDto {
   amount: number;
+}
+
+
+export interface PromotionStats {
+  id: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+  beginDate?: string | null;
+  endDate?: string | null;
+  promotionType: 'MULTIPLIER' | 'BONUS_POINTS';
+  promoType?: string | null;
+  targetSegment?: string | null;
+  multiplier?: number | string | null;
+  bonusPoints?: number | null;
+  minimumSpend?: number | string | null;
+  participants: number;
+  pointsIssued: number;
+  redemptions: number;
+  pointsRedeemed: number;
+  businessCount: number;
 }

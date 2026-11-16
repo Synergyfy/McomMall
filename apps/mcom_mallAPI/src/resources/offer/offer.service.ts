@@ -115,7 +115,13 @@ export class OfferService {
   async findOne(userId: string, id: string): Promise<Offer> {
     const offer = await this.offerRepository.findOne({
       where: { id, user: { id: userId } },
-      relations: ['user', 'businesses'],
+      relations: [
+        'user',
+        'businesses',
+        'includedProducts',
+        'excludedProducts',
+        'freeProduct',
+      ],
     });
     if (!offer) {
       throw new NotFoundException(`Offer with ID "${id}" not found`);
@@ -138,7 +144,13 @@ export class OfferService {
 
     const offer = await this.offerRepository.findOne({
       where: { id, user: { id: user.id } },
-      relations: ['user', 'businesses'],
+      relations: [
+        'user',
+        'businesses',
+        'includedProducts',
+        'excludedProducts',
+        'freeProduct',
+      ],
     });
     if (!offer) {
       throw new NotFoundException(`Offer with ID "${id}" not found`);

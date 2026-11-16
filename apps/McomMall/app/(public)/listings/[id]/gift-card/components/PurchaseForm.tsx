@@ -45,7 +45,7 @@ const baseFormSchema = z.object({
   recipientEmail: z.string().email("Invalid email address."),
   senderName: z.string().min(1, "Sender name is required."),
   personalMessage: z.string().optional(),
-  paymentProvider: z.enum(["stripe", "paypal"]),
+  paymentProvider: z.enum(["stripe", "paypal", "mcom_wallet"]),
 });
 
 type PurchaseFormValues = z.infer<typeof baseFormSchema>;
@@ -108,6 +108,26 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     initiatePurchase(details, {
       onSuccess: (data) => {
         setPurchaseResponse(data);
+        if (data.provider === "mcom_wallet" && data.transactionId) {
+          verifyPurchase(
+            {
+              paymentProvider: data.provider,
+              transactionId: data.transactionId,
+              purchaseDetails: details,
+            },
+            {
+              onSuccess: (giftCard) => {
+                setCreatedGiftCard(giftCard);
+                setShowSuccessDialog(true);
+              },
+              onError: () => {
+                toast.error(
+                  "Wallet payment succeeded but the gift card could not be issued. Please contact support."
+                );
+              },
+            }
+          );
+        }
       },
       onError: () => {
         toast.error("Failed to initiate purchase. Please try again.");
@@ -324,8 +344,9 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="stripe">Stripe</SelectItem>
+                  <SelectItem value="stripe">Credit / debit card</SelectItem>
                   <SelectItem value="paypal">PayPal</SelectItem>
+                  <SelectItem value="mcom_wallet">MCOM Wallet</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

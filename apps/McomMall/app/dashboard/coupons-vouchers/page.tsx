@@ -75,8 +75,7 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 import { HistoryCoupon, HistoryVoucher } from '@/app/dashboard/component/HistoryMarketingCards';
-import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
-import { useCreateStripeIntent, useCreatePaypalOrder } from '@/service/payment/hook';
+import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useInitiateMoneyVoucherPurchase, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
 import { useGetUserProfile } from '@/service/user/hook';
 import { useGetAllCoupons, useSaveCoupon, useGetSavedCoupons, useGetCoupons } from '@/service/coupons/hook';
 import { UserVoucherResponseDto } from '@/service/money-engine/types';
@@ -195,15 +194,14 @@ export default function CouponsVouchersPage() {
     const purchaseMutation = usePurchaseVoucher();
     const { coupons: myCoupons, isLoading: isMyCouponsLoading } = useGetCoupons(historyPage, 10);
 
-    const createStripeIntentMutation = useCreateStripeIntent();
-    const createPaypalOrderMutation = useCreatePaypalOrder();
+    const initiateMoneyVoucherPurchase = useInitiateMoneyVoucherPurchase();
     const spendMutation = useSpendVoucher();
     const { savedCoupons, isLoading: isSavedCouponsLoading } = useGetSavedCoupons();
 
     // Form states
     const [topUpAmount, setTopUpAmount] = useState('50');
     const [selectedVoucher, setSelectedVoucher] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'PAYPAL'>('STRIPE');
+    const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'PAYPAL' | 'MCOM_WALLET'>('STRIPE');
     const [transferRecipient, setTransferRecipient] = useState('');
     const [transferAmount, setTransferAmount] = useState('');
     const [spendVoucherId, setSpendVoucherId] = useState('');
@@ -374,18 +372,55 @@ export default function CouponsVouchersPage() {
             return;
         }
         try {
+            const idempotencyKey =
+                typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                    ? crypto.randomUUID()
+                    : `voucher-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            const initiated = await initiateMoneyVoucherPurchase.mutateAsync({
+                rewardDefinitionId: selectedVoucher,
+                paymentAmount: Number(topUpAmount),
+                paymentGateway: paymentMethod,
+                idempotencyKey,
+            });
+
+            if (paymentMethod === 'MCOM_WALLET') {
+                if (!initiated.transactionId) {
+                    throw new Error('MCOM Wallet did not return a payment reference.');
+                }
+                await purchaseMutation.mutateAsync({
+                    rewardDefinitionId: selectedVoucher,
+                    paymentAmount: Number(topUpAmount),
+                    transactionId: initiated.transactionId,
+                    paymentGateway: 'MCOM_WALLET',
+                });
+                toast.success(`Successfully purchased voucher for £${topUpAmount}`);
+                setIsTopUpModalOpen(false);
+                setTopUpAmount('50');
+                setSelectedVoucher('');
+                setPurchaseStep('select');
+                return;
+            }
+
             if (paymentMethod === 'STRIPE') {
-                const intent = await createStripeIntentMutation.mutateAsync({ amount: Number(topUpAmount) });
-                setStripeClientSecret(intent.clientSecret);
+                if (!initiated.clientSecret) {
+                    throw new Error('Card payment could not be started.');
+                }
+                setStripeClientSecret(initiated.clientSecret);
                 setPurchaseStep('payment');
             } else {
-                const order = await createPaypalOrderMutation.mutateAsync({ amount: Number(topUpAmount) });
-                setPaypalOrderId(order.orderId);
+                if (!initiated.orderId) {
+                    throw new Error('PayPal order could not be created.');
+                }
+                setPaypalOrderId(initiated.orderId);
                 setPurchaseStep('payment');
             }
         } catch (error: unknown) {
             const err = error as ApiError;
-            toast.error(err?.response?.data?.message || 'Failed to initiate payment');
+            toast.error(
+                err?.response?.data?.message ||
+                    (error instanceof Error ? error.message : undefined) ||
+                    'Failed to initiate payment'
+            );
         }
     };
 
@@ -760,8 +795,9 @@ export default function CouponsVouchersPage() {
                                 <div className="space-y-2">
                                     <Label>Method</Label>
                                     <div className="flex gap-2">
-                                        <div onClick={() => setPaymentMethod('STRIPE')} className={`flex-1 p-3 rounded-xl border cursor-pointer text-center text-xs font-bold ${paymentMethod === 'STRIPE' ? 'border-orange-500 bg-orange-50' : 'border-gray-100'}`}>Stripe (Card)</div>
+                                        <div onClick={() => setPaymentMethod('STRIPE')} className={`flex-1 p-3 rounded-xl border cursor-pointer text-center text-xs font-bold ${paymentMethod === 'STRIPE' ? 'border-orange-500 bg-orange-50' : 'border-gray-100'}`}>Card</div>
                                         <div onClick={() => setPaymentMethod('PAYPAL')} className={`flex-1 p-3 rounded-xl border cursor-pointer text-center text-xs font-bold ${paymentMethod === 'PAYPAL' ? 'border-blue-500 bg-blue-50' : 'border-gray-100'}`}>PayPal</div>
+                                        <div onClick={() => setPaymentMethod('MCOM_WALLET')} className={`flex-1 p-3 rounded-xl border cursor-pointer text-center text-xs font-bold ${paymentMethod === 'MCOM_WALLET' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-100'}`}>MCOM Wallet</div>
                                     </div>
                                 </div>
                                 <Button type="submit" className="w-full bg-orange-600 rounded-xl">Pay £{topUpAmount}</Button>

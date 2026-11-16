@@ -6,6 +6,7 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 
 /**
  * Local read-model of MCOM Rewards issuances, populated by lifecycle events
@@ -51,7 +52,7 @@ export class RewardIssuanceMirror {
   @Column({ default: 'ISSUED' })
   status: string;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   value: number;
 
   @Column({ type: 'int', default: 1 })

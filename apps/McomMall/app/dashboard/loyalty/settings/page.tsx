@@ -1,229 +1,275 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { toast } from 'sonner';
+import { ArrowLeft, Save } from 'lucide-react';
+import { useBusinessId } from '@/hooks/useBusinessId';
 import {
-  LayoutDashboard,
-  Users,
-  Tag,
-  Gift,
-  Settings,
-  HelpCircle,
-} from 'lucide-react';
+  useLoyaltySettings,
+  useUpdateLoyaltySettings,
+} from '@/service/loyalty/hook';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+export default function LoyaltySettingsPage() {
+  const { businessId } = useBusinessId();
+  const settingsQuery = useLoyaltySettings(businessId);
+  const updateSettings = useUpdateLoyaltySettings();
 
-// --- Preview Components ---
+  const [isEnabled, setIsEnabled] = useState(true);
+  const [programName, setProgramName] = useState('Loyalty & Rewards');
+  const [brandColor, setBrandColor] = useState('#ea580c');
+  const [accentColor, setAccentColor] = useState('#fff1eb');
+  const [pointsPerCurrency, setPointsPerCurrency] = useState('1');
+  const [pointsMultiplier, setPointsMultiplier] = useState('1');
+  const [signupBonusPoints, setSignupBonusPoints] = useState('0');
+  const [redemptionApproval, setRedemptionApproval] = useState('auto');
+  const [redemptionMode, setRedemptionMode] = useState('both');
+  const [redemptionValue, setRedemptionValue] = useState('0.01');
+  const [terms, setTerms] = useState('');
 
-const PreviewCard = ({
-  name,
-  primaryColor,
-  textColor,
-}: {
-  name: string;
-  primaryColor: string;
-  textColor: string;
-}) => (
-  <div
-    className="rounded-lg p-6 text-white shadow-md"
-    style={{ backgroundColor: primaryColor }}
-  >
-    <div className="flex justify-between items-center">
-      <div className="flex items-center space-x-4">
-        <Gift size={40} />
-        <div>
-          <h2 className="text-xl font-bold" style={{ color: textColor }}>
-            {name}
-          </h2>
-        </div>
-      </div>
-      <div className="text-right">
-        <p className="text-3xl font-bold" style={{ color: textColor }}>
-          12,345
-        </p>
-        <p className="text-sm" style={{ color: textColor }}>
-          Points
-        </p>
-      </div>
-    </div>
-    <div className="mt-4">
-      <Button
-        variant="secondary"
-        className="w-auto px-4 py-2 h-auto text-sm bg-white hover:bg-gray-100"
-        style={{ color: primaryColor }}
-      >
-        View Points History
-      </Button>
-    </div>
-  </div>
-);
+  useEffect(() => {
+    const settings = settingsQuery.data;
+    if (!settings) return;
+    setIsEnabled(settings.isEnabled ?? true);
+    setProgramName(settings.programName ?? 'Loyalty & Rewards');
+    setBrandColor(settings.brandColor ?? '#ea580c');
+    setAccentColor(settings.accentColor ?? '#fff1eb');
+    setPointsPerCurrency(String(settings.pointsPerCurrency ?? 1));
+    setPointsMultiplier(String(settings.pointsMultiplier ?? 1));
+    setSignupBonusPoints(String(settings.signupBonusPoints ?? 0));
+    setRedemptionApproval(settings.redemptionApproval ?? 'auto');
+    setRedemptionMode(settings.redemptionMode ?? 'both');
+    setRedemptionValue(String(settings.redemptionValue ?? 0.01));
+    setTerms(settings.terms ?? '');
+  }, [settingsQuery.data]);
 
-const PreviewOffer = ({
-  primaryColor,
-  secondaryColor,
-  textColor,
-  bgColor,
-}: {
-  primaryColor: string;
-  secondaryColor: string;
-  textColor: string;
-  bgColor: string;
-}) => (
-  <Card style={{ backgroundColor: bgColor }}>
-    <CardContent className="pt-6 space-y-4">
-      <div>
-        <h3 className="font-bold text-lg" style={{ color: secondaryColor }}>
-          Offer
-        </h3>
-        <p className="text-sm" style={{ color: secondaryColor }}>
-          This is a sample offer description.
-        </p>
-      </div>
-      <Button
-        className="w-full text-white"
-        style={{ backgroundColor: primaryColor }}
-      >
-        Claim for free
-      </Button>
-    </CardContent>
-  </Card>
-);
-
-// --- Main Page Component ---
-
-export default function SettingsPage() {
-  const [programName, setProgramName] = useState('My Rewards!');
-  const [primaryColor, setPrimaryColor] = useState('#8A3FFC');
-  const [secondaryColor, setSecondaryColor] = useState('#3D3D3D');
-  const [textColor, setTextColor] = useState('#FFFFFF');
-  const [backgroundColor, setBackgroundColor] = useState('#FFFFFF');
+  const handleSave = async () => {
+    if (!businessId) {
+      toast.error('No business profile found.');
+      return;
+    }
+    try {
+      await updateSettings.mutateAsync({
+        businessId,
+        isEnabled,
+        programName,
+        brandColor,
+        accentColor,
+        pointsPerCurrency: Number(pointsPerCurrency) || 0,
+        pointsMultiplier: Number(pointsMultiplier) || 1,
+        signupBonusPoints: Number(signupBonusPoints) || 0,
+        redemptionApproval,
+        redemptionMode,
+        redemptionValue: Number(redemptionValue) || 0,
+        terms,
+      });
+      toast.success('Loyalty settings saved.');
+    } catch {
+      toast.error('Could not save settings.');
+    }
+  };
 
   return (
-    <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8 font-sans">
-      <div className="max-w-7xl mx-auto">
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Left Column: Settings Form */}
-          <div className="space-y-8">
-            <Card>
-              <CardContent className="pt-6 space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    Rewards program status
-                  </h2>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <Checkbox id="status" defaultChecked />
-                    <Label
-                      htmlFor="status"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Active
-                    </Label>
-                  </div>
-                </div>
+    <div className="min-h-full bg-[#fff8f5] p-4 sm:p-6">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <header className="flex items-center gap-3">
+          <Link
+            href="/dashboard/loyalty"
+            className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Loyalty Settings</h1>
+            <p className="text-sm text-gray-500">
+              Configure your programme branding and earning rules.
+            </p>
+          </div>
+        </header>
 
-                <div className="space-y-2">
-                  <Label htmlFor="program-name">Program name</Label>
-                  <Input
-                    id="program-name"
+        {settingsQuery.isLoading ? (
+          <p className="py-16 text-center text-sm text-gray-400">Loading settings…</p>
+        ) : (
+          <div className="space-y-5">
+            <section className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Programme status
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Pause the programme without deleting member balances.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsEnabled((prev) => !prev)}
+                  className={`relative h-6 w-11 rounded-full transition ${
+                    isEnabled ? 'bg-orange-600' : 'bg-gray-300'
+                  }`}
+                  aria-label="Toggle loyalty programme"
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
+                      isEnabled ? 'left-5' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">Branding</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Programme name
+                  </label>
+                  <input
                     value={programName}
-                    onChange={e => setProgramName(e.target.value)}
+                    onChange={(event) => setProgramName(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="image">Image</Label>
-                  <Select>
-                    <SelectTrigger id="image">
-                      <SelectValue placeholder="Gifts (Light)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gifts-light">Gifts (Light)</SelectItem>
-                      <SelectItem value="gifts-dark">Gifts (Dark)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Programme logo URL
+                  </label>
+                  <input
+                    value={settingsQuery.data?.logoUrl ?? ''}
+                    readOnly
+                    placeholder="Upload via storefront settings"
+                    className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+                  />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="primary-color">Primary color</Label>
-                    <Input
-                      id="primary-color"
-                      type="color"
-                      value={primaryColor}
-                      onChange={e => setPrimaryColor(e.target.value)}
-                      className="p-1 h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="secondary-color">Secondary color</Label>
-                    <Input
-                      id="secondary-color"
-                      type="color"
-                      value={secondaryColor}
-                      onChange={e => setSecondaryColor(e.target.value)}
-                      className="p-1 h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="text-color">Text color</Label>
-                    <Input
-                      id="text-color"
-                      type="color"
-                      value={textColor}
-                      onChange={e => setTextColor(e.target.value)}
-                      className="p-1 h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="background-color">Background color</Label>
-                    <Input
-                      id="background-color"
-                      type="color"
-                      value={backgroundColor}
-                      onChange={e => setBackgroundColor(e.target.value)}
-                      className="p-1 h-10"
-                    />
-                  </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Brand colour
+                  </label>
+                  <input
+                    type="color"
+                    value={brandColor}
+                    onChange={(event) => setBrandColor(event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-gray-200"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Accent colour
+                  </label>
+                  <input
+                    type="color"
+                    value={accentColor}
+                    onChange={(event) => setAccentColor(event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-gray-200"
+                  />
+                </div>
+              </div>
+            </section>
 
-            <Card>
-              <CardContent className="pt-6">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Offer categories
-                </h2>
-                {/* Add offer categories content here */}
-              </CardContent>
-            </Card>
-          </div>
+            <section className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">Earning & Redemption</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Points per £1 spent
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={pointsPerCurrency}
+                    onChange={(event) => setPointsPerCurrency(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Points multiplier
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={pointsMultiplier}
+                    onChange={(event) => setPointsMultiplier(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Sign-up bonus points
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={signupBonusPoints}
+                    onChange={(event) => setSignupBonusPoints(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Redemption value per point (£)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={redemptionValue}
+                    onChange={(event) => setRedemptionValue(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Redemption approval
+                  </label>
+                  <select
+                    value={redemptionApproval}
+                    onChange={(event) => setRedemptionApproval(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  >
+                    <option value="auto">Automatic</option>
+                    <option value="manual">Manual approval</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Redemption mode
+                  </label>
+                  <select
+                    value={redemptionMode}
+                    onChange={(event) => setRedemptionMode(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  >
+                    <option value="points">Points only</option>
+                    <option value="discount">Discount only</option>
+                    <option value="both">Points and discount</option>
+                  </select>
+                </div>
+              </div>
 
-          {/* Right Column: Live Preview */}
-          <div className="space-y-6">
-            <PreviewCard
-              name={programName}
-              primaryColor={primaryColor}
-              textColor={textColor}
-            />
-            <PreviewOffer
-              primaryColor={primaryColor}
-              secondaryColor={secondaryColor}
-              textColor={textColor}
-              bgColor={backgroundColor}
-            />
+              <label className="mt-4 block text-xs font-semibold text-gray-500">
+                Terms & conditions
+              </label>
+              <textarea
+                value={terms}
+                onChange={(event) => setTerms(event.target.value)}
+                rows={4}
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+            </section>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleSave}
+                disabled={updateSettings.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                {updateSettings.isPending ? 'Saving…' : 'Save settings'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

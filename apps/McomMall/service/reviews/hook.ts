@@ -119,3 +119,62 @@ export const useCreateReview = () => {
     },
   });
 };
+
+// --- Business-owner review management ---
+
+export interface OwnerReview {
+  id: string;
+  rating: number;
+  comment: string;
+  status: string;
+  ownerReply?: string | null;
+  ownerRepliedAt?: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    fullName?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    profilePictureUrl?: string | null;
+  };
+  business?: { id: string; businessName?: string } | null;
+  product?: { id: string; name?: string } | null;
+  service?: { id: string; name?: string } | null;
+}
+
+export const useOwnerReviews = (businessId?: string) =>
+  useQuery<OwnerReview[], Error>({
+    queryKey: ['reviews', 'business-owner-list', businessId],
+    queryFn: async () => {
+      const { data } = await api.get('/reviews/business-owner', {
+        params: businessId ? { businessId } : undefined,
+      });
+      return Array.isArray(data) ? data : data?.data ?? [];
+    },
+    enabled: !!businessId,
+  });
+
+export const useReview = (id?: string) =>
+  useQuery<OwnerReview, Error>({
+    queryKey: ['reviews', 'detail', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/reviews/${id}`);
+      return data;
+    },
+    enabled: !!id,
+  });
+
+export const useReplyToReview = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, reply }: { id: string; reply: string }) => {
+      const { data } = await api.patch(`/reviews/${id}/reply`, { reply });
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'detail', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'business-owner-list'] });
+    },
+  });
+};

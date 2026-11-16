@@ -104,7 +104,7 @@ export const getBusinessVoucherProducts = async (
 export const redeemVoucherManual = async (
   redeemDto: RedeemVoucherDto
 ): Promise<Voucher> => {
-  const { data } = await api.post<Voucher>('/business/vouchers/redeem-manual', redeemDto);
+  const { data } = await api.post<Voucher>('/business/vouchers/redeem/manual', redeemDto);
   return data;
 };
 

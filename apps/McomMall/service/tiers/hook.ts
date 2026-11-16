@@ -27,7 +27,6 @@ export const mapApiTierToTier = (apiTier: ApiTier): Tier => {
     if (flags.dedicatedSupport) features.push('Dedicated Support');
     if (flags.priorityInSearch) features.push('Priority In Search');
     if (flags.advancedAnalytics) features.push('Advanced Analytics');
-    if (flags.allowGroupCreation) features.push('Group Creation Allowed');
     if (flags.allowCustomBranding) features.push('Custom Branding');
     if (flags.hasAccessToCRM) features.push('Access to CRM');
   }
@@ -108,7 +107,6 @@ export const useGetTiers = (type: string = 'all') => {
         features: [
           'Maximum visibility in Local Search',
           'Featured listing placements',
-          'Advanced marketing automation & Flow Builder',
           'Premium 24/7 dedicated support',
           'Unlimited loyalty voucher campaigns',
           'Advanced CRM analytics insights'
@@ -173,7 +171,6 @@ export const useGetTierById = (id: string) => {
         features: [
           'Maximum visibility in Local Search',
           'Featured listing placements',
-          'Advanced marketing automation & Flow Builder',
           'Premium 24/7 dedicated support',
           'Unlimited loyalty voucher campaigns',
           'Advanced CRM analytics insights'

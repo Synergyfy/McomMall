@@ -28,7 +28,7 @@ import { MerchantGiftCard } from '@/types/merchant-gift-card';
 
 const formSchema = z.object({
   amount: z.coerce.number().min(-1000).max(1000),
-  notes: z.string().optional(),
+  notes: z.string().min(1, 'A note is required for the audit trail.'),
 });
 
 interface AdjustBalanceDialogProps {
@@ -92,7 +92,7 @@ export const AdjustBalanceDialog = ({ card, isOpen, onClose }: AdjustBalanceDial
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (optional)</FormLabel>
+                  <FormLabel>Notes</FormLabel>
                   <FormControl>
                     <Textarea {...field} />
                   </FormControl>

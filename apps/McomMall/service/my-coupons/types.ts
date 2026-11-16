@@ -20,7 +20,7 @@ export interface Coupon {
 export interface InitiateCouponPurchaseDto {
   couponProductId: string;
   amount: number;
-  paymentMethod: 'stripe' | 'paypal';
+  paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet';
 }
 
 export interface VerifyCouponPurchaseDto {
@@ -32,17 +32,17 @@ export interface VerifyCouponPurchaseDto {
     personalMessage?: string;
     deliveryDate?: Date;
   };
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   transactionId: string;
 }
 
 export interface InitiateReloadDto {
   amount: number;
-  paymentMethod: 'stripe' | 'paypal';
+  paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet';
 }
 
 export interface VerifyReloadDto {
   amount: number;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   transactionId: string;
 }

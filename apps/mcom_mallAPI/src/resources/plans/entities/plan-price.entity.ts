@@ -1,4 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { ApiProperty } from '@nestjs/swagger';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { PlanVariant } from './plan-variant.entity';
@@ -29,7 +30,7 @@ export class PlanPrice extends AbstractBaseEntity {
     example: 29.99,
     description: 'One-off price for the full tier duration',
   })
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @ApiProperty({ example: 'price_123', nullable: true })

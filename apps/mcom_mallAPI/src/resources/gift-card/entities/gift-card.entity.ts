@@ -7,6 +7,7 @@ import {
   DeleteDateColumn,
   Index,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { GiftCardTransaction } from './gift-card-transaction.entity';
 import { Order } from '../../order/entities/order.entity';
@@ -29,10 +30,10 @@ export class GiftCard extends AbstractBaseEntity {
   @Column({ unique: true, length: 16 })
   code: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   initialBalance: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   currentBalance: number;
 
   @Column({ length: 3 })

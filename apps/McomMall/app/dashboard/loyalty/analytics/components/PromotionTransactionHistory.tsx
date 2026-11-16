@@ -36,13 +36,13 @@ export const PromotionTransactionHistory = ({
 
   const { data, isLoading } = useGetPromotionTransactionHistory(promotionId, {
     page,
-    take: 10,
+    limit: 10,
     startDate: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
     endDate: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
   });
 
   const handlePageChange = (newPage: number) => {
-    if (newPage > 0 && newPage <= (data?.meta.pageCount || 1)) {
+    if (newPage > 0 && newPage <= (data?.meta.totalPages || 1)) {
       setPage(newPage);
     }
   };
@@ -135,7 +135,7 @@ export const PromotionTransactionHistory = ({
           </Table>
         </div>
 
-        {data && data.meta.pageCount > 1 && (
+        {data && data.meta.totalPages > 1 && (
           <div className="mt-4 flex justify-end">
             <Pagination>
               <PaginationContent>
@@ -151,7 +151,7 @@ export const PromotionTransactionHistory = ({
                 </PaginationItem>
                 <PaginationItem>
                     <span className="text-sm text-muted-foreground px-4">
-                        Page {page} of {data.meta.pageCount}
+                        Page {page} of {data.meta.totalPages}
                     </span>
                 </PaginationItem>
                 <PaginationItem>
@@ -161,7 +161,7 @@ export const PromotionTransactionHistory = ({
                       e.preventDefault();
                       handlePageChange(page + 1);
                     }}
-                    className={page >= data.meta.pageCount ? 'pointer-events-none opacity-50' : ''}
+                    className={page >= data.meta.totalPages ? 'pointer-events-none opacity-50' : ''}
                   />
                 </PaginationItem>
               </PaginationContent>

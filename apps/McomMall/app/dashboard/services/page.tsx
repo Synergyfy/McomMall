@@ -297,15 +297,25 @@ export default function ServicesDashboard() {
                           >
                             <Badge
                               variant={
-                                service.isActive ? 'default' : 'secondary'
+                                service.adminDisabled
+                                  ? 'destructive'
+                                  : service.isActive
+                                    ? 'default'
+                                    : 'secondary'
                               }
                               className={
-                                service.isActive
-                                  ? 'bg-green-100 text-green-800 border-none px-3'
-                                  : 'px-3'
+                                service.adminDisabled
+                                  ? 'bg-amber-100 text-amber-800 border-none px-3'
+                                  : service.isActive
+                                    ? 'bg-green-100 text-green-800 border-none px-3'
+                                    : 'px-3'
                               }
                             >
-                              {service.isActive ? 'Active' : 'Inactive'}
+                              {service.adminDisabled
+                                ? 'Disabled by admin'
+                                : service.isActive
+                                  ? 'Active'
+                                  : 'Inactive'}
                             </Badge>
                           </TableCell>
                           <TableCell

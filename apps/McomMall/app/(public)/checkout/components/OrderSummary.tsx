@@ -5,6 +5,7 @@ import { Product } from '@/service/listings/types';
 import { Cart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 
 interface OrderSummaryProps {
   product?: Product;
@@ -69,11 +70,11 @@ export default function OrderSummary({
                   {item.product.title}
                 </h3>
                 <p className="text-gray-500">
-                  £{item.product.price.toFixed(2)} x {item.quantity}
+                  {formatCurrency(item.product.price)} x {item.quantity}
                 </p>
               </div>
               <p className="text-lg font-semibold text-gray-800">
-                £{(item.product.price * item.quantity).toFixed(2)}
+                {formatCurrency(item.product.price * item.quantity)}
               </p>
             </motion.div>
           ))}
@@ -94,7 +95,7 @@ export default function OrderSummary({
                   {product.title}
                 </h3>
                 <p className="text-lg text-gray-600">
-                  £{product.price.toFixed(2)}
+                  {formatCurrency(product.price)}
                 </p>
               </div>
             </div>
@@ -140,18 +141,18 @@ export default function OrderSummary({
         <div className="flex items-center justify-between text-lg">
           <p className="text-gray-600">Subtotal</p>
           <p className="font-semibold text-gray-800">
-            £{basePrice.toFixed(2)}
+            {formatCurrency(basePrice)}
           </p>
         </div>
         {discount > 0 && (
           <div className="flex items-center justify-between text-lg text-green-600">
             <p>Discount</p>
-            <p className="font-semibold">-£{discount.toFixed(2)}</p>
+            <p className="font-semibold">-{formatCurrency(discount)}</p>
           </div>
         )}
         <div className="flex items-center justify-between text-2xl font-bold text-gray-800 pt-2 border-t-2 border-gray-100 mt-2">
           <p>Total</p>
-          <p>£{totalPrice.toFixed(2)}</p>
+          <p>{formatCurrency(totalPrice)}</p>
         </div>
       </div>
     </motion.div>

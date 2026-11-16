@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import {
   CampaignTargetType,
@@ -45,10 +46,10 @@ export class CampaignCashback extends AbstractBaseEntity {
   })
   displayType: CampaignDisplayType;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   totalValue: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   levelValue: number;
 
   @Column({

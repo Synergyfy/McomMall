@@ -101,7 +101,7 @@ export class CustomerDirectoryService {
     const reviews = await this.reviewRepository
       .createQueryBuilder('review')
       .leftJoinAndSelect('review.user', 'user')
-      .where('review.business_id = :businessId', { businessId })
+      .where('review.business = :businessId', { businessId })
       .andWhere('review.user IS NOT NULL')
       .getMany();
 
@@ -333,8 +333,8 @@ export class CustomerDirectoryService {
       this.reviewRepository
         .createQueryBuilder('review')
         .leftJoinAndSelect('review.user', 'user')
-        .where('review.business_id = :businessId', { businessId })
-        .orderBy('review.created_at', 'DESC')
+        .where('review.business = :businessId', { businessId })
+        .orderBy('review.createdAt', 'DESC')
         .take(limit)
         .getMany(),
       this.signalRepository.find({

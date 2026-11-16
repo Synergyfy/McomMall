@@ -145,7 +145,6 @@ const defaultTiers = [
       'Unlimited product & service listings',
       'Maximum visibility in Local Search',
       'Featured listing placements',
-      'Advanced marketing automation & Flow Builder',
       '24/7 dedicated account manager',
       'Unlimited loyalty & voucher campaigns',
       'Advanced CRM analytics insights',

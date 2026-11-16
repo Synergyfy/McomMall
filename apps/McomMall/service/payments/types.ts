@@ -36,6 +36,7 @@ export interface CreateStripeIntentRequest {
   // Keeping amount for backward compatibility if PAYG still uses it directly
   amount?: number;
   currency?: string;
+  idempotencyKey?: string;
 }
 
 // Payload for PayPal Order
@@ -46,6 +47,7 @@ export interface CreatePaypalOrderRequest {
   purpose?: PaymentPurpose;  // 'MEMBERSHIP'
   // Keeping amount for backward compatibility
   amount?: number;
+  idempotencyKey?: string;
 }
 
 export interface RecordPaymentRequest {

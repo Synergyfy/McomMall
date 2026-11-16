@@ -13,14 +13,19 @@ export function formatEnumValue(value: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export const CURRENCY = '£';
+export {
+  CURRENCY,
+  formatMoney,
+  formatPence,
+  fromPence,
+  parseMoneyInput,
+  toPence,
+} from './money';
+
+import { formatMoney } from './money';
 
 export function formatCurrency(amount: number | string) {
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return `${CURRENCY}${numericAmount.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return formatMoney(amount);
 }
 
 export const isImageUrl = (url: string | null | undefined): boolean => {

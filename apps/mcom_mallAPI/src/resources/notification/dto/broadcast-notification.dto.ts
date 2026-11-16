@@ -40,4 +40,12 @@ export class BroadcastNotificationDto {
   @IsOptional()
   @IsString()
   entityId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Delivery channel',
+    example: 'in_app',
+  })
+  @IsOptional()
+  @IsString()
+  channel?: string;
 }

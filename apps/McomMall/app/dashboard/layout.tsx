@@ -113,7 +113,6 @@ export default function DashboardLayout({
 
   const pathname = usePathname();
   const isLocalMall = pathname === '/dashboard/localmall';
-  const isEngagement = pathname.startsWith('/dashboard/engagement');
 
   useEffect(() => {
     setMounted(true);
@@ -156,24 +155,8 @@ export default function DashboardLayout({
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-grow flex flex-col min-h-0 w-full min-w-0 max-w-full overflow-x-hidden">
           <header className="flex items-center justify-between w-full h-14 py-2 px-4 border-b border-gray-200 bg-white shadow-sm transition-all duration-300">
-            {isEngagement ? (
-              /* --- ENGAGEMENT HEADER --- */
-              <>
-                <div className="flex items-center gap-2">
-                  <Link href="/dashboard" className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center shrink-0">
-                      <span className="text-white font-black text-sm">M</span>
-                    </div>
-                  </Link>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ProximityHeaderBadge />
-                  <UserNav align="end" />
-                </div>
-              </>
-            ) : (
-              /* --- DEFAULT HEADER --- */
-              <>
+            {/* --- DEFAULT HEADER --- */}
+            <>
                 {/* --- LEFT SIDE: Hamburger + Desktop collapse button --- */}
                 <div className="flex items-center gap-2">
                   {/* Mobile hamburger menu */}
@@ -238,7 +221,7 @@ export default function DashboardLayout({
                 {/* --- RIGHT SIDE: Membership, Activity Timer & User Nav (desktop only) --- */}
                 <div className="flex items-center gap-2 sm:gap-4">
                   <div className="hidden sm:flex items-center gap-2 sm:gap-4">
-                    <MembershipBadge />
+                    {userRole === 'owner' && <MembershipBadge />}
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -252,8 +235,7 @@ export default function DashboardLayout({
                   {/* UserNav — compact avatar on mobile, full on desktop */}
                   <UserNav align="end" />
                 </div>
-              </>
-            )}
+            </>
           </header>
 
           {/* Trial indicator — business owners only */}
@@ -269,7 +251,7 @@ export default function DashboardLayout({
           </div>
           
           {/* Bottom Navigation (Mobile Only) */}
-          {!(pathname.includes('/add-product') || pathname.includes('/add-service') || pathname.includes('/events/new') || pathname.includes('/dashboard/localmall')) && (
+          {!(pathname.includes('/add-product') || pathname.includes('/add-service') || pathname.includes('/dashboard/localmall')) && (
             userRole === 'customer' ? (
               <CustomerBottomNav />
             ) : (

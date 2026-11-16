@@ -1,4 +1,5 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { GiftCard } from './gift-card.entity';
 import { Order } from '../../order/entities/order.entity';
@@ -31,7 +32,7 @@ export class GiftCardTransaction extends AbstractBaseEntity {
   @Column({ nullable: true })
   orderId?: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @Column({

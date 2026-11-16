@@ -109,6 +109,20 @@ export class CheckoutService {
       throw new NotFoundException('One or more products not found.');
     }
 
+    // Products that are not published and public must not be purchasable even
+    // if someone has the ID (e.g. an old link or a direct API call).
+    const unavailableProduct = products.find(
+      (p) =>
+        p.productStatus !== 'published' ||
+        p.visibility !== 'public' ||
+        p.adminDisabled,
+    );
+    if (unavailableProduct) {
+      throw new BadRequestException(
+        `"${unavailableProduct.title}" is not available for purchase.`,
+      );
+    }
+
     // Early stock guard so a payment intent is not created for unavailable
     // stock. The authoritative compare-and-set happens in completeCheckout.
     for (const item of items) {
@@ -354,41 +368,64 @@ export class CheckoutService {
 
     // Create payment intent if needed
     if (remainingTotal > 0) {
-      // Prefer centralized MCOM Wallet holds when enabled and linked.
-      const centralUserId = (user as any)?.centralUserId as string | undefined;
-      if (centralUserId && this.mcomWalletService.isEnabled()) {
-        try {
-          const hold = await this.mcomWalletService.placeHold({
-            userId: centralUserId,
-            amount: Number(remainingTotal.toFixed(2)),
-            reference: `mall-checkout-${newOrder.id}`,
-            metadata: { platform: 'mcom-mall', orderId: newOrder.id },
-            idempotencyKey: this.mcomWalletService.buildKey(
-              'hold',
-              newOrder.id,
-            ),
-          });
-          return {
-            orderId: newOrder.id,
-            holdId: hold.holdId,
-            expiresAt: hold.expiresAt,
-            paymentRequired: true,
-            paymentMethod: PaymentMethod.MCOM_WALLET,
-            remainingTotal,
-          };
-        } catch (err: any) {
-          throw this.mcomWalletService.toHttpException(err);
+      const provider =
+        initiateCheckoutDto.paymentProvider ?? PaymentMethod.STRIPE;
+
+      if (provider === PaymentMethod.MCOM_WALLET) {
+        const centralUserId = (user as any)?.centralUserId as
+          | string
+          | undefined;
+        if (!centralUserId) {
+          throw new BadRequestException(
+            'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+          );
         }
+        const charge = await this.paymentProviderService.createWalletCharge(
+          Number(remainingTotal.toFixed(2)),
+          'GBP',
+          {
+            reference: `mall-checkout-${newOrder.id}`,
+            userId,
+            description: 'MCOM Mall order',
+          },
+          centralUserId,
+        );
+        return {
+          orderId: newOrder.id,
+          transactionId: charge.chargeId,
+          paymentRequired: true,
+          paymentMethod: PaymentMethod.MCOM_WALLET,
+          remainingTotal,
+        };
       }
+
+      if (provider === PaymentMethod.PAYPAL) {
+        const order = await this.paymentProviderService.createPaypalOrder(
+          remainingTotal,
+          'GBP',
+          { reference: `mall-checkout-${newOrder.id}` },
+        );
+        return {
+          orderId: newOrder.id,
+          orderID: order.id,
+          approvalUrl: order.approvalUrl ?? null,
+          paymentRequired: true,
+          paymentMethod: PaymentMethod.PAYPAL,
+          remainingTotal,
+        };
+      }
+
       const paymentIntent =
         await this.paymentProviderService.createStripePaymentIntent(
           remainingTotal,
           'GBP',
+          { reference: `mall-checkout-${newOrder.id}` },
         );
       return {
         orderId: newOrder.id,
         clientSecret: paymentIntent.client_secret,
         paymentRequired: true,
+        paymentMethod: PaymentMethod.STRIPE,
         remainingTotal,
       };
     }
@@ -429,19 +466,41 @@ export class CheckoutService {
           ? transactionId
           : undefined);
       if (walletHoldId) {
-        // Centralized wallet path: convert the pre-authorization hold into a
-        // real debit. Uncaptured holds auto-expire (~24h) as a backstop.
-        try {
-          await this.mcomWalletService.captureHold({
-            holdId: walletHoldId,
-            amount: Number(remainingTotal.toFixed(2)),
-            reference: `mall-checkout-${orderId}`,
-            idempotencyKey: this.mcomWalletService.buildKey('capture', orderId),
-          });
-        } catch (err: any) {
-          order.status = OrderStatus.FAILED;
-          await this.orderRepository.save(order);
-          throw this.mcomWalletService.toHttpException(err);
+        // Legacy pre-authorization hold: convert the hold into a real debit.
+        // New checkouts use a settled MCOM Pay wallet charge instead.
+        const isLegacyHold =
+          Boolean(holdId) ||
+          (!transactionId && Boolean(walletHoldId));
+        if (isLegacyHold) {
+          try {
+            await this.mcomWalletService.captureHold({
+              holdId: walletHoldId,
+              amount: Number(remainingTotal.toFixed(2)),
+              reference: `mall-checkout-${orderId}`,
+              idempotencyKey: this.mcomWalletService.buildKey(
+                'capture',
+                orderId,
+              ),
+            });
+          } catch (err: any) {
+            order.status = OrderStatus.FAILED;
+            await this.orderRepository.save(order);
+            throw this.mcomWalletService.toHttpException(err);
+          }
+        } else {
+          const verification =
+            await this.paymentProviderService.verifyWalletCharge(
+              walletHoldId,
+              Number(remainingTotal.toFixed(2)),
+              'GBP',
+            );
+          if (!verification.ok) {
+            order.status = OrderStatus.FAILED;
+            await this.orderRepository.save(order);
+            throw new BadRequestException(
+              `Payment verification failed: ${verification.reason}`,
+            );
+          }
         }
       } else {
         if (!transactionId || !paymentProvider) {
@@ -450,11 +509,17 @@ export class CheckoutService {
           );
         }
         const verification =
-          await this.paymentProviderService.verifyStripePaymentIntent(
-            transactionId,
-            remainingTotal,
-            'GBP',
-          );
+          paymentProvider === PaymentMethod.PAYPAL
+            ? await this.paymentProviderService.captureAndVerifyPaypalOrder(
+                transactionId,
+                remainingTotal,
+                'GBP',
+              )
+            : await this.paymentProviderService.verifyStripePaymentIntent(
+                transactionId,
+                remainingTotal,
+                'GBP',
+              );
         if (!verification.ok) {
           order.status = OrderStatus.FAILED;
           await this.orderRepository.save(order);

@@ -27,7 +27,6 @@ import {
   MapPin,
   BarChart2,
   Trophy,
-  Wrench,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -164,13 +163,8 @@ export const serviceMenuItems: MenuItem[] = [
 
 export const marketingMenuItems: MenuItem[] = [
   {
-    title: 'Engagement',
-    href: '/dashboard/engagement',
-    icon: BarChart2,
-  },
-  {
     title: 'Partnerships',
-    href: '/dashboard/marketing/partnerships',
+    href: '/dashboard/marketing/my-partners',
     icon: Users,
     subMenu: [
       { title: 'My Partners', href: '/dashboard/marketing/my-partners' },
@@ -180,18 +174,6 @@ export const marketingMenuItems: MenuItem[] = [
       },
     ],
   },
-  /*
-  {
-    title: 'Groups',
-    href: '/dashboard/marketing/groups',
-    icon: Users,
-    subMenu: [
-      { title: 'My Groups', href: '/dashboard/marketing/groups' },
-      { title: 'Create Group', href: '/dashboard/marketing/groups/new' },
-      { title: 'Membership', href: '/dashboard/marketing/membership' },
-    ],
-  },
-  */
 ];
 
 export const historyMenuItems: MenuItem[] = [
@@ -249,27 +231,6 @@ export const accountMenuItems: MenuItem[] = [
 
 export const pluginMenuItems: MenuItem[] = [
   {
-    title: 'Business Tools',
-    href: '/dashboard/tools',
-    icon: Wrench,
-    subMenu: [
-      { title: 'Overview', href: '/dashboard/tools' },
-      { title: 'Excess Stock', href: '/dashboard/tools/excess-stock' },
-      { title: 'Capacity Manager', href: '/dashboard/tools/capacity' },
-      { title: 'Campaigns', href: '/dashboard/tools/campaigns' },
-      { title: 'Push Alerts', href: '/dashboard/tools/alerts' },
-    ],
-  },
-  {
-    title: 'Marketing Automations',
-    href: '/dashboard/automations',
-    icon: Zap,
-    subMenu: [
-      { title: 'Dashboard', href: '/dashboard/automations' },
-      { title: 'Flow Builder', href: '/dashboard/automations/new' },
-    ],
-  },
-  {
     title: 'Loyalty & Reward',
     href: '/dashboard/loyalty',
     icon: Settings,
@@ -287,11 +248,6 @@ export const pluginMenuItems: MenuItem[] = [
     title: 'Promotion',
     href: '/dashboard/promotions',
     icon: Megaphone,
-  },
-  {
-    title: 'Events',
-    href: '/dashboard/events',
-    icon: Calendar,
   },
   {
     title: 'Gift Card',

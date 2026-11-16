@@ -46,17 +46,9 @@ export default function VoucherPage() {
     const [spendingLocations, setSpendingLocations] = useState<any[]>([]);
 
     useEffect(() => {
-        if (id) {
-            const stored = localStorage.getItem(`spending-locations-${id}`);
-            if (stored) {
-                try {
-                    setSpendingLocations(JSON.parse(stored));
-                } catch (e) {
-                    console.error("Failed to parse spending locations", e);
-                }
-            }
-        }
-    }, [id]);
+        const locations = (displayVoucher as any)?.spendingLocations;
+        setSpendingLocations(Array.isArray(locations) ? locations : []);
+    }, [displayVoucher]);
 
     if (isLoading && !cachedItem) {
         return <div className="flex justify-center items-center h-screen bg-gray-50 pt-16"><Loader className="animate-spin text-orange-600" size={48} /></div>;
@@ -105,8 +97,12 @@ export default function VoucherPage() {
         title: title,
         image: images[0] || '/placeholder.png',
         category: 'Voucher',
-        price: (displayVoucher as any)?.price || 0,
-        items_left: 1,
+        items_left: 0,
+        price:
+            (displayVoucher as any)?.price ||
+            (displayVoucher?.fixedAmounts?.length
+                ? Math.min(...displayVoucher.fixedAmounts)
+                : 0),
         fixedAmounts: displayVoucher?.fixedAmounts,
         bonusAmount: displayVoucher?.bonusAmount,
         bonusThreshold: displayVoucher?.bonusThreshold,

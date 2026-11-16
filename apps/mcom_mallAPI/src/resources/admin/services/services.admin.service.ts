@@ -63,10 +63,16 @@ export class AdminServicesService {
     }
 
     if (status && status !== 'all') {
-      let sStatus = status;
-      if (status === 'active') sStatus = 'published';
-      if (status === 'inactive') sStatus = 'draft';
-      qb.andWhere('service.status = :sStatus', { sStatus });
+      if (status === 'active') {
+        qb.andWhere('service.status = :sStatus', { sStatus: 'published' });
+      } else if (status === 'inactive') {
+        qb.andWhere(
+          '(service.adminDisabled = true OR service.status = :draftStatus)',
+          { draftStatus: 'draft' },
+        );
+      } else {
+        qb.andWhere('service.status = :sStatus', { sStatus: status });
+      }
     }
 
     if (category && category !== 'all') {
@@ -85,7 +91,11 @@ export class AdminServicesService {
       category: 'Service', // Placeholder
       price: Number(s.fixedPrice || s.pricePerHour || s.pricePerUnit || 0),
       duration: s.duration,
-      status: s.status === 'published' ? 'active' : 'inactive',
+      status: s.adminDisabled
+        ? 'inactive'
+        : s.status === 'published'
+          ? 'active'
+          : 'inactive',
       description: s.description || '',
       images: s.media || [],
       createdAt: s.created_at,
@@ -98,6 +108,18 @@ export class AdminServicesService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async deactivate(id: string) {
+    const service = await this.servicesRepository.findOne({ where: { id } });
+    if (!service) throw new NotFoundException('Service not found');
+    return this.servicesRepository.update(id, { adminDisabled: true });
+  }
+
+  async activate(id: string) {
+    const service = await this.servicesRepository.findOne({ where: { id } });
+    if (!service) throw new NotFoundException('Service not found');
+    return this.servicesRepository.update(id, { adminDisabled: false });
   }
 
   async remove(id: string) {

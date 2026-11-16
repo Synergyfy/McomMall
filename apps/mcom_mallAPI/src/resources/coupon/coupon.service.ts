@@ -4,6 +4,8 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   NotFoundException,
   Optional,
   UnprocessableEntityException,
@@ -22,6 +24,7 @@ import {
   RedemptionStatus,
 } from './entities/redemption-log.entity';
 import { CreateCouponDto } from './dto/create-coupon.dto';
+import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { MarketingCampaign } from '../campaign/entities/marketing-campaign.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { BusinessStatus } from '../listings/listing.enum';
@@ -43,6 +46,9 @@ import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 
 import { SavedCoupon } from './entities/saved-coupon.entity';
+import { CouponProduct } from './entities/coupon-product.entity';
+import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { OrderPayment, PaymentMethod } from '../order/entities/order-payment.entity';
 import { CouponStatsDto } from './dto/coupon-stats.dto';
 import { CouponChartDataDto } from './dto/coupon-chart-data.dto';
 import { CouponTransactionHistoryDto } from './dto/coupon-transaction-history.dto';
@@ -72,6 +78,13 @@ export class CouponService {
     private readonly addressRepository: Repository<ShippingAddress>,
     @InjectRepository(SavedCoupon)
     private readonly savedCouponRepository: Repository<SavedCoupon>,
+    @InjectRepository(CouponProduct)
+    private readonly couponProductRepository: Repository<CouponProduct>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(OrderPayment)
+    private readonly orderPaymentRepository: Repository<OrderPayment>,
+    private readonly paymentProviderService: PaymentProviderService,
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
@@ -80,6 +93,8 @@ export class CouponService {
     @Optional()
     private readonly instrumentScopeService?: InstrumentScopeService,
   ) {}
+
+  private readonly logger = new Logger(CouponService.name);
 
   async create(dto: CreateCouponDto, creator?: User): Promise<Coupon> {
     const {
@@ -96,6 +111,12 @@ export class CouponService {
       campaignId,
       businessId,
       brandingBusinessId,
+      status,
+      backgroundImageUrl,
+      individualUseOnly,
+      minSpend,
+      maxSpend,
+      allowedEmails,
     } = dto;
 
     if (
@@ -156,7 +177,16 @@ export class CouponService {
       perUserLimit: perUserLimit || 1,
       startDate: startDate || campaign?.startDate || null,
       expiresAt: expiresAt || campaign?.endDate || null,
-      status: CouponStatus.DRAFT,
+      status:
+        status ??
+        (sourceType === CouponSourceType.BUSINESS
+          ? CouponStatus.ACTIVE
+          : CouponStatus.DRAFT),
+      backgroundImageUrl: backgroundImageUrl ?? null,
+      individualUseOnly: individualUseOnly ?? false,
+      minSpend: minSpend ?? null,
+      maxSpend: maxSpend ?? null,
+      allowedEmails: allowedEmails ?? null,
       campaign,
       business,
     });
@@ -577,7 +607,7 @@ export class CouponService {
       .innerJoin('log.coupon', 'coupon')
       .where('coupon.businessId IN (:...businessIds)', { businessIds })
       .andWhere('log.status = :status', { status: RedemptionStatus.REDEEMED })
-      .select('SUM(coupon.discountValue)', 'rawTotalRedeemed')
+      .select('SUM(coupon.discountValue) / 100.0', 'rawTotalRedeemed')
       .getRawOne();
 
     const totalRedeemed = Number(rawTotalRedeemed || 0);
@@ -585,10 +615,8 @@ export class CouponService {
     const { rawTotalSold } = await this.couponRepository
       .createQueryBuilder('coupon')
       .where('coupon.businessId IN (:...businessIds)', { businessIds })
-      .select(
-        'SUM(coupon.discountValue * CASE WHEN coupon.usageLimit > 0 THEN coupon.usageLimit ELSE 1 END)',
-        'rawTotalSold',
-      )
+      .andWhere('coupon.status != :draft', { draft: CouponStatus.DRAFT })
+      .select('SUM(coupon.discountValue) / 100.0', 'rawTotalSold')
       .getRawOne();
 
     const totalSold = Number(rawTotalSold || 0);
@@ -610,21 +638,43 @@ export class CouponService {
       return { data: [] };
     }
 
-    const rawResults = await this.redemptionLogRepository
-      .createQueryBuilder('log')
-      .innerJoin('log.coupon', 'coupon')
-      .where('coupon.businessId IN (:...businessIds)', { businessIds })
-      .andWhere('log.status = :status', { status: RedemptionStatus.REDEEMED })
-      .select('SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)', 'month')
-      .addSelect('COUNT(log.id)', 'redemptions')
-      .groupBy('SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)')
-      .orderBy('month', 'ASC')
-      .getRawMany();
+    const [redemptionRows, salesRows] = await Promise.all([
+      this.redemptionLogRepository
+        .createQueryBuilder('log')
+        .innerJoin('log.coupon', 'coupon')
+        .where('coupon.businessId IN (:...businessIds)', { businessIds })
+        .andWhere('log.status = :status', { status: RedemptionStatus.REDEEMED })
+        .select('SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)', 'month')
+        .addSelect('COUNT(log.id)', 'redemptions')
+        .groupBy('SUBSTRING(CAST(log.timestamp AS VARCHAR), 1, 7)')
+        .orderBy('month', 'ASC')
+        .getRawMany(),
+      this.couponRepository
+        .createQueryBuilder('coupon')
+        .where('coupon.businessId IN (:...businessIds)', { businessIds })
+        .andWhere('coupon.status != :draft', { draft: CouponStatus.DRAFT })
+        .select('SUBSTRING(CAST(coupon.created_at AS VARCHAR), 1, 7)', 'month')
+        .addSelect('COUNT(coupon.id)', 'sales')
+        .groupBy('SUBSTRING(CAST(coupon.created_at AS VARCHAR), 1, 7)')
+        .orderBy('month', 'ASC')
+        .getRawMany(),
+    ]);
 
-    const data = rawResults.map((r) => ({
-      month: r.month,
-      sales: 0,
-      redemptions: Number(r.redemptions || 0),
+    const months = Array.from(
+      new Set([
+        ...redemptionRows.map((row) => row.month),
+        ...salesRows.map((row) => row.month),
+      ]),
+    ).sort();
+
+    const data = months.map((month) => ({
+      month,
+      sales: Number(
+        salesRows.find((row) => row.month === month)?.sales ?? 0,
+      ),
+      redemptions: Number(
+        redemptionRows.find((row) => row.month === month)?.redemptions ?? 0,
+      ),
     }));
 
     return { data };
@@ -653,8 +703,12 @@ export class CouponService {
       });
     }
     if (endDate) {
+      const inclusiveEnd = new Date(endDate);
+      if (!Number.isNaN(inclusiveEnd.getTime()) && !endDate.includes('T')) {
+        inclusiveEnd.setHours(23, 59, 59, 999);
+      }
       query.andWhere('log.timestamp <= :endDate', {
-        endDate: new Date(endDate),
+        endDate: inclusiveEnd,
       });
     }
 
@@ -762,6 +816,86 @@ export class CouponService {
     });
 
     return new PageDto(items, pageMetaDto);
+  }
+
+  async findOneForUser(id: string, user: User): Promise<Coupon> {
+    const coupon = await this.couponRepository.findOne({
+      where: { id },
+      relations: ['business', 'business.user', 'campaign', 'branding'],
+    });
+    if (!coupon) {
+      throw new NotFoundException(`Coupon with ID ${id} not found.`);
+    }
+    if (
+      user.role !== UserRole.ADMIN &&
+      coupon.business?.user?.id !== user.id
+    ) {
+      throw new ForbiddenException(
+        'You are not authorized to view this coupon.',
+      );
+    }
+    return coupon;
+  }
+
+  async updateForUser(
+    id: string,
+    dto: UpdateCouponDto,
+    user: User,
+  ): Promise<Coupon> {
+    const coupon = await this.findOneForUser(id, user);
+
+    const {
+      businessId,
+      campaignId,
+      brandingBusinessId,
+      sourceType,
+      ...rest
+    } = dto;
+
+    Object.assign(coupon, rest);
+
+    if (businessId) {
+      const business = await this.businessRepository.findOne({
+        where: { id: businessId },
+        relations: ['user'],
+      });
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+      if (user.role !== UserRole.ADMIN && business.user?.id !== user.id) {
+        throw new ForbiddenException(
+          'You can only update coupons for a business that you own.',
+        );
+      }
+      coupon.business = business;
+    }
+
+    if (campaignId) {
+      const campaign = await this.campaignRepository.findOne({
+        where: { id: campaignId },
+      });
+      if (!campaign) {
+        throw new NotFoundException('Campaign not found');
+      }
+      coupon.campaign = campaign;
+    }
+
+    return this.couponRepository.save(coupon);
+  }
+
+  async updateStatusForUser(
+    id: string,
+    status: CouponStatus,
+    user: User,
+  ): Promise<Coupon> {
+    const coupon = await this.findOneForUser(id, user);
+    coupon.status = status;
+    return this.couponRepository.save(coupon);
+  }
+
+  async removeForUser(id: string, user: User): Promise<void> {
+    const coupon = await this.findOneForUser(id, user);
+    await this.couponRepository.softRemove(coupon);
   }
 
   async redeemManual(
@@ -974,6 +1108,462 @@ export class CouponService {
     }
 
     return savedCoupon;
+  }
+  // ─── Customer coupon-product purchases (MCOM Pay) ─────────────────────────
+
+  private normalizeCouponPaymentMethod(method: string): PaymentMethod {
+    const normalized = (method || '').toLowerCase();
+    if (normalized === 'stripe') return PaymentMethod.STRIPE;
+    if (normalized === 'paypal') return PaymentMethod.PAYPAL;
+    if (normalized === 'mcom_wallet' || normalized === 'wallet') {
+      return PaymentMethod.MCOM_WALLET;
+    }
+    throw new BadRequestException('Invalid payment provider specified.');
+  }
+
+  private validateCouponProductAmount(
+    product: CouponProduct,
+    amount: number,
+  ): void {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Enter a valid coupon amount.');
+    }
+    const fixed = (product.fixedAmounts ?? []).map(Number);
+    const matchesFixed = fixed.some((value) => Math.abs(value - amount) < 0.01);
+    if (matchesFixed) return;
+    if (!product.allowCustomAmount) {
+      throw new BadRequestException(
+        `Choose one of the available amounts: ${fixed.join(', ')}.`,
+      );
+    }
+    const min = Number(product.minCustomAmount ?? 0);
+    const max = Number(product.maxCustomAmount ?? Number.MAX_SAFE_INTEGER);
+    if (amount < min || amount > max) {
+      throw new BadRequestException(
+        `Amount must be between £${min.toFixed(2)} and £${max.toFixed(2)}.`,
+      );
+    }
+  }
+
+  private async getCentralUserId(userId: string): Promise<string> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user?.centralUserId) {
+      throw new BadRequestException(
+        'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+      );
+    }
+    return user.centralUserId;
+  }
+
+  async initiateCouponPurchase(
+    dto: { couponProductId: string; amount: number; paymentMethod: string },
+    userId: string,
+  ) {
+    const product = await this.couponProductRepository.findOne({
+      where: { id: dto.couponProductId, isEnabled: true },
+      relations: ['user'],
+    });
+    if (!product) {
+      throw new NotFoundException('Coupon product not found or inactive.');
+    }
+    if (!product.user?.isActive) {
+      throw new BadRequestException(
+        'This coupon is not currently available for purchase.',
+      );
+    }
+    const amount = Number(dto.amount);
+    this.validateCouponProductAmount(product, amount);
+    const method = this.normalizeCouponPaymentMethod(dto.paymentMethod);
+    const metadata = {
+      reference: `coupon-purchase-${product.id}-${userId}`,
+      userId,
+      description: `MCOM Mall coupon purchase — ${product.name}`,
+    };
+
+    if (method === PaymentMethod.MCOM_WALLET) {
+      const charge = await this.paymentProviderService.createWalletCharge(
+        amount,
+        'GBP',
+        metadata,
+        await this.getCentralUserId(userId),
+      );
+      return { provider: method, transactionId: charge.chargeId, amount };
+    }
+    if (method === PaymentMethod.STRIPE) {
+      const intent =
+        await this.paymentProviderService.createStripePaymentIntent(
+          amount,
+          'GBP',
+          metadata,
+        );
+      return {
+        provider: method,
+        clientSecret: intent.client_secret,
+        amount,
+      };
+    }
+    const order = await this.paymentProviderService.createPaypalOrder(
+      amount,
+      'GBP',
+      metadata,
+    );
+    return {
+      provider: method,
+      orderId: order.id,
+      approvalUrl: order.approvalUrl ?? null,
+      amount,
+    };
+  }
+
+  private async verifyCouponPayment(
+    method: PaymentMethod,
+    transactionId: string,
+    amount: number,
+  ) {
+    if (!transactionId) {
+      throw new BadRequestException('A payment reference is required.');
+    }
+    const result =
+      method === PaymentMethod.MCOM_WALLET
+        ? await this.paymentProviderService.verifyWalletCharge(
+            transactionId,
+            amount,
+            'GBP',
+          )
+        : method === PaymentMethod.PAYPAL
+          ? await this.paymentProviderService.captureAndVerifyPaypalOrder(
+              transactionId,
+              amount,
+              'GBP',
+            )
+          : await this.paymentProviderService.verifyStripePaymentIntent(
+              transactionId,
+              amount,
+              'GBP',
+            );
+    if (!result.ok) {
+      throw new BadRequestException(
+        `Payment verification failed: ${result.reason}`,
+      );
+    }
+  }
+
+  async verifyAndCompleteCouponPurchase(
+    dto: {
+      paymentProvider: string;
+      transactionId: string;
+      purchaseDetails: { couponProductId: string; amount: number };
+    },
+    userId: string,
+  ): Promise<any> {
+    const method = this.normalizeCouponPaymentMethod(dto.paymentProvider);
+    const amount = Number(dto.purchaseDetails?.amount);
+    const productId = dto.purchaseDetails?.couponProductId;
+    const product = await this.couponProductRepository.findOne({
+      where: { id: productId, isEnabled: true },
+      relations: ['user', 'user.businesses'],
+    });
+    if (!product) {
+      throw new NotFoundException('Coupon product not found or inactive.');
+    }
+    this.validateCouponProductAmount(product, amount);
+    await this.verifyCouponPayment(method, dto.transactionId, amount);
+
+    const existingPayment = await this.orderPaymentRepository.findOne({
+      where: { transactionId: dto.transactionId },
+    });
+    if (existingPayment) {
+      const existing = await this.findPurchasedCouponForBuyer(userId);
+      if (existing) return this.toCustomerCoupon(existing);
+    }
+
+    const business = product.user?.businesses?.[0] ?? null;
+    const expiresAt = product.expiryDays
+      ? new Date(Date.now() + product.expiryDays * 24 * 60 * 60 * 1000)
+      : null;
+
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+      const paymentRepo = manager.getRepository(OrderPayment);
+      const orderRepo = manager.getRepository(Order);
+      const couponRepo = manager.getRepository(Coupon);
+
+      const payment = await paymentRepo.save(
+        paymentRepo.create({
+          user: { id: userId } as User,
+          amount,
+          currency: 'GBP',
+          transactionId: dto.transactionId,
+          paymentMethod: method,
+        }),
+      );
+      const order = await orderRepo.save(
+        orderRepo.create({
+          user: { id: userId } as User,
+          total: amount,
+          payment,
+        }),
+      );
+
+      let code = this.generateCouponCode();
+      for (let i = 0; i < 5; i++) {
+        const clash = await couponRepo.findOne({ where: { code } });
+        if (!clash) break;
+        code = this.generateCouponCode();
+      }
+
+      const coupon = couponRepo.create({
+        code,
+        title: product.name,
+        description: product.description,
+        sourceType: CouponSourceType.BUSINESS,
+        discountValue: amount,
+        discountType: DiscountType.FIXED,
+        usageLimit: 1,
+        perUserLimit: 1,
+        status: CouponStatus.ACTIVE,
+        startDate: new Date(),
+        expiresAt,
+        business: business ?? undefined,
+        order,
+        metadata: {
+          buyerId: userId,
+          couponProductId: product.id,
+          couponProductName: product.name,
+          backgroundImage: product.backgroundImage ?? null,
+          textColor: product.textColor ?? null,
+          initialValue: amount,
+          balance: amount,
+        },
+      });
+      const saved = await couponRepo.save(coupon);
+      return this.toCustomerCoupon(saved);
+      });
+    } catch (dbErr) {
+      this.logger.error(
+        `Database transaction failed for coupon purchase after payment was captured. Initiating compensating refund.`,
+        dbErr,
+      );
+      await this.refundCouponPaymentOnFailure(method, dto.transactionId, amount);
+      throw new InternalServerErrorException(
+        'An error occurred while creating your coupon. If your account was charged, a refund has been initiated.',
+      );
+    }
+  }
+
+  async initiateCouponReload(
+    code: string,
+    dto: { amount: number; paymentMethod: string },
+    userId: string,
+  ) {
+    const coupon = await this.findCouponByCode(code);
+    const metadata = (coupon.metadata ?? {}) as Record<string, any>;
+    if (metadata.buyerId !== userId) {
+      throw new ForbiddenException('This coupon does not belong to you.');
+    }
+    const product = await this.couponProductRepository.findOne({
+      where: { id: metadata.couponProductId },
+    });
+    if (!product?.allowReloading) {
+      throw new BadRequestException('This coupon cannot be reloaded.');
+    }
+    const amount = Number(dto.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Enter a valid reload amount.');
+    }
+    const method = this.normalizeCouponPaymentMethod(dto.paymentMethod);
+    const paymentMetadata = {
+      reference: `coupon-reload-${coupon.id}-${userId}`,
+      userId,
+      description: `MCOM Mall coupon reload — ${product.name}`,
+    };
+
+    if (method === PaymentMethod.MCOM_WALLET) {
+      const charge = await this.paymentProviderService.createWalletCharge(
+        amount,
+        'GBP',
+        paymentMetadata,
+        await this.getCentralUserId(userId),
+      );
+      return { provider: method, transactionId: charge.chargeId, amount };
+    }
+    if (method === PaymentMethod.STRIPE) {
+      const intent =
+        await this.paymentProviderService.createStripePaymentIntent(
+          amount,
+          'GBP',
+          paymentMetadata,
+        );
+      return {
+        provider: method,
+        clientSecret: intent.client_secret,
+        amount,
+      };
+    }
+    const order = await this.paymentProviderService.createPaypalOrder(
+      amount,
+      'GBP',
+      paymentMetadata,
+    );
+    return {
+      provider: method,
+      orderId: order.id,
+      approvalUrl: order.approvalUrl ?? null,
+      amount,
+    };
+  }
+
+  async verifyAndCompleteCouponReload(
+    code: string,
+    dto: {
+      amount: number;
+      paymentProvider: string;
+      transactionId: string;
+    },
+    userId: string,
+  ): Promise<any> {
+    const coupon = await this.findCouponByCode(code);
+    const metadata = (coupon.metadata ?? {}) as Record<string, any>;
+    if (metadata.buyerId !== userId) {
+      throw new ForbiddenException('This coupon does not belong to you.');
+    }
+    const product = await this.couponProductRepository.findOne({
+      where: { id: metadata.couponProductId },
+    });
+    if (!product?.allowReloading) {
+      throw new BadRequestException('This coupon cannot be reloaded.');
+    }
+    const amount = Number(dto.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Enter a valid reload amount.');
+    }
+    const method = this.normalizeCouponPaymentMethod(dto.paymentProvider);
+    await this.verifyCouponPayment(method, dto.transactionId, amount);
+
+    const existingPayment = await this.orderPaymentRepository.findOne({
+      where: { transactionId: dto.transactionId },
+    });
+    if (existingPayment) return this.toCustomerCoupon(coupon);
+
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+      const paymentRepo = manager.getRepository(OrderPayment);
+      const orderRepo = manager.getRepository(Order);
+      const couponRepo = manager.getRepository(Coupon);
+
+      const payment = await paymentRepo.save(
+        paymentRepo.create({
+          user: { id: userId } as User,
+          amount,
+          currency: 'GBP',
+          transactionId: dto.transactionId,
+          paymentMethod: method,
+        }),
+      );
+      await orderRepo.save(
+        orderRepo.create({
+          user: { id: userId } as User,
+          total: amount,
+          payment,
+        }),
+      );
+
+      const currentBalance = Number(
+        metadata.balance ?? coupon.discountValue ?? 0,
+      );
+      const nextBalance = roundMoney(currentBalance + amount);
+      coupon.discountValue = nextBalance;
+      coupon.metadata = {
+        ...metadata,
+        balance: nextBalance,
+        lastReloadAt: new Date().toISOString(),
+      };
+      const saved = await couponRepo.save(coupon);
+      return this.toCustomerCoupon(saved);
+      });
+    } catch (dbErr) {
+      this.logger.error(
+        `Database transaction failed for coupon reload after payment was captured. Initiating compensating refund.`,
+        dbErr,
+      );
+      await this.refundCouponPaymentOnFailure(method, dto.transactionId, amount);
+      throw new InternalServerErrorException(
+        'An error occurred while reloading your coupon. If your account was charged, a refund has been initiated.',
+      );
+    }
+  }
+
+  private async refundCouponPaymentOnFailure(
+    method: PaymentMethod,
+    transactionId: string,
+    amount: number,
+  ): Promise<void> {
+    try {
+      if (
+        method === PaymentMethod.STRIPE ||
+        method === PaymentMethod.MCOM_WALLET
+      ) {
+        await this.paymentProviderService.refundStripePayment(
+          transactionId,
+          amount,
+        );
+      } else if (method === PaymentMethod.PAYPAL) {
+        await this.paymentProviderService.refundPaypalOrder(
+          transactionId,
+          amount,
+          'GBP',
+        );
+      }
+    } catch (refundErr) {
+      this.logger.error(
+        `Compensating refund also failed for coupon transaction ${transactionId}: ${refundErr.message}`,
+      );
+    }
+  }
+
+  async findPurchasedCouponsForUser(userId: string): Promise<any[]> {
+    const coupons = await this.couponRepository
+      .createQueryBuilder('coupon')
+      .leftJoinAndSelect('coupon.business', 'business')
+      .where("coupon.metadata ->> 'buyerId' = :userId", { userId })
+      .orderBy('coupon.created_at', 'DESC')
+      .getMany();
+    return coupons.map((coupon) => this.toCustomerCoupon(coupon));
+  }
+
+  private async findPurchasedCouponForBuyer(
+    userId: string,
+  ): Promise<Coupon | null> {
+    return this.couponRepository
+      .createQueryBuilder('coupon')
+      .where("coupon.metadata ->> 'buyerId' = :userId", { userId })
+      .orderBy('coupon.created_at', 'DESC')
+      .getOne();
+  }
+
+  private toCustomerCoupon(coupon: Coupon): any {
+    const metadata = (coupon.metadata ?? {}) as Record<string, any>;
+    const balance = Number(metadata.balance ?? coupon.discountValue ?? 0);
+    return {
+      ...coupon,
+      initialValue: Number(metadata.initialValue ?? coupon.discountValue ?? 0),
+      balance,
+      couponProduct: metadata.couponProductId
+        ? {
+            id: metadata.couponProductId,
+            name: metadata.couponProductName ?? coupon.title,
+            allowReloading: true,
+            backgroundImage: metadata.backgroundImage ?? null,
+            textColor: metadata.textColor ?? null,
+          }
+        : null,
+      buyer: { id: metadata.buyerId ?? null },
+      owner: coupon.business?.user ? { id: coupon.business.user.id } : null,
+    };
+  }
+
+  private generateCouponCode(): string {
+    return `CPN-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
   }
 }
 

@@ -34,10 +34,22 @@ export interface Membership {
 }
 
 export interface CreateMembershipDto {
-  tier: string;
+  tier?: 'basic' | 'extended' | 'professional';
+  planVariantId?: string;
+  planType?: 'monthly' | 'annual' | 'quarterly';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
+  idempotencyKey?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface VerifyPaymentDto {
-  paymentIntentId: string;
-  tier: string;
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
+  transactionId?: string;
+  holdId?: string;
+  purchaseDetails: {
+    tier?: 'basic' | 'extended' | 'professional';
+    planVariantId?: string;
+    planType?: 'monthly' | 'annual' | 'quarterly';
+  };
 }

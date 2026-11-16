@@ -63,8 +63,13 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
     const { mutateAsync: createBooking, isPending: isCreating } = useCreateBooking();
     const { mutateAsync: checkAvailability, isPending: isChecking } = useCheckAvailability();
 
-    const showCalendar = !!service.availability || ['perHour', 'perUnit'].includes(service.pricingModel);
+    const showCalendar = true;
     const availabilityProfile = service.availability || DEFAULT_AVAILABILITY;
+    const isUnavailable = Boolean(
+      service.adminDisabled ||
+        service.status !== 'published' ||
+        service.isActive === false
+    );
 
     // Derived Selection Data
     const activeVariant = useMemo(() => 
@@ -222,6 +227,11 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                start.setHours(sH, sM, 0, 0);
                end = new Date(selectedDate);
                end.setHours(eH, eM, 0, 0);
+            } else {
+               // Services without a configured calendar still need a valid
+               // time range. Default to the service duration (or one hour).
+               const durationMinutes = Number(service.duration) || 60;
+               end = new Date(start.getTime() + durationMinutes * 60_000);
             }
 
             const payload = {
@@ -240,7 +250,13 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                 setCreatedBookingId(booking.id);
                 setPaymentModalOpen(true);
             }
-        } catch (error) {}
+        } catch (error: any) {
+            const message =
+                error?.response?.data?.message ||
+                error?.message ||
+                'Could not create this booking. Please try again.';
+            toast.error(Array.isArray(message) ? message.join('\n') : message);
+        }
     };
 
     return (
@@ -460,13 +476,18 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
 
             {/* CTA */}
             <div className="flex flex-col gap-3 pt-4">
+                {isUnavailable && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                        This service is no longer accepting new bookings. Existing bookings remain available in your dashboard.
+                    </div>
+                )}
                 <Button
                     size="lg"
-                    disabled={isCreating || isChecking || (availabilityStatus?.isAvailable === false)}
+                    disabled={isUnavailable || isCreating || isChecking || (availabilityStatus?.isAvailable === false)}
                     className="w-full py-8 text-lg font-black bg-orange-600 hover:bg-orange-700 text-white rounded-2xl shadow-lg shadow-orange-200 transition-transform active:scale-[0.98] disabled:opacity-50 disabled:grayscale"
                     onClick={handleBookNow}
                 >
-                    {isCreating || isChecking ? <Loader2 className="animate-spin" /> : 'Confirm Booking'}
+                    {isCreating || isChecking ? <Loader2 className="animate-spin" /> : isUnavailable ? 'Currently Unavailable' : 'Confirm Booking'}
                 </Button>
                 <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
                     Funds held in escrow until completion

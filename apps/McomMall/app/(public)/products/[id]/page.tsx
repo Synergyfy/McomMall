@@ -41,6 +41,9 @@ export default function ProductPage() {
   }, [wishlist, id]);
 
   const { data: product, isLoading, isError } = useGetProductById(id || '');
+  const isUnavailable = Boolean(
+    product && (product.adminDisabled || product.productStatus !== 'published')
+  );
 
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>({});
 
@@ -297,15 +300,21 @@ export default function ProductPage() {
 
     let addedCount = 0;
 
-    // Iterate through all valid combinations resulting from the selection crossproduct
-    selectedCombinations.forEach(v => {
-      addItemToCart({
-        productId: id,
-        quantity: 1,
-        selectedVariants: v.combination,
+    if (selectedCombinations.length === 0) {
+      // Simple product with no variant matrix.
+      addItemToCart({ productId: id, quantity: 1 });
+      addedCount = 1;
+    } else {
+      // Iterate through all valid combinations resulting from the selection crossproduct
+      selectedCombinations.forEach(v => {
+        addItemToCart({
+          productId: id,
+          quantity: 1,
+          selectedVariants: v.combination,
+        });
+        addedCount++;
       });
-      addedCount++;
-    });
+    }
 
     toast.success(`Added ${addedCount} item${addedCount !== 1 ? 's' : ''} to cart`);
     
@@ -535,21 +544,30 @@ export default function ProductPage() {
 
                 {/* Actions */}
                 <div className="flex flex-col gap-3">
+                  {isUnavailable && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                      This product is no longer available to purchase. You can still view the details from your order history.
+                    </div>
+                  )}
                   <Button
                     size="lg"
                     className="w-full py-6 text-lg bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleAddToCart}
-                    disabled={isOutOfStock}
+                    disabled={isOutOfStock || isUnavailable}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                    {isUnavailable
+                      ? 'Unavailable'
+                      : isOutOfStock
+                        ? 'Out of Stock'
+                        : 'Add to Cart'}
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
                     className="w-full py-6 text-lg border-2 border-orange-100 text-orange-700 hover:bg-orange-50 hover:text-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleBuyNow}
-                    disabled={isOutOfStock}
+                    disabled={isOutOfStock || isUnavailable}
                   >
                     <CreditCard className="mr-2 h-5 w-5" />
                     Buy Now

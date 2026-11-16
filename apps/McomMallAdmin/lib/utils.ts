@@ -13,8 +13,17 @@ export function formatEnumValue(value: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export const CURRENCY = '£';
+export {
+  CURRENCY,
+  formatMoney,
+  formatPence,
+  fromPence,
+  parseMoneyInput,
+  toPence,
+} from './money';
+
+import { formatMoney } from './money';
 
 export function formatCurrency(amount: number) {
-  return `${CURRENCY}${amount.toFixed(2)}`;
+  return formatMoney(amount);
 }

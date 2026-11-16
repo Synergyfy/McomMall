@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Business } from '../../listings/entities/listing.entity';
@@ -25,7 +26,7 @@ export class Dispute extends AbstractBaseEntity {
   @Column({ nullable: true })
   orderId?: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @Column({ type: 'enum', enum: DisputeReason })

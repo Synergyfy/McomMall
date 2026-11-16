@@ -6,6 +6,7 @@ import {
   UseGuards,
   Req,
   Body,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,7 @@ import { NotificationService } from './notification.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { BroadcastNotificationDto } from './dto/broadcast-notification.dto';
+import { BroadcastSegmentDto } from './dto/broadcast-segment.dto';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -35,6 +37,29 @@ export class NotificationController {
   @ApiOperation({ summary: 'Mark notifications as seen' })
   markAsSeen(@Body('notificationIds') notificationIds: string[]) {
     return this.notificationService.markAsSeen(notificationIds);
+  }
+
+  @Post('broadcast/segment')
+  @ApiOperation({
+    summary: 'Send an alert to a business customer segment',
+  })
+  broadcastSegment(
+    @Req() req: Request,
+    @Body() dto: BroadcastSegmentDto,
+  ) {
+    return this.notificationService.broadcastToSegment(req.user.id, dto);
+  }
+
+  @Get('recipients/count')
+  @ApiOperation({ summary: 'Count customers matching a segment' })
+  countRecipients(
+    @Req() req: Request,
+    @Query('businessId') businessId?: string,
+    @Query('segmentId') segmentId?: string,
+  ) {
+    return this.notificationService
+      .countRecipients(req.user.id, businessId, segmentId)
+      .then((count) => ({ count }));
   }
 
   @Post('broadcast')

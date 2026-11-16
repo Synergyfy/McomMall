@@ -15,6 +15,10 @@ import * as cookieParser from 'cookie-parser';
 // 1. Shared Configuration Function
 // This setup applies to both Local and Vercel environments
 async function configureApp(app: any) {
+  // API responses must never be served from the browser HTTP cache with a
+  // 304: some clients reject conditional responses instead of replaying the
+  // cached body.
+  app.getHttpAdapter?.().getInstance?.().set?.('etag', false);
   app.use(
     json({
       limit: '50mb',

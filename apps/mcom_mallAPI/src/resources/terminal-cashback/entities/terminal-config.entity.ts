@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -71,7 +72,7 @@ export class TerminalConfig extends AbstractBaseEntity {
     description: 'Fixed reward amount for Level 2',
     nullable: true,
   })
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   fixedRewardValue: number;
 
   @ApiProperty({

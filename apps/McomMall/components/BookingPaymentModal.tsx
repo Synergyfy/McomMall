@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
   useVerifyPayment,
   useGetEligibleBookingRewards,
 } from '@/service/bookings/hook';
+import { useWalletBalance } from '@/service/payments/hooks';
 import { PaymentMethod } from '@/service/bookings/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookingSuccessModal } from './BookingSuccessModal';
@@ -45,14 +46,28 @@ export default function BookingPaymentModal({
   const [rewardIssuanceId, setRewardIssuanceId] = useState<string | undefined>();
   const [isVerifying, setIsVerifying] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isPayingWithWallet, setIsPayingWithWallet] = useState(false);
+  const initiateKeyRef = useRef<string | null>(null);
 
   const initiatePaymentMutation = useInitiatePayment();
   const verifyPaymentMutation = useVerifyPayment();
+  const { data: wallet, isLoading: walletLoading } = useWalletBalance(
+    isOpen && paymentMethod === PaymentMethod.MCOM_WALLET
+  );
   const { data: rewardData, isLoading: rewardsLoading } =
     useGetEligibleBookingRewards(bookingId, isOpen);
 
   useEffect(() => {
-    if (isOpen && bookingId && !clientSecret && !orderID && !initiatePaymentMutation.isPending) {
+    if (!isOpen || !bookingId) return;
+    if (paymentMethod === PaymentMethod.MCOM_WALLET) return;
+    const initiateKey = `${bookingId}:${paymentMethod}:${rewardIssuanceId ?? ''}`;
+    if (
+      !clientSecret &&
+      !orderID &&
+      !initiatePaymentMutation.isPending &&
+      initiateKeyRef.current !== initiateKey
+    ) {
+      initiateKeyRef.current = initiateKey;
       handleInitiatePayment(paymentMethod);
     }
   }, [isOpen, bookingId, paymentMethod, clientSecret, orderID, rewardIssuanceId]);
@@ -77,7 +92,12 @@ export default function BookingPaymentModal({
 
   const handleInitiatePayment = async (method: PaymentMethod) => {
     try {
-      const provider = method === PaymentMethod.STRIPE ? 'stripe' : 'paypal';
+      const provider =
+        method === PaymentMethod.STRIPE
+          ? 'stripe'
+          : method === PaymentMethod.PAYPAL
+            ? 'paypal'
+            : 'mcom_wallet';
       const response = await initiatePaymentMutation.mutateAsync({
         bookingId,
         paymentProvider: provider,
@@ -89,11 +109,48 @@ export default function BookingPaymentModal({
       setRewardDiscount(response.rewardDiscount ?? 0);
       if (method === PaymentMethod.STRIPE) {
         setClientSecret(response.clientSecret);
-      } else {
+      } else if (method === PaymentMethod.PAYPAL) {
         setOrderID(response.orderId);
       }
     } catch (error) {
       console.error('Failed to initiate payment', error);
+      // Allow the customer to retry after a transient failure.
+      initiateKeyRef.current = null;
+    }
+  };
+
+  const handleWalletPay = async () => {
+    if (isPayingWithWallet || isVerifying) return;
+    setIsPayingWithWallet(true);
+    try {
+      const response = await initiatePaymentMutation.mutateAsync({
+        bookingId,
+        paymentProvider: 'mcom_wallet',
+        rewardIssuanceId,
+      });
+      setAmount(response.amount);
+      setTotalAmount(response.totalAmount ?? response.amount);
+      setRewardDiscount(response.rewardDiscount ?? 0);
+      const transactionId = response.transactionId;
+      if (!transactionId) {
+        throw new Error('MCOM Wallet did not return a payment reference.');
+      }
+      await verifyPaymentMutation.mutateAsync({
+        bookingId,
+        amount: response.amount,
+        paymentProvider: 'mcom_wallet',
+        transactionId,
+      });
+      setShowSuccess(true);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'MCOM Wallet payment failed. Please try again.';
+      console.error('Failed to pay with MCOM Wallet', error);
+      alert(message);
+    } finally {
+      setIsPayingWithWallet(false);
     }
   };
 
@@ -101,7 +158,12 @@ export default function BookingPaymentModal({
     if (isVerifying) return;
     setIsVerifying(true);
     try {
-      const provider = paymentMethod === PaymentMethod.STRIPE ? 'stripe' : 'paypal';
+      const provider =
+        paymentMethod === PaymentMethod.STRIPE
+          ? 'stripe'
+          : paymentMethod === PaymentMethod.PAYPAL
+            ? 'paypal'
+            : 'mcom_wallet';
       await verifyPaymentMutation.mutateAsync({
         bookingId,
         amount,
@@ -254,7 +316,7 @@ export default function BookingPaymentModal({
                     </div>
 
                     {/* Method Selection */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                     <Button
                         variant={paymentMethod === PaymentMethod.STRIPE ? 'default' : 'outline'}
                         className={`h-20 rounded-2xl flex flex-col gap-2 transition-all border-2 ${
@@ -265,7 +327,7 @@ export default function BookingPaymentModal({
                         onClick={() => switchMethod(PaymentMethod.STRIPE)}
                     >
                         <CreditCard className="h-6 w-6" />
-                        <span className="text-xs font-black uppercase tracking-widest">Credit Card</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Card</span>
                     </Button>
                     <Button
                         variant={paymentMethod === PaymentMethod.PAYPAL ? 'default' : 'outline'}
@@ -277,14 +339,90 @@ export default function BookingPaymentModal({
                         onClick={() => switchMethod(PaymentMethod.PAYPAL)}
                     >
                         <Wallet className="h-6 w-6" />
-                        <span className="text-xs font-black uppercase tracking-widest">PayPal</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">PayPal</span>
+                    </Button>
+                    <Button
+                        variant={paymentMethod === PaymentMethod.MCOM_WALLET ? 'default' : 'outline'}
+                        className={`h-20 rounded-2xl flex flex-col gap-2 transition-all border-2 ${
+                        paymentMethod === PaymentMethod.MCOM_WALLET
+                            ? 'bg-orange-600 text-white shadow-xl shadow-orange-100 border-orange-600'
+                            : 'border-slate-100 text-slate-600 hover:bg-slate-50 hover:border-slate-200'
+                        }`}
+                        onClick={() => switchMethod(PaymentMethod.MCOM_WALLET)}
+                    >
+                        <Wallet className="h-6 w-6" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">MCOM</span>
                     </Button>
                     </div>
 
                     {/* Payment Form Area */}
                     <div className="min-h-[250px] relative bg-slate-50/30 rounded-3xl p-1">
                     <AnimatePresence mode="wait">
-                        {initiatePaymentMutation.isPending ? (
+                        {paymentMethod === PaymentMethod.MCOM_WALLET ? (
+                        <motion.div
+                            key="wallet"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="p-4 space-y-4"
+                        >
+                            {walletLoading ? (
+                                <p className="text-sm text-slate-500">Checking wallet balance…</p>
+                            ) : wallet && wallet.linked === false ? (
+                                <div className="space-y-2">
+                                    <p className="text-sm font-bold text-slate-800">
+                                        Your MCOM Wallet is not linked.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            if (wallet.topUpUrl) window.location.href = wallet.topUpUrl;
+                                        }}
+                                    >
+                                        Open MCOM Wallet
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between rounded-2xl border border-orange-100 bg-orange-50/60 p-4">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                                Available balance
+                                            </p>
+                                            <p className="text-2xl font-black text-slate-900">
+                                                £{Number(wallet?.availableBalance ?? 0).toFixed(2)}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                                Booking total
+                                            </p>
+                                            <p className="text-2xl font-black text-orange-600">
+                                                £{Number(totalAmount || amount || 0).toFixed(2)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        className="w-full h-12 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-bold"
+                                        disabled={
+                                            isPayingWithWallet ||
+                                            isVerifying ||
+                                            Number(wallet?.availableBalance ?? 0) <
+                                                Number(totalAmount || amount || 0)
+                                        }
+                                        onClick={handleWalletPay}
+                                    >
+                                        {isPayingWithWallet || isVerifying
+                                            ? 'Processing…'
+                                            : Number(wallet?.availableBalance ?? 0) <
+                                                Number(totalAmount || amount || 0)
+                                              ? 'Insufficient balance'
+                                              : 'Pay with MCOM Wallet'}
+                                    </Button>
+                                </div>
+                            )}
+                        </motion.div>
+                        ) : initiatePaymentMutation.isPending ? (
                         <motion.div 
                             key="loader"
                             initial={{ opacity: 0 }}

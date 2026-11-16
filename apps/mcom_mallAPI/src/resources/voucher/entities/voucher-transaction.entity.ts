@@ -5,6 +5,7 @@ import {
   ManyToOne,
   CreateDateColumn,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { Voucher } from './voucher.entity';
 import { User } from '../../users/entities/user.entity';
 import { Order } from '../../order/entities/order.entity';
@@ -27,7 +28,7 @@ export class VoucherTransaction {
   })
   voucher: Voucher;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @Column({
@@ -51,19 +52,9 @@ export class VoucherTransaction {
   @ManyToOne(() => Order, { nullable: true })
   order: Order;
 
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    comment: 'Balance before the transaction',
-  })
+  @Column({ type: 'bigint', comment: 'Balance before the transaction', transformer: moneyTransformer })
   balanceBefore: number;
 
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    comment: 'Balance after the transaction',
-  })
+  @Column({ type: 'bigint', comment: 'Balance after the transaction', transformer: moneyTransformer })
   balanceAfter: number;
 }

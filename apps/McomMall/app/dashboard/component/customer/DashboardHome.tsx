@@ -28,7 +28,7 @@ interface DashboardHomeProps {
   activities: any;
   isLoadingActivities: boolean;
   onAddPoints: (amount: number) => void;
-  setActiveTab: (tab: 'home' | 'discover' | 'promotions' | 'rewards' | 'events' | 'profile') => void;
+  setActiveTab: (tab: 'home' | 'discover' | 'promotions' | 'rewards' | 'profile') => void;
 }
 
 const UK_LOCATIONS = [

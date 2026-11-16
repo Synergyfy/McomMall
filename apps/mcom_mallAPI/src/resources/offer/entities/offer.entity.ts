@@ -6,6 +6,7 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { Product } from '../../product/entities/product.entity';
@@ -63,7 +64,7 @@ export class Offer extends AbstractBaseEntity {
   @Column({ type: 'boolean', default: false })
   allowLimitToReset: boolean;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   discountAmount: number;
 
   @Column({ type: 'int', nullable: true })

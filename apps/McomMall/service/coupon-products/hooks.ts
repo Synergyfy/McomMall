@@ -39,7 +39,7 @@ export const useCreateCouponProduct = () => {
 
 export const useInitiateCouponPurchase = () => {
   return useMutation({
-    mutationFn: (data: { couponProductId: string; amount: number; paymentMethod: 'stripe' | 'paypal' }) => {
+    mutationFn: (data: { couponProductId: string; amount: number; paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet' }) => {
       return api.post('/coupons/initiate-purchase', data);
     },
   });
@@ -48,7 +48,7 @@ export const useInitiateCouponPurchase = () => {
 export const useVerifyCouponPurchase = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { purchaseDetails: any; paymentProvider: 'stripe' | 'paypal'; transactionId: string }) => {
+    mutationFn: (data: { purchaseDetails: any; paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet'; transactionId: string }) => {
       return api.post('/coupons/verify-purchase', data);
     },
     onSuccess: () => {

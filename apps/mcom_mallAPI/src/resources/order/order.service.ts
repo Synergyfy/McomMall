@@ -700,7 +700,6 @@ export class OrderService {
     let offer: Offer | null = null;
     let walletRequested = false;
     let walletTransactionId: string | null = null;
-    let walletIdempotencyKey: string | null = null;
 
     try {
     // --- Server-side payment verification for card / PayPal ---
@@ -747,7 +746,7 @@ export class OrderService {
       if (!offer) throw new NotFoundException('Offer not found');
     }
 
-    // --- MCOM Wallet (centralized) payment path: replaces Stripe/PayPal ---
+    // --- MCOM Wallet payment path (settled through MCOM Pay) ---
     walletRequested =
       createCheckoutDto.payment.paymentMethod === PaymentMethod.MCOM_WALLET;
     if (walletRequested && finalAmount > 0) {
@@ -762,22 +761,23 @@ export class OrderService {
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      walletIdempotencyKey =
-        createCheckoutDto.payment.idempotencyKey ||
-        this.mcomWalletService.buildKey('purchase', userId, randomUUID());
       try {
-        const receipt = await this.mcomWalletService.debit({
-          userId: centralUserId,
-          amount: Number(finalAmount.toFixed(2)),
-          category: 'PURCHASE',
-          description: 'MCOM Mall order',
-          reference: `mall-order-${userId}`,
-          metadata: { platform: 'mcom-mall', mallUserId: userId },
-          idempotencyKey: walletIdempotencyKey,
-        });
-        walletTransactionId = receipt.transactionId;
+        const charge = await this.paymentProviderService.createWalletCharge(
+          Number(finalAmount.toFixed(2)),
+          'GBP',
+          {
+            reference: `mall-order-${userId}`,
+            userId,
+            ...(createCheckoutDto.payment.idempotencyKey
+              ? { idempotencyKey: createCheckoutDto.payment.idempotencyKey }
+              : {}),
+            description: 'MCOM Mall order',
+          },
+          centralUserId,
+        );
+        walletTransactionId = charge.chargeId;
       } catch (err: any) {
-        throw this.mcomWalletService.toHttpException(err);
+        throw err;
       }
     }
     } catch (preOrderErr) {
@@ -800,7 +800,6 @@ export class OrderService {
           transactionId:
             walletTransactionId ||
             createCheckoutDto.payment.transactionId ||
-            walletIdempotencyKey ||
             randomUUID(),
           user,
           amount: finalAmount,
@@ -1149,43 +1148,21 @@ export class OrderService {
           );
         }
 
-        // Compensating refund: order records failed AFTER a successful central
-        // debit — credit the wallet back so the user is never charged for a
-        // failed order. Same-amount credit with a derived key; central treats
-        // a repeated key as the same receipt (safe retry). If the immediate
-        // credit fails, persist to the outbox for background reconciliation
-        // instead of swallowing the error.
-        if (walletTransactionId && walletIdempotencyKey) {
-          const refundIdempotencyKey = this.mcomWalletService.buildKey(
-            'refund',
-            walletIdempotencyKey,
-          );
+        // Compensating refund: order records failed AFTER a successful MCOM
+        // Pay wallet charge — refund the charge so the customer is never
+        // charged for a failed order. MCOM Pay refunds are idempotent per
+        // charge + amount.
+        if (walletTransactionId) {
           try {
-            const centralUserId = user.centralUserId;
-            if (centralUserId) {
-              await this.mcomWalletService.credit({
-                userId: centralUserId,
-                amount: Number(finalAmount.toFixed(2)),
-                category: 'REFUND',
-                description: 'MCOM Mall order failed — auto refund',
-                reference: `mall-order-failed-${userId}`,
-                metadata: { platform: 'mcom-mall', mallUserId: userId },
-                idempotencyKey: refundIdempotencyKey,
-              });
-            }
+            await this.paymentProviderService.refundStripePayment(
+              walletTransactionId,
+              Number(finalAmount.toFixed(2)),
+            );
           } catch (refundErr) {
             this.logger.error(
-              '[order.checkout] compensating wallet refund failed — queued for retry',
+              '[order.checkout] compensating MCOM Pay wallet refund failed — manual reconciliation required',
               refundErr,
             );
-            await this.walletRefundReconcileService.enqueue({
-              mallUserId: userId,
-              centralUserId: user.centralUserId,
-              amount: Number(finalAmount.toFixed(2)),
-              idempotencyKey: refundIdempotencyKey,
-              walletTransactionId,
-              failureReason: String((refundErr as any)?.message || refundErr),
-            });
           }
         }
         throw dbErr;
@@ -1603,7 +1580,7 @@ export class OrderService {
       .leftJoin('item.product', 'product')
       .leftJoin('product.business', 'business')
       .leftJoin('business.user', 'user')
-      .select('SUM(order.total)', 'totalSales')
+      .select('SUM(order.total) / 100.0', 'totalSales')
       .addSelect('COUNT(DISTINCT order.id)', 'orders')
       .addSelect('SUM(item.quantity)', 'productsSold')
       .where('user.id = :ownerId', { ownerId })
@@ -1620,7 +1597,7 @@ export class OrderService {
       .leftJoin('orderItem.product', 'rewardProduct')
       .leftJoin('rewardProduct.business', 'rewardBusiness')
       .leftJoin('rewardBusiness.user', 'rewardOwner')
-      .select('COALESCE(SUM(reward.discountAmount), 0)', 'rewardDiscountTotal')
+      .select('COALESCE(SUM(reward.discountAmount) / 100.0, 0)', 'rewardDiscountTotal')
       .where('rewardOwner.id = :ownerId', { ownerId })
       .andWhere('reward.status = :status', {
         status: RewardRedemptionStatus.COMMITTED,
@@ -1652,7 +1629,7 @@ export class OrderService {
   ): Promise<{ totalOrders: number; totalSpent: number }> {
     const stats = await this.orderRepository
       .createQueryBuilder('order')
-      .select('SUM(order.total)', 'totalSpent')
+      .select('SUM(order.total) / 100.0', 'totalSpent')
       .addSelect('COUNT(order.id)', 'totalOrders')
       .where('order.userId = :customerId', { customerId })
       .getRawOne();

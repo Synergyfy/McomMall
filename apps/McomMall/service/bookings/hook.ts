@@ -48,7 +48,7 @@ const cancelBooking = async (bookingId: string): Promise<Booking> => {
 
 const initiatePayment = async (payload: {
   bookingId: string;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   rewardIssuanceId?: string;
 }) => {
   const { data } = await api.post('/bookings/initiate-payment', payload);
@@ -63,7 +63,7 @@ const getEligibleBookingRewards = async (bookingId: string) => {
 const verifyPayment = async (payload: {
   bookingId: string;
   amount: number;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   transactionId: string;
 }) => {
   const { data } = await api.post('/bookings/verify-payment', payload);

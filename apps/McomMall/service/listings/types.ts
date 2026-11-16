@@ -385,6 +385,7 @@ export interface Product {
   height?: number;
   productStatus: string;
   visibility: string;
+  adminDisabled?: boolean;
   purchaseNote?: string;
   enableReviews?: boolean;
   averageRating?: number;

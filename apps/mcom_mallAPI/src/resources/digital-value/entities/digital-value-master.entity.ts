@@ -6,6 +6,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Business } from '../../listings/entities/listing.entity';
@@ -38,22 +39,10 @@ export class DigitalValueMaster extends AbstractBaseEntity {
   @Column({ name: 'merchant_id', nullable: true })
   merchantId: string;
 
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    default: 0,
-    name: 'initial_value',
-  })
+  @Column({ name: 'initial_value', type: 'bigint', default: 0, transformer: moneyTransformer })
   initialValue: number;
 
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    default: 0,
-    name: 'current_balance',
-  })
+  @Column({ name: 'current_balance', type: 'bigint', default: 0, transformer: moneyTransformer })
   currentBalance: number;
 
   @Column({

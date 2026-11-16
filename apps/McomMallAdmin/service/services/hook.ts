@@ -120,6 +120,56 @@ export const useCreateAdminService = () => {
   });
 };
 
+// Deactivate Service
+export const useDeactivateService = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        const response = await api.patch(`/admin/services/${id}/deactivate`);
+        return response.data;
+      } catch (error: any) {
+        const err = error as ErrorResponse;
+        throw new Error(err.response?.data?.message || err.message || 'Failed to deactivate service');
+      }
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Service deactivated successfully');
+      queryClient.invalidateQueries({ queryKey: ['FETCH_ALL_ADMIN_SERVICES'] });
+      queryClient.invalidateQueries({ queryKey: ['FETCH_ADMIN_SERVICE_STATS'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+};
+
+// Activate Service
+export const useActivateService = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        const response = await api.patch(`/admin/services/${id}/activate`);
+        return response.data;
+      } catch (error: any) {
+        const err = error as ErrorResponse;
+        throw new Error(err.response?.data?.message || err.message || 'Failed to activate service');
+      }
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Service activated successfully');
+      queryClient.invalidateQueries({ queryKey: ['FETCH_ALL_ADMIN_SERVICES'] });
+      queryClient.invalidateQueries({ queryKey: ['FETCH_ADMIN_SERVICE_STATS'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+};
+
 // Delete Service
 export const useDeleteService = () => {
   const queryClient = useQueryClient();

@@ -33,6 +33,7 @@ import {
     useGetAdminProductStats,
     useGetAllAdminProducts,
     useDeactivateProduct,
+    useActivateProduct,
     useDeleteProduct
 } from '@/service/product/hook';
 import { AdminProduct } from '@/service/product/types';
@@ -78,24 +79,28 @@ function ProductDetailSheet({
     open,
     onOpenChange,
     onDeactivate,
+    onActivate,
     onDelete,
     isDeactivating,
+    isActivating,
     isDeleting,
 }: {
     product: AdminProduct | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onDeactivate: (id: string) => void;
+    onActivate: (id: string) => void;
     onDelete: (id: string) => void;
     isDeactivating: boolean;
+    isActivating: boolean;
     isDeleting: boolean;
 }) {
     if (!product) return null;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-                <SheetHeader className="pb-4 border-b">
+            <SheetContent className="w-full sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col">
+                <SheetHeader className="p-6 pb-4 border-b pr-12">
                     <SheetTitle className="text-xl">{product.name}</SheetTitle>
                     <SheetDescription className="flex items-center gap-2 mt-2">
                         <ProductStatusBadge status={product.status} />
@@ -103,7 +108,7 @@ function ProductDetailSheet({
                     </SheetDescription>
                 </SheetHeader>
 
-                <div className="space-y-6 pt-6">
+                <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-6">
                     {/* Image Preview */}
                     <div className="aspect-square rounded-xl bg-slate-100 overflow-hidden relative border">
                         {product.images?.[0] ? (
@@ -143,11 +148,11 @@ function ProductDetailSheet({
                             <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
                                 <Building2 className="h-5 w-5 text-orange-600" />
                             </div>
-                            <div>
-                                <p className="font-semibold text-slate-900">{product.businessName}</p>
-                                <p className="text-xs text-slate-500">ID: {product.businessId}</p>
+                            <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-slate-900 truncate">{product.businessName}</p>
+                                <p className="text-xs text-slate-500 truncate">ID: {product.businessId}</p>
                             </div>
-                            <Button variant="ghost" size="sm" className="ml-auto text-orange-600">
+                            <Button variant="ghost" size="sm" className="ml-auto shrink-0 text-orange-600">
                                 View Business
                             </Button>
                         </div>
@@ -179,33 +184,46 @@ function ProductDetailSheet({
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 pt-6 sticky bottom-0 bg-white pb-6 border-t mt-6">
-                        <Button className="w-full bg-slate-900 hover:bg-slate-800">
-                            Edit Product
-                        </Button>
-                        <div className="grid grid-cols-2 gap-2">
+                {/* Actions */}
+                <div className="border-t bg-white p-6 space-y-2">
+                    <Button className="w-full bg-slate-900 hover:bg-slate-800">
+                        Edit Product
+                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
                             <Button
                                 variant="outline"
-                                className="text-slate-600"
-                                onClick={() => product.id && onDeactivate(product.id)}
-                                disabled={isDeactivating || isDeleting || product.status === 'inactive'}
+                                className={product.status === 'inactive' ? 'text-emerald-700 hover:text-emerald-800 border-emerald-100 hover:bg-emerald-50' : 'text-slate-600'}
+                                onClick={() => {
+                                    if (!product.id) return;
+                                    if (product.status === 'inactive') {
+                                        onActivate(product.id);
+                                    } else {
+                                        onDeactivate(product.id);
+                                    }
+                                }}
+                                disabled={isDeactivating || isActivating || isDeleting}
                             >
-                                {isDeactivating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Archive className="h-4 w-4 mr-2" />}
-                                Deactivate
+                                {isDeactivating || isActivating ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : product.status === 'inactive' ? (
+                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                ) : (
+                                    <Archive className="h-4 w-4 mr-2" />
+                                )}
+                                {product.status === 'inactive' ? 'Activate' : 'Deactivate'}
                             </Button>
                             <Button
                                 variant="outline"
                                 className="text-red-600 hover:text-red-700 border-red-100 hover:bg-red-50"
                                 onClick={() => product.id && onDelete(product.id)}
-                                disabled={isDeactivating || isDeleting}
+                                disabled={isDeactivating || isActivating || isDeleting}
                             >
-                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                                {isDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
                                 Delete
                             </Button>
                         </div>
-                    </div>
                 </div>
             </SheetContent>
         </Sheet>
@@ -232,10 +250,14 @@ export default function ProductsPage() {
         limit,
     });
     const deactivateMutation = useDeactivateProduct();
+    const activateMutation = useActivateProduct();
     const deleteMutation = useDeleteProduct();
 
     const productsList = productsData?.data || [];
     const totalPages = productsData?.totalPages || 1;
+    const sheetProduct = selectedProduct
+        ? productsList.find(p => p.id === selectedProduct.id) ?? selectedProduct
+        : null;
 
     const handleView = (p: AdminProduct) => {
         setSelectedProduct(p);
@@ -244,6 +266,10 @@ export default function ProductsPage() {
 
     const handleDeactivate = (id: string) => {
         deactivateMutation.mutate(id);
+    };
+
+    const handleActivate = (id: string) => {
+        activateMutation.mutate(id);
     };
 
     const handleDelete = (id: string) => {
@@ -521,12 +547,14 @@ export default function ProductsPage() {
 
             {/* Product Detail Sheet */}
             <ProductDetailSheet
-                product={selectedProduct}
+                product={sheetProduct}
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
                 onDeactivate={handleDeactivate}
+                onActivate={handleActivate}
                 onDelete={handleDelete}
                 isDeactivating={deactivateMutation.isPending}
+                isActivating={activateMutation.isPending}
                 isDeleting={deleteMutation.isPending}
             />
 

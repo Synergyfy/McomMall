@@ -66,7 +66,7 @@ export default function PricingCheckoutClient({
   useEffect(() => {
     if (!stripeRedirect && totalPrice > 0) {
       if (paymentMethod === PaymentMethod.STRIPE) {
-        createStripeIntent({ amount: Math.round(totalPrice * 100) });
+        createStripeIntent({ amount: totalPrice });
       } else {
         createPayPalOrder({ amount: totalPrice });
       }

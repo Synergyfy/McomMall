@@ -146,7 +146,7 @@ export class AdminService {
     const ordersTodayQuery = await this.orderRepository
       .createQueryBuilder('order')
       .select('COUNT(order.id)', 'count')
-      .addSelect('SUM(order.total)', 'sum')
+      .addSelect('SUM(order.total) / 100.0', 'sum')
       .where('order.created_at > :startOfDay', { startOfDay })
       .getRawOne();
 
@@ -184,7 +184,7 @@ export class AdminService {
     // Revenue Chart
     const recentRevenue = await this.orderRepository
       .createQueryBuilder('order')
-      .select('DATE(order.created_at) as date, SUM(order.total) as total')
+      .select('DATE(order.created_at) as date, SUM(order.total) / 100.0 as total')
       .where('order.created_at > :sevenDaysAgo', { sevenDaysAgo })
       .groupBy('DATE(order.created_at)')
       .getRawMany();

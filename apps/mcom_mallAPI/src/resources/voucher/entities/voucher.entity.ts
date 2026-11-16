@@ -9,6 +9,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { User } from '../../users/entities/user.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { Order } from '../../order/entities/order.entity';
@@ -34,10 +35,10 @@ export class Voucher {
   @Column({ unique: true, length: 20 })
   code: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   initialValue: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   balance: number;
 
   @Column({

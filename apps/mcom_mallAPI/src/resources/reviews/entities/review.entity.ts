@@ -60,6 +60,14 @@ export class Review {
   @JoinColumn({ name: 'service_id' })
   service: Service;
 
+  @ApiProperty({ required: false })
+  @Column({ name: 'owner_reply', type: 'text', nullable: true })
+  ownerReply?: string | null;
+
+  @ApiProperty({ required: false })
+  @Column({ name: 'owner_replied_at', type: 'timestamp', nullable: true })
+  ownerRepliedAt?: Date | null;
+
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

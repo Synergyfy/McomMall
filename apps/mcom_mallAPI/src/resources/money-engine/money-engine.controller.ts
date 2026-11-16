@@ -32,6 +32,7 @@ import {
 } from './dto/dtos';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
+import { PaymentGateway } from '../payments/enums/payment-gateway.enum';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -205,6 +206,24 @@ export class MoneyEngineController {
   }
 
   // --- USER ENDPOINTS ---
+
+  @Post('purchase/initiate')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({
+    summary: 'Create an MCOM Pay charge for a reward voucher purchase',
+  })
+  async initiatePurchase(
+    @CurrentUser() user: User,
+    @Body()
+    dto: {
+      rewardDefinitionId: string;
+      paymentAmount: number;
+      paymentGateway: PaymentGateway;
+      idempotencyKey?: string;
+    },
+  ) {
+    return this.moneyEngineService.initiatePurchase(user, dto);
+  }
 
   @Post('purchase')
   @Roles(UserRole.CUSTOMER)

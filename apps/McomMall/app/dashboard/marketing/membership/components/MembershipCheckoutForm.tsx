@@ -57,8 +57,12 @@ const MembershipCheckoutForm = ({
     if (paymentIntent && paymentIntent.status === 'succeeded') {
       verifyPayment.mutate(
         {
-          paymentIntentId: paymentIntent.id,
-          tier,
+          paymentProvider: 'stripe',
+          transactionId: paymentIntent.id,
+          purchaseDetails: {
+            tier: tier.toLowerCase() as 'basic' | 'extended' | 'professional',
+            planType: 'monthly',
+          },
         },
         {
           onSuccess: (membership) => {
@@ -81,6 +85,7 @@ const MembershipCheckoutForm = ({
     <form onSubmit={handleSubmit}>
       <PaymentElement />
       <Button
+        type="submit"
         disabled={isLoading || !stripe || !elements}
         className="w-full mt-4"
       >

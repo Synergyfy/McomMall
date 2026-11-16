@@ -248,6 +248,75 @@ export class CampaignCashbackService {
     return userCampaign;
   }
 
+  async initiateContribution(
+    id: string,
+    user: User,
+    paymentMethod: ContributionPaymentProvider,
+  ): Promise<{
+    clientSecret?: string;
+    orderId?: string;
+    approvalUrl?: string | null;
+    transactionId?: string;
+    provider: ContributionPaymentProvider;
+    amount: number;
+  }> {
+    const userCampaign = await this.findOne(id, user);
+    if (userCampaign.contributionPaid) {
+      throw new BadRequestException('Contribution already paid');
+    }
+    const amount = Number(userCampaign.campaign.levelValue);
+    const reference = `campaign-contribution-${id}`;
+
+    if (paymentMethod === ContributionPaymentProvider.WALLET) {
+      if (!user.centralUserId) {
+        throw new BadRequestException(
+          'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+        );
+      }
+      const charge = await this.paymentProviderService.createWalletCharge(
+        amount,
+        'GBP',
+        { reference, userId: user.id, description: 'Campaign contribution' },
+        user.centralUserId,
+      );
+      return {
+        transactionId: charge.chargeId,
+        provider: ContributionPaymentProvider.WALLET,
+        amount,
+      };
+    }
+
+    if (paymentMethod === ContributionPaymentProvider.STRIPE) {
+      const intent =
+        await this.paymentProviderService.createStripePaymentIntent(
+          amount,
+          'GBP',
+          { reference, userId: user.id, description: 'Campaign contribution' },
+        );
+      return {
+        clientSecret: intent.client_secret ?? undefined,
+        provider: ContributionPaymentProvider.STRIPE,
+        amount,
+      };
+    }
+
+    if (paymentMethod === ContributionPaymentProvider.PAYPAL) {
+      const order = await this.paymentProviderService.createPaypalOrder(
+        amount,
+        'GBP',
+        { reference, userId: user.id, description: 'Campaign contribution' },
+      );
+      return {
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+        provider: ContributionPaymentProvider.PAYPAL,
+        amount,
+      };
+    }
+
+    throw new BadRequestException('Invalid payment provider specified.');
+  }
+
   async contribute(
     id: string,
     user: User,
@@ -313,6 +382,27 @@ export class CampaignCashbackService {
         throw new BadRequestException(
           `PayPal verification failed: ${result.reason}`,
         );
+    } else if (
+      contributeDto.paymentMethod === ContributionPaymentProvider.WALLET
+    ) {
+      if (!contributeDto.transactionId)
+        throw new BadRequestException('Transaction ID is required');
+
+      const existingPayment = await this.orderPaymentRepository.findOne({
+        where: { transactionId: contributeDto.transactionId },
+      });
+      if (existingPayment)
+        throw new BadRequestException('Transaction already processed');
+
+      const result = await this.paymentProviderService.verifyWalletCharge(
+        contributeDto.transactionId,
+        contributeDto.amount,
+        currency,
+      );
+      if (!result.ok)
+        throw new BadRequestException(
+          `MCOM Wallet verification failed: ${result.reason}`,
+        );
     }
 
     // 3. SECURE UPDATE (Inside Transaction with Pessimistic Lock)
@@ -348,8 +438,11 @@ export class CampaignCashbackService {
           );
       }
 
-      if (contributeDto.paymentMethod === ContributionPaymentProvider.WALLET) {
-        // Wallet spend is safe inside transaction as it manages its own balance updates
+      if (
+        contributeDto.paymentMethod === ContributionPaymentProvider.WALLET &&
+        !contributeDto.transactionId
+      ) {
+        // Legacy local-wallet contribution (no MCOM Pay charge).
         await this.walletService.spendBalance(
           user.id,
           contributeDto.amount,
@@ -358,11 +451,14 @@ export class CampaignCashbackService {
           manager,
         );
       } else {
-        // Record successful external payment in DB
+        // Record successful payment in DB.
         const paymentMethod =
           contributeDto.paymentMethod === ContributionPaymentProvider.STRIPE
             ? PaymentMethod.STRIPE
-            : PaymentMethod.PAYPAL;
+            : contributeDto.paymentMethod ===
+                ContributionPaymentProvider.PAYPAL
+              ? PaymentMethod.PAYPAL
+              : PaymentMethod.MCOM_WALLET;
         const payment = manager.create(OrderPayment, {
           user: { id: user.id } as User,
           amount: contributeDto.amount,

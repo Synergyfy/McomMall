@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/service/api';
 import {
   Promotion,
+  PromotionStats,
   CreatePromotionDto,
   UpdatePromotionDto,
   CheckPromotionDto,
@@ -83,7 +84,19 @@ const updateParticipantPoints = async ({
   return data;
 };
 
+const getPromotionStats = async (): Promise<PromotionStats[]> => {
+  const { data } = await api.get<PromotionStats[]>('/promotions/stats');
+  return data;
+};
+
 // React Query Hooks
+
+export const useGetPromotionStats = () => {
+  return useQuery<PromotionStats[], Error>({
+    queryKey: ['promotions', 'stats'],
+    queryFn: getPromotionStats,
+  });
+};
 
 export const useGetPromotions = () => {
   return useQuery<Promotion[], Error>({
@@ -135,8 +148,46 @@ export const useParticipateInPromotion = () => {
   return useMutation<void, Error, string>({
     mutationFn: participateInPromotion,
     onSuccess: () => {
-      // Invalidate queries that should be updated after participation
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
+      queryClient.invalidateQueries({
+        queryKey: ['promotions', 'my-participations'],
+      });
+    },
+  });
+};
+
+const getSavedPromotions = async (): Promise<Promotion[]> => {
+  const { data } = await api.get<any[]>('/promotions/saved');
+  return (data ?? []).map((row) => row.promotion ?? row);
+};
+
+export const useGetSavedPromotions = () =>
+  useQuery<Promotion[], Error>({
+    queryKey: ['promotions', 'saved'],
+    queryFn: getSavedPromotions,
+  });
+
+export const useSavePromotion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (promotionId: string) => {
+      const { data } = await api.post(`/promotions/${promotionId}/save`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['promotions', 'saved'] });
+    },
+  });
+};
+
+export const useUnsavePromotion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (promotionId: string) => {
+      await api.delete(`/promotions/${promotionId}/save`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['promotions', 'saved'] });
     },
   });
 };

@@ -51,6 +51,29 @@ export class GiftCardMerchantController {
     return this.giftCardService.createTheme(dto, user.id);
   }
 
+  @Put('themes/:id')
+  @ApiOperation({ summary: 'Update a custom email gift card theme' })
+  updateTheme(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateGiftCardThemeDto>,
+  ) {
+    return this.giftCardService.updateTheme(id, dto, user.id);
+  }
+
+  @Delete('themes/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a custom email gift card theme' })
+  deleteTheme(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.giftCardService.deleteTheme(id, user.id);
+  }
+
+  @Get('themes/mine')
+  @ApiOperation({ summary: "List the owner's custom email gift card themes" })
+  getMyThemes(@CurrentUser() user: User) {
+    return this.giftCardService.findAllThemes(undefined, user.id);
+  }
+
   // --- Settings Management ---
   @Get('settings')
   @ApiOperation({ summary: "Get the owner's gift card settings" })

@@ -51,6 +51,12 @@ export class AdminProductsController {
     return this.adminProductsService.deactivate(id);
   }
 
+  @Patch(':id/activate')
+  @ApiOperation({ summary: 'Re-activate a product' })
+  activate(@Param('id') id: string) {
+    return this.adminProductsService.activate(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a product' })
   remove(@Param('id') id: string) {

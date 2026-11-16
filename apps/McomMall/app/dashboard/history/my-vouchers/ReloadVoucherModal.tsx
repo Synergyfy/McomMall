@@ -26,7 +26,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { InProgressDialog } from '@/components/InProgressDialog';
 
 const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 interface ReloadVoucherModalProps {
@@ -36,7 +36,7 @@ interface ReloadVoucherModalProps {
 
 interface ReloadVoucherFormData {
   amount: number;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
 }
 
 export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
@@ -47,7 +47,9 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [reloadAmount, setReloadAmount] = useState<number>(0);
-  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'paypal' | null>(null);
+  const [paymentProvider, setPaymentProvider] = useState<
+    'stripe' | 'paypal' | 'mcom_wallet' | null
+  >(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const {
@@ -72,6 +74,19 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
       const initiationResponse = await initiateReload.mutateAsync(payload);
       setReloadAmount(numericAmount);
       setPaymentProvider(data.paymentProvider);
+      if (initiationResponse.provider === 'mcom_wallet' && initiationResponse.transactionId) {
+        setReloadAmount(numericAmount);
+        setPaymentProvider('mcom_wallet');
+        await verifyReload.mutateAsync({
+          paymentProvider: 'mcom_wallet',
+          transactionId: initiationResponse.transactionId,
+          reloadDetails: { amount: numericAmount },
+        });
+        toast.success('Voucher reloaded successfully!');
+        setIsOpen(false);
+        reset();
+        return;
+      }
       if (initiationResponse.provider === 'stripe') {
         setClientSecret(initiationResponse.clientSecret);
       } else {
@@ -148,6 +163,10 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="paypal" id="paypal" />
                       <Label htmlFor="paypal">PayPal</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="mcom_wallet" id="mcom_wallet" />
+                      <Label htmlFor="mcom_wallet">MCOM Wallet</Label>
                     </div>
                   </RadioGroup>
                 )}

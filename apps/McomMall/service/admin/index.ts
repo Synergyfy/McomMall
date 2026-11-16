@@ -38,7 +38,7 @@ const getPromotionTransactionHistory = async (
   id: string,
   params: {
     page?: number;
-    take?: number;
+    limit?: number;
     order?: 'ASC' | 'DESC';
     startDate?: string;
     endDate?: string;
@@ -55,7 +55,7 @@ export const useGetPromotionTransactionHistory = (
   id: string,
   params: {
     page?: number;
-    take?: number;
+    limit?: number;
     order?: 'ASC' | 'DESC';
     startDate?: string;
     endDate?: string;
@@ -84,7 +84,7 @@ export const useGetVoucherSummaryStatistics = () => {
 
 const getVoucherTransactionHistory = async (params: {
   page?: number;
-  take?: number;
+  limit?: number;
   order?: 'ASC' | 'DESC';
   startDate?: string;
   endDate?: string;
@@ -101,7 +101,7 @@ const getVoucherTransactionHistory = async (params: {
 
 export const useGetVoucherTransactionHistory = (params: {
   page?: number;
-  take?: number;
+  limit?: number;
   order?: 'ASC' | 'DESC';
   startDate?: string;
   endDate?: string;

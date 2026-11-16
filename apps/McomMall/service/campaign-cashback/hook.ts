@@ -48,6 +48,22 @@ export const useGetCampaignCashbackById = (id: string) => {
     });
 };
 
+export const useInitiateCampaignContribution = () => {
+    return useMutation({
+        mutationFn: async ({ campaignId, paymentMethod }: { campaignId: string; paymentMethod: string }) => {
+            const { data } = await api.post(`/campaign-cashback/${campaignId}/contribute/initiate`, { paymentMethod });
+            return data as {
+                clientSecret?: string;
+                orderId?: string;
+                approvalUrl?: string | null;
+                transactionId?: string;
+                provider: string;
+                amount: number;
+            };
+        },
+    });
+};
+
 export const useContributeToCampaign = () => {
     const queryClient = useQueryClient();
 

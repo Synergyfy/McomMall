@@ -29,14 +29,14 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 
 const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 const formSchema = z.object({
   amount: z.coerce.number().min(1, {
     message: 'Amount must be at least 1.',
   }),
-  paymentMethod: z.enum(['stripe', 'paypal']),
+  paymentMethod: z.enum(['stripe', 'paypal', 'mcom_wallet']),
 });
 
 interface PurchaseCouponModalProps {
@@ -52,20 +52,47 @@ export const PurchaseCouponModal: React.FC<PurchaseCouponModalProps> = ({
 }) => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const form = useForm<{ amount: number; paymentMethod: 'stripe' | 'paypal' }>({
+  const form = useForm<{ amount: number; paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet' }>({
     resolver: zodResolver(formSchema),
   });
 
   const initiatePurchase = useInitiateCouponPurchase();
   const verifyPurchase = useVerifyCouponPurchase();
 
-  const onSubmit = (values: { amount: number; paymentMethod: 'stripe' | 'paypal' }) => {
+  const onSubmit = (values: { amount: number; paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet' }) => {
     if (!couponProduct) return;
 
     initiatePurchase.mutate(
       { ...values, couponProductId: couponProduct.id },
       {
         onSuccess: (response) => {
+          if (
+            values.paymentMethod === 'mcom_wallet' &&
+            response.data.transactionId
+          ) {
+            verifyPurchase.mutate(
+              {
+                transactionId: response.data.transactionId,
+                paymentProvider: 'mcom_wallet',
+                purchaseDetails: {
+                  couponProductId: couponProduct.id,
+                  amount: values.amount,
+                },
+              },
+              {
+                onSuccess: () => {
+                  toast.success('Coupon purchased successfully!');
+                  onClose();
+                },
+                onError: () => {
+                  toast.error(
+                    'Wallet payment succeeded but the coupon could not be issued. Please contact support.'
+                  );
+                },
+              }
+            );
+            return;
+          }
           if (values.paymentMethod === 'stripe') {
             setClientSecret(response.data.clientSecret);
           } else {
@@ -138,8 +165,9 @@ export const PurchaseCouponModal: React.FC<PurchaseCouponModalProps> = ({
                       <FormLabel>Payment Method</FormLabel>
                       <FormControl>
                         <select {...field}>
-                          <option value="stripe">Stripe</option>
+                          <option value="stripe">Card</option>
                           <option value="paypal">PayPal</option>
+                          <option value="mcom_wallet">MCOM Wallet</option>
                         </select>
                       </FormControl>
                       <FormMessage />

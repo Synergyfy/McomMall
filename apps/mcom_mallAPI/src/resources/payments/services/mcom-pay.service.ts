@@ -279,12 +279,17 @@ export class McomPayService {
     chargeId: string,
     amountMinor?: string,
     reason?: string,
+    idempotencyKey?: string,
   ): Promise<McomPayChargeDto> {
     this.assertEnabled();
+    const key =
+      idempotencyKey ||
+      this.buildKey('refund', chargeId, amountMinor || 'full');
     const charge = await this.request<McomPayChargeDto>(
       'POST',
       `/charges/${encodeURIComponent(chargeId)}/refund`,
       { ...(amountMinor ? { amountMinor } : {}), ...(reason ? { reason } : {}) },
+      key,
     );
     await this.recordCharge(charge);
     return charge;

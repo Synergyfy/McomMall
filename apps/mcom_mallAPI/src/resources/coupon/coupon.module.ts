@@ -12,18 +12,27 @@ import { BrandingAssociation } from './entities/branding-association.entity';
 import { RedemptionLog } from './entities/redemption-log.entity';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 import { SavedCoupon } from './entities/saved-coupon.entity';
+import { OrderPayment } from '../order/entities/order-payment.entity';
+import { PaymentsModule } from '../payments/payments.module';
 import { BusinessCouponController } from './business-coupon.controller';
 import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
+import { CouponProduct } from './entities/coupon-product.entity';
+import { CouponProductService } from './coupon-product.service';
+import { CouponProductBusinessController } from './coupon-product-business.controller';
+import { CouponProductPublicController } from './coupon-product-public.controller';
 
 @Module({
   imports: [
     forwardRef(() => CapabilityModule),
     PartnerInstrumentsModule,
+    forwardRef(() => PaymentsModule),
     TypeOrmModule.forFeature([
       Coupon,
+      CouponProduct,
       SavedCoupon,
       User,
       Order,
+      OrderPayment,
       Business,
       MarketingCampaign,
       BrandingAssociation,
@@ -31,8 +40,13 @@ import { PartnerInstrumentsModule } from '../partner-instruments/partner-instrum
       ShippingAddress,
     ]),
   ],
-  controllers: [CouponController, BusinessCouponController],
-  providers: [CouponService],
-  exports: [CouponService],
+  controllers: [
+    CouponController,
+    BusinessCouponController,
+    CouponProductBusinessController,
+    CouponProductPublicController,
+  ],
+  providers: [CouponService, CouponProductService],
+  exports: [CouponService, CouponProductService],
 })
 export class CouponModule {}

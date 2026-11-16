@@ -107,6 +107,7 @@ export interface CreateProductDto {
   height?: number;
   productStatus?: string;
   visibility?: string;
+  adminDisabled?: boolean;
   purchaseNote?: string;
   enableReviews?: boolean;
   tags?: string[];

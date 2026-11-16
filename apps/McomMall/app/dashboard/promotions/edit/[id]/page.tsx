@@ -83,30 +83,19 @@ export default function PromotionEditForm() {
       } else {
         setBonusPoints(promotion.bonusPoints?.toString() || '100');
       }
-      setMinimumSpend(promotion.minimumSpend.toString());
+      setMinimumSpend(String(promotion.minimumSpend ?? '0'));
       setLimitPerCustomer(promotion.limitPerCustomer?.toString() || '1');
       setBeginDate(promotion.beginDate ? new Date(promotion.beginDate) : undefined);
       setEndDate(promotion.endDate ? new Date(promotion.endDate) : undefined);
-
-      // Parse metadata if present in description
-      if (promotion.description) {
-        try {
-          if (promotion.description.startsWith('{')) {
-            const meta = JSON.parse(promotion.description);
-            setDescription(meta.uiDescription || '');
-            setSelectedType(meta.promoType || 'flash_deal');
-            setTargetSegment(meta.targetSegment || 'all');
-            setBoroughVisibility(meta.boroughVisibility || false);
-            setHighStreetVisibility(meta.highStreetVisibility || false);
-            setFeaturedPlacement(meta.featuredPlacement || false);
-            setAddExtraGift(meta.addExtraGift || false);
-          } else {
-            setDescription(promotion.description);
-          }
-        } catch (e) {
-          setDescription(promotion.description);
-        }
-      }
+      setDescription(promotion.description || '');
+      setSelectedType((promotion.promoType as PromotionTypeKey) || 'flash_deal');
+      setTargetSegment(
+        (promotion.targetSegment as typeof targetSegment) || 'all'
+      );
+      setBoroughVisibility(Boolean(promotion.boroughVisibility));
+      setHighStreetVisibility(Boolean(promotion.highStreetVisibility));
+      setFeaturedPlacement(Boolean(promotion.featuredPlacement));
+      setAddExtraGift(Boolean(promotion.addExtraGift));
     }
   }, [promotion]);
 
@@ -126,28 +115,23 @@ export default function PromotionEditForm() {
   };
 
   const handleSubmit = async () => {
-    // Pack advanced metadata into description JSON string
-    const packedDescription = JSON.stringify({
-      uiDescription: description,
-      promoType: selectedType,
-      targetSegment,
-      boroughVisibility,
-      highStreetVisibility,
-      featuredPlacement,
-      addExtraGift
-    });
-
     try {
       await updatePromotion.mutateAsync({
         id: promotionId,
         name,
-        description: packedDescription,
+        description: description.trim() || undefined,
         termsAndConditions,
         isActive: promotion?.isActive ?? true,
         beginDate,
         endDate,
         promotionType,
-        promotionScope: 'ALL_LISTINGS',
+        promotionScope: promotion?.promotionScope ?? 'ALL_LISTINGS',
+        promoType: selectedType ?? undefined,
+        targetSegment,
+        boroughVisibility,
+        highStreetVisibility,
+        featuredPlacement,
+        addExtraGift,
         multiplier: promotionType === 'MULTIPLIER' ? parseFloat(multiplier) : undefined,
         bonusPoints: promotionType === 'BONUS_POINTS' ? parseInt(bonusPoints, 10) : undefined,
         limitPerCustomer: limitPerCustomer ? parseInt(limitPerCustomer, 10) : undefined,

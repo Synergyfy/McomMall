@@ -384,12 +384,26 @@ export class GiftCardService {
 
   // --- Consumer-Facing Methods ---
 
+  private async getCentralUserId(userId: string): Promise<string> {
+    const user = await this.dataSource.manager.findOne(User, {
+      where: { id: userId },
+      select: ['id', 'centralUserId'],
+    });
+    if (!user?.centralUserId) {
+      throw new BadRequestException(
+        'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+      );
+    }
+    return user.centralUserId;
+  }
+
   async initiateGiftCardPurchase(
     initiateDto: InitiatePurchaseDto,
-    _userId: string,
+    userId: string,
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    transactionId?: string;
     provider: PaymentMethod;
   }> {
     const template = await this.templateRepository.findOne({
@@ -411,6 +425,24 @@ export class GiftCardService {
     this.validatePurchaseAmount(initiateDto.amount, template);
 
     const currency = 'GBP';
+
+    if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
+      const centralUserId = await this.getCentralUserId(userId);
+      const charge = await this.paymentProviderService.createWalletCharge(
+        initiateDto.amount,
+        currency,
+        {
+          reference: `gift-card-purchase-${template.id}`,
+          userId,
+          description: 'MCOM Mall gift card purchase',
+        },
+        centralUserId,
+      );
+      return {
+        transactionId: charge.chargeId,
+        provider: PaymentMethod.MCOM_WALLET,
+      };
+    }
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
       const paymentIntent =
@@ -492,7 +524,14 @@ export class GiftCardService {
     const currency = 'GBP';
     let verificationResult;
 
-    if (paymentProvider === PaymentMethod.STRIPE) {
+    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+      verificationResult =
+        await this.paymentProviderService.verifyWalletCharge(
+          transactionId,
+          amount,
+          currency,
+        );
+    } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
@@ -676,6 +715,11 @@ export class GiftCardService {
             amount,
             currency,
           );
+        } else if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+          await this.paymentProviderService.refundStripePayment(
+            transactionId,
+            amount,
+          );
         }
       } catch (refundErr) {
         this.logger.error(
@@ -691,10 +735,11 @@ export class GiftCardService {
   async initiateGiftCardReload(
     code: string,
     initiateDto: InitiateReloadDto,
-    _userId: string,
+    userId: string,
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    transactionId?: string;
     provider: PaymentMethod;
   }> {
     const giftCard = await this.findActiveCardByCode(code);
@@ -714,6 +759,24 @@ export class GiftCardService {
     }
 
     const currency = 'GBP';
+
+    if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
+      const centralUserId = await this.getCentralUserId(userId);
+      const charge = await this.paymentProviderService.createWalletCharge(
+        initiateDto.amount,
+        currency,
+        {
+          reference: `gift-card-reload-${giftCard.id}`,
+          userId,
+          description: 'MCOM Mall gift card reload',
+        },
+        centralUserId,
+      );
+      return {
+        transactionId: charge.chargeId,
+        provider: PaymentMethod.MCOM_WALLET,
+      };
+    }
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
       const paymentIntent =
@@ -763,7 +826,14 @@ export class GiftCardService {
     const currency = 'GBP';
     let verificationResult;
 
-    if (paymentProvider === PaymentMethod.STRIPE) {
+    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+      verificationResult =
+        await this.paymentProviderService.verifyWalletCharge(
+          transactionId,
+          amount,
+          currency,
+        );
+    } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
@@ -1736,14 +1806,18 @@ export class GiftCardService {
     processedById: string,
   ): Promise<GiftCard> {
     const giftCard = await this.findGiftCardDetailsForOwner(id, ownerId);
-    if (amount < 0) {
-      throw new BadRequestException('Balance cannot be negative.');
+
+    const previousBalance = Number(giftCard.currentBalance ?? 0);
+    const transactionAmount = Number(amount);
+    const newBalance = previousBalance + transactionAmount;
+
+    if (newBalance < 0) {
+      throw new BadRequestException(
+        'Balance cannot be reduced below zero.',
+      );
     }
 
-    const previousBalance = giftCard.currentBalance;
-    const transactionAmount = amount - previousBalance;
-
-    giftCard.currentBalance = amount;
+    giftCard.currentBalance = newBalance;
 
     const transaction = this.transactionRepository.create({
       giftCardId: giftCard.id,
@@ -1785,7 +1859,7 @@ export class GiftCardService {
   async getOwnerStats(ownerId: string): Promise<GiftCardStatsDto> {
     const liabilityResult = await this.giftCardRepository
       .createQueryBuilder('giftCard')
-      .select('SUM(giftCard.currentBalance)', 'sum')
+      .select('SUM(giftCard.currentBalance) / 100.0', 'sum')
       .where('giftCard.ownerId = :ownerId', { ownerId })
       .andWhere('giftCard.isActive = true')
       .getRawOne();
@@ -1794,7 +1868,7 @@ export class GiftCardService {
       .createQueryBuilder('transaction')
       .leftJoin('transaction.giftCard', 'giftCard')
       .select('transaction.type', 'type')
-      .addSelect('SUM(transaction.amount)', 'sum')
+      .addSelect('SUM(transaction.amount) / 100.0', 'sum')
       .where('giftCard.ownerId = :ownerId', { ownerId })
       .groupBy('transaction.type')
       .getRawMany();
@@ -1834,7 +1908,7 @@ export class GiftCardService {
       .leftJoin('transaction.giftCard', 'giftCard')
       .select(`to_char(transaction.created_at, 'YYYY-MM')`, 'month')
       .addSelect('transaction.type', 'type')
-      .addSelect('SUM(transaction.amount)', 'amount')
+      .addSelect('SUM(transaction.amount) / 100.0', 'amount')
       .where('giftCard.ownerId = :ownerId', { ownerId })
       .andWhere(`transaction.type IN (:...types)`, {
         types: [
@@ -1875,6 +1949,14 @@ export class GiftCardService {
     return { data };
   }
 
+  private endOfDay(value: string): Date {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime()) && !value.includes('T')) {
+      date.setHours(23, 59, 59, 999);
+    }
+    return date;
+  }
+
   async getTransactionHistoryForOwner(
     ownerId: string,
     startDate?: string,
@@ -1891,7 +1973,7 @@ export class GiftCardService {
 
     if (startDate && endDate) {
       query.andWhere({
-        created_at: Between(new Date(startDate), new Date(endDate)),
+        created_at: Between(new Date(startDate), this.endOfDay(endDate)),
       });
     } else if (startDate) {
       query.andWhere({
@@ -1972,18 +2054,18 @@ export class GiftCardService {
   }> {
     const totalLiabilityResult = await this.giftCardRepository
       .createQueryBuilder('giftCard')
-      .select('SUM(giftCard.currentBalance)', 'sum')
+      .select('SUM(giftCard.currentBalance) / 100.0', 'sum')
       .getRawOne();
     const redeemedResult = await this.transactionRepository
       .createQueryBuilder('transaction')
-      .select('SUM(transaction.amount)', 'sum')
+      .select('SUM(transaction.amount) / 100.0', 'sum')
       .where('transaction.type = :type', {
         type: GiftCardTransactionType.REDEEM,
       })
       .getRawOne();
     const issuedResult = await this.transactionRepository
       .createQueryBuilder('transaction')
-      .select('SUM(transaction.amount)', 'sum')
+      .select('SUM(transaction.amount) / 100.0', 'sum')
       .where('transaction.type = :type', {
         type: GiftCardTransactionType.PURCHASE,
       })
@@ -2141,6 +2223,37 @@ export class GiftCardService {
       isPublic: ownerId ? (dto.isPublic ?? false) : true,
     });
     return this.themeRepository.save(theme);
+  }
+
+  async updateTheme(
+    id: string,
+    dto: Partial<CreateGiftCardThemeDto>,
+    ownerId: string,
+  ): Promise<GiftCardTheme> {
+    const theme = await this.themeRepository.findOne({ where: { id } });
+    if (!theme) {
+      throw new NotFoundException(`Gift card theme with ID ${id} not found.`);
+    }
+    if (theme.ownerId !== ownerId) {
+      throw new ForbiddenException(
+        'You are not authorized to update this theme.',
+      );
+    }
+    Object.assign(theme, dto);
+    return this.themeRepository.save(theme);
+  }
+
+  async deleteTheme(id: string, ownerId: string): Promise<void> {
+    const theme = await this.themeRepository.findOne({ where: { id } });
+    if (!theme) {
+      throw new NotFoundException(`Gift card theme with ID ${id} not found.`);
+    }
+    if (theme.ownerId !== ownerId) {
+      throw new ForbiddenException(
+        'You are not authorized to delete this theme.',
+      );
+    }
+    await this.themeRepository.remove(theme);
   }
 
   async checkBalanceWithPin(

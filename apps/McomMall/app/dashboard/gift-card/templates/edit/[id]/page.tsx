@@ -47,19 +47,12 @@ const EditGiftCardTemplatePage = () => {
   const [spendingLocations, setSpendingLocations] = useState<any[]>([]);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
 
-  // Load from local storage on mount
+  // Load persisted spending locations from the template
   useEffect(() => {
-    if (id) {
-      const stored = localStorage.getItem(`spending-locations-${id}`);
-      if (stored) {
-        try {
-          setSpendingLocations(JSON.parse(stored));
-        } catch (e) {
-          console.error("Failed to parse spending locations", e);
-        }
-      }
+    if (template?.spendingLocations) {
+      setSpendingLocations(template.spendingLocations as any[]);
     }
-  }, [id]);
+  }, [template]);
 
   // Gift card templates belong to the user's single MCOM Central business.
   useEffect(() => {
@@ -88,7 +81,6 @@ const EditGiftCardTemplatePage = () => {
       } else {
         updated = [...prev, option];
       }
-      localStorage.setItem(`spending-locations-${id}`, JSON.stringify(updated));
       return updated;
     });
   };
@@ -220,6 +212,7 @@ const EditGiftCardTemplatePage = () => {
       ...formData,
       minCustomAmount: formData.allowCustomAmount ? Number(formData.minCustomAmount) : undefined,
       maxCustomAmount: formData.allowCustomAmount ? Number(formData.maxCustomAmount) : undefined,
+      spendingLocations,
     };
 
     if (imageFile) {
@@ -278,11 +271,6 @@ const EditGiftCardTemplatePage = () => {
 
     updateTemplate({ id, templateData: submissionData }, {
       onSuccess: () => {
-        if (submissionData.logoUrl) {
-          localStorage.setItem(`gift-card-logo-${id}`, submissionData.logoUrl);
-        } else if (submissionData.logoUrl === '') {
-          localStorage.removeItem(`gift-card-logo-${id}`);
-        }
         toast.success("Gift card template updated successfully!");
         router.push('/dashboard/gift-card/templates');
       },
@@ -326,7 +314,7 @@ const EditGiftCardTemplatePage = () => {
 
               <div>
                 <Label>Where you can spend your gift card</Label>
-                <p className="text-xs text-gray-500 mb-2">Select the businesses where this gift card can be spent (Persisted locally for now)</p>
+                <p className="text-xs text-gray-500 mb-2">Select the businesses where this gift card can be spent</p>
                 <Popover open={isLocationOpen} onOpenChange={setIsLocationOpen}>
                   <PopoverTrigger asChild>
                     <Button

@@ -1,5 +1,6 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/service/api';
 import {
   getVoucherProducts,
   addVoucherProduct,
@@ -213,4 +214,17 @@ export const useGetSoldVouchers = () => {
   });
 
   return { soldVouchers, isLoading, isError, mutate: refetch };
+};
+// Product-level analytics for a voucher campaign
+export const useVoucherProductAnalytics = (id: string) => {
+  return useQuery({
+    queryKey: ['voucherProductAnalytics', id],
+    queryFn: async () => {
+      const { data } = await api.get(
+        `/business/vouchers/products/${id}/analytics`
+      );
+      return data;
+    },
+    enabled: !!id,
+  });
 };

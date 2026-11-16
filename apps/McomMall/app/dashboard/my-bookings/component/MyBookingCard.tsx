@@ -154,8 +154,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 <DropdownMenuItem
                   onClick={handlePayNow}
                   disabled={
-                    (booking.status !== "pending" && booking.status !== "approved") || 
-                    booking.paymentIntentId != null
+                    booking.status !== "pending" && booking.status !== "approved"
                   }
                 >
                   <CreditCard className="mr-2 h-4 w-4" />

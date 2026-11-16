@@ -20,6 +20,7 @@ import { PartnershipRequestStatus } from '../partnership/partnership.enum';
 import { ActivitiesService } from '../activities/activities.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PromotionService } from '../promotion/promotion.service';
+import { OrderItem } from '../order/entities/order-item.entity';
 import {
   CapabilityService,
   ActionType,
@@ -27,6 +28,7 @@ import {
 import { ProductSearchDto } from './dto/product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
+import { UserRole } from '../../common/role.enum';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -68,6 +70,8 @@ export class ProductService {
     );
 
     const { serviceProviderId, ...restOfDto } = createProductDto;
+    // Admin moderation is not writable by merchants, even if they send it.
+    delete (restOfDto as Record<string, unknown>).adminDisabled;
     let serviceProvider: User | undefined;
 
     if (serviceProviderId) {
@@ -131,11 +135,27 @@ export class ProductService {
       restOfDto.stock = restOfDto.quantity;
     }
     if (restOfDto.images || restOfDto.videos || restOfDto.media) {
-      restOfDto.media = [
-        ...(restOfDto.images || []),
-        ...(restOfDto.videos || []),
-        ...(restOfDto.media || []),
-      ];
+      restOfDto.media = Array.from(
+        new Set([
+          ...(restOfDto.images || []),
+          ...(restOfDto.videos || []),
+          ...(restOfDto.media || []),
+        ]),
+      );
+    }
+
+    const hasProductImage =
+      (restOfDto.images?.length ?? 0) > 0 ||
+      (restOfDto.media ?? []).some(
+        (url) =>
+          typeof url === 'string' &&
+          !/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(url),
+      );
+
+    if (!hasProductImage) {
+      throw new BadRequestException(
+        'At least one product image is required to create a product.',
+      );
     }
 
     const product = this.productRepository.create({
@@ -174,6 +194,47 @@ export class ProductService {
     return product;
   }
 
+  /**
+   * Public-facing lookup. Draft, scheduled and private products are only
+   * returned to the business that owns them (or an admin). Everyone else gets
+   * the same 404 as a product that does not exist.
+   */
+  async findOneForViewer(id: string, user?: User) {
+    const product = await this.findOne(id);
+    if (!product) {
+      return null;
+    }
+
+    const isOwner = !!user && product.business?.user?.id === user.id;
+    const isAdmin = user?.role === UserRole.ADMIN;
+    const isPubliclyVisible =
+      product.productStatus === 'published' &&
+      product.visibility === 'public' &&
+      !product.adminDisabled;
+
+    if (isOwner || isAdmin || isPubliclyVisible) {
+      return product;
+    }
+
+    // An admin-disabled product stays visible to customers who already bought
+    // it so they can still reach their order/history details.
+    if (product.adminDisabled && user) {
+      const hasOrdered = await this.productRepository.manager
+        .getRepository(OrderItem)
+        .createQueryBuilder('item')
+        .innerJoin('item.order', 'order')
+        .where('item.product = :productId', { productId: id })
+        .andWhere('order.user = :userId', { userId: user.id })
+        .getExists();
+
+      if (hasOrdered) {
+        return product;
+      }
+    }
+
+    return null;
+  }
+
   async update(id: string, updateProductDto: UpdateProductDto, userId: string) {
     const product = await this.findOne(id);
     if (!product) {
@@ -184,6 +245,8 @@ export class ProductService {
     }
 
     const { serviceProviderId, ...restOfDto } = updateProductDto;
+    // Admin moderation is not writable by merchants, even if they send it.
+    delete (restOfDto as Record<string, unknown>).adminDisabled;
 
     if (restOfDto.variations && restOfDto.variations.length > 0) {
       restOfDto.variations = restOfDto.variations.map((v) => ({
@@ -222,11 +285,13 @@ export class ProductService {
       restOfDto.stock = restOfDto.quantity;
     }
     if (restOfDto.images || restOfDto.videos || restOfDto.media) {
-      restOfDto.media = [
-        ...(restOfDto.images || []),
-        ...(restOfDto.videos || []),
-        ...(restOfDto.media || []),
-      ];
+      restOfDto.media = Array.from(
+        new Set([
+          ...(restOfDto.images || []),
+          ...(restOfDto.videos || []),
+          ...(restOfDto.media || []),
+        ]),
+      );
     }
 
     Object.assign(product, restOfDto);
@@ -294,9 +359,29 @@ export class ProductService {
     user?: User,
   ) {
     const { page = 1, limit = 10 } = paginationDto;
+
+    const business = await this.productRepository.manager
+      .getRepository(Business)
+      .findOne({
+        where: { id: businessId },
+        relations: ['user'],
+      });
+
+    const isOwner = !!user && business?.user?.id === user.id;
+    const isAdmin = user?.role === UserRole.ADMIN;
+    const canSeeAll = isOwner || isAdmin;
+
+    const where: Record<string, unknown> = { business: { id: businessId } };
+    if (!canSeeAll) {
+      where.productStatus = 'published';
+      where.visibility = 'public';
+      where.adminDisabled = false;
+    }
+
     const [data, total] = await this.productRepository.findAndCount({
-      where: { business: { id: businessId } },
+      where,
       relations: ['business', 'business.user'],
+      order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -340,6 +425,9 @@ export class ProductService {
       .leftJoinAndSelect('product.business', 'business')
       .where('product.productStatus = :status', { status: 'published' })
       .andWhere('product.visibility = :visibility', { visibility: 'public' })
+      .andWhere('product.adminDisabled = :adminDisabled', {
+        adminDisabled: false,
+      })
       .andWhere(
         '(product.enableStockManagement = :disableStockManagement OR product.stock > :minStock OR (product.variations IS NOT NULL AND jsonb_path_exists(product.variations, :jsonPath)))',
         {

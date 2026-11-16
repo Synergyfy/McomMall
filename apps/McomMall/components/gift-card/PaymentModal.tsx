@@ -9,9 +9,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Palmtree, CreditCard } from "lucide-react";
+import { Loader2, Palmtree, CreditCard, Wallet } from "lucide-react";
 import { useInitiateGiftCardPurchase, useVerifyGiftCardPurchase } from "@/service/hooks/useGiftCardPayment";
 import { InitiatePurchaseDto, PaymentProvider } from "@/service/gift-cards/types";
+import { PayPalCheckoutButton } from "@/components/PayPalCheckoutButton";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -23,8 +24,8 @@ interface PaymentModalProps {
 }
 
 // It is strongly recommended to move the key to environment variables
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+const stripePromise = (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  ? loadStripe((process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''))
   : null;
 
 const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails: Omit<InitiatePurchaseDto, "paymentProvider">, onSuccess: () => void, onClose: () => void }) => {
@@ -34,10 +35,49 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
   const { verifyPurchase, isVerifying } = useVerifyGiftCardPurchase();
   const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>("stripe");
   const [error, setError] = useState<string | null>(null);
+  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (paymentProvider === 'mcom_wallet') {
+      try {
+        const initiationRes = await initiatePurchase({
+          ...purchaseDetails,
+          paymentProvider,
+        });
+        const transactionId = initiationRes?.data?.transactionId;
+        if (!transactionId) {
+          throw new Error('MCOM Wallet did not return a payment reference.');
+        }
+        await verifyPurchase({
+          paymentProvider,
+          transactionId,
+          purchaseDetails: { ...purchaseDetails, paymentProvider },
+        });
+        onSuccess();
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Wallet payment failed.');
+      }
+      return;
+    }
+
+    if (paymentProvider === 'paypal') {
+      try {
+        const initiationRes = await initiatePurchase({
+          ...purchaseDetails,
+          paymentProvider,
+        });
+        if (!initiationRes?.data?.orderId) {
+          throw new Error('PayPal order could not be created.');
+        }
+        setPaypalOrderId(initiationRes.data.orderId);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'PayPal payment failed.');
+      }
+      return;
+    }
 
     if (paymentProvider === 'stripe') {
       if (!stripe || !elements) {
@@ -96,10 +136,16 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
           setError("Payment failed. Please try again.");
         }
       }
-    } else {
-      // Handle PayPal
-      setError("PayPal is not yet supported.");
     }
+  };
+
+  const handlePayPalSuccess = async (orderId: string) => {
+    await verifyPurchase({
+      paymentProvider: 'paypal',
+      transactionId: orderId,
+      purchaseDetails: { ...purchaseDetails, paymentProvider: 'paypal' },
+    });
+    onSuccess();
   };
 
   return (
@@ -111,7 +157,7 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
           variant={paymentProvider === "stripe" ? "default" : "outline"}
           className="bg-orange-600"
         >
-          <CreditCard className="mr-2 h-4 w-4" /> Stripe
+          <CreditCard className="mr-2 h-4 w-4" /> Card
         </Button>
         <Button
           type="button"
@@ -120,7 +166,29 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
         >
           <Palmtree className="mr-2 h-4 w-4" /> PayPal
         </Button>
+        <Button
+          type="button"
+          onClick={() => setPaymentProvider("mcom_wallet")}
+          variant={paymentProvider === "mcom_wallet" ? "default" : "outline"}
+        >
+          <Wallet className="mr-2 h-4 w-4" /> MCOM Wallet
+        </Button>
       </div>
+
+      {paypalOrderId && (
+        <div className="mb-4 flex justify-center">
+          <PayPalCheckoutButton
+            orderID={paypalOrderId}
+            onPaymentSuccess={handlePayPalSuccess}
+          />
+        </div>
+      )}
+
+      {paymentProvider === "mcom_wallet" && !paypalOrderId && (
+        <p className="mb-4 rounded-md border border-orange-100 bg-orange-50 p-3 text-sm text-orange-800">
+          Your MCOM Wallet will be charged when you press Pay.
+        </p>
+      )}
 
       {paymentProvider === "stripe" && (
         <div className="mb-4 p-4 border rounded-md">
@@ -134,7 +202,7 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
         <Button type="button" variant="ghost" onClick={onClose} disabled={isInitiating || isVerifying}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isInitiating || isVerifying || !stripe} className="bg-orange-600 hover:bg-orange-700">
+        <Button type="submit" disabled={isInitiating || isVerifying || !stripe || !!paypalOrderId} className="bg-orange-600 hover:bg-orange-700">
           {(isInitiating || isVerifying) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Pay ${purchaseDetails.amount}
         </Button>

@@ -160,27 +160,22 @@ export default function PromotionForm() {
   };
 
   const handleSubmit = async () => {
-    // Pack advanced metadata into description JSON string to fit API schema
-    const packedDescription = JSON.stringify({
-      uiDescription: description,
-      promoType: selectedType,
-      targetSegment,
-      boroughVisibility,
-      highStreetVisibility,
-      featuredPlacement,
-      addExtraGift
-    });
-
     try {
       await createPromotion.mutateAsync({
         name,
-        description: packedDescription,
+        description: description.trim() || undefined,
         termsAndConditions,
         isActive: true,
         beginDate,
         endDate,
         promotionType,
         promotionScope: 'ALL_LISTINGS',
+        promoType: selectedType ?? undefined,
+        targetSegment,
+        boroughVisibility,
+        highStreetVisibility,
+        featuredPlacement,
+        addExtraGift,
         multiplier: promotionType === 'MULTIPLIER' ? parseFloat(multiplier) : undefined,
         bonusPoints: promotionType === 'BONUS_POINTS' ? parseInt(bonusPoints, 10) : undefined,
         limitPerCustomer: limitPerCustomer ? parseInt(limitPerCustomer, 10) : undefined,
@@ -765,7 +760,7 @@ export default function PromotionForm() {
               Campaign Launched!
             </DialogTitle>
             <DialogDescription className="text-center text-xs text-on-surface-variant leading-relaxed">
-              Your new promotion has been broadcasted successfully to your target segment. It will appear in local high street placements.
+              Your promotion is now live and will apply to customers matching your target segment. Use Send Offer to notify customers directly.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex justify-center">

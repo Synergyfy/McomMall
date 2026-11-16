@@ -6,6 +6,7 @@ import {
   Query,
   Delete,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import {
@@ -49,6 +50,18 @@ export class AdminServicesController {
   @ApiResponse({ status: 200, type: PaginatedServicesDto })
   findAll(@Query() query: ServiceQueryDto) {
     return this.adminServicesService.findAll(query);
+  }
+
+  @Patch(':id/deactivate')
+  @ApiOperation({ summary: 'Deactivate a service' })
+  deactivate(@Param('id') id: string) {
+    return this.adminServicesService.deactivate(id);
+  }
+
+  @Patch(':id/activate')
+  @ApiOperation({ summary: 'Re-activate a service' })
+  activate(@Param('id') id: string) {
+    return this.adminServicesService.activate(id);
   }
 
   @Delete(':id')

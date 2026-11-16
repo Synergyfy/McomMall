@@ -90,7 +90,6 @@ const navItems: NavItem[] = [
     { title: 'Memberships', href: '/admin/memberships', icon: Users },
     { title: 'Community', href: '/admin/community-activity', icon: Users },
     { title: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-    { title: 'Automations', href: '/admin/automations', icon: Rocket },
     { title: 'Billing', href: '/admin/billing', icon: CreditCard },
     { title: 'Data', href: '/admin/data', icon: Package },
     { title: 'Expo Promo', href: '/admin/expo-promo', icon: Megaphone },

@@ -125,7 +125,7 @@ const FundWallet: React.FC<FundWalletProps> = ({ isOpen, onClose }) => {
                     <SelectValue placeholder="Select a payment provider" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="stripe">Stripe</SelectItem>
+                    <SelectItem value="stripe">Credit / debit card</SelectItem>
                     <SelectItem value="paypal">PayPal</SelectItem>
                   </SelectContent>
                 </Select>

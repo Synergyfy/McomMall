@@ -1,4 +1,5 @@
 import { Column, Entity, Index } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { FlashSaleStatus } from '../flash-sale.enum';
 
@@ -16,10 +17,10 @@ export class FlashSaleItem extends AbstractBaseEntity {
   @Column({ nullable: true })
   image: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   price: number;
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   discountedPrice: number;
 
   @Column({ type: 'int', default: 0 })

@@ -7,7 +7,6 @@ import {
   Home,
   Compass,
   Star,
-  Calendar,
   Tag,
   Grid3X3,
   Building2,
@@ -16,7 +15,7 @@ import {
   User,
 } from 'lucide-react';
 
-type TabId = 'home' | 'discover' | 'promotions' | 'rewards' | 'events' | 'more';
+type TabId = 'home' | 'discover' | 'promotions' | 'rewards' | 'more';
 
 export const CustomerBottomNav: React.FC = () => {
   const pathname = usePathname();
@@ -27,7 +26,6 @@ export const CustomerBottomNav: React.FC = () => {
     if (pathname?.startsWith('/dashboard/discover')) return 'discover';
     if (pathname?.startsWith('/dashboard/promotions')) return 'promotions';
     if (pathname?.startsWith('/dashboard/rewards')) return 'rewards';
-    if (pathname?.startsWith('/dashboard/events')) return 'events';
     if (
       pathname?.startsWith('/dashboard/localmall') ||
       pathname?.startsWith('/dashboard/wallet') ||
@@ -45,7 +43,6 @@ export const CustomerBottomNav: React.FC = () => {
     { id: 'discover', href: '/dashboard/discover', icon: Compass, label: 'Discover' },
     { id: 'promotions', href: '/dashboard/promotions', icon: Tag, label: 'Promotions' },
     { id: 'rewards', href: '/dashboard/rewards', icon: Star, label: 'Rewards' },
-    { id: 'events', href: '/dashboard/events', icon: Calendar, label: 'Events' },
     { id: 'more', icon: Grid3X3, label: 'More', onClick: () => setShowMore(true) },
   ];
 

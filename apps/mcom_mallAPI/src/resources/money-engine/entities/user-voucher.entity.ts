@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { RewardDefinition } from './reward-definition.entity';
@@ -21,10 +22,10 @@ export class UserVoucher extends AbstractBaseEntity {
   @Column({ unique: true, length: 12 })
   code: string;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   realBalance: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   rewardBalance: number;
 
   @Column({

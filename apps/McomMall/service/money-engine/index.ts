@@ -32,6 +32,22 @@ export const purchaseVoucher = async (data: PurchaseVoucherDto): Promise<UserVou
     return response.data;
 };
 
+export const initiateVoucherPurchase = async (data: {
+    rewardDefinitionId: string;
+    paymentAmount: number;
+    paymentGateway: 'STRIPE' | 'PAYPAL' | 'MCOM_WALLET';
+    idempotencyKey?: string;
+}): Promise<{
+    clientSecret?: string;
+    orderId?: string;
+    approvalUrl?: string | null;
+    transactionId?: string;
+    provider: string;
+}> => {
+    const response = await api.post('/money-engine/purchase/initiate', data);
+    return response.data;
+};
+
 export const getBusinessStats = async (): Promise<BusinessStatsResponseDto> => {
     const response = await api.get<BusinessStatsResponseDto>('/money-engine/business/stats');
     return response.data;

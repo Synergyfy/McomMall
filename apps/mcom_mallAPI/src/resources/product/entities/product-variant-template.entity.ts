@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { moneyJsonTransformer } from '../../../common/money/money';
 import { ApiProperty } from '@nestjs/swagger';
 import { ProductAttribute } from '../../product/interfaces/product-variant.interface';
 
@@ -44,7 +45,7 @@ export class ProductVariantTemplate {
   @ApiProperty({
     description: 'Predefined attributes for this template',
   })
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'jsonb', transformer: moneyJsonTransformer })
   attributes: ProductAttribute[];
 
   @CreateDateColumn()

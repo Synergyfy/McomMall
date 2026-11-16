@@ -92,7 +92,7 @@ const formatDate = (dateString: string) => {
 export default function StoreDashboard() {
   // --- STATE MANAGEMENT ---
   const { data: products = [], isLoading, isError, error } = useGetMyProducts();
-  const [activeTab, setActiveTab] = React.useState<ProductStatus>('All');
+  const [activeTab, setActiveTab] = React.useState<string>('All');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('all');
   const [selectedBrand, setSelectedBrand] = React.useState('all');
@@ -151,13 +151,30 @@ export default function StoreDashboard() {
   };
 
   // --- FILTERING LOGIC ---
+  const matchesTab = React.useCallback((product: Product, tab: string) => {
+    if (tab === 'All') return true;
+    if (tab === 'published')
+      return product.productStatus === 'published' && !product.adminDisabled;
+    if (tab === 'draft')
+      return product.productStatus === 'draft' && !product.adminDisabled;
+    if (tab === 'pending')
+      return (
+        product.productStatus === 'pending' ||
+        product.productStatus === 'Pending Review'
+      );
+    if (tab === 'in_stock')
+      return Number(product.stock) > 0 && !product.adminDisabled;
+    if (tab === 'disabled') return Boolean(product.adminDisabled);
+    return product.productStatus === tab;
+  }, []);
+
   const filteredProducts = React.useMemo(() => {
     if (!products) return [];
     let tempProducts = [...products];
 
     // 1. Filter by active tab
     if (activeTab !== 'All') {
-      tempProducts = tempProducts.filter(p => p.productStatus === activeTab);
+      tempProducts = tempProducts.filter(p => matchesTab(p, activeTab));
     }
 
     // 2. Filter by search term (name or SKU)
@@ -180,7 +197,7 @@ export default function StoreDashboard() {
     }
 
     return tempProducts;
-  }, [products, activeTab, searchTerm, selectedCategory, selectedBrand]);
+  }, [products, activeTab, searchTerm, selectedCategory, selectedBrand, matchesTab]);
 
   // --- EVENT HANDLERS ---
   const handleResetFilters = () => {
@@ -200,30 +217,43 @@ export default function StoreDashboard() {
     );
   };
 
-  const handleBulkAction = (action: string) => {
+  const handleBulkAction = async (action: string) => {
+    const { toast } = await import('sonner');
     if (selectedRows.length === 0) {
-      // In a real app, use a toast notification instead of alert.
-      alert('Please select products to perform a bulk action.');
+      toast.error('Please select products to perform a bulk action.');
       return;
     }
 
-    if (action === 'delete') {
-      // In a real app, you'd call an API here.
-      console.log('Deleting products:', selectedRows);
-      // setProducts(prev => prev.filter(p => !selectedRows.includes(p.id)));
+    try {
+      if (action === 'delete') {
+        await Promise.all(selectedRows.map(productId => deleteProduct(productId)));
+        toast.success(`Deleted ${selectedRows.length} product${selectedRows.length === 1 ? '' : 's'}.`);
+      } else if (action === 'publish' || action === 'unpublish') {
+        const productStatus = action === 'publish' ? 'published' : 'draft';
+        await Promise.all(
+          selectedRows.map(id => updateProduct({ id, productStatus } as any))
+        );
+        toast.success(
+          `${action === 'publish' ? 'Published' : 'Moved to draft'} ${selectedRows.length} product${selectedRows.length === 1 ? '' : 's'}.`
+        );
+      } else {
+        toast.error('Unknown bulk action.');
+        return;
+      }
       setSelectedRows([]);
+    } catch (e: any) {
+      toast.error(e?.message || 'Bulk action failed.');
     }
-    // Add logic for other bulk actions like 'publish' or 'unpublish' here.
-    console.log(`Performing '${action}' on products:`, selectedRows);
   };
 
   // --- DERIVED STATE & CONSTANTS ---
-  const TABS: ProductStatus[] = [
-    'All',
-    'Online',
-    'Draft',
-    'Pending Review',
-    'In stock',
+  const TABS: { key: string; label: string }[] = [
+    { key: 'All', label: 'All' },
+    { key: 'published', label: 'Online' },
+    { key: 'draft', label: 'Draft' },
+    { key: 'pending', label: 'Pending Review' },
+    { key: 'in_stock', label: 'In stock' },
+    { key: 'disabled', label: 'Disabled' },
   ];
   const categories = [...new Set((products || []).map(p => p.category))].filter((cat): cat is string => Boolean(cat));
   const brands = [...new Set((products || []).map(p => p.brand))].filter((brand): brand is string => Boolean(brand));
@@ -305,17 +335,17 @@ export default function StoreDashboard() {
               <div className="flex flex-wrap items-center text-sm text-gray-600 -mb-2">
                 {TABS.map(tab => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-2 sm:pb-0 px-3 py-2 rounded-md mb-2 ${activeTab === tab
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`pb-2 sm:pb-0 px-3 py-2 rounded-md mb-2 ${activeTab === tab.key
                       ? 'bg-gray-100 font-semibold text-gray-800'
                       : ''
                       }`}
                   >
-                    {tab} (
-                    {tab === 'All'
+                    {tab.label} (
+                    {tab.key === 'All'
                       ? products?.length || 0
-                      : products?.filter(p => p.productStatus === tab).length ||
+                      : products?.filter(p => matchesTab(p, tab.key)).length ||
                       0}
                     )
                   </button>
@@ -464,7 +494,8 @@ export default function StoreDashboard() {
                       return (
                         <TableRow
                           key={product.id}
-                          className={`mobile-table-card md:table-row ${product.productStatus === 'Pending Review'
+                          className={`mobile-table-card md:table-row ${product.productStatus === 'pending' ||
+                            product.productStatus === 'Pending Review'
                             ? 'bg-red-50'
                             : ''
                             }`}
@@ -519,21 +550,35 @@ export default function StoreDashboard() {
                           >
                             <Badge
                               variant={
-                                product.productStatus === 'Pending Review'
+                                product.adminDisabled
                                   ? 'destructive'
-                                  : product.productStatus === 'Online' ||
-                                    product.productStatus === 'In stock'
-                                    ? 'default'
-                                    : 'secondary'
+                                  : product.productStatus === 'pending' ||
+                                      product.productStatus === 'Pending Review'
+                                    ? 'destructive'
+                                    : product.productStatus === 'published'
+                                      ? 'default'
+                                      : 'secondary'
                               }
                               className={
-                                product.productStatus === 'Online' ||
-                                  product.productStatus === 'In stock'
-                                  ? 'bg-green-100 text-green-800'
-                                  : ''
+                                product.adminDisabled
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : product.productStatus === 'published'
+                                    ? 'bg-green-100 text-green-800'
+                                    : ''
                               }
                             >
-                              {product.productStatus}
+                              {product.adminDisabled
+                                ? 'Disabled'
+                                : product.productStatus === 'published'
+                                  ? 'Online'
+                                  : product.productStatus === 'pending' ||
+                                      product.productStatus === 'Pending Review'
+                                    ? 'Pending Review'
+                                    : product.productStatus === 'draft'
+                                      ? 'Draft'
+                                      : product.productStatus === 'archived'
+                                        ? 'Archived'
+                                        : product.productStatus}
                             </Badge>
                           </TableCell>
                           <TableCell

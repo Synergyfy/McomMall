@@ -32,7 +32,9 @@ import {
 import {
     useGetAdminServiceStats,
     useGetAllAdminServices,
-    useDeleteService
+    useDeleteService,
+    useDeactivateService,
+    useActivateService
 } from '@/service/services/hook';
 import { AdminService } from '@/service/services/types';
 import {
@@ -45,7 +47,7 @@ import {
     Clock,
     CheckCircle2,
     XCircle,
-    Copy,
+    Archive,
     Trash2,
     ExternalLink,
     Loader2,
@@ -75,20 +77,28 @@ function ServiceDetailSheet({
     open,
     onOpenChange,
     onDelete,
+    onDeactivate,
+    onActivate,
     isDeleting,
+    isDeactivating,
+    isActivating,
 }: {
     service: AdminService | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onDelete: (id: string) => void;
+    onDeactivate: (id: string) => void;
+    onActivate: (id: string) => void;
     isDeleting: boolean;
+    isDeactivating: boolean;
+    isActivating: boolean;
 }) {
     if (!service) return null;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-                <SheetHeader className="pb-4 border-b">
+            <SheetContent className="w-full sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col">
+                <SheetHeader className="p-6 pb-4 border-b pr-12">
                     <SheetTitle className="text-xl">{service.name}</SheetTitle>
                     <SheetDescription className="flex items-center gap-2 mt-2">
                         <ServiceStatusBadge status={service.status} />
@@ -96,7 +106,7 @@ function ServiceDetailSheet({
                     </SheetDescription>
                 </SheetHeader>
 
-                <div className="space-y-6 pt-6">
+                <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-6">
                     {/* Image Preview */}
                     <div className="aspect-video rounded-xl bg-slate-100 overflow-hidden relative border">
                         {service.images?.[0] ? (
@@ -136,11 +146,11 @@ function ServiceDetailSheet({
                             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
                                 <Building2 className="h-5 w-5 text-blue-600" />
                             </div>
-                            <div>
-                                <p className="font-semibold text-slate-900">{service.businessName}</p>
-                                <p className="text-xs text-slate-500">ID: {service.businessId}</p>
+                            <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-slate-900 truncate">{service.businessName}</p>
+                                <p className="text-xs text-slate-500 truncate">ID: {service.businessId}</p>
                             </div>
-                            <Button variant="ghost" size="sm" className="ml-auto text-blue-600">
+                            <Button variant="ghost" size="sm" className="ml-auto shrink-0 text-blue-600">
                                 View Business
                             </Button>
                         </div>
@@ -172,28 +182,46 @@ function ServiceDetailSheet({
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 pt-6 sticky bottom-0 bg-white pb-6 border-t mt-6">
-                        <Button className="w-full bg-slate-900 hover:bg-slate-800">
-                            Edit Service
-                        </Button>
-                        <div className="grid grid-cols-2 gap-2">
-                            <Button variant="outline" className="text-slate-600">
-                                <Copy className="h-4 w-4 mr-2" />
-                                Duplicate
+                {/* Actions */}
+                <div className="border-t bg-white p-6 space-y-2">
+                    <Button className="w-full bg-slate-900 hover:bg-slate-800">
+                        Edit Service
+                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                variant="outline"
+                                className={service.status === 'inactive' ? 'text-emerald-700 hover:text-emerald-800 border-emerald-100 hover:bg-emerald-50' : 'text-slate-600'}
+                                onClick={() => {
+                                    if (!service.id) return;
+                                    if (service.status === 'inactive') {
+                                        onActivate(service.id);
+                                    } else {
+                                        onDeactivate(service.id);
+                                    }
+                                }}
+                                disabled={isDeleting || isDeactivating || isActivating}
+                            >
+                                {isDeactivating || isActivating ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : service.status === 'inactive' ? (
+                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                ) : (
+                                    <Archive className="h-4 w-4 mr-2" />
+                                )}
+                                {service.status === 'inactive' ? 'Activate' : 'Deactivate'}
                             </Button>
                             <Button
                                 variant="outline"
                                 className="text-red-600 hover:text-red-700 border-red-100 hover:bg-red-50"
                                 onClick={() => service.id && onDelete(service.id)}
-                                disabled={isDeleting}
+                                disabled={isDeleting || isDeactivating || isActivating}
                             >
                                 {isDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
                                 Delete
                             </Button>
                         </div>
-                    </div>
                 </div>
             </SheetContent>
         </Sheet>
@@ -220,9 +248,14 @@ export default function ServicesPage() {
         limit,
     });
     const deleteMutation = useDeleteService();
+    const deactivateMutation = useDeactivateService();
+    const activateMutation = useActivateService();
 
     const servicesList = servicesData?.data || [];
     const totalPages = servicesData?.totalPages || 1;
+    const sheetService = selectedService
+        ? servicesList.find(s => s.id === selectedService.id) ?? selectedService
+        : null;
 
     const handleView = (s: AdminService) => {
         setSelectedService(s);
@@ -233,6 +266,14 @@ export default function ServicesPage() {
         if (window.confirm('Are you sure you want to delete this service?')) {
             deleteMutation.mutate(id);
         }
+    };
+
+    const handleDeactivate = (id: string) => {
+        deactivateMutation.mutate(id);
+    };
+
+    const handleActivate = (id: string) => {
+        activateMutation.mutate(id);
     };
 
     return (
@@ -487,11 +528,15 @@ export default function ServicesPage() {
 
             {/* Service Detail Sheet */}
             <ServiceDetailSheet
-                service={selectedService}
+                service={sheetService}
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
                 onDelete={handleDelete}
+                onDeactivate={handleDeactivate}
+                onActivate={handleActivate}
                 isDeleting={deleteMutation.isPending}
+                isDeactivating={deactivateMutation.isPending}
+                isActivating={activateMutation.isPending}
             />
         </div>
     );

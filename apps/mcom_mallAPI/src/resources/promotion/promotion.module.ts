@@ -9,6 +9,7 @@ import { PromotionParticipant } from './entities/promotion-participant.entity';
 import { User } from '../users/entities/user.entity';
 import { PromotionEngineService } from './promotion-engine.service';
 import { PromotionActivity } from './entities/promotion-activity.entity';
+import { SavedPromotion } from './entities/saved-promotion.entity';
 import { ActivitiesModule } from '../activities/activities.module';
 import { TransactionModule } from '../transaction/transaction.module';
 import { CapabilityModule } from '../capability/capability.module';
@@ -23,6 +24,7 @@ import { CapabilityModule } from '../capability/capability.module';
       PromotionParticipant,
       User,
       PromotionActivity,
+      SavedPromotion,
     ]),
     ActivitiesModule,
     TransactionModule,

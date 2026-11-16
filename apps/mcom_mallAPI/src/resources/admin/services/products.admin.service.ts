@@ -47,10 +47,14 @@ export class AdminProductsService {
     if (status && status !== 'all') {
       let pStatus = status;
       if (status === 'active') pStatus = 'published';
-      if (status === 'inactive') pStatus = 'draft';
 
       if (status === 'out_of_stock') {
         qb.andWhere('product.stock = 0');
+      } else if (status === 'inactive') {
+        qb.andWhere(
+          '(product.adminDisabled = true OR product.productStatus = :draftStatus)',
+          { draftStatus: 'draft' },
+        );
       } else {
         qb.andWhere('product.productStatus = :pStatus', { pStatus });
       }
@@ -71,11 +75,13 @@ export class AdminProductsService {
       price: p.price,
       stock: p.stock,
       status:
-        p.productStatus === 'published'
-          ? 'active'
-          : p.stock === 0
-            ? 'out_of_stock'
-            : 'inactive',
+        p.adminDisabled
+          ? 'inactive'
+          : p.productStatus === 'published'
+            ? 'active'
+            : p.stock === 0
+              ? 'out_of_stock'
+              : 'inactive',
       description: p.description,
       images: p.media || [],
       createdAt: p.created_at,
@@ -93,7 +99,13 @@ export class AdminProductsService {
   async deactivate(id: string) {
     const product = await this.productsRepository.findOne({ where: { id } });
     if (!product) throw new NotFoundException('Product not found');
-    return this.productsRepository.update(id, { productStatus: 'draft' });
+    return this.productsRepository.update(id, { adminDisabled: true });
+  }
+
+  async activate(id: string) {
+    const product = await this.productsRepository.findOne({ where: { id } });
+    if (!product) throw new NotFoundException('Product not found');
+    return this.productsRepository.update(id, { adminDisabled: false });
   }
 
   async remove(id: string) {

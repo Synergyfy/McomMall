@@ -6,6 +6,7 @@ import {
   Index,
   DeleteDateColumn,
 } from 'typeorm';
+import { moneyJsonTransformer, moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { BundledService } from './bundled-service.entity';
@@ -60,14 +61,14 @@ export class Service extends AbstractBaseEntity {
   @ApiProperty({ enum: PricingModel, description: 'Pricing model' })
   pricingModel: PricingModel;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   @ApiProperty({ description: 'Fixed price', example: 100.0 })
   fixedPrice?: number;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   pricePerHour?: number;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   pricePerUnit?: number;
 
   @Column({ length: 50, nullable: true })
@@ -90,19 +91,19 @@ export class Service extends AbstractBaseEntity {
   @Column('int', { nullable: true, default: 10 })
   maxGuests?: number;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   pricePerGuest?: number;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   fixedGroupPrice?: number;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   basePrice?: number;
 
   @Column('int', { nullable: true })
   baseGuests?: number;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   additionalGuestPrice?: number;
 
   @Column({ default: false })
@@ -121,22 +122,22 @@ export class Service extends AbstractBaseEntity {
   @Column('simple-array', { nullable: true })
   tags: string[];
 
-  @Column('jsonb', { nullable: true })
+  @Column('jsonb', { nullable: true, transformer: moneyJsonTransformer })
   deliveryConfig: any;
 
-  @Column('jsonb', { nullable: true })
+  @Column('jsonb', { nullable: true, transformer: moneyJsonTransformer })
   pricingRules: any;
 
   @Column('jsonb', { nullable: true })
   availability: any;
 
-  @Column('jsonb', { nullable: true })
+  @Column('jsonb', { nullable: true, transformer: moneyJsonTransformer })
   variants: any[];
 
   @Column({ default: false })
   enableTieredPackages: boolean;
 
-  @Column('jsonb', { nullable: true })
+  @Column('jsonb', { nullable: true, transformer: moneyJsonTransformer })
   tiers: any[];
 
   @Column({ default: true })
@@ -149,6 +150,9 @@ export class Service extends AbstractBaseEntity {
   @ApiProperty({ description: 'Status of the service', example: 'published' })
   status: string;
 
+  @Column({ default: false })
+  adminDisabled: boolean;
+
   @Column({ type: 'int', default: 0 })
   duration: number;
 
@@ -158,7 +162,7 @@ export class Service extends AbstractBaseEntity {
   @Column({ default: false })
   isPromotionEligible: boolean;
 
-  @Column('decimal', { precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   bookingFee?: number;
 
   @Column('float', { default: 0 })

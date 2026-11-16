@@ -7,9 +7,22 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useContributeToCampaign } from '@/service/campaign-cashback/hook';
+import {
+    useContributeToCampaign,
+    useInitiateCampaignContribution,
+} from '@/service/campaign-cashback/hook';
 import { CampaignCashback } from '@/service/campaign-cashback/types';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
+import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
+
+const stripePromise = loadStripe(
+    process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY ||
+        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+        ''
+);
 
 interface Props {
     isOpen: boolean;
@@ -18,25 +31,32 @@ interface Props {
 }
 
 type PaymentFlowState = 'idle' | 'paymentPending' | 'paymentSucceeded' | 'paymentFailed';
+type PaymentMethod = 'stripe' | 'paypal' | 'wallet';
 
 export const CampaignUnlockModal: React.FC<Props> = ({ isOpen, onClose, campaign }) => {
     const [flowState, setFlowState] = useState<PaymentFlowState>('idle');
     const [errorMessage, setErrorMessage] = useState('');
+    const [method, setMethod] = useState<PaymentMethod>('stripe');
+    const [clientSecret, setClientSecret] = useState<string | null>(null);
+    const [orderId, setOrderId] = useState<string | null>(null);
+    const initiateMutation = useInitiateCampaignContribution();
     const contributeMutation = useContributeToCampaign();
 
     if (!campaign) return null;
 
-    const handlePay = async (method: string) => {
+    const completeContribution = async (
+        transactionId: string,
+        paymentMethod: PaymentMethod
+    ) => {
         setFlowState('paymentPending');
         setErrorMessage('');
-
         try {
             await contributeMutation.mutateAsync({
                 campaignId: campaign.id,
                 amount: campaign.levelValue,
-                paymentMethod: method,
+                paymentMethod,
+                transactionId,
             });
-            // The hook handles invalidating the getQueries, explicitly preventing optimistic UI.
             setFlowState('paymentSucceeded');
         } catch (err: any) {
             setFlowState('paymentFailed');
@@ -44,9 +64,52 @@ export const CampaignUnlockModal: React.FC<Props> = ({ isOpen, onClose, campaign
         }
     };
 
+    const handleWalletPay = async () => {
+        setFlowState('paymentPending');
+        setErrorMessage('');
+        try {
+            const initiated = await initiateMutation.mutateAsync({
+                campaignId: campaign.id,
+                paymentMethod: 'wallet',
+            });
+            if (!initiated.transactionId) {
+                throw new Error('MCOM Wallet did not return a payment reference.');
+            }
+            await completeContribution(initiated.transactionId, 'wallet');
+        } catch (err: any) {
+            setFlowState('paymentFailed');
+            setErrorMessage(err?.message || 'Wallet payment failed. Please try again.');
+        }
+    };
+
+    const handleInitiate = async (paymentMethod: 'stripe' | 'paypal') => {
+        setMethod(paymentMethod);
+        setFlowState('paymentPending');
+        setErrorMessage('');
+        try {
+            const initiated = await initiateMutation.mutateAsync({
+                campaignId: campaign.id,
+                paymentMethod,
+            });
+            if (paymentMethod === 'stripe' && initiated.clientSecret) {
+                setClientSecret(initiated.clientSecret);
+                setFlowState('idle');
+            } else if (paymentMethod === 'paypal' && initiated.orderId) {
+                setOrderId(initiated.orderId);
+                setFlowState('idle');
+            } else {
+                throw new Error('The payment provider did not return a payment reference.');
+            }
+        } catch (err: any) {
+            setFlowState('paymentFailed');
+            setErrorMessage(err?.message || 'Payment could not be started.');
+        }
+    };
+
     const handleClose = () => {
-        // Reset state on close
         setTimeout(() => setFlowState('idle'), 200);
+        setClientSecret(null);
+        setOrderId(null);
         onClose();
     };
 
@@ -61,27 +124,44 @@ export const CampaignUnlockModal: React.FC<Props> = ({ isOpen, onClose, campaign
                 </DialogHeader>
 
                 <div className="flex flex-col space-y-4 py-4">
-                    {flowState === 'idle' && (
+                    {flowState === 'idle' && !clientSecret && !orderId && (
                         <>
                             <div className="bg-orange-50 text-orange-800 p-4 rounded-md border border-orange-200 text-sm">
-                                By paying £{campaign.levelValue.toFixed(2)}, you will instantly unlock all 3 values, giving you access to the full combined balance across all eligible channels.
+                                Your contribution is processed securely by MCOM Pay. Card, PayPal and your MCOM Wallet are all supported.
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 mt-4">
-                                <Button variant="outline" onClick={() => handlePay('mcom_wallet')} className="h-12 border-gray-300">
+                            <div className="grid grid-cols-1 gap-3 mt-4">
+                                <Button variant="outline" onClick={handleWalletPay} className="h-12 border-gray-300">
                                     Pay with MCOM Wallet
                                 </Button>
-                                <Button variant="outline" onClick={() => handlePay('gift_card')} className="h-12 border-gray-300">
-                                    Load via Gift Card
+                                <Button variant="default" onClick={() => handleInitiate('stripe')} className="h-12 bg-[#635BFF] hover:bg-[#4A44CC] text-white">
+                                    Pay by Card
                                 </Button>
-                                <Button variant="default" onClick={() => handlePay('stripe')} className="h-12 bg-[#635BFF] hover:bg-[#4A44CC] text-white col-span-2">
-                                    Pay via Stripe
-                                </Button>
-                                <Button variant="default" onClick={() => handlePay('paypal')} className="h-12 bg-[#003087] hover:bg-[#002266] text-white col-span-2">
-                                    Pay via PayPal
+                                <Button variant="default" onClick={() => handleInitiate('paypal')} className="h-12 bg-[#003087] hover:bg-[#002266] text-white">
+                                    Pay with PayPal
                                 </Button>
                             </div>
                         </>
+                    )}
+
+                    {flowState === 'idle' && clientSecret && (
+                        <Elements stripe={stripePromise} options={{ clientSecret }}>
+                            <StripeCheckoutForm
+                                clientSecret={clientSecret}
+                                onPaymentSuccess={(transactionId) =>
+                                    completeContribution(transactionId, 'stripe')
+                                }
+                            />
+                        </Elements>
+                    )}
+
+                    {flowState === 'idle' && orderId && (
+                        <PayPalCheckoutButton
+                            orderID={orderId}
+                            onPaymentSuccess={(transactionId) =>
+                                completeContribution(transactionId, 'paypal')
+                            }
+                        />
                     )}
 
                     {flowState === 'paymentPending' && (
@@ -114,7 +194,15 @@ export const CampaignUnlockModal: React.FC<Props> = ({ isOpen, onClose, campaign
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900">Payment Failed</h3>
                             <p className="text-sm text-red-600 font-medium">{errorMessage}</p>
-                            <Button onClick={() => setFlowState('idle')} variant="outline" className="mt-4 w-full border-gray-300">
+                            <Button
+                                onClick={() => {
+                                    setFlowState('idle');
+                                    setClientSecret(null);
+                                    setOrderId(null);
+                                }}
+                                variant="outline"
+                                className="mt-4 w-full border-gray-300"
+                            >
                                 Try a Different Method
                             </Button>
                         </div>
