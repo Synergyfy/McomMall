@@ -30,13 +30,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -50,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { useGetCategories, useGetSubCategoriesByCategory, useGetSectors, useGetCategoriesBySector } from '@/service/taxonomy/hook';
 import { UserListing } from '@/service/listings/types';
 import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import {
   Tooltip,
   TooltipContent,
@@ -98,10 +92,14 @@ export function Step1BasicInfo() {
     }
   }, [isLoadingListings, businesses.length]);
 
-  // Auto-populate business when user has exactly one service business
+  // Every user has one MCOM Central business. Attach services to it
+  // automatically instead of asking them to pick a listing.
+  const business = pickCentralBusiness(businesses);
+
   useEffect(() => {
-    if (!isLoadingListings && businesses.length === 1 && !currentBusinessId) {
-      form.setValue('businessId', businesses[0].id);
+    const business = pickCentralBusiness(businesses);
+    if (!isLoadingListings && business && currentBusinessId !== business.id) {
+      form.setValue('businessId', business.id, { shouldValidate: true });
     }
   }, [isLoadingListings, businesses, currentBusinessId, form]);
 
@@ -131,60 +129,24 @@ export function Step1BasicInfo() {
             Basic Information
           </CardTitle>
           <CardDescription>
-            Start by selecting your business and providing the fundamental details of your service.
+            Provide the fundamental details of your service. It will be attached to your MCOM Central business automatically.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Business Selection */}
-          <FormField
-            control={form.control}
-            name="businessId"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center gap-2 mb-2">
-                  <FormLabel className="text-base font-semibold">
-                    Business <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Select which business will offer this service.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={isLoadingListings}
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger className="py-6">
-                      <SelectValue
-                        placeholder={isLoadingListings ? 'Loading businesses...' : 'Select Business'}
-                      />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {businesses.length > 0 ? (
-                      businesses.map((b: UserListing) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.businessName}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        No service businesses available
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Attached business (owned by MCOM Central Hub) */}
+          <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Store className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">
+                Adding this service to your MCOM Central business
+              </p>
+              <p className="truncate text-sm font-semibold">
+                {business?.businessName || 'Your registered business'}
+              </p>
+            </div>
+          </div>
 
           {/* Service Name */}
           <FormField
@@ -665,17 +627,17 @@ export function Step1BasicInfo() {
               <AlertDialogTitle className="text-xl">No Service Business Found</AlertDialogTitle>
             </div>
             <AlertDialogDescription className="text-base leading-relaxed">
-              You need to create a <span className="font-semibold">Service</span> type business listing before you can add a service.
+              Your business profile is managed in MCOM Central. You need a <span className="font-semibold">Service</span> type business profile there before you can add a service.
               <br /><br />
-              Please go to <span className="font-semibold">"My Listings"</span> and create a new business with the listing type set to <span className="font-semibold">"Service"</span>.
+              Update your business profile in MCOM Central so its listing type includes <span className="font-semibold">Service</span>, then sign back in.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => router.push('/dashboard/services')}>
               Go Back
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => router.push('/dashboard/add-listing')}>
-              Create Business
+            <AlertDialogAction onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`}>
+              Open MCOM Central
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

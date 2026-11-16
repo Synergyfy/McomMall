@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { 
   ArrowLeft, 
   Settings, 
@@ -31,7 +32,7 @@ export default function AutomationFlowBuilder() {
 
   // Retrieve actual user listing ID
   const { data: listingsData, isLoading: isLoadingListing } = useGetUserListings(1, 1);
-  const listing = listingsData?.data?.[0];
+  const listing = pickCentralBusiness(listingsData?.data);
   const businessId = listing?.id;
 
   // Campaign configurations
@@ -103,15 +104,15 @@ export default function AutomationFlowBuilder() {
             </div>
             <CardTitle className="text-2xl font-bold text-[#a14000]">No Storefront Found</CardTitle>
             <CardDescription className="text-xs text-[#5a4136]">
-              Create a business profile first to design automation workflows.
+              Your business profile is managed in MCOM Central. Create or update it there to design automation workflows.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
             <Button
               className="w-full bg-[#ff6900] hover:bg-[#a14000] text-white font-bold py-6 rounded-xl shadow-sm transition-colors"
-              onClick={() => router.push('/dashboard/add-listing')}
+              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`}
             >
-              Add Business Profile
+              Create Business on MCOM Central
             </Button>
           </CardContent>
         </Card>

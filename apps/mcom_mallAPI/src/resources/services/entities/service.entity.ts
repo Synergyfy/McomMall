@@ -156,9 +156,6 @@ export class Service extends AbstractBaseEntity {
   isFeatured: boolean;
 
   @Column({ default: false })
-  isRotatorEligible: boolean;
-
-  @Column({ default: false })
   isPromotionEligible: boolean;
 
   @Column('decimal', { precision: 12, scale: 2, nullable: true })

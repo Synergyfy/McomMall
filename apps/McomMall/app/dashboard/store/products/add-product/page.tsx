@@ -19,6 +19,7 @@ import Step8Finalize from '../components/wizard/Step8Finalize';
 import { ProductStatusModal } from '../components/wizard/lib/ProductStatusModal';
 import { useAuth } from '@/service/auth/hook';
 import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { useAddProduct } from '@/service/store/products/hook';
 import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
 import { parseApiError, scrollToFirstError, toSerializable } from '@/lib/form-validation';
@@ -38,7 +39,7 @@ export default function AddProductPage() {
   const searchParams = useSearchParams();
   const isHybridFlow = searchParams.get('hybridFlow') === 'true';
   const { user } = useAuth();
-  const { data: userListings } = useGetUserListings();
+  const { data: userListings, isLoading: isLoadingListings } = useGetUserListings();
   const { mutate: addProduct, isPending } = useAddProduct();
   const { mutate: createPartnershipRequest } = useCreateCompositePartnershipRequest();
 
@@ -84,6 +85,7 @@ export default function AddProductPage() {
       diagrams: { male: '', female: '', unisex: '' }
     },
     businessId: '',
+    businessName: '',
     serviceProviderId: '',
     fulfillmentType: [] as string[],
     pickupInstructions: '',
@@ -124,13 +126,16 @@ export default function AddProductPage() {
   };
 
   useEffect(() => {
-    if (userListings?.data && userListings.data.length > 0 && !formData.businessId) {
-      const fromOnboarding = searchParams.get('fromOnboarding') === 'true';
-      if (userListings.data.length === 1 || fromOnboarding) {
-        updateFormData({ businessId: userListings.data[0].id });
-      }
+    // Listings are owned by MCOM Central Hub and each user has exactly one.
+    // Attach new products to that business automatically instead of asking.
+    const business = pickCentralBusiness(userListings?.data);
+    if (business && formData.businessId !== business.id) {
+      updateFormData({
+        businessId: business.id,
+        businessName: business.businessName,
+      });
     }
-  }, [userListings, formData.businessId, searchParams]);
+  }, [userListings, formData.businessId]);
 
   // Scroll to top of the dashboard main content container on step changes
   useEffect(() => {
@@ -141,8 +146,46 @@ export default function AddProductPage() {
     }
   }, [step]);
 
+  if (isLoadingListings) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-100 border-t-orange-500" />
+          <p className="text-sm text-gray-500">Loading your MCOM Central business profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userListings?.data?.length) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] p-6">
+        <div className="max-w-md rounded-2xl border border-orange-200 bg-white p-6 text-center shadow-sm">
+          <h2 className="text-xl font-bold text-gray-900">Business profile required</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Products are attached to the business registered on MCOM Central Hub. Create or update your business there, then sign back in.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/dashboard/business-profile`;
+            }}
+            className="mt-5 w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white hover:bg-orange-700"
+          >
+            Open MCOM Central
+          </button>
+        </div>
+      </div>
+    );
+  }
+
 
   const handlePublish = () => {
+    if (!formData.businessId) {
+      toast.error('Your business profile from MCOM Central Hub is required before adding a product.');
+      return;
+    }
+
     // Final gate: validate every relevant step before we send anything.
     const stepsToValidate = getProductStepsToValidate(formData, fulfillmentType);
     const firstInvalid = findFirstInvalidProductStep(formData, stepsToValidate);
@@ -545,7 +588,7 @@ export default function AddProductPage() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.push('/dashboard/store/products')} userListings={userListings?.data || []} errors={errors} />;
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.push('/dashboard/store/products')} errors={errors} />;
       case 2:
         return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} errors={errors} />;
       case 3:

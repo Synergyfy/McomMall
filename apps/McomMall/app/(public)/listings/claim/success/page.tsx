@@ -8,7 +8,7 @@ export default function ClaimSuccessPage() {
   const router = useRouter();
 
   const handleGoToMyListings = () => {
-    router.push('/dashboard/my-listings');
+    router.push('/dashboard/my-business');
   };
 
   return (

@@ -42,13 +42,6 @@ export function NavMenuContent({ onLinkClick }: NavMenuContentProps) {
       >
         Claim Listing
       </Link>
-      <Link
-        href="/dashboard/add-listing"
-        onClick={onLinkClick}
-        className="p-3 hover:bg-gray-100 rounded-md"
-      >
-        Create Listing
-      </Link>
 
       {/* Accordion for Business Categories */}
       <Accordion type="single" collapsible className="w-full">

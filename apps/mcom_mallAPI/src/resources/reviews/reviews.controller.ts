@@ -102,6 +102,19 @@ export class ReviewsController {
     return this.reviewsService.unpublish(id);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('business-owner')
+  @ApiOperation({ summary: 'Get all reviews for the current business owner' })
+  @ApiQuery({ name: 'businessId', required: false })
+  @ApiResponse({ status: 200, description: 'Return owner business reviews.' })
+  findBusinessOwnerReviews(
+    @Request() req,
+    @Query('businessId') businessId?: string,
+  ) {
+    return this.reviewsService.findBusinessOwnerReviews(req.user, businessId);
+  }
+
   @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get a review by id' })

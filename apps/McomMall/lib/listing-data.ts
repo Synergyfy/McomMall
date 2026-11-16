@@ -80,14 +80,6 @@ export interface DetailedListing extends Listing {
   };
 }
 
-// Type for Hotspots
-export interface Hotspot {
-  id: string;
-  x: number; // Percentage from left
-  y: number; // Percentage from top
-  link: string;
-}
-
 // Type for Promotional Items
 export interface PromotionalItem {
   id: number | string;
@@ -97,7 +89,6 @@ export interface PromotionalItem {
   price: number;
   discountedPrice?: number;
   items_left: number;
-  hotspots?: Hotspot[];
   link?: string;
   averageRating?: number;
   reviewCount?: number;
@@ -120,7 +111,7 @@ export interface PromotionalItem {
 
 
 export const promotionalItems: PromotionalItem[] = [
-  { id: 1, title: 'Do Pass Yourself', image: 'https://placehold.co/200x200/png', category: 'Appliances', price: 120.00, discountedPrice: 99.99, items_left: 15, hotspots: [{ id: 'hs1', x: 50, y: 50, link: '/some-product' }] },
+  { id: 1, title: 'Do Pass Yourself', image: 'https://placehold.co/200x200/png', category: 'Appliances', price: 120.00, discountedPrice: 99.99, items_left: 15 },
   { id: 2, title: 'Awoof Deals', image: 'https://placehold.co/200x200/png', category: 'Phones & Tablets', price: 850.00, discountedPrice: 799.99, items_left: 10 },
   { id: 3, title: 'Up to 80% Off', image: 'https://placehold.co/200x200/png', category: 'Health & Beauty', price: 50.00, discountedPrice: 39.99, items_left: 25 },
   { id: 4, title: 'Send Packages Securely', image: 'https://placehold.co/200x200/png', category: 'Home & Office', price: 200.00, discountedPrice: 179.99, items_left: 5 },

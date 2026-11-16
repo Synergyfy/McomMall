@@ -83,6 +83,31 @@ const nextConfig: NextConfig = {
         destination: '/privacy-policy',
         permanent: true,
       },
+      {
+        source: '/dashboard/membership-audits/membership',
+        destination: '/dashboard/subscription',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/membership-audits/:path*',
+        destination: '/dashboard',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/my-listings/:path*',
+        destination: '/dashboard/my-business',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/my-listings',
+        destination: '/dashboard/my-business',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/reviews',
+        destination: '/dashboard/my-business',
+        permanent: false,
+      },
     ];
   },
 };

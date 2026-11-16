@@ -132,7 +132,7 @@ const CreateGroupClient = () => {
               Your current membership plan does not include group creation.
             </p>
             <Button asChild>
-              <Link href="/dashboard/membership-audits/membership">
+              <Link href="/dashboard/subscription">
                 Upgrade Membership
               </Link>
             </Button>

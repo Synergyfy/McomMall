@@ -6,7 +6,7 @@ import {
   GripVertical, Save, Edit2, Check, X, ChevronDown, ChevronRight,
   LayoutDashboard, Calendar, MessageSquare, Heart, Gift, LifeBuoy,
   Plus, List, BookOpen, ShoppingBag, Settings as SettingsIcon,
-  Scan, Zap, History, CreditCard, Wallet, Coins, LogOut, UserPen, Users,
+  History, CreditCard, Wallet, Coins, LogOut, UserPen, Users,
   SquareDashedKanban, Search, Settings2, Building2, ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -74,7 +74,6 @@ const initialData: NavGroup[] = [
     id: 'group-listing',
     title: 'Listing',
     items: [
-      { id: 'nav-add-listing', label: 'Add Listing', icon: Plus },
       {
         id: 'nav-my-listings', label: 'My Listings', icon: List,
         subItems: [
@@ -154,20 +153,12 @@ const initialData: NavGroup[] = [
         ]
       },
       {
-        id: 'nav-hotspot', label: 'Hotspot Campaigns', icon: Scan,
-        subItems: [
-          { id: 'sub-h-all', label: 'All Campaigns' },
-          { id: 'sub-h-new', label: 'New Campaign' },
-        ]
-      },
-      {
         id: 'nav-partnerships', label: 'Partnerships', icon: Users,
         subItems: [
           { id: 'sub-p-my', label: 'My Partners' },
           { id: 'sub-p-requests', label: 'Partnership Requests' },
         ]
       },
-      { id: 'nav-group-circles', label: 'Group Circles', icon: Zap },
     ]
   },
   {

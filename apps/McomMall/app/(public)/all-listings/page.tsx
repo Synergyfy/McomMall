@@ -242,10 +242,10 @@ function AllListingsPageContent() {
               {/* Promo Widget */}
               <div className="p-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl text-white shadow-xl shadow-orange-500/20">
                 <h4 className="font-black text-xl mb-2">Grow Your Business</h4>
-                <p className="text-orange-100 text-sm mb-4">List your services on McomMall and reach thousands of customers daily.</p>
-                <Link href="/add-listing" className="inline-block bg-white text-orange-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition-transform">
-                  Add Listing Free
-                </Link>
+                <p className="text-orange-100 text-sm mb-4">Grow your business with a profile managed from MCOM Central Hub.</p>
+                <a href={`${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`} className="inline-block bg-white text-orange-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition-transform">
+                  Create Business Profile
+                </a>
               </div>
             </div>
           </aside>

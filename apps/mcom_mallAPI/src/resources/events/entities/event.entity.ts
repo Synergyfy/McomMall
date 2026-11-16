@@ -45,9 +45,6 @@ export class Event extends AbstractBaseEntity {
   selectedTemplate?: string;
 
   @Column({ default: false })
-  promoteRotator: boolean;
-
-  @Column({ default: false })
   promoteQR: boolean;
 
   @Column({ default: false })

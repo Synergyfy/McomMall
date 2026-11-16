@@ -192,22 +192,6 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                                             </label>
                                         </div>
-                                        {/* Rotator Eligible */}
-                                        <div className="flex items-center justify-between px-4 py-3">
-                                            <div>
-                                                <p className="text-sm font-bold text-[#1c140d] dark:text-white">🔄 Local Mall Rotator</p>
-                                                <p className="text-xs text-[#9c7349]">Show in the Borough carousel and Local Mall discovery feed.</p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    checked={!!formData.isRotatorEligible}
-                                                    onChange={(e) => updateFormData({ isRotatorEligible: e.target.checked })}
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-                                            </label>
-                                        </div>
                                         {/* Promotion Eligible */}
                                         <div className="flex items-center justify-between px-4 py-3">
                                             <div>

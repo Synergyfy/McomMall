@@ -223,7 +223,7 @@ export const BoroughFeedScreen: FC<BoroughFeedScreenProps> = ({
 }) => {
   const feedPosts = [
     { id: '1', author: 'Greenwich Bakery', text: 'Co-promotion deal active this weekend! Earn double points on all bread purchases.', likes: 12, date: '2 hrs ago', category: 'Promotion' },
-    { id: '2', author: 'Borough Admin', text: 'Join our local High Street Webinar next Tuesday. Learn rotators management tips.', likes: 24, date: '1 day ago', category: 'Notice' },
+    { id: '2', author: 'Borough Admin', text: 'Join our local High Street Webinar next Tuesday. Learn featured placement tips.', likes: 24, date: '1 day ago', category: 'Notice' },
     { id: '3', author: 'FitStudio Greenwich', text: 'New yoga slots available for local businesses staff! 15% discount for verified merchants.', likes: 8, date: '2 days ago', category: 'Collab' },
   ];
 

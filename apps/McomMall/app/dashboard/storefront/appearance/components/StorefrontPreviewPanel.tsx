@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Smartphone, Monitor, MapPin, Phone, Globe, Star, ShoppingBag, Trophy } from 'lucide-react';
+import { Smartphone, Monitor, MapPin, Phone, Globe, Star, ShoppingBag } from 'lucide-react';
 import { Product } from '@/service/listings/types';
 import { Service } from '@/service/services/types';
 
@@ -14,8 +14,6 @@ interface StorefrontPreviewPanelProps {
   brandColor: string;
   featuredProducts: Product[];
   featuredServices: Service[];
-  spinWheelEnabled: boolean;
-  groupCircleEnabled: boolean;
 }
 
 export const StorefrontPreviewPanel: React.FC<StorefrontPreviewPanelProps> = ({
@@ -27,8 +25,6 @@ export const StorefrontPreviewPanel: React.FC<StorefrontPreviewPanelProps> = ({
   brandColor,
   featuredProducts = [],
   featuredServices = [],
-  spinWheelEnabled,
-  groupCircleEnabled,
 }) => {
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
 
@@ -126,27 +122,6 @@ export const StorefrontPreviewPanel: React.FC<StorefrontPreviewPanelProps> = ({
                   <span>High Street Mall, Borough</span>
                 </div>
               </div>
-
-              {/* Spin Wheel Teaser */}
-              {spinWheelEnabled && (
-                <div className="m-3 p-2.5 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-between text-orange-950 gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold shrink-0">
-                      <Trophy className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-[10px]">Daily Spin & Win</p>
-                      <p className="text-[9px] opacity-75">Spin for discounts!</p>
-                    </div>
-                  </div>
-                  <button
-                    style={{ backgroundColor: styles.accentBg, color: styles.accentText }}
-                    className="px-2.5 py-1 rounded-lg font-bold text-[9px] shadow-sm shrink-0"
-                  >
-                    Play
-                  </button>
-                </div>
-              )}
 
               {/* Featured Showcase */}
               <div className="p-4 space-y-3">

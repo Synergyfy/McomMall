@@ -6,7 +6,6 @@ import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Service } from '../services/entities/service.entity';
 import { Notification } from '../notification/entities/notification.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
-import { Rotator } from '../rotators/entities/rotator.entity';
 import { ToolsService } from './tools.service';
 import { ToolsController } from './tools.controller';
 
@@ -19,7 +18,6 @@ import { ToolsController } from './tools.controller';
       Service,
       Notification,
       Campaign,
-      Rotator,
     ]),
   ],
   controllers: [ToolsController],

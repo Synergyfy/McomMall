@@ -443,14 +443,14 @@ export class StatsService {
           title: 'Activate Loyalty Vouchers',
           description:
             'Merchant stores in your borough using loyalty vouchers experience a 22% footfall conversion lift.',
-          actionLink: '/dashboard/membership-audits/vouchers',
+          actionLink: '/dashboard/vouchers',
         },
         {
           id: 'action-2',
           title: 'Complete Google Place Verification',
           description:
             'Verification increases local mapping impressions by up to 30%.',
-          actionLink: '/dashboard/membership-audits/audits',
+          actionLink: '/dashboard/storefront/verification',
         },
       ],
     };

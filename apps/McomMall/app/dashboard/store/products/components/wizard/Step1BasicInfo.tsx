@@ -27,7 +27,6 @@ interface Step1Props {
   updateFormData: (data: any) => void;
   onNext: () => void;
   onCancel: () => void;
-  userListings?: any[];
   errors?: Record<string, string>;
 }
 
@@ -40,7 +39,7 @@ const detectGender = (name: string): "male" | "female" | "unisex" | "none" => {
   return 'none';
 };
 
-export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, userListings, errors }: Step1Props) {
+export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, errors }: Step1Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isHybridFlow = searchParams.get('hybridFlow') === 'true';
@@ -162,31 +161,17 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
               </div>
             </div>
 
-            {/* Business Selection */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="businessId">
-                Select Business <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  className={`w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none ${errors?.businessId ? 'border-destructive ring-1 ring-destructive' : ''}`}
-                  id="businessId"
-                  value={formData.businessId || formData.bussinessId || ''}
-                  onChange={handleChange}
-                  aria-invalid={!!errors?.businessId}
-                >
-                  <option disabled value="">Select a business...</option>
-                  {userListings?.map((listing: any) => (
-                    <option key={listing.id} value={listing.id}>
-                      {listing.businessName}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
-                  <ChevronDown className="w-5 h-5" />
-                </div>
+            {/* Attached business (owned by MCOM Central Hub) */}
+            <div className="flex items-center gap-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] px-4 py-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#f4ede7] dark:bg-[#3a2e26] text-[#f48c25]">
+                <Package size={18} />
               </div>
-              <FieldError message={errors?.businessId} />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-[#9c7349] dark:text-[#cba885]">Adding this product to your MCOM Central business</p>
+                <p className="truncate text-sm font-semibold text-[#1c140d] dark:text-white">
+                  {formData.businessName || 'Your registered business'}
+                </p>
+              </div>
             </div>
 
             {/* Product Name */}

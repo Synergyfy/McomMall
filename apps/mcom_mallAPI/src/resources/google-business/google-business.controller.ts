@@ -1,9 +1,6 @@
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import {
-  GoogleBusinessService,
-  CompleteOnboardingDto,
-} from './google-business.service';
+import { GoogleBusinessService } from './google-business.service';
 import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('GoogleBusiness')
@@ -27,22 +24,6 @@ export class GoogleBusinessController {
   @ApiResponse({ status: 200, description: 'Return mapped taxonomy IDs.' })
   async mapCategory(@Query('googleCategoryId') googleCategoryId: string) {
     return this.googleBusinessService.mapGoogleCategory(googleCategoryId);
-  }
-
-  @Public()
-  @Post('complete-onboarding')
-  @ApiOperation({
-    summary:
-      'Atomically claims a branch, creates a merchant account, and sets up storefront',
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Onboarding completed successfully.',
-  })
-  async completeOnboarding(
-    @Body() completeOnboardingDto: CompleteOnboardingDto,
-  ) {
-    return this.googleBusinessService.completeOnboarding(completeOnboardingDto);
   }
 
   @Public()

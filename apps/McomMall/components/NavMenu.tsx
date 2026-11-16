@@ -122,9 +122,6 @@ export const menuItems = [
         <ListItem href="/listings" title="Listing">
           Listing
         </ListItem>
-        <ListItem href="/dashboard/add-listing" title="Create New Listing">
-          Add your business to our directory.
-        </ListItem>
       </div>
     ),
   },

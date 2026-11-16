@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AdFormData, FormErrors } from "./types";
 import { GeneralAdSettings } from "./components/GeneralAdSettings";
 import { CampaignFilters } from "./components/CampaignFilters";
@@ -16,7 +16,7 @@ import {
 } from "@/service/campaigns/types";
 import { SuccessCampaignDialog } from "./components/SuccessCampaignDialog";
 import { useGetUserListings } from "@/service/listings/hook";
-import { UserListing } from "@/service/listings/types";
+import { pickCentralBusiness } from "@/lib/central-business";
 
 const AddListingPage = () => {
   const [formData, setFormData] = useState<AdFormData>({
@@ -36,11 +36,7 @@ const AddListingPage = () => {
   const [isSuccessDialogOpen, setSuccessDialogOpen] = useState(false);
 
   const addCampaignMutation = useAddCampaign();
-  const {
-    data: userListings,
-    isLoading: isLoadingListings,
-    isError: isErrorListings,
-  } = useGetUserListings();
+  const { data: userListings } = useGetUserListings();
 
   const { data: categoriesData, isLoading: isLoadingCategories } = useGetCategories();
 
@@ -53,12 +49,19 @@ const AddListingPage = () => {
   }, [categoriesData]);
 
   const listingOptions = useMemo(() => {
-    if (!userListings) return [];
-    return userListings.data.map((listing: UserListing) => ({
-      value: listing.id,
-      label: listing.businessName,
-    }));
+    const business = pickCentralBusiness(userListings?.data);
+    return business
+      ? [{ value: business.id, label: business.businessName }]
+      : [];
   }, [userListings]);
+
+  // Campaigns are attached to the user's single MCOM Central business.
+  useEffect(() => {
+    const business = pickCentralBusiness(userListings?.data);
+    if (business && !formData.listing) {
+      setFormData(prev => ({ ...prev, listing: business.id }));
+    }
+  }, [userListings, formData.listing]);
 
   const togglePlacement = (id: string) => {
     setFormData((prev) => {
@@ -154,8 +157,6 @@ const AddListingPage = () => {
               setFormData={setFormData}
               errors={errors}
               listings={listingOptions}
-              isLoading={isLoadingListings}
-              isError={isErrorListings}
             />
 
             <AdPlacementSelector

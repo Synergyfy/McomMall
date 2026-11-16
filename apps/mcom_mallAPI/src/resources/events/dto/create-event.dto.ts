@@ -62,10 +62,6 @@ export class CreateEventDto {
 
   @IsBoolean()
   @IsOptional()
-  promoteRotator?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
   promoteQR?: boolean;
 
   @IsBoolean()

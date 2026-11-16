@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useGetUserListings, useEditListing } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { useGetMyProducts } from '@/service/store/products/hook';
 import { useGetMyServices } from '@/service/services/hook';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,8 +12,6 @@ import {
   Palette,
   Image as ImageIcon,
   Star,
-  RefreshCw,
-  Trophy,
   Loader2,
   ChevronRight,
   Save,
@@ -22,8 +21,6 @@ import { useRouter } from 'next/navigation';
 import { ThemePicker } from './components/ThemePicker';
 import { BannerManager } from './components/BannerManager';
 import { FeaturedItemsSelector } from './components/FeaturedItemsSelector';
-import { RotatorControls } from './components/RotatorControls';
-import { GamificationControls } from './components/GamificationControls';
 import { StorefrontPreviewPanel } from './components/StorefrontPreviewPanel';
 
 export default function StorefrontAppearancePage() {
@@ -31,7 +28,7 @@ export default function StorefrontAppearancePage() {
 
   // Fetch listing data
   const { data: listingsData, isLoading: isLoadingListing } = useGetUserListings(1, 1);
-  const listing = listingsData?.data?.[0];
+  const listing = pickCentralBusiness(listingsData?.data);
 
   // Fetch products & services
   const { data: products = [], isLoading: isLoadingProducts } = useGetMyProducts();
@@ -40,7 +37,7 @@ export default function StorefrontAppearancePage() {
   const { mutateAsync: editListing, isPending: isSaving } = useEditListing();
 
   // State variables for appearance
-  const [activeTab, setActiveTab] = useState<'theme' | 'banners' | 'featured' | 'rotator' | 'games'>('theme');
+  const [activeTab, setActiveTab] = useState<'theme' | 'banners' | 'featured'>('theme');
   const [theme, setTheme] = useState<'light' | 'dark' | 'brand'>('light');
   const [brandColor, setBrandColor] = useState('#ea580c');
   const [bannerUrl, setBannerUrl] = useState('');
@@ -49,12 +46,6 @@ export default function StorefrontAppearancePage() {
   const [seasonalStartDate, setSeasonalStartDate] = useState('');
   const [seasonalEndDate, setSeasonalEndDate] = useState('');
   const [seasonalBannerUrl, setSeasonalBannerUrl] = useState('');
-  const [rotatorProducts, setRotatorProducts] = useState(false);
-  const [rotatorServices, setRotatorServices] = useState(false);
-  const [boroughCampaign, setBoroughCampaign] = useState(false);
-  const [spinWheelEnabled, setSpinWheelEnabled] = useState(false);
-  const [showPrizes, setShowPrizes] = useState(false);
-  const [groupCircleEnabled, setGroupCircleEnabled] = useState(false);
 
   // Sync with listing cover and localStorage configuration on load
   useEffect(() => {
@@ -73,12 +64,6 @@ export default function StorefrontAppearancePage() {
           if (config.seasonalStartDate) setSeasonalStartDate(config.seasonalStartDate);
           if (config.seasonalEndDate) setSeasonalEndDate(config.seasonalEndDate);
           if (config.seasonalBannerUrl) setSeasonalBannerUrl(config.seasonalBannerUrl);
-          if (config.rotatorProducts !== undefined) setRotatorProducts(config.rotatorProducts);
-          if (config.rotatorServices !== undefined) setRotatorServices(config.rotatorServices);
-          if (config.boroughCampaign !== undefined) setBoroughCampaign(config.boroughCampaign);
-          if (config.spinWheelEnabled !== undefined) setSpinWheelEnabled(config.spinWheelEnabled);
-          if (config.showPrizes !== undefined) setShowPrizes(config.showPrizes);
-          if (config.groupCircleEnabled !== undefined) setGroupCircleEnabled(config.groupCircleEnabled);
         } catch (e) {
           console.error('Failed to parse storefront appearance local storage settings', e);
         }
@@ -100,9 +85,9 @@ export default function StorefrontAppearancePage() {
         <Card className="max-w-md w-full text-center p-6 shadow-md border-orange-200">
           <CardContent className="space-y-4">
             <h2 className="text-2xl font-bold">No Storefront Found</h2>
-            <p className="text-gray-500">Create a business profile first to customize appearance.</p>
-            <Button className="w-full bg-orange-600" onClick={() => router.push('/dashboard/add-listing')}>
-              Create Profile
+            <p className="text-gray-500">Your business profile is managed in MCOM Central. Create or update it there and it will sync to your storefront.</p>
+            <Button className="w-full bg-orange-600" onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`}>
+              Create Business on MCOM Central
             </Button>
           </CardContent>
         </Card>
@@ -133,12 +118,6 @@ export default function StorefrontAppearancePage() {
         seasonalStartDate,
         seasonalEndDate,
         seasonalBannerUrl,
-        rotatorProducts,
-        rotatorServices,
-        boroughCampaign,
-        spinWheelEnabled,
-        showPrizes,
-        groupCircleEnabled,
       };
       localStorage.setItem(`storefront_appearance_${listing.id}`, JSON.stringify(config));
 
@@ -202,8 +181,6 @@ export default function StorefrontAppearancePage() {
                 { id: 'theme', label: 'Theme Styling', icon: <Palette className="w-4 h-4" /> },
                 { id: 'banners', label: 'Store Banners', icon: <ImageIcon className="w-4 h-4" /> },
                 { id: 'featured', label: 'Featured Items', icon: <Star className="w-4 h-4" /> },
-                { id: 'rotator', label: 'Discover Feeds', icon: <RefreshCw className="w-4 h-4" /> },
-                { id: 'games', label: 'Gamification', icon: <Trophy className="w-4 h-4" /> },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -249,26 +226,6 @@ export default function StorefrontAppearancePage() {
               {activeTab === 'featured' && (
                 <FeaturedItemsSelector products={products} services={services} />
               )}
-              {activeTab === 'rotator' && (
-                <RotatorControls
-                  rotatorProducts={rotatorProducts}
-                  setRotatorProducts={setRotatorProducts}
-                  rotatorServices={rotatorServices}
-                  setRotatorServices={setRotatorServices}
-                  boroughCampaign={boroughCampaign}
-                  setBoroughCampaign={setBoroughCampaign}
-                />
-              )}
-              {activeTab === 'games' && (
-                <GamificationControls
-                  spinWheelEnabled={spinWheelEnabled}
-                  setSpinWheelEnabled={setSpinWheelEnabled}
-                  showPrizes={showPrizes}
-                  setShowPrizes={setShowPrizes}
-                  groupCircleEnabled={groupCircleEnabled}
-                  setGroupCircleEnabled={setGroupCircleEnabled}
-                />
-              )}
             </div>
           </div>
         </div>
@@ -285,8 +242,6 @@ export default function StorefrontAppearancePage() {
               brandColor={brandColor}
               featuredProducts={products.filter((p) => p.isFeatured)}
               featuredServices={services.filter((s) => s.isFeatured)}
-              spinWheelEnabled={spinWheelEnabled}
-              groupCircleEnabled={groupCircleEnabled}
             />
           </Card>
         </div>

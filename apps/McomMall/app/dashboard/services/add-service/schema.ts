@@ -125,7 +125,7 @@ export const serviceFormSchema = baseSchema.superRefine((rawValues, ctx) => {
   };
 
   /* ---------------- Step 1: Basic Info ---------------- */
-  require('businessId', values.businessId, 'Please select a business');
+  require('businessId', values.businessId, 'Your MCOM Central business is required');
 
   if (typeof values.name !== 'string' || values.name.trim().length < 3) {
     ctx.addIssue({

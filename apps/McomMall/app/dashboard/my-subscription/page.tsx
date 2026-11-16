@@ -1,10 +1,5 @@
-import { Suspense } from 'react';
-import MySubscriptionPageClient from './components/MySubscriptionPageClient';
+import { redirect } from 'next/navigation';
 
 export default function MySubscriptionPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <MySubscriptionPageClient />
-    </Suspense>
-  );
+  redirect('/dashboard/subscription');
 }

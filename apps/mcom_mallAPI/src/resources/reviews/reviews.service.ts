@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Review, ReviewStatus } from './entities/review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
@@ -236,6 +236,58 @@ export class ReviewsService {
       where: { user: { id: userId }, status: ReviewStatus.PUBLISHED },
       relations: ['business', 'product', 'service'],
     });
+  }
+
+  async findBusinessOwnerReviews(
+    user: User,
+    businessId?: string,
+  ): Promise<{
+    data: Review[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    let businessIds: string[] = [];
+
+    if (businessId) {
+      const business = await this.businessRepository.findOne({
+        where: { id: businessId, user: { id: user.id } },
+      });
+      if (!business) {
+        throw new ForbiddenException(
+          'You do not have permission to view reviews for this business.',
+        );
+      }
+      businessIds = [business.id];
+    } else {
+      const businesses = await this.businessRepository.find({
+        where: { user: { id: user.id } },
+      });
+      businessIds = businesses.map((business) => business.id);
+    }
+
+    if (businessIds.length === 0) {
+      return {
+        data: [],
+        meta: { total: 0, page: 1, limit: 0, totalPages: 0 },
+      };
+    }
+
+    // Owners can see pending reviews too, so they know what is awaiting
+    // moderation. These reviews are still collected and shown on MCOM Mall.
+    const reviews = await this.reviewRepository.find({
+      where: { business: { id: In(businessIds) } },
+      relations: ['user', 'business'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: reviews,
+      meta: {
+        total: reviews.length,
+        page: 1,
+        limit: reviews.length,
+        totalPages: 1,
+      },
+    };
   }
 
   async findBusinessReviews(

@@ -54,7 +54,7 @@ export default function NotificationSettingsPage() {
     {
       key: 'promotion' as const,
       title: 'Marketing Promotions',
-      description: 'Receive emails about ongoing campaign events, boroughs, and high street rotators.',
+      description: 'Receive emails about ongoing campaign events, boroughs, and high street placements.',
       icon: Gift,
       value: !!profile?.promotion,
     },

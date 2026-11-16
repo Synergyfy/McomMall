@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +26,7 @@ export default function StorefrontVerificationPage() {
 
   // Fetch listing data
   const { data: listingsData, isLoading: isLoadingListing } = useGetUserListings(1, 1);
-  const listing = listingsData?.data?.[0];
+  const listing = pickCentralBusiness(listingsData?.data);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'ownership' | 'google' | 'documents'>('overview');
 
@@ -43,9 +44,9 @@ export default function StorefrontVerificationPage() {
         <Card className="max-w-md w-full text-center p-6 shadow-md border-orange-200">
           <CardContent className="space-y-4">
             <h2 className="text-2xl font-bold">No Storefront Found</h2>
-            <p className="text-gray-500">Create a business profile first to manage verification.</p>
-            <Button className="w-full bg-orange-600" onClick={() => router.push('/dashboard/add-listing')}>
-              Create Profile
+            <p className="text-gray-500">Your business profile is managed in MCOM Central. Create or update it there to manage verification.</p>
+            <Button className="w-full bg-orange-600" onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`}>
+              Create Business on MCOM Central
             </Button>
           </CardContent>
         </Card>

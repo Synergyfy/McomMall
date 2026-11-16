@@ -93,7 +93,7 @@ export class ToolsController {
   }
 
   @Get('campaigns')
-  @ApiOperation({ summary: 'Get active campaigns and rotators for a business' })
+  @ApiOperation({ summary: 'Get active campaigns for a business' })
   getCampaigns(
     @Query('businessId', ParseUUIDPipe) businessId: string,
     @CurrentUser() user: any,

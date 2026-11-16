@@ -2,12 +2,10 @@
 
 import { FC, useState, useEffect } from 'react';
 import { 
-  Zap, 
+  Zap,
   MapPin, 
   Check, 
   Globe, 
-  ArrowUp, 
-  ArrowDown, 
   Award,
   ChevronRight,
   ShieldCheck,
@@ -101,7 +99,6 @@ export const VisibilitySettingsScreen: FC<VisibilitySettingsScreenProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { title: 'Audience Reach', desc: 'Adjust target radius.', icon: MapPin, screen: 'audience' },
-              { title: 'Feed Rotator', desc: 'Reorder featured cards.', icon: Zap, screen: 'rotator' },
               { title: 'Premium Boost', desc: 'Activate double visibility.', icon: Award, screen: 'boost' },
             ].map((item, idx) => (
               <button 
@@ -201,107 +198,6 @@ export const AudienceSettingsScreen: FC<AudienceSettingsScreenProps> = ({
           className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Target Radius'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ─── ROTATOR SETTINGS SCREEN ─────────────────────────────────────────────────
-interface RotatorSettingsScreenProps {
-  onNavigate: (screen: string) => void;
-}
-
-export const RotatorSettingsScreen: FC<RotatorSettingsScreenProps> = ({
-  onNavigate,
-}) => {
-  const [items, setItems] = useState<string[]>(['Fresh Bread Roll', 'Organic Sourdough Loaf', 'Chocolate Croissant', 'Vegan Cinnamon Bun']);
-  const [saving, setSaving] = useState(false);
-  const [myBusiness, setMyBusiness] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchRotator = async () => {
-      try {
-        const profileRes = await api.get('businesses/my-profile');
-        const biz = profileRes.data;
-        if (biz?.id) {
-          setMyBusiness(biz);
-          const settingsRes = await api.get(`visibility/${biz.id}`);
-          if (settingsRes.data?.rotatorOrder && settingsRes.data.rotatorOrder.length > 0) {
-            setItems(settingsRes.data.rotatorOrder);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching rotator order settings:', err);
-      }
-    };
-    fetchRotator();
-  }, []);
-
-  const move = (idx: number, dir: -1 | 1) => {
-    const nextIdx = idx + dir;
-    if (nextIdx < 0 || nextIdx >= items.length) return;
-
-    const list = [...items];
-    const temp = list[idx];
-    list[idx] = list[nextIdx];
-    list[nextIdx] = temp;
-    setItems(list);
-  };
-
-  const handleSaveOrder = async () => {
-    if (!myBusiness?.id) return;
-    setSaving(true);
-    try {
-      await api.patch(`visibility/${myBusiness.id}`, {
-        rotatorOrder: items,
-      });
-      setTimeout(() => {
-        onNavigate('visibility');
-      }, 500);
-    } catch (err) {
-      console.error('Error updating rotator sorting order:', err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
-        <h2 className="text-lg font-black text-gray-900 tracking-tight">Rotator Sort Settings</h2>
-        <p className="text-xs text-gray-400 mt-1">Configure custom display precedence for your featured storefront products.</p>
-
-        <div className="flex flex-col gap-2.5 mt-6">
-          {items.map((item, idx) => (
-            <div key={item} className="p-3.5 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-900">{item}</span>
-              <div className="flex gap-1.5">
-                <button 
-                  onClick={() => move(idx, -1)}
-                  disabled={idx === 0}
-                  className="p-2 bg-white hover:bg-gray-100 disabled:opacity-50 border border-gray-150 rounded-lg text-gray-500 transition-colors"
-                >
-                  <ArrowUp className="w-3.5 h-3.5" />
-                </button>
-                <button 
-                  onClick={() => move(idx, 1)}
-                  disabled={idx === items.length - 1}
-                  className="p-2 bg-white hover:bg-gray-100 disabled:opacity-50 border border-gray-150 rounded-lg text-gray-500 transition-colors"
-                >
-                  <ArrowDown className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <button 
-          onClick={handleSaveOrder}
-          disabled={saving}
-          className="w-full mt-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Display Precedence'}
         </button>
       </div>
     </div>

@@ -44,7 +44,6 @@ export const mainMenuItems: MenuItem[] = [
 ];
 
 export const listingMenuItems: MenuItem[] = [
-  { title: 'Add listing', href: '/dashboard/add-listing', icon: Plus },
   { title: 'Ad Campaign', href: '/dashboard/ad-campaign', icon: Megaphone },
   {
     title: 'My listings',

@@ -8,7 +8,6 @@ export interface BundledService {
   updated_at: string;
 }
 
-import { Hotspot } from '@/lib/listing-data';
 export interface SearchServiceDto {
   term: string;
 }
@@ -138,10 +137,8 @@ export interface CreateServiceDto {
   bookingRequirements?: BookingRequirements;
   variants?: ServiceVariant[]; // For Time/Resource variants
 
-  hotspots?: Hotspot[];
   availability?: AvailabilityProfile;
   isFeatured?: boolean;
-  isRotatorEligible?: boolean;
   isPromotionEligible?: boolean;
 }
 
@@ -217,7 +214,6 @@ export interface Service {
   variants?: ServiceVariant[];
   tiers?: ServiceTier[];
 
-  hotspots?: Hotspot[];
   deletedAt: string | null;
   created_at: string;
   updated_at: string;
@@ -225,7 +221,6 @@ export interface Service {
   status?: string;
   duration?: number;
   isFeatured?: boolean;
-  isRotatorEligible?: boolean;
   isPromotionEligible?: boolean;
   business?: IBusiness;
   availability?: AvailabilityProfile;

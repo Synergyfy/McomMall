@@ -16,15 +16,8 @@ import { toast } from "sonner";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import GiftCardPreview from '@/components/gift-card/gift-card-preview';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useGetAllListings } from '@/service/listings/hook';
-import { useGetGroupCircles } from '@/service/group-circle/hook';
+import { useGetAllListings, useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,8 +42,8 @@ const EditGiftCardTemplatePage = () => {
 
   // Spending Locations States & Data
   const { data: allListingsData } = useGetAllListings({ page: 1, limit: 100 });
-  const { data: groupCirclesData } = useGetGroupCircles({ page: 1, limit: 100 });
-
+  const { data: userListings } = useGetUserListings(1, 1);
+  const businessName = pickCentralBusiness(userListings?.data)?.businessName;
   const [spendingLocations, setSpendingLocations] = useState<any[]>([]);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
 
@@ -68,6 +61,13 @@ const EditGiftCardTemplatePage = () => {
     }
   }, [id]);
 
+  // Gift card templates belong to the user's single MCOM Central business.
+  useEffect(() => {
+    if (businessName && !formData.name) {
+      setFormData(prev => ({ ...prev, name: businessName }));
+    }
+  }, [businessName, formData.name]);
+
   // Combine options
   const locationOptions = React.useMemo(() => {
     const opts: any[] = [];
@@ -76,21 +76,8 @@ const EditGiftCardTemplatePage = () => {
         opts.push({ id: b.id, label: b.businessName, type: 'Business' });
       });
     }
-    if (groupCirclesData?.data) {
-      groupCirclesData.data.forEach(gc => {
-        gc.members.forEach(m => {
-          const contact = m.network;
-          if (contact) {
-            const label = contact.businessName || contact.fullName;
-            if (!opts.find(o => o.id === contact.id)) {
-              opts.push({ id: contact.id, label, type: 'Group Circle Contact' });
-            }
-          }
-        });
-      });
-    }
     return opts;
-  }, [allListingsData, groupCirclesData]);
+  }, [allListingsData]);
 
   const toggleLocation = (option: any) => {
     setSpendingLocations(prev => {
@@ -105,8 +92,6 @@ const EditGiftCardTemplatePage = () => {
       return updated;
     });
   };
-
-  const { data: listings } = useGetAllListings({ page: 1, limit: 100 });
 
   useEffect(() => {
     if (template) {
@@ -325,28 +310,23 @@ const EditGiftCardTemplatePage = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="name">Template Name (Business Listing)</Label>
-                <Select
-                  value={formData.name || ''}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, name: value }))}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select a business listing" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {listings?.data.map((listing) => (
-                      <SelectItem key={listing.id} value={listing.businessName}>
-                        {listing.businessName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="name">Template Name</Label>
+                <Input
+                  id="name"
+                  className="mt-1"
+                  placeholder="e.g. My Store Gift Card"
+                  value={formData.name || businessName || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Attached to your MCOM Central business: {businessName || 'registered business'}.
+                </p>
                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
               </div>
 
               <div>
                 <Label>Where you can spend your gift card</Label>
-                <p className="text-xs text-gray-500 mb-2">Select businesses or group circle contacts (Persisted locally for now)</p>
+                <p className="text-xs text-gray-500 mb-2">Select the businesses where this gift card can be spent (Persisted locally for now)</p>
                 <Popover open={isLocationOpen} onOpenChange={setIsLocationOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -357,7 +337,7 @@ const EditGiftCardTemplatePage = () => {
                     >
                       {spendingLocations.length > 0
                         ? `${spendingLocations.length} location(s) selected`
-                        : "Select businesses or contacts..."}
+                        : "Select businesses..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -368,23 +348,6 @@ const EditGiftCardTemplatePage = () => {
                         <CommandEmpty>No location found.</CommandEmpty>
                         <CommandGroup heading="Businesses">
                           {locationOptions.filter(o => o.type === 'Business').map((option) => (
-                            <CommandItem
-                              key={option.id}
-                              value={option.label}
-                              onSelect={() => toggleLocation(option)}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  spendingLocations.find(l => l.id === option.id) ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {option.label}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                        <CommandGroup heading="Group Circle Contacts">
-                          {locationOptions.filter(o => o.type === 'Group Circle Contact').map((option) => (
                             <CommandItem
                               key={option.id}
                               value={option.label}

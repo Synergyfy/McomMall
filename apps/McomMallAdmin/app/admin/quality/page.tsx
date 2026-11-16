@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { UserCheck, FileSearch, Star, Plus, Trash2, AlertTriangle, Loader2, ClipboardList } from 'lucide-react';
+import { UserCheck, Star, Plus, Trash2, AlertTriangle, Loader2, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGetAdminBusinesses } from '@/service/admin/hook';
 import {
@@ -227,17 +226,6 @@ export default function QualityPage() {
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm">
-                <CardContent className="p-4 flex items-center gap-3 text-sm text-slate-500">
-                    <FileSearch className="h-5 w-5 text-slate-400" />
-                    Storefront content audits live under
-                    <Link href="/admin/audit" className="font-bold text-blue-600">
-                        Business Audits
-                    </Link>
-                    once that queue lands.
                 </CardContent>
             </Card>
 

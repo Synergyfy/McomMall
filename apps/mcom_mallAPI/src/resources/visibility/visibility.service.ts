@@ -21,7 +21,6 @@ export class VisibilityService {
         radius: 10,
         hubs: ['Islington', 'Hackney'],
         featuredDaysLeft: 3,
-        rotatorOrder: ['New Arrivals', 'Best Sellers', 'Seasonal Promo'],
         highStreetMode: false,
       });
       settings = await this.settingsRepository.save(settings);

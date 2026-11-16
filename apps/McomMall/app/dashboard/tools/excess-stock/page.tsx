@@ -429,7 +429,7 @@ export default function ExcessStockDashboard() {
                       { id: 'storefront', label: 'Direct Storefront Listing', desc: 'Render on your profile page' },
                       { id: 'nearby', label: 'Nearby Customers feed', desc: 'Radius check-in alert notifications' },
                       { id: 'borough', label: 'Borough-wide campaign', desc: 'Display on the district-wide catalog board' },
-                      { id: 'rotator', label: 'High Street feed rotator', desc: 'Premium pinned slots on the homepage' }
+                      { id: 'featured', label: 'High Street featured placement', desc: 'Premium pinned slots on the homepage' }
                     ].map((ch) => {
                       const isChecked = channels.includes(ch.id);
                       return (

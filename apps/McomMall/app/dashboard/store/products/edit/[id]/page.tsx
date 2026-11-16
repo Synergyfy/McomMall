@@ -16,7 +16,6 @@ import Step7ServiceMapping from '../../components/wizard/shipping/Step7ServiceMa
 import Step8Finalize from '../../components/wizard/Step8Finalize';
 import { ProductStatusModal } from '../../components/wizard/lib/ProductStatusModal';
 import { useAuth } from '@/service/auth/hook';
-import { useGetUserListings } from '@/service/listings/hook';
 import { useGetProductById, useUpdateProduct } from '@/service/store/products/hook';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 import { toSerializable } from '@/lib/form-validation';
@@ -27,7 +26,6 @@ export default function EditProductPage() {
   const params = useParams();
   const id = params.id as string;
   const { user } = useAuth();
-  const { data: userListings } = useGetUserListings();
   const { data: product, isLoading: isLoadingProduct } = useGetProductById(id);
   const { mutate: updateProduct, isPending } = useUpdateProduct();
   const { data: categories } = useGetCategories();
@@ -70,6 +68,7 @@ export default function EditProductPage() {
       diagrams: { male: '', female: '', unisex: '' }
     },
     bussinessId: '',
+    businessName: '',
     serviceProviderId: '',
     fulfillmentType: [] as string[],
     pickupInstructions: '',
@@ -121,6 +120,7 @@ export default function EditProductPage() {
           diagrams: { male: '', female: '', unisex: '' }
         },
         bussinessId: product.bussinessId || '',
+        businessName: product.business?.businessName || '',
         serviceProviderId: product.serviceProviderId || '',
         fulfillmentType: product.fulfillmentType || [],
         pickupInstructions: product.pickupInstructions || '',
@@ -334,7 +334,7 @@ export default function EditProductPage() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.back()} userListings={userListings?.data || []} />;
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.back()} />;
       case 2:
         return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
       case 3:

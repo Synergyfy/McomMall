@@ -121,11 +121,6 @@ export default function Footer() {
               </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-[#f58220] transition-colors">
-                Add Listing
-              </a>
-            </li>
-            <li>
               <Link
                 href="/terms-and-conditions"
                 className="hover:text-[#f58220] transition-colors"

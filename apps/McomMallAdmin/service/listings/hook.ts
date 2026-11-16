@@ -110,34 +110,6 @@ export const useEditListing = () => {
   return mutation;
 };
 
-export const useDeleteListing = () => {
-  const queryClient = useQueryClient();
-  const remove = async (listingId: string) => {
-    try {
-      const response = await api.delete(`listings/${listingId}`);
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      throw new Error(
-        err.response?.data?.message || err.message || 'Failed to delete listing'
-      );
-    }
-  };
-
-  const mutation = useMutation({
-    mutationFn: remove,
-    onSuccess: data => {
-      toast.success(data.message || 'Listing deleted successfully!');
-      queryClient.invalidateQueries({ queryKey: ['FETCH_USER_LISTINGS'] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  return mutation;
-};
-
 export const useGetBusinessData = ({ id }: { id: string }) => {
   const fetcher = async () => {
     try {
@@ -188,36 +160,6 @@ export const useGetInHouseBusiness = ({
     refetchOnMount: false,
   });
   return query;
-};
-
-export const useAddListing = () => {
-  const router = useRouter();
-  const create = async (payload: CreateBusinessPayload) => {
-    try {
-      const response = await api.post('listings', { ...payload });
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      throw new Error(
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to create listing'
-      );
-    }
-  };
-
-  const mutation = useMutation({
-    mutationFn: create,
-    onSuccess: data => {
-      toast.success(data.message || 'Listing created successfully!');
-      router.push('/dashboard/my-listings');
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  return mutation;
 };
 
 export const useGetGoogleListing = ({ placeId }: { placeId: string }) => {
