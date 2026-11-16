@@ -138,12 +138,24 @@ export class StoreMoneyInPence1799000000000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     for (const [table, column] of MONEY_COLUMNS) {
+      const [info] = await queryRunner.query(
+        `SELECT data_type FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+        [table, column],
+      );
+      if (!info || info.data_type === 'bigint') continue;
       await queryRunner.query(
         `ALTER TABLE "${table}" ALTER COLUMN "${column}" TYPE bigint USING (ROUND("${column}"::numeric * 100))::bigint`,
       );
     }
 
     for (const [table, column] of MONEY_ARRAY_COLUMNS) {
+      const [info] = await queryRunner.query(
+        `SELECT udt_name FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+        [table, column],
+      );
+      if (!info || info.udt_name === '_int8') continue;
       const temp = `__${column}_pence`;
       await queryRunner.query(
         `ALTER TABLE "${table}" ADD COLUMN "${temp}" bigint[]`,
@@ -160,6 +172,12 @@ export class StoreMoneyInPence1799000000000 implements MigrationInterface {
     }
 
     for (const [table, column] of INTEGER_POUND_COLUMNS) {
+      const [info] = await queryRunner.query(
+        `SELECT data_type FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2`,
+        [table, column],
+      );
+      if (!info || info.data_type === 'bigint') continue;
       await queryRunner.query(
         `ALTER TABLE "${table}" ALTER COLUMN "${column}" TYPE bigint USING ("${column}"::bigint * 100)`,
       );
