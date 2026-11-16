@@ -32,7 +32,6 @@ const plainText = (value: unknown): string =>
  * differs from the changed data key (e.g. shortDesc/fullDesc → description).
  */
 export const PRODUCT_ERROR_ALIASES: Record<string, string[]> = {
-  businessId: ['businessId'],
   productName: ['productName'],
   category: ['category'],
   categoryName: ['category'],
@@ -64,9 +63,6 @@ export function validateProductStep(step: number, formData: any): ProductFormErr
 
   switch (step) {
     case 1: {
-      if (isBlank(formData?.businessId)) {
-        errors.businessId = 'Please select a business';
-      }
       if (isBlank(formData?.productName)) {
         errors.productName = 'Product name is required';
       } else if (String(formData.productName).trim().length < 3) {

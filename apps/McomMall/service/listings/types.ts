@@ -43,7 +43,6 @@ export interface GoogleReview {
 }
 
 import { Review as ApiReview } from '../reviews/types';
-import { Hotspot } from '@/lib/listing-data';
 
 export type { ApiReview };
 
@@ -169,7 +168,6 @@ export interface UserListing {
   isVerified: boolean;
   isClaimed: boolean;
   googlePlaceId?: string;
-  isRotatorEligible?: boolean;
   isPromotionEligible?: boolean;
   isFeatured?: boolean;
   location: Location;
@@ -409,7 +407,6 @@ export interface Product {
   bonusAmount?: number;
   business?: InHouseBusiness;
   isFeatured?: boolean;
-  isRotatorEligible?: boolean;
   isPromotionEligible?: boolean;
 }
 
@@ -470,7 +467,6 @@ export interface InHouseBusiness {
   giftCard: boolean;
   voucher: boolean;
   promotion: boolean;
-  bannerHotspots?: Hotspot[];
 }
 
 export type InHouseBusinessResults = InHouseBusiness[];

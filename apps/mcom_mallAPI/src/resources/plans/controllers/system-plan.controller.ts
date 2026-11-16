@@ -104,7 +104,7 @@ export class SystemPlanController {
       featureFlags: {
         priorityInSearch: {
           type: 'boolean',
-          description: 'Priority rotator in search results',
+          description: 'Priority placement in search results',
         },
         advancedAnalytics: {
           type: 'boolean',

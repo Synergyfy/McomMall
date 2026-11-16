@@ -37,7 +37,7 @@ export const HubParticipationScreen: FC<HubParticipationScreenProps> = ({
 
   const tiers = [
     { title: 'Bronze Member', minPoints: 0, benefits: ['Standard listing display', 'Basic analytics'], active: points >= 0 && points < 2500 },
-    { title: 'Silver Tier', minPoints: 2500, benefits: ['Featured listing rotator access', 'Joint points campaigns'], active: points >= 2500 && points < 5000 },
+    { title: 'Silver Tier', minPoints: 2500, benefits: ['Featured listing access', 'Joint points campaigns'], active: points >= 2500 && points < 5000 },
     { title: 'Gold Champion', minPoints: 5000, benefits: ['Priority search sorting', 'Assigned manager direct helpline'], active: points >= 5000 },
   ];
 

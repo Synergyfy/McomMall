@@ -6,7 +6,6 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 import { 
   LayoutDashboard, 
-  PlusSquare,
   MapPin,
   Menu,
   Store,
@@ -196,13 +195,6 @@ export const BottomNav: FC<BottomNavProps> = ({ onMenuClick }) => {
         label="LocalMall"
         isActive={pathname.includes('/dashboard/localmall')}
       />
-      <div className="flex-1 flex justify-center">
-        <Link href="/dashboard/add-listing" className="relative -top-4">
-          <div className="w-14 h-14 bg-orange-500 rounded-2xl shadow-lg shadow-orange-200 flex items-center justify-center text-white transform rotate-45">
-            <PlusSquare className="w-7 h-7 -rotate-45" />
-          </div>
-        </Link>
-      </div>
       <BottomNavItem
         href="/dashboard/storefront"
         icon={Store}

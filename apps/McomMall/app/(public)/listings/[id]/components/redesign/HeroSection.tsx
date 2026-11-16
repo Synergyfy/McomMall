@@ -36,22 +36,6 @@ export default function HeroSection({ listing }: HeroSectionProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#FDFDFD] via-black/20 to-black/40" />
       </motion.div>
 
-      {/* Banner Hotspots */}
-      {listing.bannerHotspots?.map(hotspot => (
-        <a
-          key={hotspot.id}
-          href={hotspot.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute w-8 h-8 rounded-full bg-[#f58220]/90 border-4 border-white/50 cursor-pointer transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center shadow-2xl hover:scale-125 hover:bg-[#f58220] transition-all z-20 group"
-          style={{ left: `${hotspot.x}%`, top: `${hotspot.y}%` }}
-        >
-          <div className="w-2.5 h-2.5 bg-white rounded-full group-hover:scale-110 transition-transform"></div>
-          <span className="absolute top-10 whitespace-nowrap bg-black/80 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest">
-            Special Offer
-          </span>
-        </a>
-      ))}
 
       {/* Main Content Area */}
       <div className="absolute inset-0 flex items-end">

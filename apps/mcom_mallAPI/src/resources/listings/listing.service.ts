@@ -3,8 +3,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Business } from './entities/listing.entity';
@@ -13,7 +11,7 @@ import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity'
 import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { BusinessStatus, ListingType } from './listing.enum';
-import { CreateBusinessDto, UpdateBusinessDto } from './dto/listings.dto';
+import { UpdateBusinessDto } from './dto/listings.dto';
 import { User } from '../users/entities/user.entity';
 import { SearchBusinessDto } from './dto/listings.dto';
 import { ActivitiesService } from '../activities/activities.service';
@@ -22,12 +20,6 @@ import { Promotion } from '../promotion/entities/promotion.entity';
 import { Product } from '../product/entities/product.entity';
 import { PromotionScope } from '../promotion/promotion.enum';
 import { ListingPublicDto } from './dto/listing-public.dto';
-import { OnboardingDeciderService } from '../localmall/onboarding-decider.service';
-import { ActivatedRegion } from '../localmall/entities/activated-region.entity';
-import {
-  CapabilityService,
-  ActionType,
-} from '../capability/capability.service';
 
 @Injectable()
 export class ListingsService {
@@ -40,192 +32,10 @@ export class ListingsService {
     private readonly taxonomyCategoryRepository: Repository<TaxonomyCategory>,
     @InjectRepository(TaxonomySubcategory)
     private readonly taxonomySubcategoryRepository: Repository<TaxonomySubcategory>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly activitiesService: ActivitiesService,
     private readonly promotionService: PromotionService,
-    @Inject(forwardRef(() => CapabilityService))
-    private readonly capabilityService: CapabilityService,
-    private readonly onboardingDeciderService: OnboardingDeciderService,
   ) {}
-
-  async create(
-    createBusinessDto: CreateBusinessDto,
-    userId: string,
-  ): Promise<Business> {
-    const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found.`);
-    }
-
-    // Check Capability for Listing - Handled by CapabilitiesGuard on Controller
-    // const currentListingCount = await this.businessRepository.count({ where: { user: { id: userId } } });
-    // await this.capabilityService.checkPermission(userId, ActionType.CREATE_LISTING, { currentCount: currentListingCount });
-
-    if (createBusinessDto.listingType.includes(ListingType.PRODUCT)) {
-      await this.capabilityService.checkPermission(
-        userId,
-        ActionType.CAN_SELL_PRODUCTS,
-      );
-    }
-
-    if (createBusinessDto.listingType.includes(ListingType.SERVICE)) {
-      await this.capabilityService.checkPermission(
-        userId,
-        ActionType.CAN_SELL_SERVICES,
-      );
-    }
-
-    if (
-      createBusinessDto.listingType.includes(ListingType.PRODUCT) &&
-      !createBusinessDto.productSellerProfile
-    ) {
-      throw new BadRequestException(
-        'Product seller profile is required for product listings.',
-      );
-    }
-    if (
-      createBusinessDto.listingType.includes(ListingType.SERVICE) &&
-      !createBusinessDto.serviceProviderProfile
-    ) {
-      throw new BadRequestException(
-        'Service provider profile is required for service listings.',
-      );
-    }
-
-    if (
-      createBusinessDto.listingType.includes(ListingType.PRODUCT) &&
-      !createBusinessDto.location
-    ) {
-      throw new BadRequestException(
-        'Location is required for businesses that sell products.',
-      );
-    }
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const { sectorId, categoryId, subCategoryId, ...businessData } =
-        createBusinessDto;
-
-      const isUuid = (val: string) =>
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          val || '',
-        );
-
-      if (!sectorId || !isUuid(sectorId)) {
-        throw new BadRequestException('Invalid Sector ID');
-      }
-      if (!categoryId || !isUuid(categoryId)) {
-        throw new BadRequestException('Invalid Category ID');
-      }
-      if (!subCategoryId || !isUuid(subCategoryId)) {
-        throw new BadRequestException('Invalid SubCategory ID');
-      }
-
-      // Validate Taxonomy Hierarchy
-      const sector = await this.sectorRepository.findOne({
-        where: { id: sectorId },
-      });
-      if (!sector) {
-        throw new BadRequestException('Invalid Sector ID');
-      }
-
-      const category = await this.taxonomyCategoryRepository.findOne({
-        where: { id: categoryId },
-      });
-      if (!category) {
-        throw new BadRequestException('Invalid Category ID');
-      }
-      if (category.sectorId !== sectorId) {
-        throw new BadRequestException(
-          'Selected Category does not belong to the selected Sector',
-        );
-      }
-
-      const subCategory = await this.taxonomySubcategoryRepository.findOne({
-        where: { id: subCategoryId },
-      });
-      if (!subCategory) {
-        throw new BadRequestException('Invalid SubCategory ID');
-      }
-      if (subCategory.categoryId !== categoryId) {
-        throw new BadRequestException(
-          'Selected SubCategory does not belong to the selected Category',
-        );
-      }
-
-      let localMallId: string | undefined = undefined;
-      let resolvedArea: string | undefined = undefined;
-      if (createBusinessDto.location && createBusinessDto.location.postcode) {
-        try {
-          const deciderResult =
-            await this.onboardingDeciderService.checkLocation(
-              createBusinessDto.location.postcode,
-            );
-          if (deciderResult) {
-            (businessData.location as any).latitude = deciderResult.latitude;
-            (businessData.location as any).longitude = deciderResult.longitude;
-            (businessData.location as any).resolvedArea =
-              deciderResult.resolvedArea;
-            resolvedArea = deciderResult.resolvedArea;
-            localMallId = deciderResult.localMallId;
-          }
-        } catch (e) {
-          console.error('Failed resolving location details:', e);
-        }
-      }
-
-      const business = this.businessRepository.create({
-        ...businessData,
-        isClaimed: true, // New businesses are claimed by default
-        user,
-        status: BusinessStatus.DRAFT,
-        sector,
-        category,
-        subCategory,
-        localMallId,
-      });
-
-      const savedBusiness = await queryRunner.manager.save(business);
-
-      // Update ActivatedRegion active status dynamically based on business counts in the local mall
-      if (localMallId && resolvedArea) {
-        try {
-          const count = await queryRunner.manager.count(Business, {
-            where: { localMallId },
-          });
-          const shouldBeActive = count > 1;
-          await queryRunner.manager.update(
-            ActivatedRegion,
-            { name: resolvedArea },
-            { isActive: shouldBeActive },
-          );
-        } catch (e) {
-          console.error('Failed dynamically activating region:', e);
-        }
-      }
-      await this.activitiesService.create(
-        user,
-        'created',
-        'listing',
-        savedBusiness.businessName,
-      );
-
-      await queryRunner.commitTransaction();
-      return savedBusiness;
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err instanceof BadRequestException
-        ? err
-        : new BadRequestException(`Failed to create listing: ${err.message}`);
-    } finally {
-      await queryRunner.release();
-    }
-  }
 
   async findAllForUser(userId: string, page = 1, limit = 10, status?: string) {
     const skip = (page - 1) * limit;
@@ -508,91 +318,6 @@ export class ListingsService {
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw new BadRequestException(`Failed to update listing: ${err.message}`);
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  async remove(id: string, userId: string): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // Find the business and ALL its relations within the transaction
-      const business = await queryRunner.manager.findOne(Business, {
-        where: { id, user: { id: userId } },
-        relations: [
-          'location',
-          'socialLinks',
-          'businessHours',
-          'specialDays',
-          'productSellerProfile',
-          'productSellerProfile.storefrontLinks',
-          'serviceProviderProfile',
-          'serviceProviderProfile.certifications',
-          'products',
-          'campaigns',
-        ],
-      });
-
-      if (!business) {
-        throw new ForbiddenException(
-          'Business not found or you do not have permission to delete this.',
-        );
-      }
-
-      // Manually remove all related entities to ensure correct order
-      // and bypass any issues with the ORM's automatic cascade.
-      if (business.productSellerProfile?.storefrontLinks?.length) {
-        await queryRunner.manager.remove(
-          business.productSellerProfile.storefrontLinks,
-        );
-      }
-      if (business.serviceProviderProfile?.certifications?.length) {
-        await queryRunner.manager.remove(
-          business.serviceProviderProfile.certifications,
-        );
-      }
-      if (business.productSellerProfile) {
-        await queryRunner.manager.remove(business.productSellerProfile);
-      }
-      if (business.serviceProviderProfile) {
-        await queryRunner.manager.remove(business.serviceProviderProfile);
-      }
-      if (business.location) {
-        await queryRunner.manager.remove(business.location);
-      }
-      if (business.socialLinks?.length) {
-        await queryRunner.manager.remove(business.socialLinks);
-      }
-      if (business.businessHours?.length) {
-        await queryRunner.manager.remove(business.businessHours);
-      }
-      if (business.specialDays?.length) {
-        await queryRunner.manager.remove(business.specialDays);
-      }
-      if (business.products?.length) {
-        await queryRunner.manager.remove(business.products);
-      }
-      if (business.campaigns?.length) {
-        await queryRunner.manager.remove(business.campaigns);
-      }
-
-      // Finally, remove the business itself
-      await queryRunner.manager.remove(business);
-      await this.activitiesService.create(
-        business.user,
-        'deleted',
-        'listing',
-        business.businessName,
-      );
-
-      await queryRunner.commitTransaction();
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      // Re-throw the original error to be handled by Nest's exception filter
-      throw err;
     } finally {
       await queryRunner.release();
     }

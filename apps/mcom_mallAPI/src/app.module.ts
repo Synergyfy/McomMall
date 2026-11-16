@@ -44,8 +44,6 @@ import { ExchangeModule } from './resources/exchange/exchange.module';
 import { PartnershipModule } from './resources/partnership/partnership.module';
 import { ServiceProviderProfileModule } from './resources/service-provider-profile/service-provider-profile.module';
 import { MembershipModule } from './resources/membership/membership.module';
-import { AuditsModule } from './resources/audits/audits.module';
-import { GroupCirclesModule } from './resources/group-circles/group-circles.module';
 import { SearchModule } from './resources/search/search.module';
 import { DisputeModule } from './resources/dispute/dispute.module';
 import { PlansModule } from './resources/plans/plans.module';
@@ -65,9 +63,6 @@ import { ShippingModule } from './resources/shipping/shipping.module';
 import { LocalMallModule } from './resources/localmall/localmall.module';
 import { GoogleBusinessModule } from './resources/google-business/google-business.module';
 import { EventsModule } from './resources/events/events.module';
-import { RotatorsModule } from './resources/rotators/rotators.module';
-import { GamificationModule } from './resources/gamification/gamification.module';
-import { QrCodesModule } from './resources/qr-codes/qr-codes.module';
 import { InterestSignalsModule } from './resources/interest-signals/interest-signals.module';
 import { AutomationsModule } from './resources/automations/automations.module';
 import { VisibilityModule } from './resources/visibility/visibility.module';
@@ -77,7 +72,6 @@ import { ServiceMeshModule } from './resources/service-mesh/service-mesh.module'
 import { RewardsIntegrationModule } from './resources/rewards-integration/rewards-integration.module';
 import { PartnerInstrumentsModule } from './resources/partner-instruments/partner-instruments.module';
 import { DiscoverModule } from './resources/discover/discover.module';
-import { HotspotModule } from './resources/hotspot/hotspot.module';
 import { CustomerDirectoryModule } from './resources/customer-directory/customer-directory.module';
 import { LoyaltyModule } from './resources/loyalty/loyalty.module';
 import { ToolsModule } from './resources/tools/tools.module';
@@ -116,18 +110,14 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     // Single global EventEmitter instance. Modules (order, shipping, …) inject
     // EventEmitter2 from this root registration instead of calling forRoot().
     EventEmitterModule.forRoot(),
-    QrCodesModule,
     InterestSignalsModule,
     AutomationsModule,
-    HotspotModule,
     CustomerDirectoryModule,
     LoyaltyModule,
     ToolsModule,
     SettingsModule,
     VisibilityModule,
     EventsModule,
-    RotatorsModule,
-    GamificationModule,
     GoogleBusinessModule,
     LocalMallModule,
     DigitalValueModule,
@@ -138,9 +128,7 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     PlansModule,
     DisputeModule,
     SearchModule,
-    GroupCirclesModule,
     MembershipModule,
-    AuditsModule,
     TeamModule,
     ServiceProviderProfileModule,
     PartnershipModule,

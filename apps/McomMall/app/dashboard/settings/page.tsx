@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useGetUserProfile } from '@/service/user/hook';
 import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { useGetTeam } from '@/service/team/hooks';
 import { useGetMyMembership } from '@/service/membership/hooks';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,7 +30,7 @@ export default function SettingsHubPage() {
   const { data: listingsData, isLoading: isListingsLoading } = useGetUserListings(1, 1);
   const { data: membership, isLoading: isMembershipLoading } = useGetMyMembership();
   
-  const listing = listingsData?.data?.[0];
+  const listing = pickCentralBusiness(listingsData?.data);
   const businessId = listing?.id || '';
   
   const { data: teamData } = useGetTeam(businessId);

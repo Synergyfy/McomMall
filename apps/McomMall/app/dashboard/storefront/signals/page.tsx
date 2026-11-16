@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import api from '@/service/api';
+import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -30,7 +32,8 @@ interface SignalMetrics {
 
 export default function InterestSignalsDashboard() {
   const router = useRouter();
-  const businessId = 'default-business-id';
+  const { data: listingsData } = useGetUserListings(1, 1);
+  const businessId = pickCentralBusiness(listingsData?.data)?.id || '';
 
   // Fetch signals metrics from API
   const { data: metrics = null, isLoading } = useQuery<SignalMetrics>({

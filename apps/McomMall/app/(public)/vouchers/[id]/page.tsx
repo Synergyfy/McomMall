@@ -165,19 +165,6 @@ export default function VoucherPage() {
                                                             </ul>
                                                         </div>
                                                     )}
-                                                    {spendingLocations.filter(loc => loc.type === 'Group Circle Contact').length > 0 && (
-                                                        <div className="pt-2">
-                                                            <h4 className="text-sm font-semibold text-gray-900 mb-2 border-b pb-1">Group Circle Contacts</h4>
-                                                            <ul className="space-y-1">
-                                                                {spendingLocations.filter(loc => loc.type === 'Group Circle Contact').map(loc => (
-                                                                    <li key={loc.id} className="text-sm text-gray-700 flex items-center">
-                                                                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
-                                                                        {loc.label}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    )}
                                                 </>
                                             )}
                                         </div>

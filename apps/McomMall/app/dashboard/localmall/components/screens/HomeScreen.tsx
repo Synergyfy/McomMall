@@ -68,8 +68,8 @@ export const HomeScreen: FC<HomeScreenProps> = ({
       color: 'from-purple-500 to-pink-500',
     },
     {
-      title: 'Rotators & Premium Boosts',
-      description: 'Drag-and-drop your products on the customer feed rotator or boost visibility for wider reach.',
+      title: 'Featured Placement & Boosts',
+      description: 'Reorder featured products on your storefront feed or boost visibility for wider reach.',
       icon: Zap,
       color: 'from-blue-500 to-cyan-500',
     },

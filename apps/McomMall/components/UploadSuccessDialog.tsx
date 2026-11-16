@@ -19,7 +19,7 @@ export function UploadSuccessDialog({
   const router = useRouter();
 
   const handleNavigate = () => {
-    router.push('/dashboard/my-listings');
+    router.push('/dashboard/my-business');
   };
 
   return (

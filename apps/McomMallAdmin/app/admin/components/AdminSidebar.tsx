@@ -74,8 +74,6 @@ const navItems: NavItem[] = [
     { title: 'Bookings', href: '/admin/bookings', icon: Clock },
     { title: 'Transactions', href: '/admin/transactions', icon: CreditCard },
     { title: 'Terminal Cashback', href: '/admin/terminal-cashback', icon: QrCode },
-    { title: 'Gamification', href: '/admin/gamification', icon: Award },
-    { title: 'QLinks', href: '/admin/qlinks', icon: QrCode },
 
     { title: 'Disputes', href: '/admin/disputes', icon: AlertTriangle },
     { title: 'Campaigns', href: '/admin/campaigns', icon: Megaphone },
@@ -108,7 +106,6 @@ const navItems: NavItem[] = [
     { title: 'Settings', href: '/admin/settings', icon: Settings },
     { title: 'Onboarding', href: '/admin/settings/onboarding', icon: Rocket },
     { title: 'Sidebar Config', href: '/admin/settings/business-sidebar', icon: PanelLeft },
-    { title: 'Audit Log', href: '/admin/audit', icon: ScrollText },
     { title: 'Roles', href: '/admin/roles', icon: ShieldCheck },
     { title: 'Integrations', href: '/admin/integrations', icon: Plug },
 ];

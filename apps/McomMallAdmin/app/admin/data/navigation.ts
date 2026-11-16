@@ -59,8 +59,6 @@ export const navItems: NavItem[] = [
     { title: 'Bookings', href: '/admin/bookings', icon: Clock, description: 'Manage service and product bookings' },
     { title: 'Transactions', href: '/admin/transactions', icon: CreditCard, description: 'Financial transactions and payouts' },
     { title: 'Terminal Cashback', href: '/admin/terminal-cashback', icon: QrCode, description: 'Manage QR-based terminal cashback' },
-    { title: 'Gamification', href: '/admin/gamification', icon: Award, description: 'User engagement and rewards' },
-    { title: 'QLinks', href: '/admin/qlinks', icon: QrCode, description: 'Manage quick links and QR codes' },
 
     { title: 'Disputes', href: '/admin/disputes', icon: AlertTriangle, description: 'Handle customer and business disputes' },
     { title: 'Campaigns', href: '/admin/campaigns', icon: Megaphone, description: 'Manage marketing campaigns' },
@@ -93,7 +91,6 @@ export const navItems: NavItem[] = [
     { title: 'Settings', href: '/admin/settings', icon: Settings, description: 'Global system settings' },
     { title: 'Onboarding', href: '/admin/settings/onboarding', icon: Rocket, description: 'New user onboarding flows' },
     { title: 'Sidebar Config', href: '/admin/settings/business-sidebar', icon: PanelLeft, description: 'Configure business sidebars' },
-    { title: 'Audit Log', href: '/admin/audit', icon: ScrollText, description: 'View system-wide audit logs' },
     { title: 'Roles', href: '/admin/roles', icon: ShieldCheck, description: 'Manage system roles and permissions' },
     { title: 'Integrations', href: '/admin/integrations', icon: Plug, description: 'Third-party API integrations' },
 ];

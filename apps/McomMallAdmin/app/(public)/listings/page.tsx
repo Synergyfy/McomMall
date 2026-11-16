@@ -2,13 +2,9 @@
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/service/store/store';
-import { setLoginModalOpen } from '@/service/store/uiSlice';
-import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -42,22 +38,8 @@ const initialFilters: FilterState = {
 };
 
 function ListingsPageContent() {
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const { accessToken, userRole } = useSelector(
-    (state: RootState) => state.auth
-  );
-
   const handleAddNewListing = () => {
-    if (!accessToken) {
-      dispatch(setLoginModalOpen(true));
-    } else {
-      if (userRole === 'owner') {
-        router.push('/add-listing');
-      } else {
-        toast.error('Only business owners can add new listings.');
-      }
-    }
+    window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`;
   };
 
   const searchParams = useSearchParams();

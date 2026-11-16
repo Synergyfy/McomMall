@@ -20,11 +20,6 @@ export class UpdateVisibilitySettingsDto {
   @IsOptional()
   featuredDaysLeft?: number;
 
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  rotatorOrder?: string[];
-
   @IsBoolean()
   @IsOptional()
   highStreetMode?: boolean;

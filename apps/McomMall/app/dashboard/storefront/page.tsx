@@ -2,6 +2,7 @@
 
 import type { FC } from 'react';
 import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { useGetMyProducts } from '@/service/store/products/hook';
 import { useGetServicesByBusiness } from '@/service/services/hook';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -34,7 +35,7 @@ const StorefrontHubPage: FC = () => {
   
   // Fetch owner listings (limit 1)
   const { data: listingsData, isLoading: isLoadingListing } = useGetUserListings(1, 1);
-  const listing = listingsData?.data?.[0];
+  const listing = pickCentralBusiness(listingsData?.data);
 
   // Fetch products & services to compute completion checklist
   const { data: products = [] } = useGetMyProducts();
@@ -63,15 +64,15 @@ const StorefrontHubPage: FC = () => {
             </div>
             <CardTitle className="text-2xl font-bold">No Storefront Found</CardTitle>
             <CardDescription>
-              Create a business profile first to activate your Storefront Hub.
+              Your business profile is managed in MCOM Central. Create or update it there to activate your Storefront Hub.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
               className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={() => router.push('/dashboard/add-listing')}
+              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`}
             >
-              Add Business Profile
+              Create Business on MCOM Central
             </Button>
           </CardContent>
         </Card>

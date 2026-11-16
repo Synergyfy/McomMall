@@ -666,15 +666,6 @@ export class CreateServiceDto {
   isFeatured?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Whether the service is eligible for rotator carousel',
-    example: false,
-    default: false,
-  })
-  @IsBoolean()
-  @IsOptional()
-  isRotatorEligible?: boolean;
-
-  @ApiPropertyOptional({
     description: 'Whether the service is eligible for promotion campaign',
     example: false,
     default: false,

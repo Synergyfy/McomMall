@@ -6,15 +6,14 @@ import {
   Eye, 
   MapPin, 
   Sparkles, 
-  ArrowUpDown, 
   ToggleLeft, 
   Check, 
   Map, 
   Flame,
-  ArrowUp,
-  ArrowDown
 } from 'lucide-react';
 import api from '@/service/api';
+import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -25,17 +24,16 @@ interface VisibilityData {
   radius: number;
   hubs: string[];
   featuredDaysLeft: number;
-  rotatorOrder: string[];
   highStreetMode: boolean;
 }
 
 export default function StorefrontVisibilityDashboard() {
   const queryClient = useQueryClient();
-  const businessId = 'default-business-id';
+  const { data: listingsData } = useGetUserListings(1, 1);
+  const businessId = pickCentralBusiness(listingsData?.data)?.id || '';
 
   // Component state fallbacks for instant sliders updates
   const [sliderVal, setSliderVal] = useState<number>(75);
-  const [rotators, setRotators] = useState<string[]>(['New Arrivals', 'Best Sellers', 'Seasonal Promo']);
   const [highStreetMode, setHighStreetMode] = useState<boolean>(true);
 
   // Fetch visibility settings from API
@@ -46,7 +44,6 @@ export default function StorefrontVisibilityDashboard() {
         const res = await api.get(`visibility/${businessId}`);
         const data = res.data;
         setSliderVal(data.radius || 10);
-        setRotators(data.rotatorOrder || ['New Arrivals', 'Best Sellers', 'Seasonal Promo']);
         setHighStreetMode(data.highStreetMode);
         return data;
       } catch {
@@ -57,7 +54,6 @@ export default function StorefrontVisibilityDashboard() {
           radius: 75,
           hubs: ['Islington', 'Hackney', 'Camden'],
           featuredDaysLeft: 3,
-          rotatorOrder: ['New Arrivals', 'Best Sellers', 'Seasonal Promo'],
           highStreetMode: true
         };
       }
@@ -91,20 +87,6 @@ export default function StorefrontVisibilityDashboard() {
     const nextVal = !highStreetMode;
     setHighStreetMode(nextVal);
     updateSettingsMutation.mutate({ highStreetMode: nextVal });
-  };
-
-  const moveRotator = (index: number, direction: 'up' | 'down') => {
-    const newList = [...rotators];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    if (targetIndex >= 0 && targetIndex < newList.length) {
-      // Swap elements
-      const temp = newList[index];
-      newList[index] = newList[targetIndex];
-      newList[targetIndex] = temp;
-      setRotators(newList);
-      updateSettingsMutation.mutate({ rotatorOrder: newList });
-    }
   };
 
   // Calculations based on sliderVal
@@ -211,53 +193,11 @@ export default function StorefrontVisibilityDashboard() {
         </div>
       </div>
 
-      {/* rotators order and high street presence */}
+      {/* High street presence */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* rotators ordering list */}
-        <div className="lg:col-span-4 bg-white border border-[#e2bfb0]/30 p-6 rounded-2xl shadow-sm space-y-4">
-          <div>
-            <h3 className="text-lg font-black text-[#0b1c30]">Homepage Priority Rotators</h3>
-            <p className="text-xs text-[#5a4136]">Order categories displayed on storefront home.</p>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            {rotators.map((rotator, idx) => (
-              <div 
-                key={rotator} 
-                className="p-3.5 bg-[#f8f9ff] border border-gray-150 rounded-xl flex items-center justify-between gap-3 shadow-inner"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#ff6900] text-white shadow-sm">
-                    {idx + 1}
-                  </span>
-                  <span className="text-xs font-bold text-gray-800">{rotator}</span>
-                </div>
-                
-                <div className="flex gap-1">
-                  <button 
-                    onClick={() => moveRotator(idx, 'up')} 
-                    disabled={idx === 0}
-                    className="p-1 text-gray-400 hover:text-[#ff6900] disabled:opacity-30"
-                  >
-                    <ArrowUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button 
-                    onClick={() => moveRotator(idx, 'down')} 
-                    disabled={idx === rotators.length - 1}
-                    className="p-1 text-gray-400 hover:text-[#ff6900] disabled:opacity-30"
-                  >
-                    <ArrowDown className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-gray-400 italic font-semibold">* Click priority arrows to rearrange sections on your public storefront homepage.</p>
-        </div>
 
         {/* High Street verify map toggle */}
-        <div className="lg:col-span-8 bg-[#213145] text-[#eaf1ff] p-6 md:p-8 rounded-2xl shadow-md relative overflow-hidden flex flex-col justify-between gap-6">
+        <div className="lg:col-span-12 bg-[#213145] text-[#eaf1ff] p-6 md:p-8 rounded-2xl shadow-md relative overflow-hidden flex flex-col justify-between gap-6">
           <div className="absolute right-0 bottom-0 w-48 h-48 bg-[#ff6900]/10 rounded-full blur-3xl" />
           
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4 relative z-10">

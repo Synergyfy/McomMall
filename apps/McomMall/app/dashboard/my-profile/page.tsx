@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AddressList from './components/AddressList';
-import MediaCropper from '../add-listing/components/steps/shared/MediaCropper';
+import MediaCropper from '@/components/dashboard/media/MediaCropper';
 import CentralManagedProfileNotice from '@/components/CentralManagedProfileNotice';
 
 type SocialPlatform =

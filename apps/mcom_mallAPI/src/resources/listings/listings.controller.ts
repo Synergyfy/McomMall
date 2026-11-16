@@ -4,10 +4,8 @@ import {
   ParseUUIDPipe,
   Param,
   Get,
-  Post,
   Body,
   Request,
-  Delete,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -20,19 +18,13 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { ListingsService } from './listing.service';
-import {
-  CreateBusinessDto,
-  SearchBusinessDto,
-  UpdateBusinessDto,
-} from './dto/listings.dto';
+import { SearchBusinessDto, UpdateBusinessDto } from './dto/listings.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { ServicesService } from '../services/services.service';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-import { CheckPermission } from '../capability/decorators/check-permission.decorator';
-import { ActionType } from '../capability/capability.service';
 import { CapabilitiesGuard } from '../capability/guards/capabilities.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
@@ -136,64 +128,6 @@ export class ListingsController {
     );
   }
 
-  @Post()
-  @CheckPermission(ActionType.CREATE_LISTING)
-  @ApiOperation({ summary: 'Create a new business listing' })
-  @ApiBody({
-    type: CreateBusinessDto,
-    examples: {
-      example1: {
-        summary: 'Full Business Creation Example',
-        value: {
-          listingType: ['RETAIL', 'SERVICE'],
-          businessName: 'Golden Bakery',
-          legalName: 'Golden Bakery Ltd.',
-          shortDescription: 'Freshly baked goods every day.',
-          about: 'We use traditional recipes passed down through generations.',
-          website: 'https://goldenbakery.com',
-          businessPhone: '+442012345678',
-          businessEmail: 'info@goldenbakery.com',
-          location: {
-            postcode: 'W1D 1AN',
-            addressLine1: '123 Baker Street',
-            city: 'London',
-            showPublicly: true,
-            deliveryRadiusKm: 5,
-            serviceModel: 'HYBRID',
-          },
-          sectorId: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
-          categoryId: 'e390f1ee-6c54-4b01-90e6-d701748f0852',
-          subCategoryId: 'f490f1ee-6c54-4b01-90e6-d701748f0853',
-          businessHours: [
-            { dayOfWeek: 'MONDAY', openTime: '08:00', closeTime: '18:00' },
-            { dayOfWeek: 'TUESDAY', openTime: '08:00', closeTime: '18:00' },
-          ],
-          socialLinks: [
-            {
-              platform: 'Instagram',
-              url: 'https://instagram.com/goldenbakery',
-            },
-          ],
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'The business has been successfully created.',
-    example: {
-      id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-      businessName: 'Golden Bakery',
-      slug: 'golden-bakery',
-      status: 'DRAFT',
-      createdAt: '2023-11-15T10:00:00Z',
-    },
-  })
-  create(@Body() createBusinessDto: CreateBusinessDto, @Request() req) {
-    const userId = req.user.id;
-    return this.listingsService.create(createBusinessDto, userId);
-  }
-
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
@@ -249,21 +183,6 @@ export class ListingsController {
   ) {
     const userId = req.user.id;
     return this.listingsService.update(id, updateBusinessDto, userId);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a business' })
-  @ApiParam({ name: 'id', description: 'Business UUID' })
-  @ApiResponse({
-    status: 200,
-    description: 'The business has been successfully deleted.',
-    example: {
-      message: 'Business deleted successfully',
-    },
-  })
-  remove(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
-    const userId = req.user.id;
-    return this.listingsService.remove(id, userId);
   }
 
   @Public()

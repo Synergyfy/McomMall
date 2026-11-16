@@ -2,13 +2,6 @@
 import { AdFormData, FormErrors, SearchableSelectItem } from '../types';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
@@ -31,8 +24,6 @@ import {
 import { cn } from '@/lib/utils';
 import {
   Calendar as CalendarIcon,
-  Check,
-  ChevronsUpDown,
   HelpCircle,
   PoundSterling,
 } from 'lucide-react';
@@ -44,8 +35,6 @@ interface GeneralAdSettingsProps {
   setFormData: React.Dispatch<React.SetStateAction<AdFormData>>;
   errors: FormErrors;
   listings: SearchableSelectItem[];
-  isLoading: boolean;
-  isError: boolean;
 }
 
 // Reusable Tooltip Component
@@ -60,77 +49,6 @@ const InfoTooltip = ({ message }: { message: string }) => (
       </TooltipContent>
     </Tooltip>
   </TooltipProvider>
-);
-
-// Reusable Searchable Select (Combobox)
-const SearchableSelect = ({
-  open,
-  setOpen,
-  value,
-  setValue,
-  items,
-  placeholder,
-  notFoundMessage,
-  isLoading,
-  isError,
-}: {
-  open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  value: string;
-  setValue: React.Dispatch<React.SetStateAction<string>>;
-  items: SearchableSelectItem[];
-  placeholder: string;
-  notFoundMessage: string;
-  isLoading?: boolean;
-  isError?: boolean;
-}) => (
-  <Popover open={open} onOpenChange={setOpen}>
-    <PopoverTrigger asChild>
-      <Button
-        variant="outline"
-        role="combobox"
-        aria-expanded={open}
-        className="w-full justify-between font-normal"
-        disabled={isLoading || isError}
-      >
-        {isLoading
-          ? 'Loading listings...'
-          : isError
-          ? 'Error fetching listings'
-          : value
-          ? items.find((item: SearchableSelectItem) => item.value === value)
-              ?.label
-          : placeholder}
-        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-      <Command>
-        <CommandInput placeholder={`Search ${placeholder.toLowerCase()}...`} />
-        <CommandEmpty>{notFoundMessage}</CommandEmpty>
-        <CommandGroup>
-          {items.map((item: SearchableSelectItem) => (
-            <CommandItem
-              key={item.value}
-              value={item.value}
-              onSelect={currentValue => {
-                setValue(currentValue === value ? '' : currentValue);
-                setOpen(false);
-              }}
-            >
-              <Check
-                className={cn(
-                  'mr-2 h-4 w-4',
-                  value === item.value ? 'opacity-100' : 'opacity-0'
-                )}
-              />
-              {item.label}
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </Command>
-    </PopoverContent>
-  </Popover>
 );
 
 const DateTimePicker = ({
@@ -221,10 +139,7 @@ export const GeneralAdSettings = ({
   setFormData,
   errors,
   listings,
-  isLoading,
-  isError,
 }: GeneralAdSettingsProps) => {
-  const [openListing, setOpenListing] = React.useState(false);
 
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200">
@@ -250,25 +165,12 @@ export const GeneralAdSettings = ({
         {/* For Listing */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
-            For Listing{' '}
-            <InfoTooltip message="Select the listing you want to promote." />
+            Business{' '}
+            <InfoTooltip message="This campaign will run for your MCOM Central business." />
           </label>
-          <SearchableSelect
-            open={openListing}
-            setOpen={setOpenListing}
-            value={formData.listing}
-            setValue={val =>
-              setFormData(prev => ({
-                ...prev,
-                listing: typeof val === 'string' ? val : prev.listing,
-              }))
-            }
-            items={listings}
-            placeholder="Search for a listing"
-            notFoundMessage="No listing found."
-            isLoading={isLoading}
-            isError={isError}
-          />
+          <div className="flex h-10 items-center rounded-md border border-gray-200 bg-gray-50 px-3 text-sm text-gray-700">
+            {listings[0]?.label || 'Your MCOM Central business'}
+          </div>
           {errors.listing && (
             <p className="text-red-500 text-xs mt-1">{errors.listing}</p>
           )}

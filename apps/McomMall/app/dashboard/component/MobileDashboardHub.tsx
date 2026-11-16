@@ -32,7 +32,7 @@ const NearbyDiscovery = dynamic(() => import('@/components/marketplace/NearbyDis
 
 const SHORTCUTS = [
   { title: "LocalMall", icon: MapPin, href: "/dashboard/localmall", color: "text-amber-600", bg: "bg-amber-100" },
-  { title: "Listings", icon: PlusCircle, href: "/dashboard/my-listings", color: "text-blue-600", bg: "bg-blue-100" },
+  { title: "My Business", icon: PlusCircle, href: "/dashboard/my-business", color: "text-blue-600", bg: "bg-blue-100" },
   { title: "Store", icon: ShoppingBag, href: "/dashboard/store", color: "text-orange-600", bg: "bg-orange-100" },
   { title: "Services", icon: Briefcase, href: "/dashboard/services", color: "text-purple-600", bg: "bg-purple-100" },
   { title: "Wallet", icon: Wallet, href: "/dashboard/wallet", color: "text-green-600", bg: "bg-green-100" },

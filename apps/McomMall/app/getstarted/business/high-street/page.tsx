@@ -102,7 +102,7 @@ export default function HighStreetExplanationPage() {
                 <h4 className="text-sm font-bold text-[#0b1c30]">Hyperlocal Ecosystem</h4>
                 <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">0 – 5 miles from High Street</p>
                 <p className="text-xs sm:text-sm text-gray-500 leading-relaxed font-medium pt-1">
-                  Active neighborhood businesses that participate directly in radius-based targeting, local cashback/loyalty systems, and localized group circles.
+                  Active neighborhood businesses that participate directly in radius-based targeting and local cashback/loyalty systems.
                 </p>
               </div>
             </div>

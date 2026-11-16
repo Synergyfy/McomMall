@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Image as ImageIcon } from 'lucide-react';
-import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
+import MultiMediaUpload from '@/components/dashboard/media/MultiMediaUpload';
 
 export function Step6FinalReview() {
   const { control } = useFormContext();

@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import api from '@/service/api';
+import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -40,7 +42,8 @@ interface SummaryData {
 export default function AutomationsDashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const businessId = 'default-business-id';
+  const { data: listingsData } = useGetUserListings(1, 1);
+  const businessId = pickCentralBusiness(listingsData?.data)?.id || '';
 
   // Fetch automations dashboard summary
   const { data: summary = null, isLoading } = useQuery<SummaryData>({

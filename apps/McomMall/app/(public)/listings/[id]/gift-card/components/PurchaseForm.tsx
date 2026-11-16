@@ -141,7 +141,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
   }
 
   const handleRedirect = () => {
-    router.push('/dashboard/my-listings');
+    router.push('/dashboard/my-business');
   };
 
   if (showSuccessDialog && createdGiftCard) {

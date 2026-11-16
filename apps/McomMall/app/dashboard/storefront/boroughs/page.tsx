@@ -14,6 +14,8 @@ import {
   Plus
 } from 'lucide-react';
 import api from '@/service/api';
+import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -33,7 +35,8 @@ interface Campaign {
 
 export default function BoroughCampaigns() {
   const queryClient = useQueryClient();
-  const businessId = 'default-business-id';
+  const { data: listingsData } = useGetUserListings(1, 1);
+  const businessId = pickCentralBusiness(listingsData?.data)?.id || '';
   
   // Track joined campaigns in local state for offline mock support
   const [joinedList, setJoinedList] = useState<string[]>([]);

@@ -16,7 +16,7 @@ import {
     FileDown,
     FileText
 } from 'lucide-react';
-import MediaCropper from '@/app/dashboard/add-listing/components/steps/shared/MediaCropper';
+import MediaCropper from '@/components/dashboard/media/MediaCropper';
 import { uploadFile } from '@/lib/upload';
 import { FieldError } from '@/lib/form-validation';
 import { toast } from 'sonner';

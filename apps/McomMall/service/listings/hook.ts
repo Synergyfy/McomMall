@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import api from '../api';
@@ -108,34 +108,6 @@ export const useEditListing = () => {
   return mutation;
 };
 
-export const useDeleteListing = () => {
-  const queryClient = useQueryClient();
-  const remove = async (listingId: string) => {
-    try {
-      const response = await api.delete(`listings/${listingId}`);
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      throw new Error(
-        err.response?.data?.message || err.message || 'Failed to delete listing'
-      );
-    }
-  };
-
-  const mutation = useMutation({
-    mutationFn: remove,
-    onSuccess: data => {
-      toast.success(data.message || 'Listing deleted successfully!');
-      queryClient.invalidateQueries({ queryKey: ['FETCH_USER_LISTINGS'] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  return mutation;
-};
-
 export const useGetBusinessData = ({
   id,
   enabled,
@@ -192,35 +164,6 @@ export const useGetInHouseBusiness = ({
     refetchOnMount: false,
   });
   return query;
-};
-
-export const useAddListing = () => {
-  const router = useRouter();
-  const create = async (payload: CreateBusinessPayload) => {
-    try {
-      const response = await api.post('listings', { ...payload });
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      throw new Error(
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to create listing'
-      );
-    }
-  };
-
-  const mutation = useMutation({
-    mutationFn: create,
-    onSuccess: data => {
-      toast.success(data.message || 'Listing created successfully!');
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  return mutation;
 };
 
 export const useGetGoogleListing = ({ placeId }: { placeId: string }) => {

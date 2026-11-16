@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useUpdateProduct } from '@/service/store/products/hook';
 import { toast } from 'sonner';
-import { Star, RefreshCw, Megaphone, Loader2 } from 'lucide-react';
+import { Star, Megaphone, Loader2 } from 'lucide-react';
 import { Product } from '@/service/listings/types';
 
 interface PromoteProductModalProps {
@@ -29,7 +29,6 @@ export const PromoteProductModal: React.FC<PromoteProductModalProps> = ({
   onClose,
 }) => {
   const [isFeatured, setIsFeatured] = useState(false);
-  const [isRotatorEligible, setIsRotatorEligible] = useState(false);
   const [isPromotionEligible, setIsPromotionEligible] = useState(false);
 
   const { mutateAsync: updateProduct, isPending } = useUpdateProduct();
@@ -37,7 +36,6 @@ export const PromoteProductModal: React.FC<PromoteProductModalProps> = ({
   useEffect(() => {
     if (product) {
       setIsFeatured(product.isFeatured ?? false);
-      setIsRotatorEligible(product.isRotatorEligible ?? false);
       setIsPromotionEligible(product.isPromotionEligible ?? false);
     }
   }, [product]);
@@ -49,7 +47,6 @@ export const PromoteProductModal: React.FC<PromoteProductModalProps> = ({
       await updateProduct({
         id: product.id,
         isFeatured,
-        isRotatorEligible,
         isPromotionEligible,
       } as any);
       toast.success('Promotion settings updated!');
@@ -89,27 +86,6 @@ export const PromoteProductModal: React.FC<PromoteProductModalProps> = ({
               onCheckedChange={setIsFeatured}
               id="featured-toggle"
               aria-label="Mark as Featured"
-            />
-          </div>
-
-          {/* Rotator toggle */}
-          <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-gray-100 bg-blue-50/40 hover:bg-blue-50 transition-colors">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                <RefreshCw className="w-4 h-4 text-blue-600" />
-              </div>
-              <div>
-                <Label className="font-semibold text-gray-900 leading-tight">Add to Local Mall Rotator</Label>
-                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                  Opts this product into the Borough carousel and Local Mall discovery feed.
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={isRotatorEligible}
-              onCheckedChange={setIsRotatorEligible}
-              id="rotator-toggle"
-              aria-label="Add to Rotator"
             />
           </div>
 

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { ChevronRight, PlusCircle, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -20,7 +21,6 @@ import { useRouter } from 'next/navigation';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import { CreateServiceDto, UpdateServiceDto } from '@/service/services/types';
 import { useAddService } from '@/service/services/hook';
-import { UserListing } from '@/service/listings/types';
 import Link from 'next/link';
 
 interface ServiceError {
@@ -50,8 +50,7 @@ const EditServicePage = () => {
   const params = useParams();
   const serviceId = params.id as string;
   const queryClient = useQueryClient();
-  const { data: listings, isLoading: isLoadingListings } =
-    useGetUserListings();
+  const { data: listings } = useGetUserListings();
   const { data: serviceData, isLoading: isLoadingService } =
     useGetServiceById(serviceId);
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
@@ -116,6 +115,15 @@ const EditServicePage = () => {
 
 
   const [errors, setErrors] = React.useState<ServiceError>({});
+  const businessName = pickCentralBusiness(listings?.data)?.businessName;
+
+  // Services belong to the user's single MCOM Central business.
+  React.useEffect(() => {
+    const business = pickCentralBusiness(listings?.data);
+    if (business && !formData.businessId) {
+      setFormData(prev => ({ ...prev, businessId: business.id }));
+    }
+  }, [listings, formData.businessId]);
 
   const { mutate: updateService, isPending: isUpdatingService } =
     useUpdateService();
@@ -144,7 +152,7 @@ const EditServicePage = () => {
     if (formData.name.length > 160)
       newErrors.name = 'Service name must be 160 characters or less.';
     if (!formData.businessId)
-      newErrors.businessId = 'Please select a business.';
+      newErrors.businessId = 'Your MCOM Central business is required.';
 
     // Pricing model validation
     if (formData.pricingModel === 'fixed' && formData.fixedPrice == null) {
@@ -251,12 +259,6 @@ const EditServicePage = () => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  const businesses =
-    listings?.data?.filter(
-      (listing: UserListing) =>
-        listing.listingType.includes('service')
-    ) || [];
-
   return (
     <>
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans">
@@ -302,33 +304,10 @@ const EditServicePage = () => {
                 )}
               </div>
               <div>
-                <Label htmlFor="businessId">Business</Label>
-                <Select
-                  name="businessId"
-                  onValueChange={value => handleSelectChange('businessId', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a business" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingListings ? (
-                      <SelectItem value="loading" disabled>
-                        Loading businesses...
-                      </SelectItem>
-                    ) : (
-                      businesses.filter((b: UserListing) => b.id && b.id.trim() !== '').map((business: UserListing) => (
-                        <SelectItem key={business.id} value={business.id}>
-                          {business.businessName}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                {errors.businessId && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.businessId}
-                  </p>
-                )}
+                <Label>Business</Label>
+                <div className="mt-1 flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-gray-700">
+                  {businessName || 'Your MCOM Central business'}
+                </div>
               </div>
             </div>
             <div className="mb-6">
@@ -787,16 +766,6 @@ const EditServicePage = () => {
               >
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Add-on
               </Button>
-            </div>
-
-            <div className="mb-6">
-                <h3 className="text-lg font-medium">Interactive Hotspots</h3>
-                <p className="text-sm text-muted-foreground">Add clickable hotspots to your service image.</p>
-                <Button asChild variant="outline" className="mt-2">
-                    <Link href={`/dashboard/hotspot-editor/edit/${serviceId}?type=service`}>
-                        Add/Edit Hotspots
-                    </Link>
-                </Button>
             </div>
 
             <div className="flex justify-end">

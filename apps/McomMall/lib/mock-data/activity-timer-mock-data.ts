@@ -46,7 +46,7 @@ export const BUSINESS_ACTIVITY_TASKS: MockTaskDefinition[] = [
     title: 'Create your business profile',
     description:
       'Add your business details so customers can find and verify you.',
-    url: '/dashboard/add-listing',
+    url: `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`,
     timer: 'TRIAL',
   },
   {

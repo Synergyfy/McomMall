@@ -11,7 +11,6 @@ import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Service } from '../services/entities/service.entity';
 import { Notification } from '../notification/entities/notification.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
-import { Rotator } from '../rotators/entities/rotator.entity';
 import { UserRole } from '../../common/role.enum';
 
 @Injectable()
@@ -29,8 +28,6 @@ export class ToolsService {
     private readonly notificationRepository: Repository<Notification>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
-    @InjectRepository(Rotator)
-    private readonly rotatorRepository: Repository<Rotator>,
   ) {}
 
   private async assertBusinessAccess(
@@ -61,7 +58,7 @@ export class ToolsService {
     await this.assertBusinessAccess(businessId, requester);
     const business = await this.businessRepository.findOne({
       where: { id: businessId },
-      relations: ['services', 'products', 'campaigns', 'rotators'],
+      relations: ['services', 'products', 'campaigns'],
     });
     if (!business) {
       throw new NotFoundException(`Business with ID ${businessId} not found`);
@@ -77,15 +74,11 @@ export class ToolsService {
 
     const serviceIds = (business.services ?? []).map((service) => service.id);
 
-    const [products, activeCampaigns, activeRotators, bookings] =
-      await Promise.all([
+    const [products, activeCampaigns, bookings] = await Promise.all([
         this.productRepository.find({
           where: { business: { id: businessId } },
         }),
         this.campaignRepository.find({
-          where: { business: { id: businessId } },
-        }),
-        this.rotatorRepository.find({
           where: { business: { id: businessId } },
         }),
         serviceIds.length > 0
@@ -104,9 +97,7 @@ export class ToolsService {
         product.lowStockThreshold != null,
     );
 
-    const activeCampaignCount =
-      activeCampaigns.length +
-      activeRotators.filter((rotator) => rotator.status === 'active').length;
+    const activeCampaignCount = activeCampaigns.length;
 
     const completedBookings = bookings.filter(
       (booking) => booking.status === 'completed',
@@ -121,10 +112,7 @@ export class ToolsService {
       excessStockCount: lowStockItems.length,
       capacityFill: capacityPercent,
       activeCampaigns: activeCampaignCount,
-      totalMonthlyReach:
-        activeRotators.filter((rotator) => rotator.status === 'active').length *
-          1500 +
-        activeCampaigns.length * 800,
+      totalMonthlyReach: activeCampaigns.length * 800,
       creditsRemaining: 8450,
       creditsTotal: 10000,
       visitsLast7Days: 2482,
@@ -261,33 +249,19 @@ export class ToolsService {
     requester: { id: string; role?: string },
   ): Promise<any[]> {
     await this.findBusinessOrThrow(businessId, requester);
-    const [campaigns, rotators] = await Promise.all([
-      this.campaignRepository.find({
-        where: { business: { id: businessId } },
-      }),
-      this.rotatorRepository.find({
-        where: { business: { id: businessId } },
-      }),
-    ]);
+    const campaigns = await this.campaignRepository.find({
+      where: { business: { id: businessId } },
+    });
 
-    return [
-      ...campaigns.map((campaign) => ({
-        id: campaign.id,
-        name: `Ad Campaign (${campaign.type})`,
-        status: campaign.enabledForLoggedInUser ? 'running' : 'paused',
-        type: campaign.type,
-        budget: campaign.budget,
-        placements: campaign.adPlacement,
-        startDate: campaign.startDate,
-      })),
-      ...rotators.map((rotator) => ({
-        id: rotator.id,
-        name: rotator.title,
-        status: rotator.status === 'active' ? 'running' : 'paused',
-        type: 'rotator',
-        startDate: rotator.created_at,
-      })),
-    ];
+    return campaigns.map((campaign) => ({
+      id: campaign.id,
+      name: `Ad Campaign (${campaign.type})`,
+      status: campaign.enabledForLoggedInUser ? 'running' : 'paused',
+      type: campaign.type,
+      budget: campaign.budget,
+      placements: campaign.adPlacement,
+      startDate: campaign.startDate,
+    }));
   }
 
   async createClearancePromotion(

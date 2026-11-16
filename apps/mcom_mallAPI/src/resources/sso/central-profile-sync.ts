@@ -551,6 +551,10 @@ function businessUpdatesFromProfile(
 ): Partial<Business> {
   const updates: Partial<Business> = {};
 
+  if (!existing.isClaimed) {
+    updates.isClaimed = true;
+  }
+
   if (profile.businessName && existing.businessName !== profile.businessName) {
     updates.businessName = profile.businessName;
   }
@@ -740,6 +744,7 @@ async function provisionBusiness(
     about: description || undefined,
     listingType: [ListingType.PRODUCT, ListingType.SERVICE],
     status: BusinessStatus.PUBLISHED,
+    isClaimed: true,
     isVerified: true,
     isGoogleVerified: profile.isOnGoogle ?? false,
     localMall: localMall ? ({ id: localMall.id } as LocalMall) : undefined,

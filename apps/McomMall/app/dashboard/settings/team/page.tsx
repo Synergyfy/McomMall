@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { 
   useGetTeam, 
   useInviteMember, 
@@ -44,7 +45,7 @@ const PERMISSION_KEYS = [
 export default function TeamManagementPage() {
   const router = useRouter();
   const { data: listingsData, isLoading: isListingsLoading } = useGetUserListings(1, 1);
-  const businessId = listingsData?.data?.[0]?.id || '';
+  const businessId = pickCentralBusiness(listingsData?.data)?.id || '';
 
   const { data: teamData, isLoading: isTeamLoading } = useGetTeam(businessId);
   const { mutateAsync: inviteMember, isPending: isInviting } = useInviteMember(businessId);
@@ -90,10 +91,10 @@ export default function TeamManagementPage() {
         <Users className="w-16 h-16 mx-auto text-gray-300" />
         <h2 className="text-xl font-bold">Storefront Profile Required</h2>
         <p className="text-sm text-gray-500">
-          Please create and verify your Business storefront profile before managing your team members.
+          Your business profile is managed in MCOM Central. Create or verify it there before managing your team members.
         </p>
-        <Button className="bg-[#ff6900] hover:bg-[#a14000] text-white rounded-xl" onClick={() => router.push('/dashboard/add-listing')}>
-          Create Storefront Profile
+        <Button className="bg-[#ff6900] hover:bg-[#a14000] text-white rounded-xl" onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`}>
+          Create Business on MCOM Central
         </Button>
       </div>
     );

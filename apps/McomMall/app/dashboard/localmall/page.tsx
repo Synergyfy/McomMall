@@ -33,7 +33,6 @@ import {
 import { 
   VisibilitySettingsScreen, 
   AudienceSettingsScreen, 
-  RotatorSettingsScreen, 
   BoostVisibilityScreen 
 } from './components/screens/VisibilityScreens';
 import { 
@@ -214,8 +213,6 @@ export default function LocalMallPage() {
         return <VisibilitySettingsScreen onNavigate={handleNavigate} businessName={businessName} />;
       case 'audience':
         return <AudienceSettingsScreen onNavigate={handleNavigate} />;
-      case 'rotator':
-        return <RotatorSettingsScreen onNavigate={handleNavigate} />;
       case 'boost':
         return <BoostVisibilityScreen onNavigate={handleNavigate} />;
 

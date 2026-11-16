@@ -540,7 +540,7 @@ export default function CapacityManagerDashboard() {
                       { id: 'nearby', title: 'Nearby Customers feed', desc: 'Send push within a 2-mile live radius' },
                       { id: 'loyalty', title: 'Loyalty Club VIPs', desc: 'Promote to your top 100 repeat customers' },
                       { id: 'inactive', title: 'Win-Back Audience', desc: 'Notify customers who haven\'t booked in 30 days' },
-                      { id: 'borough', title: 'Borough Spotlight Rotator', desc: 'Premium slot inclusion on district home banners' }
+                      { id: 'borough', title: 'Borough Spotlight Placement', desc: 'Premium slot inclusion on district home banners' }
                     ].map((segment) => {
                       const isChecked = targetAudience.includes(segment.id);
                       return (

@@ -2,6 +2,7 @@ export type Review = {
   id:string;
   rating: number;
   comment: string;
+  status?: 'pending' | 'published';
   createdAt: string;
   updatedAt: string;
   businessId?: string;
@@ -11,6 +12,13 @@ export type Review = {
     id: string;
     name: string;
     avatarUrl: string;
+  };
+  user?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    avatarUrl?: string;
   };
   business?: {
     name: string;

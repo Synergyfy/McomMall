@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGetUserListings, useEditListing } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,7 @@ const PlatformIcons: Record<string, string> = {
 const BusinessProfilePage: React.FC = () => {
   const router = useRouter();
   const { data: listingsData, isLoading } = useGetUserListings(1, 1);
-  const listing = listingsData?.data?.[0];
+  const listing = pickCentralBusiness(listingsData?.data);
   const { mutateAsync: editListing, isPending: isSaving } = useEditListing();
 
   // Form states

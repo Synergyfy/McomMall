@@ -30,12 +30,6 @@ export class VisibilitySettings {
   @Column({ type: 'int', default: 3 })
   featuredDaysLeft: number;
 
-  @Column({
-    type: 'jsonb',
-    default: ['New Arrivals', 'Best Sellers', 'Seasonal Promo'],
-  })
-  rotatorOrder: string[];
-
   @Column({ default: false })
   highStreetMode: boolean;
 

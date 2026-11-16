@@ -373,8 +373,8 @@ export default function PromotionEditForm() {
 
                     <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors border border-outline-variant/10">
                       <div>
-                        <Label htmlFor="highStreetVisibility" className="font-bold text-xs cursor-pointer">High Street Rotator placement</Label>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">Feature this promotion in the high street rotator display carousel.</p>
+                        <Label htmlFor="highStreetVisibility" className="font-bold text-xs cursor-pointer">High Street placement</Label>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Feature this promotion in the high street display carousel.</p>
                       </div>
                       <Switch id="highStreetVisibility" checked={highStreetVisibility} onCheckedChange={setHighStreetVisibility} />
                     </div>

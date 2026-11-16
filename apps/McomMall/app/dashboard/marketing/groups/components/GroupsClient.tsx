@@ -126,7 +126,7 @@ const GroupsClient = () => {
           <AlertDescription>
             Your current plan does not include group creation.
             Please{' '}
-            <Link href="/dashboard/membership-audits/membership" className="underline font-semibold">
+            <Link href="/dashboard/subscription" className="underline font-semibold">
               upgrade your plan
             </Link>
             .

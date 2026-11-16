@@ -102,7 +102,7 @@ export default function BillingOverviewPage() {
             <div className="mt-4">
               <h3 className="text-3xl font-extrabold tracking-tight">{priceFormatted}<span className="text-sm font-normal opacity-85">/ {billingCycleLabel}</span></h3>
               <p className="text-xs opacity-75 mt-1.5 max-w-sm">
-                Unlock full borough rotator campaigns, marketing automations, and custom team roles permissions.
+                Unlock full borough campaigns, marketing automations, and custom team role permissions.
               </p>
             </div>
           </div>

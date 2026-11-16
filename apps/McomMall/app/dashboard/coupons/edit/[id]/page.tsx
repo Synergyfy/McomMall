@@ -9,8 +9,6 @@ import {
   HelpCircle,
   ArrowRight,
   CheckCircle,
-  ChevronsUpDown,
-  Check,
   ChevronRight,
   CalendarIcon,
 } from 'lucide-react';
@@ -42,13 +40,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useGetUserListings } from '@/service/listings/hook';
-import { InHouseBusiness, UserListing } from '@/service/listings/types';
+import { pickCentralBusiness } from '@/lib/central-business';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
 } from '@/components/ui/command';
 import {
   Popover,
@@ -90,13 +83,13 @@ function EditCouponPage() {
   const id = params.id as string;
 
   const { coupon, isLoading: isLoadingCoupon } = useGetCoupon(id);
-  const { data: listings, isLoading: isLoadingListings } = useGetUserListings();
+  const { data: listings } = useGetUserListings();
   const editCoupon = useEditCoupon();
 
   const [formData, setFormData] = useState<FormData | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSuccess, setIsSuccess] = useState(false);
-  const [open, setOpen] = React.useState(false);
+  const businessName = pickCentralBusiness(listings?.data)?.businessName;
 
   useEffect(() => {
     if (coupon && !formData) {
@@ -113,6 +106,14 @@ function EditCouponPage() {
       });
     }
   }, [coupon, formData]);
+
+  // Attach the coupon to the user's single MCOM Central business.
+  useEffect(() => {
+    const business = pickCentralBusiness(listings?.data);
+    if (business && formData && !formData.businessId) {
+      setFormData(prev => (prev ? { ...prev, businessId: business.id } : prev));
+    }
+  }, [listings, formData]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -144,7 +145,7 @@ function EditCouponPage() {
       newErrors.expiresAt = 'Expiry date is required.';
     }
     if (!formData.businessId) {
-      newErrors.businessId = 'Please select a business listing.';
+      newErrors.businessId = 'Your MCOM Central business is required.';
     }
     return newErrors;
   };
@@ -353,68 +354,10 @@ function EditCouponPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="grid gap-2">
-                  <Label htmlFor="businessId" className="flex items-center">
-                    Select Listing{' '}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          Choose which listing this coupon is associated with.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </Label>
-                  <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={open}
-                        className="w-full justify-between"
-                      >
-                        {formData.businessId
-                          ? listings?.data?.find((l: UserListing) => l.id === formData.businessId)?.businessName || 'Select listing...'
-                          : 'Select listing...'}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput placeholder="Search listings..." />
-                        <CommandEmpty>No listings found.</CommandEmpty>
-                        <CommandGroup>
-                          {isLoadingListings ? (
-                            <CommandItem>Loading...</CommandItem>
-                          ) : (
-                            listings?.data?.map((listing: UserListing) => (
-                              <CommandItem
-                                key={listing.id}
-                                onSelect={() => {
-                                  setFormData({ ...formData, businessId: listing.id });
-                                  setOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    formData.businessId === listing.id
-                                      ? 'opacity-100'
-                                      : 'opacity-0'
-                                  )}
-                                />
-                                {listing.businessName}
-                              </CommandItem>
-                            ))
-                          )}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {errors.businessId && (
-                    <p className="text-sm text-red-600 mt-1">{errors.businessId}</p>
-                  )}
+                  <Label>Listing</Label>
+                  <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-gray-700">
+                    {businessName || 'Your MCOM Central business'}
+                  </div>
                 </div>
               </div>
             </CardContent>

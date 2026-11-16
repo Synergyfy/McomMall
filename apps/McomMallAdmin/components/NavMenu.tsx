@@ -192,9 +192,6 @@ export const menuItems = [
         <ListItem href="/listings" title="Claim Listing">
           Find and claim your business profile.
         </ListItem>
-        <ListItem href="/dashboard/add-listing" title="Create New Listing">
-          Add your business to our directory.
-        </ListItem>
       </div>
     ),
   },

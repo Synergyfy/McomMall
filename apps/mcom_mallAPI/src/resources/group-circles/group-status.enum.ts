@@ -1,6 +1,0 @@
-export enum GroupStatus {
-  RECRUITING = 'RECRUITING',
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  COMPLETED = 'COMPLETED',
-}

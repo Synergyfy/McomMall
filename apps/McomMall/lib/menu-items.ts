@@ -6,13 +6,12 @@ import {
   Plus,
   List,
   Wallet,
-  UserStar,
   ShoppingBag,
+  Store,
   SquareDashedKanban,
   Settings,
   LucideIcon,
   UserPen,
-  Award,
   Heart,
   LogOut,
   Megaphone,
@@ -70,20 +69,11 @@ export const mainMenuItems: MenuItem[] = [
 ];
 
 export const listingMenuItems: MenuItem[] = [
-  { title: 'Add Profile', href: '/dashboard/add-listing', icon: Plus },
-  // { title: 'Ad Campaign', href: '/dashboard/ad-campaign', icon: Megaphone },
   {
-    title: 'My Profiles',
-    href: '/dashboard/my-listings',
-    icon: List,
-    subMenu: [
-      { title: 'Active', href: '/dashboard/my-listings/active' },
-      { title: 'Drafts', href: '/dashboard/my-listings/drafts' },
-      { title: 'Pending', href: '/dashboard/my-listings/pending' },
-      { title: 'Expired', href: '/dashboard/my-listings/expired' },
-    ],
+    title: 'My Business',
+    href: '/dashboard/my-business',
+    icon: Store,
   },
-  { title: 'Reviews', href: '/dashboard/reviews', icon: UserStar },
 ];
 
 export const storefrontMenuItems: MenuItem[] = [
@@ -202,11 +192,6 @@ export const marketingMenuItems: MenuItem[] = [
     ],
   },
   */
-  {
-    title: 'Group Circles',
-    href: '/dashboard/group-circles',
-    icon: Zap,
-  },
 ];
 
 export const historyMenuItems: MenuItem[] = [
@@ -252,7 +237,7 @@ export const accountMenuItems: MenuItem[] = [
   { title: 'My Profile', href: '/dashboard/my-profile', icon: UserPen },
   {
     title: 'My Subscription',
-    href: '/dashboard/membership-audits/membership',
+    href: '/dashboard/subscription',
     icon: CreditCard,
   },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
@@ -264,18 +249,6 @@ export const accountMenuItems: MenuItem[] = [
 
 export const pluginMenuItems: MenuItem[] = [
   {
-    title: 'Membership & Audits',
-    href: '/dashboard/membership-audits',
-    icon: Award,
-    subMenu: [
-      { title: 'Overview', href: '/dashboard/membership-audits' },
-      { title: 'Membership', href: '/dashboard/membership-audits/membership' },
-      { title: 'Audits', href: '/dashboard/membership-audits/audits' },
-      { title: 'Vouchers & Credits', href: '/dashboard/membership-audits/vouchers' },
-      { title: 'Reports', href: '/dashboard/membership-audits/reports' },
-    ],
-  },
-  {
     title: 'Business Tools',
     href: '/dashboard/tools',
     icon: Wrench,
@@ -285,15 +258,6 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Capacity Manager', href: '/dashboard/tools/capacity' },
       { title: 'Campaigns', href: '/dashboard/tools/campaigns' },
       { title: 'Push Alerts', href: '/dashboard/tools/alerts' },
-    ],
-  },
-  {
-    title: 'QR Engine',
-    href: '/dashboard/qr',
-    icon: Scan,
-    subMenu: [
-      { title: 'QR Dashboard', href: '/dashboard/qr' },
-      { title: 'Create QR', href: '/dashboard/qr/new' },
     ],
   },
   {
@@ -322,11 +286,6 @@ export const pluginMenuItems: MenuItem[] = [
   {
     title: 'Promotion',
     href: '/dashboard/promotions',
-    icon: Megaphone,
-  },
-  {
-    title: 'Rotator Campaigns',
-    href: '/dashboard/promotions/rotators',
     icon: Megaphone,
   },
   {
@@ -371,19 +330,5 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Redeem Coupon', href: '/dashboard/coupons/redeem' },
       { title: 'Analytics', href: '/dashboard/coupons/analytics' },
     ],
-  },
-  {
-    title: 'Hotspot Campaigns',
-    href: '/dashboard/hotspot-editor',
-    icon: Scan,
-    subMenu: [
-      { title: 'All Campaigns', href: '/dashboard/hotspot-editor' },
-      { title: 'New Campaign', href: '/dashboard/hotspot-editor/new' },
-    ],
-  },
-  {
-    title: 'Gamification Hub',
-    href: '/dashboard/gamification',
-    icon: Trophy,
   },
 ];

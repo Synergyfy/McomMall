@@ -13,7 +13,7 @@ const faqs = [
   {
     question: 'How do I list my business on McomMall?',
     answer:
-      'You can add your business by clicking the "Add Listing" button, usually found in the header or on your dashboard. Follow the steps to provide your business details, and once approved, your listing will be live.',
+      'Business profiles are created and managed in MCOM Central Hub. When you sign in to McomMall with your Central business account, your business listing is synced automatically. Update your details in Central and they will appear here after your next sign-in.',
   },
   {
     question: 'Is there a fee to list my business?',
