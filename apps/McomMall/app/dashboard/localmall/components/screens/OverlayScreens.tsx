@@ -464,7 +464,7 @@ export const ScheduledMessagesScreen: FC<ScheduledMessagesScreenProps> = ({
     <div className="flex flex-col gap-6">
       <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
         <h2 className="text-lg font-black text-gray-900 tracking-tight">Message Schedulers</h2>
-        <p className="text-xs text-gray-400 mt-1">Schedule push notifications or message blasts to local Greenwich consumers.</p>
+        <p className="text-xs text-gray-400 mt-1">Schedule push notifications or message blasts to local consumers.</p>
 
         <form onSubmit={handleSchedule} className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

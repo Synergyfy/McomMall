@@ -153,6 +153,44 @@ export class McomCentralService {
     }
   }
 
+  /**
+   * Resolves the local mall Central has assigned to a user (or the closest
+   * mall to their postcode). Businesses, customers and affiliates are all
+   * assigned to a City > Borough > High Street > Local Mall hierarchy in
+   * Central, which is the canonical source for this page.
+   */
+  async getLocalMall(params: {
+    userId?: string | null;
+    postcode?: string | null;
+  }): Promise<any | null> {
+    const query = new URLSearchParams();
+    if (params.userId) query.set('userId', params.userId);
+    if (params.postcode) query.set('postcode', params.postcode);
+    if (![...query.keys()].length) return null;
+
+    try {
+      const headers = this.getHmacHeaders();
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/data/local-mall?${query.toString()}`,
+        { headers },
+      );
+
+      if (!response.ok) {
+        this.logger.error(
+          `MCOM Central local mall lookup returned ${response.status} for ` +
+            `userId=${params.userId ?? '-'} postcode=${params.postcode ?? '-'}`,
+        );
+        return null;
+      }
+
+      const body = await response.json();
+      return body.data || null;
+    } catch (error) {
+      this.logger.error('Failed to fetch local mall from MCOM Central:', error);
+      return null;
+    }
+  }
+
   async getIntrospectedEntitlement(
     userId: string,
     accessToken?: string,

@@ -12,24 +12,6 @@ export interface PageDto<T> {
   meta: PageMetaDto;
 }
 
-export interface PromotionSummaryStatisticsDto {
-  totalPointsEarned: number;
-  totalPointsRedeemed: number;
-  totalParticipants: number;
-}
-
-export interface PromotionTransactionHistoryDto {
-  id: string;
-  points: number;
-  type: 'EARNED' | 'REDEMPTION';
-  createdAt: string;
-  customer: {
-    id: string;
-    name: string;
-    email: string;
-  };
-}
-
 export interface VoucherSummaryStatisticsDto {
   totalSold: number;
   totalRedeemed: number;
@@ -47,9 +29,6 @@ export interface VoucherTransactionHistoryDto {
     email: string;
   };
 }
-
-export type TPromotionTransactionHistoryPage =
-  PageDto<PromotionTransactionHistoryDto>;
 
 export type TVoucherTransactionHistoryPage =
   PageDto<VoucherTransactionHistoryDto>;

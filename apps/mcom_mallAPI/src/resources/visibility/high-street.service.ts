@@ -12,13 +12,13 @@ export class HighStreetService {
       newBusinessesThisMonth: 12,
       ongoingEventsCount: 8,
       capacityPeakHour: '18:00',
-      activePromotionsCount: 24,
-      promoDiscountCode: 'STREET24',
+      activeOffersCount: 24,
+      communityDiscountCode: 'STREET24',
       topContributors: [
         {
           rank: 1,
           name: 'Artisan Bakery & Co',
-          details: '3 promos • 2 events today',
+          details: '3 offers • 2 events today',
           score: 98,
           avatarUrl:
             'https://lh3.googleusercontent.com/aida-public/AB6AXuBaew2W5cf6IpIRuhQxuqLFXRRJq_SbpUi3M13rtS1LjvmSMuvkR8lXDWW1lSwM57dhOFuRoxEJVwBWkj0rMkT2lZikTOeu8-cCgQkz2-WLxr7tJItUyyxcYcI3NAtkyloD0dj2XUmkwf34QzmWNs-Jracc5Mb7owHpHNqtQ8ihmyLDlgf0OmJ5OoY3APS25jKzZYdPpT2sR-nntPcnbwN4ozvRxwiCMzG70jnjiyAEE4vFnPAjgtfycCVAqOVVNV4QoSS5_H17xNI',
@@ -26,7 +26,7 @@ export class HighStreetService {
         {
           rank: 2,
           name: 'The Green Florist',
-          details: '1 promo • Fully staffed',
+          details: '1 offer • Fully staffed',
           score: 94,
           avatarUrl:
             'https://lh3.googleusercontent.com/aida-public/AB6AXuAdD2g432RjYg_Q7J167xO2s1219L6K4M3o1O9_sH3X_D222tM321_H123... (placeholder or actual)',

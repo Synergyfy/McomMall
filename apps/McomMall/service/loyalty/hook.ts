@@ -127,6 +127,38 @@ export interface LoyaltyRule {
 const withBusiness = (path: string, businessId: string) =>
   `${path}${path.includes('?') ? '&' : '?'}businessId=${businessId}`;
 
+export interface LoyaltyEarningConfig {
+  id?: string;
+  businessId: string;
+  isActive: boolean;
+  earnOnProducts: boolean;
+  earnOnServices: boolean;
+  pointsPerCurrency: number;
+  fixedPointsPerOrder: number;
+  minSpend?: number | string | null;
+  includedProductIds: string[];
+  excludedProductIds: string[];
+  includedServiceIds: string[];
+  excludedServiceIds: string[];
+  productPointOverrides: Record<string, number>;
+  servicePointOverrides: Record<string, number>;
+}
+
+export interface PublicLoyaltyProgram {
+  businessId: string;
+  programName: string;
+  isOwner: boolean;
+  isConfigured: boolean;
+  isEnabled: boolean;
+  pointsPerCurrency: number;
+  fixedPointsPerOrder: number;
+  earnOnProducts: boolean;
+  earnOnServices: boolean;
+  minSpend?: number | string | null;
+  isJoined: boolean;
+  memberCount: number;
+}
+
 export const useLoyaltyStats = (businessId?: string) =>
   useQuery<LoyaltyStats>({
     queryKey: ['loyalty', 'stats', businessId],
@@ -228,35 +260,6 @@ export const useDeleteLoyaltyRule = () => {
   });
 };
 
-export const useLoyaltySettings = (businessId?: string) =>
-  useQuery<LoyaltySettings>({
-    queryKey: ['loyalty', 'settings', businessId],
-    queryFn: async () => {
-      const { data } = await api.get(withBusiness('/loyalty/settings', businessId!));
-      return data;
-    },
-    enabled: !!businessId,
-  });
-
-export const useUpdateLoyaltySettings = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      businessId,
-      ...payload
-    }: { businessId: string } & Record<string, unknown>) => {
-      const { data } = await api.put(
-        withBusiness('/loyalty/settings', businessId),
-        payload
-      );
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loyalty', 'settings'] });
-    },
-  });
-};
-
 export const useAllocatePoints = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -277,6 +280,62 @@ export const useAllocatePoints = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loyalty'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+  });
+};
+
+export const useLoyaltyEarningConfig = (businessId?: string) =>
+  useQuery<LoyaltyEarningConfig>({
+    queryKey: ['loyalty', 'earning-config', businessId],
+    queryFn: async () => {
+      const { data } = await api.get(
+        withBusiness('/loyalty/earning-config', businessId!)
+      );
+      return data;
+    },
+    enabled: !!businessId,
+  });
+
+export const useUpdateLoyaltyEarningConfig = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      businessId,
+      ...payload
+    }: { businessId: string } & Partial<LoyaltyEarningConfig>) => {
+      const { data } = await api.put(
+        withBusiness('/loyalty/earning-config', businessId),
+        payload
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loyalty', 'earning-config'] });
+      queryClient.invalidateQueries({ queryKey: ['loyalty'] });
+    },
+  });
+};
+
+export const usePublicLoyaltyProgram = (businessId?: string, enabled = true) =>
+  useQuery<PublicLoyaltyProgram>({
+    queryKey: ['loyalty', 'public-program', businessId],
+    queryFn: async () => {
+      const { data } = await api.get(`/loyalty/public/program/${businessId}`);
+      return data;
+    },
+    enabled: !!businessId && enabled,
+  });
+
+export const useJoinLoyaltyProgram = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (businessId: string) => {
+      const { data } = await api.post('/loyalty/join', { businessId });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loyalty', 'public-program'] });
+      queryClient.invalidateQueries({ queryKey: ['loyalty'] });
     },
   });
 };

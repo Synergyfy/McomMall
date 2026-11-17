@@ -9,21 +9,13 @@ import {
   Sparkles,
   Smartphone,
   Eye,
-  Settings,
-  Mail,
-  Store,
-  MapPin,
   QrCode,
-  PartyPopper,
   Layers,
   Check,
   Gift,
   Ticket,
-  Percent,
-  Calendar,
   Rocket,
   Info,
-  BadgeAlert,
   ArrowLeftCircle,
   X
 } from 'lucide-react';
@@ -31,24 +23,7 @@ import { toast } from 'sonner';
 
 import { useAddVoucherProduct } from '@/service/hooks/useVoucherService';
 
-type StepType = 1 | 2 | 3 | 4;
-
-interface VoucherTypeItem {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  popular?: boolean;
-  colorClass: string;
-}
-
-interface ChannelItem {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  isGridLarge?: boolean;
-}
+type StepType = 1 | 2;
 
 export default function VoucherCreatorWizard() {
   const router = useRouter();
@@ -56,13 +31,13 @@ export default function VoucherCreatorWizard() {
   const [step, setStep] = useState<StepType>(1);
 
   // --- WIZARD FORM STATE ---
-  const [voucherType, setVoucherType] = useState('gift_voucher');
+  const [voucherType] = useState('gift_voucher');
   const [name, setName] = useState('');
   const [value, setValue] = useState(15);
   const [valueType, setValueType] = useState('percentage'); // 'percentage' | 'currency'
   const [expiryDate, setExpiryDate] = useState('');
   const [rules, setRules] = useState('');
-  const [distributionChannels, setDistributionChannels] = useState<string[]>(['storefront', 'email', 'qr']);
+  const [distributionChannels] = useState<string[]>(['storefront', 'email', 'qr']);
   
   // Preview view toggle (mobile vs poster)
   const [previewView, setPreviewView] = useState<'mobile' | 'poster'>('mobile');
@@ -90,94 +65,27 @@ export default function VoucherCreatorWizard() {
   };
 
   // --- LAYOUT DATA ---
-  const VOUCHER_TYPES: VoucherTypeItem[] = [
-    {
-      id: 'gift_voucher',
-      title: 'Gift Voucher',
-      description: 'Create pre-paid vouchers for gifting. Ideal for holidays, birthdays, and building upfront merchant capital with your core neighborhood community.',
-      icon: <Gift className="w-6 h-6" />,
-      popular: true,
-      colorClass: 'bg-primary-container text-on-primary-container'
-    },
-    {
-      id: 'discount_code',
-      title: 'Discount Voucher',
-      description: 'Set percentage or fixed-amount deductions for specific collections or store-wide sales to clear inventory or boost conversion rates.',
-      icon: <Percent className="w-6 h-6" />,
-      colorClass: 'bg-surface-variant text-primary'
-    },
-    {
-      id: 'qr_code',
-      title: 'QR Voucher',
-      description: 'Physical-to-digital bridge. Generate printable QR codes for in-store flyer campaigns and local neighborhood partnerships.',
-      icon: <QrCode className="w-6 h-6" />,
-      colorClass: 'bg-secondary-container text-on-secondary-container'
-    },
-    {
-      id: 'reward_code',
-      title: 'Reward Voucher',
-      description: 'Incentivize repeat behavior. Issue rewards for reviews, referrals, or social media mentions to build organic momentum.',
-      icon: <PartyPopper className="w-6 h-6" />,
-      colorClass: 'bg-tertiary-container text-on-tertiary-container'
-    },
-    {
-      id: 'membership_offer',
-      title: 'Membership Voucher',
-      description: 'Tiered exclusive access. Create recurring value for your top-tier customers with subscription-style benefits.',
-      icon: <Layers className="w-6 h-6" />,
-      colorClass: 'bg-inverse-surface text-inverse-on-surface'
-    }
-  ];
-
-  const DISTRIBUTION_CHANNELS: ChannelItem[] = [
-    {
-      id: 'storefront',
-      title: 'Storefront',
-      description: 'Direct listing on your merchant profile page for visiting customers.',
-      icon: <Store className="w-6 h-6" />
-    },
-    {
-      id: 'email',
-      title: 'Email',
-      description: 'Broadcast this voucher to your existing customer mailing list.',
-      icon: <Mail className="w-6 h-6" />
-    },
-    {
-      id: 'borough_campaign',
-      title: 'Borough Campaign',
-      description: 'Targeted promotion within specific neighborhood districts.',
-      icon: <MapPin className="w-6 h-6" />
-    },
-    {
-      id: 'qr',
-      title: 'QR Code',
-      description: 'Print-ready code for in-store physical placement.',
-      icon: <QrCode className="w-6 h-6" />,
-      isGridLarge: true
-    },
-    {
-      id: 'gamification',
-      title: 'Gamification',
-      description: 'Integrate into community challenges and mini-games.',
-      icon: <PartyPopper className="w-6 h-6" />,
-      isGridLarge: true
-    }
-  ];
 
   // Helper validation for steps
+  const isExpiryValid = !expiryDate || expiryDate >= todayISO;
+
   const isStepValid = (currentStep: number) => {
-    if (currentStep === 1) return !!voucherType;
-    if (currentStep === 2) return name.trim().length > 0 && value > 0;
-    if (currentStep === 3) return distributionChannels.length > 0;
+    if (currentStep === 1) {
+      return name.trim().length > 0 && value > 0 && isExpiryValid;
+    }
     return true;
   };
 
   const handleNext = () => {
     if (isStepValid(step)) {
       setStep((prev) => (prev + 1) as StepType);
+      return;
+    }
+
+    if (!isExpiryValid) {
+      toast.error('Expiry date cannot be in the past.');
     } else {
-      if (step === 2) toast.error('Please enter a voucher title and value.');
-      else if (step === 3) toast.error('Select at least one distribution channel.');
+      toast.error('Please enter a voucher title and value.');
     }
   };
 
@@ -185,19 +93,10 @@ export default function VoucherCreatorWizard() {
     setStep((prev) => (prev - 1) as StepType);
   };
 
-  // Toggle Channels
-  const handleToggleChannel = (channelId: string) => {
-    setDistributionChannels(prev => 
-      prev.includes(channelId) 
-        ? prev.filter(c => c !== channelId) 
-        : [...prev, channelId]
-    );
-  };
-
   // Launch Payload handler
   const handleLaunch = async () => {
-    if (expiryDate && expiryDate < todayISO) {
-      toast.error('Expiry date cannot be earlier than today.');
+    if (!isExpiryValid) {
+      toast.error('Expiry date cannot be in the past.');
       return;
     }
     setIsSubmitting(true);
@@ -243,7 +142,7 @@ export default function VoucherCreatorWizard() {
         </button>
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-black tracking-widest text-primary bg-[#ffdbcc] px-3 py-1 rounded-full uppercase">
-            Step {step} of 4
+            Step {step} of 2
           </span>
           <button 
             onClick={() => router.push('/dashboard/vouchers')}
@@ -258,81 +157,16 @@ export default function VoucherCreatorWizard() {
       <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-6">
         <div 
           className="h-full bg-primary transition-all duration-500 ease-out" 
-          style={{ width: `${(step / 4) * 100}%` }}
+          style={{ width: `${(step / 2) * 100}%` }}
         />
       </div>
 
       <AnimatePresence mode="wait">
         
-        {/* STEP 1: SELECT VOUCHER TYPE */}
+        {/* STEP 1: VOUCHER DETAILS FORM */}
         {step === 1 && (
           <motion.div
             key="step1"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-          >
-            <div className="text-center md:text-left">
-              <h2 className="text-2xl font-bold font-title-md">Select Voucher Type</h2>
-              <p className="text-xs text-gray-500 font-medium">Choose the voucher architecture that best fits your current campaign objectives.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-              {VOUCHER_TYPES.map((vt) => {
-                const isActive = voucherType === vt.id;
-                return (
-                  <div
-                    key={vt.id}
-                    onClick={() => setVoucherType(vt.id)}
-                    className={`group cursor-pointer rounded-2xl p-6 border transition-all duration-300 relative overflow-hidden ${
-                      vt.popular ? 'md:col-span-3' : 'md:col-span-2'
-                    } ${
-                      isActive 
-                        ? 'border-2 border-primary bg-[#fffaf0] shadow-md' 
-                        : 'border-slate-200 bg-white hover:shadow-md hover:border-orange-200'
-                    }`}
-                  >
-                    {vt.popular && (
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-primary-container/10 rounded-bl-full -mr-4 -mt-4" />
-                    )}
-                    <div className="relative z-10 flex flex-col h-full justify-between">
-                      <div>
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${vt.colorClass}`}>
-                          {vt.icon}
-                        </div>
-                        <h3 className="font-bold text-sm text-[#0b1c30] mb-1">{vt.title}</h3>
-                        <p className="text-[11px] text-[#5f5e5e] leading-relaxed mb-4">{vt.description}</p>
-                      </div>
-                      {vt.popular && (
-                        <div className="flex items-center gap-1.5 text-primary font-extrabold text-[10px] uppercase tracking-wide">
-                          <Sparkles size={12} />
-                          Popular Choice
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-end pt-4">
-              <button
-                onClick={handleNext}
-                disabled={!isStepValid(1)}
-                className="px-8 py-3.5 bg-primary text-white rounded-full font-bold text-xs flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-55"
-              >
-                Continue Setup
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 2: VOUCHER DETAILS FORM */}
-        {step === 2 && (
-          <motion.div
-            key="step2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -390,7 +224,15 @@ export default function VoucherCreatorWizard() {
                         value={expiryDate}
                         min={todayISO}
                         onClick={handleExpiryClick}
-                        onChange={(e) => setExpiryDate(e.target.value)}
+                        onChange={(e) => {
+                          const nextDate = e.target.value;
+                          if (nextDate && nextDate < todayISO) {
+                            toast.error('Expiry date cannot be in the past.');
+                            setExpiryDate(todayISO);
+                            return;
+                          }
+                          setExpiryDate(nextDate);
+                        }}
                         className="w-full bg-[#f8f9ff] border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-slate-800"
                       />
                     </div>
@@ -419,10 +261,10 @@ export default function VoucherCreatorWizard() {
                   <button
                     type="button"
                     onClick={handleNext}
-                    disabled={!isStepValid(2)}
+                    disabled={!isStepValid(1)}
                     className="px-8 py-3.5 bg-primary text-white rounded-full font-bold text-xs flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-55"
                   >
-                    Continue to Distribution
+                    Continue to Preview
                     <ArrowRight size={14} />
                   </button>
                 </div>
@@ -478,110 +320,10 @@ export default function VoucherCreatorWizard() {
           </motion.div>
         )}
 
-        {/* STEP 3: SELECT DISTRIBUTION CHANNELS */}
-        {step === 3 && (
+        {/* STEP 2: PREVIEW & ACTIVATE */}
+        {step === 2 && (
           <motion.div
-            key="step3"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-          >
-            <div>
-              <h2 className="text-2xl font-bold font-title-md">Distribution Channels</h2>
-              <p className="text-xs text-gray-500 font-medium">Configure where and how your vouchers will be visible to your community.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              {/* Primary Channels (Left Columns) */}
-              <div className="md:col-span-8 flex flex-col gap-4">
-                {DISTRIBUTION_CHANNELS.filter(ch => !ch.isGridLarge).map((ch) => {
-                  const isChecked = distributionChannels.includes(ch.id);
-                  return (
-                    <div
-                      key={ch.id}
-                      onClick={() => handleToggleChannel(ch.id)}
-                      className={`flex items-center p-5 rounded-2xl border cursor-pointer transition-all duration-200 ${
-                        isChecked 
-                          ? 'border-2 border-primary bg-[#fffaf0] shadow-sm'
-                          : 'border-slate-200 bg-white hover:shadow-md'
-                      }`}
-                    >
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-5 shrink-0 ${
-                        isChecked ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {ch.icon}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm text-[#0b1c30] mb-0.5">{ch.title}</h4>
-                        <p className="text-[11px] text-gray-400 font-medium leading-relaxed">{ch.description}</p>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        isChecked ? 'bg-primary border-primary' : 'border-slate-300'
-                      }`}>
-                        {isChecked && <Check size={12} className="text-white font-bold" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Contextual Channels (Right Columns) */}
-              <div className="md:col-span-4 flex flex-col gap-4">
-                {DISTRIBUTION_CHANNELS.filter(ch => ch.isGridLarge).map((ch) => {
-                  const isChecked = distributionChannels.includes(ch.id);
-                  return (
-                    <div
-                      key={ch.id}
-                      onClick={() => handleToggleChannel(ch.id)}
-                      className={`p-6 rounded-2xl border cursor-pointer text-center flex flex-col items-center justify-between flex-1 transition-all duration-200 ${
-                        isChecked 
-                          ? 'border-2 border-primary bg-[#fffaf0] shadow-sm'
-                          : 'border-slate-200 bg-white hover:shadow-md'
-                      }`}
-                    >
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${
-                        isChecked ? 'bg-primary text-white shadow-md' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {ch.icon}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-sm text-[#0b1c30] mb-1">{ch.title}</h4>
-                        <p className="text-[11px] text-gray-400 font-medium leading-relaxed mb-4">{ch.description}</p>
-                      </div>
-                      <div className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
-                        isChecked ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {isChecked ? 'Selected' : 'Activate'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Bottom Actions Bar */}
-            <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200 flex items-center justify-between max-w-md mx-auto shadow-lg pt-4 mt-8">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Strategy</span>
-                <span className="font-bold text-xs text-primary">{distributionChannels.length} Channels Active</span>
-              </div>
-              <button
-                onClick={handleNext}
-                disabled={!isStepValid(3)}
-                className="px-6 py-3.5 bg-primary text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-55"
-              >
-                Preview Voucher
-                <Eye size={14} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 4: PREVIEW & ACTIVATE */}
-        {step === 4 && (
-          <motion.div
-            key="step4"
+            key="step2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}

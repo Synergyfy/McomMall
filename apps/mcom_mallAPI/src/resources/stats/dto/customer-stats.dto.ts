@@ -20,14 +20,8 @@ export class CustomerStatsDto {
   totalNumberOfServiceBooked: number;
 
   @ApiProperty({
-    description: 'Total number of promotions the user is participating in',
-    example: 3,
-  })
-  totalNumberOfPromotionsParticipating: number;
-
-  @ApiProperty({
     description:
-      'Total number of points earned from participating in promotions',
+      'Total number of points earned',
     example: 5000,
   })
   totalNumberOfPointsEarned: number;

@@ -28,11 +28,4 @@ export class QueryTransactionHistoryDto {
   @IsString()
   @IsIn(['earn', 'spend'])
   type?: string;
-
-  @ApiPropertyOptional({
-    description: 'Filter by promotion ID',
-  })
-  @IsOptional()
-  @IsString()
-  promotion_id?: string;
 }

@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 import {
   ChevronDown,
   Bold,
@@ -12,7 +11,8 @@ import {
   Layers,
   HelpCircle,
   Package,
-  Download
+  Download,
+  ExternalLink,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -30,26 +30,25 @@ interface Step1Props {
   errors?: Record<string, string>;
 }
 
-const detectGender = (name: string): "male" | "female" | "unisex" | "none" => {
-  const lowerName = name.toLowerCase();
-  // Check female first because "women" contains "men"
-  if (/\b(women|woman|female|lady|ladies|girls|girl)\b/i.test(lowerName)) return 'female';
-  if (/\b(men|man|male|gent|gents|gentlemen|boys|boy)\b/i.test(lowerName)) return 'male';
-  if (/\b(unisex|kids|children)\b/i.test(lowerName)) return 'unisex';
-  return 'none';
-};
+const CENTRAL_BUSINESS_URL = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/dashboard/business-profile`;
+
+function ClassificationItem({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9c7349] dark:text-[#cba885]">
+        {label}
+      </span>
+      <span className="text-sm font-semibold text-[#1c140d] dark:text-white">
+        {value || '—'}
+      </span>
+    </div>
+  );
+}
 
 export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, errors }: Step1Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isHybridFlow = searchParams.get('hybridFlow') === 'true';
-  const { data: categories, isLoading: isLoadingCats } = useGetCategories();
-  // Products store the category name, while the API needs the taxonomy ID.
-  const resolvedCategoryId =
-    categories?.find(
-      c => c.id === formData.category || c.name === formData.category
-    )?.id || '';
-  const { data: subCategories, isLoading: isLoadingSubs } = useGetSubCategoriesByCategory(resolvedCategoryId);
 
   const isGenderRelated = React.useMemo(() => {
     if (!formData.categoryName && !formData.subCategoryName) return false;
@@ -66,41 +65,7 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
-    if (id === 'category') {
-      const cat = categories?.find(c => c.id === value);
-      const name = cat?.name || '';
-      const detected = detectGender(name);
-
-      const updates: any = {
-        category: value,
-        categoryName: name,
-        subCategory: '',
-        subCategoryName: ''
-      };
-
-      if (detected !== 'none') {
-        updates.gender = detected;
-      }
-
-      updateFormData(updates);
-    } else if (id === 'subCategory') {
-      const sub = subCategories?.find(s => s.id === value);
-      const name = sub?.name || '';
-      const detected = detectGender(name);
-
-      const updates: any = {
-        subCategory: value,
-        subCategoryName: name
-      };
-
-      if (detected !== 'none') {
-        updates.gender = detected;
-      }
-
-      updateFormData(updates);
-    } else {
-      updateFormData({ [id]: value });
-    }
+    updateFormData({ [id]: value });
   };
 
   return (
@@ -209,85 +174,50 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
               <p className="text-xs text-[#9c7349]">Keep it short and descriptive. Recommended length: 20-60 characters.</p>
             </div>
 
-            {/* Row: Category & Sub-Category */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="category">
-                  Category <span className="text-red-500">*</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Select the main category that best describes your product.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </label>
-                <div className="relative">
-                  <select
-                    className={`w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none disabled:opacity-50 ${errors?.category ? 'border-destructive ring-1 ring-destructive' : ''}`}
-                    id="category"
-                    value={formData.category || ''}
-                    onChange={handleChange}
-                    disabled={isLoadingCats}
-                    aria-invalid={!!errors?.category}
-                  >
-                    <option disabled value="">{isLoadingCats ? 'Loading categories...' : 'Select a category...'}</option>
-                    {categories?.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
-                    <ChevronDown className="w-5 h-5" />
-                  </div>
+            {/* Business classification (owned by MCOM Central Hub) */}
+            <div className="flex flex-col gap-4 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-[#f48c25]" />
+                  <p className="text-sm font-semibold text-[#1c140d] dark:text-white">
+                    Business classification
+                  </p>
                 </div>
-                <FieldError message={errors?.category} />
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[#9c7349] dark:text-[#cba885]">
+                  Managed by MCOM Central
+                </span>
               </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="subCategory">
-                  Sub-Category
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Select a sub-category to further refine your product listing.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border outline-none"
-                    id="subCategory"
-                    value={formData.subCategory || ''}
-                    onChange={handleChange}
-                    disabled={!formData.category || isLoadingSubs}
+              <p className="text-xs text-[#9c7349] dark:text-[#cba885]">
+                Sector, category and sub-category are taken from your business profile so
+                products stay consistent with MCOM Central.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f] bg-white dark:bg-[#2d241b] px-4 py-3">
+                <ClassificationItem label="Sector" value={formData.sectorName} />
+                <ClassificationItem
+                  label="Category"
+                  value={formData.categoryName || formData.category}
+                />
+                <ClassificationItem
+                  label="Sub-category"
+                  value={formData.subCategoryName || formData.subCategory}
+                />
+              </div>
+              {!formData.categoryName && !formData.category && (
+                <div className="flex flex-col gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <span>
+                    Your MCOM Central business profile needs a category before products can
+                    be published.
+                  </span>
+                  <a
+                    href={CENTRAL_BUSINESS_URL}
+                    className="inline-flex items-center gap-1 font-semibold text-amber-900 underline"
                   >
-                    <option disabled value="">
-                      {!formData.category
-                        ? 'Select a category first'
-                        : isLoadingSubs
-                          ? 'Loading sub-categories...'
-                          : 'Select sub-category...'}
-                    </option>
-                    {subCategories?.map((sub) => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
-                    <ChevronDown className="w-5 h-5" />
-                  </div>
+                    Update business profile in MCOM Central
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
-              </div>
+              )}
+              <FieldError message={errors?.category} />
             </div>
 
             {/* Row: Brand & Gender */}

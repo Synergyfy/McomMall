@@ -54,6 +54,16 @@ const fetchApplicableOffers = async (
   return data;
 };
 
+// Fetch the public active rewards for a business
+const fetchPublicBusinessOffers = async (
+  businessId: string
+): Promise<Offer[]> => {
+  const { data } = await api.get<Offer[]>(
+    `/offer/public/business/${businessId}`
+  );
+  return data;
+};
+
 // Apply an offer
 const applyOffer = async (
   applyOfferData: ApplyOfferRequest
@@ -71,6 +81,14 @@ export const useGetOffers = () => {
   return useQuery<Offer[], Error>({
     queryKey: ['offers'],
     queryFn: fetchOffers,
+  });
+};
+
+export const useGetPublicBusinessOffers = (businessId?: string) => {
+  return useQuery<Offer[], Error>({
+    queryKey: ['offers', 'public', 'business', businessId],
+    queryFn: () => fetchPublicBusinessOffers(businessId as string),
+    enabled: !!businessId,
   });
 };
 
@@ -122,6 +140,58 @@ export const useDeleteOffer = () => {
   return useMutation<void, Error, string>({
     mutationFn: deleteOffer,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+    },
+  });
+};
+
+export interface PublicTimeBonus {
+  id: string;
+  isOwner: boolean;
+  name: string;
+  description: string;
+  bonusPoints: number;
+  endDate?: string | null;
+  limitPerCustomer: number;
+  allowLimitToReset: boolean;
+  claims: number;
+  lastClaimedAt?: string | null;
+  canClaim: boolean;
+}
+
+const fetchPublicTimeBonuses = async (
+  businessId: string
+): Promise<PublicTimeBonus[]> => {
+  const { data } = await api.get<PublicTimeBonus[]>(
+    `/offer/public/time-bonuses/business/${businessId}`
+  );
+  return data;
+};
+
+export const useGetPublicTimeBonuses = (businessId?: string) => {
+  return useQuery<PublicTimeBonus[], Error>({
+    queryKey: ['offers', 'public', 'time-bonuses', businessId],
+    queryFn: () => fetchPublicTimeBonuses(businessId as string),
+    enabled: !!businessId,
+  });
+};
+
+export const useActivateTimeBonus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (offerId: string) => {
+      const { data } = await api.post(`/offer/time-bonus/${offerId}/activate`);
+      return data as {
+        offerId: string;
+        pointsAwarded: number;
+        claims: number;
+        canClaim: boolean;
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['offers', 'public', 'time-bonuses'],
+      });
       queryClient.invalidateQueries({ queryKey: ['offers'] });
     },
   });

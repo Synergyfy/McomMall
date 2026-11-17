@@ -32,30 +32,38 @@ export const HighStreetScreen: FC<HighStreetScreenProps> = ({
   mallData,
   boroughName,
 }) => {
-  const points = mallData?.pointsBalance ?? 2400;
+  const points = mallData?.pointsBalance ?? 0;
   const activeBusinessesCount = mallData?.businesses?.length ?? 0;
+  const mallName = mallData?.mallName || `${boroughName} High Street`;
 
   return (
     <div className="flex flex-col gap-6">
       {/* Ecosystem Title */}
       <div>
-        <h2 className="text-xl font-black text-gray-900 tracking-tight">{boroughName} High Street</h2>
+        <h2 className="text-xl font-black text-gray-900 tracking-tight">{mallName}</h2>
         <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-          Manage your high street footprint, monitor consumer footprints, and explore neighbor profiles.
+          {mallData?.highStreet
+            ? `${mallData.highStreet}, ${boroughName}. `
+            : ''}
+          Manage your local mall footprint and explore neighbouring businesses.
         </p>
       </div>
 
       {/* Stats Summary cards */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
-          <p className="text-[10px] font-bold text-gray-400 uppercase">Ecosystem Reach</p>
-          <p className="text-2xl font-black text-orange-600 mt-1">4.8k views</p>
-          <span className="text-[9px] font-semibold text-gray-400 mt-0.5">Last 30 days active</span>
+          <p className="text-[10px] font-bold text-gray-400 uppercase">Assigned Customers</p>
+          <p className="text-2xl font-black text-orange-600 mt-1">
+            {(mallData?.consumerCount ?? 0).toLocaleString()}
+          </p>
+          <span className="text-[9px] font-semibold text-gray-400 mt-0.5">In your local mall</span>
         </div>
         <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
-          <p className="text-[10px] font-bold text-gray-400 uppercase">Total Points Distributed</p>
-          <p className="text-2xl font-black text-amber-600 mt-1">{points.toLocaleString()}</p>
-          <span className="text-[9px] font-semibold text-gray-400 mt-0.5">Mall loyalty pool</span>
+          <p className="text-[10px] font-bold text-gray-400 uppercase">Active Businesses</p>
+          <p className="text-2xl font-black text-amber-600 mt-1">{activeBusinessesCount}</p>
+          <span className="text-[9px] font-semibold text-gray-400 mt-0.5">
+            Your ecosystem points: {points.toLocaleString()}
+          </span>
         </div>
       </div>
 
@@ -100,23 +108,42 @@ export const MapScreen: FC<MapScreenProps> = ({
 }) => {
   const [postcode, setPostcode] = useState('');
   useEffect(() => {
-    setPostcode(localStorage.getItem('businessPostcode') || 'SE10');
-  }, []);
+    setPostcode(mallData?.postcode || localStorage.getItem('businessPostcode') || '');
+  }, [mallData?.postcode]);
+
+  const latitude = mallData?.latitude;
+  const longitude = mallData?.longitude;
+  const mapQuery =
+    typeof latitude === 'number' && typeof longitude === 'number'
+      ? `${latitude},${longitude}`
+      : mallData?.postcode || postcode;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-black text-gray-900 tracking-tight">{boroughName} Live Map</h2>
-        <p className="text-xs text-gray-400 mt-1">Real-time coordinates of nearby local businesses.</p>
+        <h2 className="text-xl font-black text-gray-900 tracking-tight">
+          {mallData?.mallName || `${boroughName} Live Map`}
+        </h2>
+        <p className="text-xs text-gray-400 mt-1">
+          {mallData?.highStreet
+            ? `Centred on ${mallData.highStreet}.`
+            : 'Local mall map view.'}
+        </p>
       </div>
 
       <div className="w-full h-80 rounded-3xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-150">
-        <iframe
-          title="Interactive Map View"
-          src={`https://maps.google.com/maps?q=${encodeURIComponent(postcode)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-          className="w-full h-full border-0 absolute inset-0 filter grayscale-[5%] contrast-[95%]"
-          loading="lazy"
-        />
+        {mapQuery ? (
+          <iframe
+            title="Interactive Map View"
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+            className="w-full h-full border-0 absolute inset-0 filter grayscale-[5%] contrast-[95%]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-gray-400">
+            No location available for this local mall yet.
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
@@ -215,23 +242,43 @@ export const ClusterScreen: FC<ClusterScreenProps> = ({
 interface BoroughFeedScreenProps {
   onNavigate: (screen: string) => void;
   boroughName: string;
+  mallData: any;
 }
 
 export const BoroughFeedScreen: FC<BoroughFeedScreenProps> = ({
-  onNavigate,
   boroughName,
+  mallData,
 }) => {
+  const campaigns = mallData?.activeCampaigns || [];
+  const deals = mallData?.nearbyDeals || [];
+  const mallName = mallData?.mallName || `${boroughName} Feed`;
+
   const feedPosts = [
-    { id: '1', author: 'Greenwich Bakery', text: 'Co-promotion deal active this weekend! Earn double points on all bread purchases.', likes: 12, date: '2 hrs ago', category: 'Promotion' },
-    { id: '2', author: 'Borough Admin', text: 'Join our local High Street Webinar next Tuesday. Learn featured placement tips.', likes: 24, date: '1 day ago', category: 'Notice' },
-    { id: '3', author: 'FitStudio Greenwich', text: 'New yoga slots available for local businesses staff! 15% discount for verified merchants.', likes: 8, date: '2 days ago', category: 'Collab' },
+    ...campaigns.map((campaign: any, index: number) => ({
+      id: `campaign-${campaign.id || index}`,
+      author: campaign.title || 'Local campaign',
+      text: `Campaign live in ${mallName}. Budget: ${Number(
+        campaign.budget || 0,
+      ).toLocaleString()}. Expires in ${campaign.expires}.`,
+      date: `Expires in ${campaign.expires}`,
+      category: 'Campaign',
+    })),
+    ...deals.map((deal: any, index: number) => ({
+      id: `deal-${index}`,
+      author: deal.business,
+      text: `${deal.deal} — earn ${deal.points} points. Offer expires in ${deal.expires}.`,
+      date: `Expires in ${deal.expires}`,
+      category: 'Offer',
+    })),
   ];
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-black text-gray-900 tracking-tight">{boroughName} Feed</h2>
-        <p className="text-xs text-gray-400 mt-1">Local announcements, cross-promotion offers, and community discussions.</p>
+        <h2 className="text-xl font-black text-gray-900 tracking-tight">{mallName}</h2>
+        <p className="text-xs text-gray-400 mt-1">
+          Live campaigns and offers from businesses in your local mall.
+        </p>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -252,20 +299,15 @@ export const BoroughFeedScreen: FC<BoroughFeedScreenProps> = ({
               </span>
             </div>
 
-            <p className="text-xs text-gray-600 leading-relaxed">
-              {post.text}
-            </p>
-
-            <div className="flex items-center gap-4 border-t border-gray-50 pt-2 text-gray-400">
-              <button className="flex items-center gap-1 hover:text-orange-500 transition-colors text-[10px] font-bold">
-                <ThumbsUp className="w-3.5 h-3.5" /> {post.likes} Likes
-              </button>
-              <button className="flex items-center gap-1 hover:text-orange-500 transition-colors text-[10px] font-bold">
-                <Share2 className="w-3.5 h-3.5" /> Share
-              </button>
-            </div>
+            <p className="text-xs text-gray-600 leading-relaxed">{post.text}</p>
           </div>
         ))}
+
+        {feedPosts.length === 0 && (
+          <p className="text-xs text-gray-400 text-center py-8">
+            No live campaigns or offers in {mallName} yet.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -283,26 +325,29 @@ export const RankingsScreen: FC<RankingsScreenProps> = ({
 }) => {
   const businesses = mallData?.businesses || [];
 
-  // Sort businesses by verified and claimed status to create growth score ranking
-  const sortedRankings = [...businesses].map((b, idx) => ({
-    ...b,
-    growthScore: 95 - idx * 4,
-    pointsDistributed: 1800 - idx * 120,
-  })).sort((a, b) => b.growthScore - a.growthScore);
+  // Verified businesses first, then alphabetical. Only real attributes are
+  // shown — no synthetic growth/reach scores.
+  const sortedRankings = [...businesses].sort((a, b) => {
+    if (a.isVerified !== b.isVerified) return a.isVerified ? -1 : 1;
+    return (a.businessName || '').localeCompare(b.businessName || '');
+  });
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-black text-gray-900 tracking-tight">High Street Rankings</h2>
-        <p className="text-xs text-gray-400 mt-1">Leaderboard of local businesses sorted by verification, campaign reach, and community contributions.</p>
+        <h2 className="text-xl font-black text-gray-900 tracking-tight">
+          {mallData?.mallName || 'Local Mall'} Businesses
+        </h2>
+        <p className="text-xs text-gray-400 mt-1">
+          Businesses assigned to your local mall in MCOM Central.
+        </p>
       </div>
 
       <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
         <div className="p-4 bg-gray-50 border-b border-gray-100 grid grid-cols-12 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-          <span className="col-span-2 text-center">Rank</span>
-          <span className="col-span-5">Merchant</span>
-          <span className="col-span-3 text-right">Points Pool</span>
-          <span className="col-span-2 text-right">Reach %</span>
+          <span className="col-span-2 text-center">#</span>
+          <span className="col-span-6">Merchant</span>
+          <span className="col-span-4 text-right">Status</span>
         </div>
 
         <div className="divide-y divide-gray-100">
@@ -312,7 +357,6 @@ export const RankingsScreen: FC<RankingsScreenProps> = ({
               onClick={() => onNavigate(`profile:${b.id}`)}
               className="p-4 grid grid-cols-12 items-center hover:bg-gray-50 transition-colors cursor-pointer text-xs font-semibold"
             >
-              {/* Rank */}
               <div className="col-span-2 flex justify-center">
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${
                   idx === 0 
@@ -327,10 +371,9 @@ export const RankingsScreen: FC<RankingsScreenProps> = ({
                 </span>
               </div>
 
-              {/* Merchant */}
-              <div className="col-span-5 flex items-center gap-2.5 truncate">
+              <div className="col-span-6 flex items-center gap-2.5 truncate">
                 <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center font-bold text-sm shrink-0 border border-orange-100">
-                  {b.businessName.charAt(0)}
+                  {(b.businessName || '?').charAt(0)}
                 </div>
                 <div className="truncate">
                   <p className="font-bold text-gray-900 truncate leading-snug">{b.businessName}</p>
@@ -338,21 +381,21 @@ export const RankingsScreen: FC<RankingsScreenProps> = ({
                 </div>
               </div>
 
-              {/* Points Pool */}
-              <div className="col-span-3 text-right text-gray-900 font-bold tabular-nums">
-                {b.pointsDistributed.toLocaleString()} pts
-              </div>
-
-              {/* Reach Score */}
-              <div className="col-span-2 text-right text-orange-600 font-black tracking-tight">
-                {b.growthScore}%
+              <div className="col-span-4 text-right">
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                  b.isVerified
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {b.isVerified ? 'Verified' : 'Listed'}
+                </span>
               </div>
             </div>
           ))}
 
           {sortedRankings.length === 0 && (
             <p className="text-xs text-gray-400 text-center py-8">
-              No merchant rankings currently compiled.
+              No businesses are assigned to this local mall yet.
             </p>
           )}
         </div>

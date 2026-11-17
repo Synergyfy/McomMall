@@ -54,6 +54,16 @@ const fetchApplicableOffers = async (
   return data;
 };
 
+// Fetch the public active rewards for a business
+const fetchPublicBusinessOffers = async (
+  businessId: string
+): Promise<Offer[]> => {
+  const { data } = await api.get<Offer[]>(
+    `/offer/public/business/${businessId}`
+  );
+  return data;
+};
+
 // Apply an offer
 const applyOffer = async (
   applyOfferData: ApplyOfferRequest
@@ -71,6 +81,14 @@ export const useGetOffers = () => {
   return useQuery<Offer[], Error>({
     queryKey: ['offers'],
     queryFn: fetchOffers,
+  });
+};
+
+export const useGetPublicBusinessOffers = (businessId?: string) => {
+  return useQuery<Offer[], Error>({
+    queryKey: ['offers', 'public', 'business', businessId],
+    queryFn: () => fetchPublicBusinessOffers(businessId as string),
+    enabled: !!businessId,
   });
 };
 

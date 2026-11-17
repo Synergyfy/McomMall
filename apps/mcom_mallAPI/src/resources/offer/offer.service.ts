@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -13,10 +14,15 @@ import { Business } from '../listings/entities/listing.entity';
 import { User } from '../users/entities/user.entity';
 import { TransactionService } from '../transaction/transaction.service';
 import { ApplyOfferDto } from './dto/apply-offer.dto';
-import { RewardCouponType, OfferScope } from './offer.enum';
+import { RewardCouponType } from './offer.enum';
 import { Transaction } from '../transaction/entities/transaction.entity';
-import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
 import { ActivitiesService } from '../activities/activities.service';
+import { TimeBonusEnrollment } from './entities/time-bonus-enrollment.entity';
+import {
+  PointTransaction,
+  PointTransactionSource,
+  PointTransactionType,
+} from '../transaction/entities/point-transaction.entity';
 @Injectable()
 export class OfferService {
   constructor(
@@ -28,9 +34,11 @@ export class OfferService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(TimeBonusEnrollment)
+    private readonly timeBonusEnrollmentRepository: Repository<TimeBonusEnrollment>,
+    @InjectRepository(PointTransaction)
+    private readonly pointTransactionRepository: Repository<PointTransaction>,
     private readonly transactionService: TransactionService,
-    @InjectRepository(PromotionParticipant)
-    private readonly promotionParticipantRepository: Repository<PromotionParticipant>,
     private readonly activitiesService: ActivitiesService,
   ) {}
 
@@ -39,27 +47,8 @@ export class OfferService {
       includedProductIds,
       excludedProductIds,
       freeProductId,
-      businessIds,
-      offerScope,
       ...rest
     } = createOfferDto;
-
-    let businesses: Business[] = [];
-    if (offerScope === OfferScope.SPECIFIC_LISTINGS) {
-      if (!businessIds || businessIds.length === 0) {
-        throw new BadRequestException(
-          'Business IDs are required for specific listings scope',
-        );
-      }
-      businesses = await this.businessRepository.find({
-        where: { id: In(businessIds), user: { id: user.id } },
-      });
-      if (businesses.length !== businessIds.length) {
-        throw new NotFoundException(
-          'One or more businesses not found or do not belong to the user',
-        );
-      }
-    }
 
     const includedProducts = includedProductIds
       ? await this.productRepository.findBy({ id: In(includedProductIds) })
@@ -87,9 +76,7 @@ export class OfferService {
 
     const offer = this.offerRepository.create({
       ...rest,
-      offerScope,
       user,
-      businesses,
       includedProducts,
       excludedProducts,
       freeProduct,
@@ -108,20 +95,48 @@ export class OfferService {
   findAll(userId: string): Promise<Offer[]> {
     return this.offerRepository.find({
       where: { user: { id: userId } },
-      relations: ['businesses'],
     });
+  }
+
+  countForUser(userId: string): Promise<number> {
+    return this.offerRepository.count({
+      where: { user: { id: userId } },
+    });
+  }
+
+  /**
+   * Public-facing list of active rewards for a listing. Offers belong to the
+   * merchant, so they are resolved through the listing owner.
+   */
+  async findActiveForBusiness(businessId: string): Promise<Offer[]> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
+    });
+    const ownerId = business?.user?.id;
+    if (!ownerId) {
+      return [];
+    }
+
+    const now = new Date();
+    const offers = await this.offerRepository.find({
+      where: { isActive: true, user: { id: ownerId } },
+      relations: ['freeProduct'],
+      order: { created_at: 'DESC' },
+    });
+
+    return offers.filter(
+      (offer) =>
+        !offer.isTimeBonus &&
+        (!offer.beginDate || new Date(offer.beginDate) <= now) &&
+        (!offer.endDate || new Date(offer.endDate) >= now),
+    );
   }
 
   async findOne(userId: string, id: string): Promise<Offer> {
     const offer = await this.offerRepository.findOne({
       where: { id, user: { id: userId } },
-      relations: [
-        'user',
-        'businesses',
-        'includedProducts',
-        'excludedProducts',
-        'freeProduct',
-      ],
+      relations: ['user', 'includedProducts', 'excludedProducts', 'freeProduct'],
     });
     if (!offer) {
       throw new NotFoundException(`Offer with ID "${id}" not found`);
@@ -136,7 +151,6 @@ export class OfferService {
   ): Promise<Offer> {
     const {
       freeProductId,
-      businessIds,
       includedProductIds,
       excludedProductIds,
       ...rest
@@ -146,7 +160,6 @@ export class OfferService {
       where: { id, user: { id: user.id } },
       relations: [
         'user',
-        'businesses',
         'includedProducts',
         'excludedProducts',
         'freeProduct',
@@ -157,33 +170,6 @@ export class OfferService {
     }
 
     Object.assign(offer, rest);
-
-    if (updateOfferDto.offerScope) {
-      offer.offerScope = updateOfferDto.offerScope;
-    }
-
-    if (offer.offerScope === OfferScope.SPECIFIC_LISTINGS) {
-      if (businessIds) {
-        if (businessIds.length > 0) {
-          const businesses = await this.businessRepository.find({
-            where: { id: In(businessIds), user: { id: user.id } },
-          });
-          if (businesses.length !== businessIds.length) {
-            throw new NotFoundException(
-              'One or more businesses not found or do not belong to the user',
-            );
-          }
-          offer.businesses = businesses;
-        } else {
-          offer.businesses = [];
-        }
-      }
-    } else if (
-      offer.offerScope === OfferScope.ALL_LISTINGS ||
-      offer.offerScope === OfferScope.SPECIFIC_PRODUCTS
-    ) {
-      offer.businesses = [];
-    }
 
     if (includedProductIds) {
       if (includedProductIds.length > 0) {
@@ -230,6 +216,149 @@ export class OfferService {
     return savedOffer;
   }
 
+  private timeBonusCanClaim(
+    offer: Offer,
+    enrollment?: TimeBonusEnrollment | null,
+  ): boolean {
+    const limit = offer.limitPerCustomer ?? 1;
+    const claims = enrollment?.claims ?? 0;
+    if (claims < limit) return true;
+    if (!offer.allowLimitToReset) return false;
+    if (!enrollment?.lastClaimedAt) return true;
+    return (
+      Date.now() - new Date(enrollment.lastClaimedAt).getTime() >=
+      24 * 60 * 60 * 1000
+    );
+  }
+
+  async findPublicTimeBonuses(businessId: string, userId?: string) {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
+    });
+    const ownerId = business?.user?.id;
+    if (!ownerId) return [];
+
+    const now = new Date();
+    const bonuses = await this.offerRepository.find({
+      where: { isActive: true, isTimeBonus: true, user: { id: ownerId } },
+      order: { created_at: 'DESC' },
+    });
+
+    const active = bonuses.filter(
+      (offer) =>
+        (!offer.beginDate || new Date(offer.beginDate) <= now) &&
+        (!offer.endDate || new Date(offer.endDate) >= now),
+    );
+
+    const enrollments = userId
+      ? await this.timeBonusEnrollmentRepository.find({
+          where: {
+            userId,
+            offerId: In(active.map((offer) => offer.id)),
+          },
+        })
+      : [];
+    const enrollmentByOffer = new Map(
+      enrollments.map((enrollment) => [enrollment.offerId, enrollment]),
+    );
+
+    const isOwner = !!userId && ownerId === userId;
+
+    return active.map((offer) => {
+      const enrollment = enrollmentByOffer.get(offer.id);
+      return {
+        id: offer.id,
+        isOwner,
+        name: offer.name,
+        description: offer.description ?? '',
+        bonusPoints: offer.bonusPoints ?? 0,
+        endDate: offer.endDate,
+        limitPerCustomer: offer.limitPerCustomer ?? 1,
+        allowLimitToReset: offer.allowLimitToReset ?? false,
+        claims: enrollment?.claims ?? 0,
+        lastClaimedAt: enrollment?.lastClaimedAt ?? null,
+        canClaim: this.timeBonusCanClaim(offer, enrollment),
+      };
+    });
+  }
+
+  async activateTimeBonus(userId: string, offerId: string) {
+    const offer = await this.offerRepository.findOne({
+      where: { id: offerId },
+      relations: ['user'],
+    });
+    if (!offer || !offer.isTimeBonus) {
+      throw new NotFoundException('Time bonus not found');
+    }
+    if (offer.user?.id === userId) {
+      throw new ForbiddenException(
+        'You cannot activate a time bonus from your own business.',
+      );
+    }
+    if (!offer.isActive) {
+      throw new BadRequestException('This time bonus is not active');
+    }
+    if (offer.beginDate && new Date(offer.beginDate) > new Date()) {
+      throw new BadRequestException('This time bonus has not started yet');
+    }
+    if (offer.endDate && new Date(offer.endDate) < new Date()) {
+      throw new BadRequestException('This time bonus has expired');
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    let enrollment = await this.timeBonusEnrollmentRepository.findOne({
+      where: { offerId, userId },
+    });
+    if (!this.timeBonusCanClaim(offer, enrollment)) {
+      throw new BadRequestException(
+        'You have already claimed this time bonus.',
+      );
+    }
+
+    if (!enrollment) {
+      enrollment = this.timeBonusEnrollmentRepository.create({
+        offerId,
+        userId,
+        claims: 0,
+      });
+    }
+
+    const points = offer.bonusPoints ?? 0;
+    if (points > 0) {
+      const business = await this.businessRepository.findOne({
+        where: { user: { id: offer.user?.id } },
+      });
+      user.points = (user.points ?? 0) + points;
+      await this.userRepository.save(user);
+      await this.pointTransactionRepository.save(
+        this.pointTransactionRepository.create({
+          user,
+          points,
+          type: PointTransactionType.EARNED,
+          businessId: business?.id,
+          reason: `Time bonus: ${offer.name}`,
+          source: PointTransactionSource.RULE,
+        }),
+      );
+    }
+
+    enrollment.claims = (enrollment.claims ?? 0) + 1;
+    enrollment.lastClaimedAt = new Date();
+    await this.timeBonusEnrollmentRepository.save(enrollment);
+
+    return {
+      offerId: offer.id,
+      pointsAwarded: points,
+      claims: enrollment.claims,
+      canClaim: this.timeBonusCanClaim(offer, enrollment),
+    };
+  }
+
   async remove(userId: string, id: string): Promise<void> {
     const offer = await this.findOne(userId, id);
     await this.offerRepository.remove(offer);
@@ -253,7 +382,6 @@ export class OfferService {
         'includedProducts',
         'excludedProducts',
         'user',
-        'businesses',
         'freeProduct',
       ],
     });
@@ -277,33 +405,20 @@ export class OfferService {
     if (!offer.user) {
       throw new BadRequestException('Offer creator not found');
     }
-    const creatorId = offer.user.id;
-
-    const userParticipations = await this.promotionParticipantRepository.find({
-      where: { user: { id: userId } },
-      relations: [
-        'promotion',
-        'promotion.businesses',
-        'promotion.businesses.user',
-      ],
-    });
-
-    const pointsByCreator = new Map<string, number>();
-    for (const p of userParticipations) {
-      if (p.promotion.businesses && p.promotion.businesses.length > 0) {
-        const creator = p.promotion.businesses[0].user;
-        if (creator) {
-          const currentPoints = pointsByCreator.get(creator.id) || 0;
-          pointsByCreator.set(creator.id, currentPoints + p.pointsEarned);
-        }
-      }
+    if (offer.user.id === userId) {
+      throw new ForbiddenException(
+        'You cannot redeem an offer from your own business.',
+      );
     }
 
-    const creatorSpecificPoints = pointsByCreator.get(creatorId) || 0;
+    const customer = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    const availablePoints = customer?.points || 0;
 
-    if (creatorSpecificPoints < offer.points) {
+    if (availablePoints < offer.points) {
       throw new BadRequestException(
-        'Insufficient points from this creator to redeem this offer.',
+        'Insufficient points to redeem this offer.',
       );
     }
 
@@ -314,18 +429,6 @@ export class OfferService {
 
     if (products.length !== productIds.length) {
       throw new NotFoundException('One or more products not found');
-    }
-
-    if (offer.offerScope === OfferScope.SPECIFIC_LISTINGS) {
-      const offerBusinessIds = offer.businesses.map((b) => b.id);
-      const productsAreInScope = products.every(
-        (p) => p.business && offerBusinessIds.includes(p.business.id),
-      );
-      if (!productsAreInScope) {
-        throw new BadRequestException(
-          'This offer is not applicable to the businesses of the products in the cart.',
-        );
-      }
     }
 
     const applicableProducts = products.filter((product) => {

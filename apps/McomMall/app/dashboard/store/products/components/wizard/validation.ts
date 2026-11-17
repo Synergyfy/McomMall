@@ -69,7 +69,8 @@ export function validateProductStep(step: number, formData: any): ProductFormErr
         errors.productName = 'Product name must be at least 3 characters';
       }
       if (isBlank(formData?.category)) {
-        errors.category = 'Please select a category';
+        errors.category =
+          'Your MCOM Central business profile needs a category before you can publish products';
       }
       break;
     }

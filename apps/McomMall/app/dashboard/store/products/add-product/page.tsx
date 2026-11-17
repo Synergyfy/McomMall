@@ -19,7 +19,7 @@ import Step8Finalize from '../components/wizard/Step8Finalize';
 import { ProductStatusModal } from '../components/wizard/lib/ProductStatusModal';
 import { useAuth } from '@/service/auth/hook';
 import { useGetUserListings } from '@/service/listings/hook';
-import { pickCentralBusiness } from '@/lib/central-business';
+import { getBusinessTaxonomy, pickCentralBusiness } from '@/lib/central-business';
 import { useAddProduct } from '@/service/store/products/hook';
 import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
 import { parseApiError, scrollToFirstError, toSerializable } from '@/lib/form-validation';
@@ -54,6 +54,8 @@ export default function AddProductPage() {
   const [formData, setFormData] = useState({
     productName: '',
     plusItem: null as any,
+    sector: '',
+    sectorName: '',
     category: '',
     categoryName: '',
     subCategory: '',
@@ -127,15 +129,57 @@ export default function AddProductPage() {
 
   useEffect(() => {
     // Listings are owned by MCOM Central Hub and each user has exactly one.
-    // Attach new products to that business automatically instead of asking.
+    // Attach new products to that business and inherit its classification
+    // instead of asking the merchant to pick sector/category themselves.
     const business = pickCentralBusiness(userListings?.data);
-    if (business && formData.businessId !== business.id) {
-      updateFormData({
-        businessId: business.id,
-        businessName: business.businessName,
-      });
+    if (!business) return;
+
+    const taxonomy = getBusinessTaxonomy(business as any);
+    const next: Record<string, unknown> = {};
+
+    if (formData.businessId !== business.id) {
+      next.businessId = business.id;
+      next.businessName = business.businessName;
     }
-  }, [userListings, formData.businessId]);
+
+    const sectorValue = taxonomy.sectorId || taxonomy.sectorName;
+    if (sectorValue && (formData.sector !== sectorValue || formData.sectorName !== taxonomy.sectorName)) {
+      next.sector = sectorValue;
+      next.sectorName = taxonomy.sectorName;
+    }
+
+    const categoryValue = taxonomy.categoryId || taxonomy.categoryName;
+    if (
+      categoryValue &&
+      (formData.category !== categoryValue || formData.categoryName !== taxonomy.categoryName)
+    ) {
+      next.category = categoryValue;
+      next.categoryName = taxonomy.categoryName;
+    }
+
+    const subCategoryValue = taxonomy.subCategoryId || taxonomy.subCategoryName;
+    if (
+      subCategoryValue &&
+      (formData.subCategory !== subCategoryValue ||
+        formData.subCategoryName !== taxonomy.subCategoryName)
+    ) {
+      next.subCategory = subCategoryValue;
+      next.subCategoryName = taxonomy.subCategoryName;
+    }
+
+    if (Object.keys(next).length > 0) {
+      updateFormData(next);
+    }
+  }, [
+    userListings,
+    formData.businessId,
+    formData.sector,
+    formData.sectorName,
+    formData.category,
+    formData.categoryName,
+    formData.subCategory,
+    formData.subCategoryName,
+  ]);
 
   // Scroll to top of the dashboard main content container on step changes
   useEffect(() => {

@@ -87,19 +87,25 @@ export const DiscoverScreen: FC<DiscoverScreenProps> = ({
 interface BusinessProfileScreenProps {
   onNavigate: (screen: string) => void;
   businessId: string;
+  mallData?: any;
 }
 
 export const BusinessProfileScreen: FC<BusinessProfileScreenProps> = ({
   onNavigate,
   businessId,
+  mallData,
 }) => {
-  const [business, setBusiness] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const fromMall = mallData?.businesses?.find(
+    (b: any) => b.id === businessId,
+  );
+  const [business, setBusiness] = useState<any>(fromMall || null);
+  const [loading, setLoading] = useState(!fromMall);
 
   useEffect(() => {
+    if (fromMall) return;
     const fetchBusiness = async () => {
       try {
-        const res = await api.get(`businesses/${businessId}`);
+        const res = await api.get(`listings/${businessId}`);
         if (res.data) {
           setBusiness(res.data);
         }
@@ -110,6 +116,7 @@ export const BusinessProfileScreen: FC<BusinessProfileScreenProps> = ({
       }
     };
     fetchBusiness();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId]);
 
   if (loading) {
@@ -142,12 +149,19 @@ export const BusinessProfileScreen: FC<BusinessProfileScreenProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">{business.category?.name || 'Merchant'}</span>
+              <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">
+                {business.category?.name || business.category || 'Merchant'}
+              </span>
               <StatusBadge isVerified={business.isVerified} isClaimed={business.isClaimed} />
             </div>
             <h2 className="text-xl font-black text-gray-900 leading-tight mt-1">{business.businessName}</h2>
             <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 shrink-0" /> {business.location?.addressLine1 || 'High Street, Greenwich'}
+              <MapPin className="w-3.5 h-3.5 shrink-0" />{' '}
+              {business.location?.addressLine1 ||
+                business.address ||
+                mallData?.highStreet ||
+                mallData?.mallName ||
+                'Local mall'}
             </p>
           </div>
         </div>
@@ -287,7 +301,9 @@ export const CommunityScreen: FC<CommunityScreenProps> = ({
             <div key={b.id} className="p-3.5 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-gray-900">{b.businessName}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{b.address || 'Greenwich Area'}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {b.address || mallData?.highStreet || mallData?.mallName}
+                </p>
               </div>
               <button 
                 onClick={() => onNavigate('status')}
@@ -312,53 +328,93 @@ export const CommunityScreen: FC<CommunityScreenProps> = ({
 // ─── INTEREST SIGNALS SCREEN ─────────────────────────────────────────────────
 interface InterestScreenProps {
   onNavigate: (screen: string) => void;
+  mallData?: any;
+  businessName?: string;
 }
 
 export const InterestScreen: FC<InterestScreenProps> = ({
-  onNavigate,
+  mallData,
+  businessName,
 }) => {
+  const myBusiness = mallData?.businesses?.find(
+    (b: any) => b.businessName === businessName,
+  );
+  const [metrics, setMetrics] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!myBusiness?.id) return;
+    const fetchMetrics = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`interest-signals/${myBusiness.id}`);
+        setMetrics(res.data);
+      } catch (err) {
+        console.error('Error fetching interest signals:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMetrics();
+  }, [myBusiness?.id]);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-xl font-black text-gray-900 tracking-tight">Interest Signals</h2>
-        <p className="text-xs text-gray-400 mt-1">Real-time local consumer engagement and page activity tracker.</p>
+        <p className="text-xs text-gray-400 mt-1">
+          Consumer engagement recorded for your business in {mallData?.mallName || 'your local mall'}.
+        </p>
       </div>
 
-      {/* Summary grid */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { icon: Eye, label: 'Profile Views', val: '1,280', color: 'text-blue-600' },
-          { icon: Bookmark, label: 'Bookmarks', val: '246', color: 'text-purple-600' },
-          { icon: TrendingUp, label: 'Interaction %', val: '8.4%', color: 'text-emerald-600' },
-        ].map((item, idx) => (
-          <div key={idx} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-center">
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-2 text-gray-400">
-              <item.icon className="w-4 h-4" />
-            </div>
-            <p className={`text-xl font-black ${item.color}`}>{item.val}</p>
-            <p className="text-[9px] font-bold text-gray-400 uppercase mt-0.5">{item.label}</p>
+      {!myBusiness ? (
+        <p className="text-xs text-gray-400 text-center py-8">
+          Your business is not listed in this local mall yet.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: Eye, label: 'Total Signals', val: metrics?.totalVotes ?? 0, color: 'text-blue-600' },
+              { icon: Bookmark, label: 'Goal Progress', val: `${metrics?.progressPercent ?? 0}%`, color: 'text-purple-600' },
+              { icon: TrendingUp, label: 'Sentiment', val: `${metrics?.sentimentScore ?? 0}%`, color: 'text-emerald-600' },
+            ].map((item, idx) => (
+              <div key={idx} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-center">
+                <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-2 text-gray-400">
+                  <item.icon className="w-4 h-4" />
+                </div>
+                <p className={`text-xl font-black ${item.color}`}>
+                  {loading ? '—' : item.val}
+                </p>
+                <p className="text-[9px] font-bold text-gray-400 uppercase mt-0.5">{item.label}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Traffic Charts Mock/Stylised representation */}
-      <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
-        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Traffic Weekly Trend</h3>
-        
-        <div className="h-32 flex items-end gap-3 px-2 pt-2 border-b border-gray-150">
-          {[40, 60, 45, 90, 75, 110, 85].map((height, idx) => (
-            <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-              <div 
-                className="w-full bg-gradient-to-t from-orange-500 to-amber-500 rounded-t-lg transition-all duration-500 hover:opacity-85" 
-                style={{ height: `${height}%` }}
-              />
-              <span className="text-[9px] font-bold text-gray-400 uppercase">
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'][idx]}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+          <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
+              Top Signal Categories
+            </h3>
+            {(metrics?.topCategories || []).length === 0 ? (
+              <p className="text-xs text-gray-400">
+                No interest signals have been submitted yet.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {metrics.topCategories.map((category: any) => (
+                  <div
+                    key={category.category}
+                    className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs"
+                  >
+                    <span className="font-semibold text-gray-700">{category.category}</span>
+                    <span className="font-bold text-gray-900">{category.votes}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

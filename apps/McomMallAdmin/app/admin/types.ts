@@ -273,7 +273,6 @@ export interface Partnership {
     endDate?: string;
     status: 'active' | 'inactive' | 'expired';
     plaqueIds: string[];
-    promotionIds: string[];
     notes?: string;
 }
 

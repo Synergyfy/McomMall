@@ -42,7 +42,6 @@ const OFFER_TYPES = [
 const EVENT_TYPES = [
   { id: 'workshops', label: 'Workshops', icon: BookOpen },
   { id: 'live', label: 'Live Events', icon: Calendar },
-  { id: 'promotions', label: 'Promotions', icon: Tag },
   { id: 'expo', label: 'Expo Events', icon: Layers },
 ];
 

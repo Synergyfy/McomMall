@@ -13,7 +13,7 @@ export default function NotificationSettingsPage() {
   const { data: profile, isLoading } = useGetUserProfile();
   const { mutateAsync: updateProfile } = useUpdateUserProfile();
 
-  const handleToggle = async (field: 'giftCard' | 'voucher' | 'promotion' | 'coupons', currentValue: boolean) => {
+  const handleToggle = async (field: 'giftCard' | 'voucher' | 'coupons', currentValue: boolean) => {
     if (!profile) return;
     
     // Optimistic toast/update
@@ -50,13 +50,6 @@ export default function NotificationSettingsPage() {
       description: 'Get notified when vouchers are active, sold, or successfully redeemed.',
       icon: Ticket,
       value: !!profile?.voucher,
-    },
-    {
-      key: 'promotion' as const,
-      title: 'Marketing Promotions',
-      description: 'Receive emails about ongoing campaign events, boroughs, and high street placements.',
-      icon: Gift,
-      value: !!profile?.promotion,
     },
     {
       key: 'coupons' as const,

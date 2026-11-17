@@ -21,6 +21,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import api from '@/service/api';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { uploadFile } from '@/lib/upload';
 
 // ─── HUB PARTICIPATION SCREEN ────────────────────────────────────────────────
@@ -33,7 +34,7 @@ export const HubParticipationScreen: FC<HubParticipationScreenProps> = ({
   onNavigate,
   mallData,
 }) => {
-  const points = mallData?.pointsBalance ?? 2400;
+  const points = mallData?.pointsBalance ?? 0;
 
   const tiers = [
     { title: 'Bronze Member', minPoints: 0, benefits: ['Standard listing display', 'Basic analytics'], active: points >= 0 && points < 2500 },
@@ -132,9 +133,12 @@ export const IdVerificationScreen: FC<IdVerificationScreenProps> = ({
 
     const fetchProfile = async () => {
       try {
-        const res = await api.get('businesses/my-profile');
-        if (res.data) {
-          setProfile(res.data);
+        const res = await api.get('listings/mine', {
+          params: { page: 1, limit: 10 },
+        });
+        const business = pickCentralBusiness<any>(res.data?.data);
+        if (business) {
+          setProfile(business);
         }
       } catch (err) {
         console.error('Error fetching business profile:', err);
@@ -396,7 +400,10 @@ export const AccountManagerSupportScreen: FC<AccountManagerSupportScreenProps> =
       <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex flex-col gap-4">
         <div>
           <h2 className="text-xl font-black text-gray-900 tracking-tight">Ecosystem Helpline</h2>
-          <p className="text-xs text-gray-400 mt-1">Connect with your dedicated {boroughName} Support Manager.</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Connect with your dedicated Support Manager
+            {boroughName ? ` for ${boroughName}` : ''}.
+          </p>
         </div>
 
         <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
@@ -406,7 +413,9 @@ export const AccountManagerSupportScreen: FC<AccountManagerSupportScreenProps> =
             </div>
             <div>
               <p className="text-xs font-bold text-gray-900">District Account Manager</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">Assigned to Greenwich zone</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                Assigned to {boroughName || 'your local mall'}
+              </p>
             </div>
           </div>
           <div className="flex gap-2">

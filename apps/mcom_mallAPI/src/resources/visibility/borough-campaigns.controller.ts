@@ -1,6 +1,5 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { BoroughCampaignsService } from './borough-campaigns.service';
-import { ParticipateCampaignDto } from './dto/participate-campaign.dto';
 
 @Controller('borough-campaigns')
 export class BoroughCampaignsController {
@@ -9,13 +8,5 @@ export class BoroughCampaignsController {
   @Get()
   findAll() {
     return this.campaignsService.findAll();
-  }
-
-  @Post(':id/participate')
-  participate(
-    @Param('id') id: string,
-    @Body() participateDto: ParticipateCampaignDto,
-  ) {
-    return this.campaignsService.participate(id, participateDto.businessId);
   }
 }

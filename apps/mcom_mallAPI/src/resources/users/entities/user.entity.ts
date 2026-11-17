@@ -9,14 +9,12 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Promotion } from '../../promotion/entities/promotion.entity';
 import { AdminRole } from '../../admin-roles/entities/admin-role.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Offer } from '../../offer/entities/offer.entity';
 import { UserRole } from '../../../common/role.enum';
 import { Business } from '../../listings/entities/listing.entity';
 import { Coupon } from '../../coupon/entities/coupon.entity';
-import { PromotionParticipant } from '../../promotion/entities/promotion-participant.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { Social } from './social.entity';
 import { Transaction } from '../../transaction/entities/transaction.entity';
@@ -99,12 +97,6 @@ export class User extends AbstractBaseEntity {
   // @OneToMany(() => CouponProduct, (couponProduct) => couponProduct.user)
   // couponProducts: CouponProduct[];
 
-  @OneToMany(
-    () => PromotionParticipant,
-    (promotionParticipant) => promotionParticipant.user,
-  )
-  promotionParticipations: PromotionParticipant[];
-
   @OneToMany(() => Review, (review) => review.user)
   reviews: Review[];
 
@@ -113,9 +105,6 @@ export class User extends AbstractBaseEntity {
 
   @OneToMany(() => Transaction, (transaction) => transaction.user)
   transactions: Transaction[];
-
-  @OneToMany(() => Promotion, (promotion) => promotion.user)
-  promotions: Promotion[];
 
   @Column({ type: 'int', default: 0 })
   points: number;
@@ -155,9 +144,6 @@ export class User extends AbstractBaseEntity {
 
   @Column({ default: true })
   voucher: boolean;
-
-  @Column({ default: true })
-  promotion: boolean;
 
   @Column({ nullable: true })
   lastLogin: Date;

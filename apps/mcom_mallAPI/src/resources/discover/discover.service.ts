@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
 import { BusinessStatus } from '../listings/listing.enum';
 import { Event } from '../events/entities/event.entity';
-import { Promotion } from '../promotion/entities/promotion.entity';
+import { Offer } from '../offer/entities/offer.entity';
 import { BoroughCampaignsService } from '../visibility/borough-campaigns.service';
 import { HighStreetService } from '../visibility/high-street.service';
 import { MembershipService } from '../membership/membership.service';
@@ -23,8 +23,8 @@ export class DiscoverService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Event)
     private readonly eventRepository: Repository<Event>,
-    @InjectRepository(Promotion)
-    private readonly promotionRepository: Repository<Promotion>,
+    @InjectRepository(Offer)
+    private readonly offerRepository: Repository<Offer>,
     private readonly boroughCampaignsService: BoroughCampaignsService,
     private readonly highStreetService: HighStreetService,
     private readonly membershipService: MembershipService,
@@ -54,16 +54,14 @@ export class DiscoverService {
   }
 
   async getHomeFeed(userId: string | undefined, query: any) {
-    const [businesses, promotions, events, rewards] = await Promise.all([
+    const [businesses, events, rewards] = await Promise.all([
       this.getBusinesses(userId, { ...query, tab: 'nearby', limit: 10 }),
-      this.getPromotions(userId, { ...query, limit: 5 }),
       this.getEvents(userId, { ...query, tab: 'upcoming', limit: 4 }),
       this.getRewards(userId, { ...query, tab: 'available', limit: 5 }),
     ]);
 
     return {
       businesses: businesses.items || businesses,
-      promotions: promotions.items || promotions,
       events: events.items || events,
       rewards: rewards.items || rewards,
     };
@@ -265,37 +263,6 @@ export class DiscoverService {
     };
   }
 
-  async getPromotions(userId: string | undefined, query: any) {
-    const { limit = 5 } = query;
-
-    const promotions = await this.promotionRepository
-      .createQueryBuilder('promotion')
-      .leftJoinAndSelect('promotion.businesses', 'businesses')
-      .where('promotion.isActive = :isActive', { isActive: true })
-      .andWhere(
-        '(promotion.beginDate IS NULL OR promotion.beginDate <= :now)',
-        { now: new Date() },
-      )
-      .andWhere(
-        '(promotion.endDate IS NULL OR promotion.endDate >= :now)',
-        { now: new Date() },
-      )
-      .orderBy('promotion.created_at', 'DESC')
-      .take(limit)
-      .getMany();
-
-    return {
-      items: promotions,
-      meta: {
-        totalItems: promotions.length,
-        itemCount: promotions.length,
-        itemsPerPage: limit,
-        totalPages: 1,
-        currentPage: 1,
-      },
-    };
-  }
-
   async getRewards(userId: string | undefined, query: any) {
     const { tab = 'available', page = 1, limit = 10 } = query;
 
@@ -369,19 +336,40 @@ export class DiscoverService {
       }
 
       // available
-      const promotions = await this.promotionRepository
-        .createQueryBuilder('promotion')
-        .leftJoinAndSelect('promotion.businesses', 'businesses')
-        .where('promotion.isActive = :isActive', { isActive: true })
-        .andWhere('promotion.endDate >= :now', { now: new Date() })
-        .take(limit)
-        .getMany();
+      const now = new Date();
+      const offers = await this.offerRepository.find({
+        where: { isActive: true },
+        relations: ['user', 'user.businesses'],
+        order: { created_at: 'DESC' },
+        take: limit,
+      });
+
+      const availableOffers = offers
+        .filter(
+          (offer) =>
+            (!offer.beginDate || new Date(offer.beginDate) <= now) &&
+            (!offer.endDate || new Date(offer.endDate) >= now),
+        )
+        .map((offer) => ({
+          id: offer.id,
+          title: offer.name,
+          brand: (offer.user?.businesses ?? [])[0]?.businessName ?? 'MCOM Partner',
+          description: offer.description ?? '',
+          cost: offer.points,
+          expiryText: offer.endDate
+            ? `Ends ${new Date(offer.endDate).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+              })}`
+            : 'No expiry',
+          rewardType: offer.rewardCouponType,
+        }));
 
       return {
-        items: promotions,
+        items: availableOffers,
         meta: {
-          totalItems: promotions.length,
-          itemCount: promotions.length,
+          totalItems: availableOffers.length,
+          itemCount: availableOffers.length,
           itemsPerPage: limit,
           totalPages: 1,
           currentPage: page,

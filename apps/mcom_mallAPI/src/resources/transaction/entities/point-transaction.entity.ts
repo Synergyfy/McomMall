@@ -3,7 +3,6 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Offer } from '../../offer/entities/offer.entity';
 import { Order } from '../../order/entities/order.entity';
-import { Promotion } from '../../promotion/entities/promotion.entity';
 import { Business } from '../../listings/entities/listing.entity';
 
 export enum PointTransactionType {
@@ -13,7 +12,6 @@ export enum PointTransactionType {
 
 export enum PointTransactionSource {
   MANUAL = 'manual',
-  PROMOTION = 'promotion',
   ORDER = 'order',
   BOOKING = 'booking',
   RULE = 'rule',
@@ -36,9 +34,6 @@ export class PointTransaction extends AbstractBaseEntity {
 
   @ManyToOne(() => Order, { nullable: true })
   order?: Order;
-
-  @ManyToOne(() => Promotion, { nullable: true })
-  promotion?: Promotion;
 
   /**
    * Business that issued (or received) the points. Required to scope loyalty
@@ -63,4 +58,11 @@ export class PointTransaction extends AbstractBaseEntity {
 
   @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
   expiresAt?: Date | null;
+
+  /** Used for idempotent awarding, e.g. `order` + order id / `booking` + id. */
+  @Column({ name: 'reference_type', type: 'varchar', length: 32, nullable: true })
+  referenceType?: string | null;
+
+  @Column({ name: 'reference_id', type: 'uuid', nullable: true })
+  referenceId?: string | null;
 }

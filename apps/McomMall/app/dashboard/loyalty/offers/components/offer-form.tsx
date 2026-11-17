@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   FileText,
   Tag,
+  ShieldCheck,
   HelpCircle,
   ArrowRight,
   ChevronsUpDown,
@@ -34,6 +35,12 @@ import {
   CommandItem,
 } from '@/components/ui/command';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -42,12 +49,8 @@ import { cn } from '@/lib/utils';
 import { useGetMyProducts } from '@/service/store/products/hook';
 import { Product } from '@/service/store/products/types';
 import { CreateOfferDto, UpdateOfferDto } from '@/service/offers/types';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useGetUserListings } from '@/service/listings/hook';
-import { pickCentralBusiness } from '@/lib/central-business';
-import { InHouseBusiness, UserListing } from '@/service/listings/types';
 
-interface FormData {
+export interface OfferFormValues {
   name: string;
   description: string;
   points: string;
@@ -72,8 +75,6 @@ interface FormData {
   allowLimitToReset: boolean;
   includedProductIds: string[];
   excludedProductIds: string[];
-  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS';
-  businessIds: string[];
 }
 
 interface FormErrors {
@@ -84,32 +85,146 @@ interface FormErrors {
   discountPercentage?: string;
   freeProductId?: string;
   bonusPoints?: string;
-  businessIds?: string;
-  includedProductIds?: string;
 }
 
 interface OfferFormProps {
-  initialData?: Partial<FormData>;
+  initialData?: Partial<OfferFormValues>;
   onSubmit: (data: CreateOfferDto | UpdateOfferDto) => Promise<void>;
   isPending: boolean;
   submitButtonText: string;
+  /** Optional live-state callback, useful for previews. */
+  onChange?: (data: OfferFormValues) => void;
 }
+
+const inputClassName =
+  'h-11 rounded-xl border-[#e7d9d1] bg-white text-sm text-gray-900 shadow-none placeholder:text-gray-400 focus-visible:border-orange-400 focus-visible:ring-2 focus-visible:ring-orange-100';
+
+/* -------------------------------------------------------------------------- */
+/*                              Small UI helpers                              */
+/* -------------------------------------------------------------------------- */
+
+function FieldLabel({
+  htmlFor,
+  children,
+  hint,
+  required,
+}: {
+  htmlFor?: string;
+  children: React.ReactNode;
+  hint: string;
+  required?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Label
+        htmlFor={htmlFor}
+        className="text-sm font-semibold text-gray-700"
+      >
+        {children}
+        {required && <span className="ml-0.5 text-orange-600">*</span>}
+      </Label>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Help: ${typeof children === 'string' ? children : 'field'}`}
+            className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-orange-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          className="max-w-64 px-3 py-2 text-xs leading-relaxed font-medium"
+        >
+          {hint}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs font-medium text-red-600">{message}</p>;
+}
+
+function SectionHeader({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#a14000] ring-1 ring-orange-100">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <p className="mt-0.5 text-xs text-gray-500">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function SwitchField({
+  id,
+  label,
+  description,
+  hint,
+  checked,
+  onCheckedChange,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  hint: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-[#ece4de] bg-[#fdfbfa] p-4 transition-colors hover:border-orange-200">
+      <div className="min-w-0">
+        <FieldLabel htmlFor={id} hint={hint}>
+          {label}
+        </FieldLabel>
+        <p className="mt-1 text-xs leading-relaxed text-gray-500">
+          {description}
+        </p>
+      </div>
+      <Switch
+        id={id}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        className="mt-1 shrink-0"
+      />
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                   Form                                     */
+/* -------------------------------------------------------------------------- */
 
 export default function OfferForm({
   initialData,
   onSubmit,
   isPending,
   submitButtonText,
+  onChange,
 }: OfferFormProps) {
   const todayStart = startOfDay(new Date());
   const { data: products, isLoading: isLoadingProducts } = useGetMyProducts();
-  const { data: listings } = useGetUserListings();
   const [openIncludedProducts, setOpenIncludedProducts] =
     React.useState(false);
   const [openExcludedProducts, setOpenExcludedProducts] =
     React.useState(false);
 
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<OfferFormValues>({
     name: '',
     description: '',
     points: '',
@@ -129,26 +244,19 @@ export default function OfferForm({
     allowLimitToReset: false,
     includedProductIds: [],
     excludedProductIds: [],
-    offerScope: 'ALL_LISTINGS',
-    businessIds: [],
     ...initialData,
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const businessName = pickCentralBusiness(listings?.data)?.businessName;
 
-  // A merchant only has their single MCOM Central business, so specific
-  // listing offers always target that business.
+  // Keep the latest callback without re-triggering the effect on every render.
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
-    const business = pickCentralBusiness(listings?.data);
-    if (
-      business &&
-      formData.offerScope === 'SPECIFIC_LISTINGS' &&
-      (formData.businessIds.length !== 1 || formData.businessIds[0] !== business.id)
-    ) {
-      setFormData(prev => ({ ...prev, businessIds: [business.id] }));
-    }
-  }, [listings, formData.offerScope, formData.businessIds]);
+    onChangeRef.current = onChange;
+  });
+  useEffect(() => {
+    onChangeRef.current?.(formData);
+  }, [formData]);
 
   const includedProductsOptions = useMemo(() => {
     if (!products) return [];
@@ -167,11 +275,11 @@ export default function OfferForm({
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = <T extends keyof FormData>(name: T, value: FormData[T]) => {
+  const handleSelectChange = <T extends keyof OfferFormValues>(name: T, value: OfferFormValues[T]) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSwitchChange = (name: keyof FormData, checked: boolean) => {
+  const handleSwitchChange = (name: keyof OfferFormValues, checked: boolean) => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
@@ -214,19 +322,6 @@ export default function OfferForm({
     ) {
       newErrors.bonusPoints = 'Bonus points must be a positive integer.';
     }
-    if (
-      formData.offerScope === 'SPECIFIC_LISTINGS' &&
-      formData.businessIds.length === 0
-    ) {
-      newErrors.businessIds = 'At least one business must be selected.';
-    }
-    if (
-      formData.offerScope === 'SPECIFIC_PRODUCTS' &&
-      formData.includedProductIds.length === 0
-    ) {
-      newErrors.includedProductIds =
-        'At least one product must be selected.';
-    }
     return newErrors;
   };
 
@@ -247,16 +342,24 @@ export default function OfferForm({
           | 'PERCENTAGE_DISCOUNT'
           | 'FREE_PRODUCTS'
           | 'BONUS_POINTS',
-        discountAmount: formData.discountAmount
-          ? parseFloat(formData.discountAmount)
-          : undefined,
-        discountPercentage: formData.discountPercentage
-          ? parseFloat(formData.discountPercentage)
-          : undefined,
-        freeProductId: formData.freeProductId || undefined,
-        bonusPoints: formData.bonusPoints
-          ? parseInt(formData.bonusPoints, 10)
-          : undefined,
+        discountAmount:
+          formData.rewardCouponType === 'FIXED_CART_DISCOUNT' &&
+          formData.discountAmount
+            ? parseFloat(formData.discountAmount)
+            : undefined,
+        discountPercentage:
+          formData.rewardCouponType === 'PERCENTAGE_DISCOUNT' &&
+          formData.discountPercentage
+            ? parseFloat(formData.discountPercentage)
+            : undefined,
+        freeProductId:
+          formData.rewardCouponType === 'FREE_PRODUCTS'
+            ? formData.freeProductId || undefined
+            : undefined,
+        bonusPoints:
+          formData.rewardCouponType === 'BONUS_POINTS' && formData.bonusPoints
+            ? parseInt(formData.bonusPoints, 10)
+            : undefined,
         limitUsageToXProducts: formData.limitUsageToXProducts
           ? parseInt(formData.limitUsageToXProducts, 10)
           : undefined,
@@ -272,8 +375,6 @@ export default function OfferForm({
         allowLimitToReset: formData.allowLimitToReset,
         includedProductIds: formData.includedProductIds,
         excludedProductIds: formData.excludedProductIds,
-        offerScope: formData.offerScope,
-        businessIds: formData.businessIds,
       };
       await onSubmit(dataToSubmit);
     } else {
@@ -282,7 +383,7 @@ export default function OfferForm({
   };
 
   const handleMultiSelectChange = (
-    field: 'includedProductIds' | 'excludedProductIds' | 'businessIds',
+    field: 'includedProductIds' | 'excludedProductIds',
     id: string
   ) => {
     setFormData(prev => {
@@ -295,500 +396,534 @@ export default function OfferForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold text-gray-700 flex items-center">
-            <FileText className="h-6 w-6 mr-3 text-gray-500" />
-            Offer Details
-          </h2>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-2">
-            <Label htmlFor="offerScope">Offer Scope</Label>
-            <RadioGroup
-              value={formData.offerScope}
-              onValueChange={
-                (value: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS') =>
-                  handleSelectChange('offerScope', value)
-              }
-              className="flex space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="ALL_LISTINGS" id="all-listings" />
-                <Label htmlFor="all-listings">All Listings</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem
-                  value="SPECIFIC_LISTINGS"
-                  id="specific-listings"
+    <TooltipProvider delayDuration={150}>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* ---------------------------------------------------------------- */}
+        {/* Offer details                                                    */}
+        {/* ---------------------------------------------------------------- */}
+        <Card className="gap-0 overflow-hidden rounded-2xl border-[#efe3dc] bg-white py-0 shadow-[0_2px_10px_rgba(31,27,24,0.04)]">
+          <CardHeader className="border-b border-[#f6ece6] px-5 py-5 sm:px-6">
+            <SectionHeader
+              icon={<FileText className="h-5 w-5" />}
+              title="Offer Details"
+              description="The basics customers will see on this reward."
+            />
+          </CardHeader>
+          <CardContent className="space-y-5 px-5 py-6 sm:px-6">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="name" required hint="Customer-facing title shown on the reward card, e.g. “20% Off Summer Collection”.">
+                  Offer Name
+                </FieldLabel>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="e.g., 20% Off Summer Collection"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className={inputClassName}
                 />
-                <Label htmlFor="specific-listings">Specific Listings</Label>
+                <FieldError message={errors.name} />
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem
-                  value="SPECIFIC_PRODUCTS"
-                  id="specific-products"
+
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="points" required hint="How many loyalty points a customer must spend to redeem this reward.">
+                  Points Required
+                </FieldLabel>
+                <Input
+                  id="points"
+                  name="points"
+                  type="number"
+                  min={1}
+                  placeholder="e.g., 500"
+                  value={formData.points}
+                  onChange={handleInputChange}
+                  className={inputClassName}
                 />
-                <Label htmlFor="specific-products">Specific Products</Label>
+                <FieldError message={errors.points} />
               </div>
-            </RadioGroup>
-          </div>
-          {formData.offerScope === 'SPECIFIC_LISTINGS' && (
-            <div className="grid gap-2">
-              <Label>Business</Label>
-              <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-gray-700">
-                {businessName || 'Your MCOM Central business'}
-              </div>
-              <p className="text-xs text-gray-500">
-                This offer applies to your business registered on MCOM Central Hub.
-              </p>
             </div>
-          )}
-          <div className="grid gap-2">
-            <Label htmlFor="name">Offer Name</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-            />
-            {errors.name && (
-              <p className="text-base text-red-600 mt-1">{errors.name}</p>
-            )}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              placeholder="Description (optional)"
-              value={formData.description}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="points">Points</Label>
-            <Input
-              id="points"
-              name="points"
-              type="number"
-              value={formData.points}
-              onChange={handleInputChange}
-            />
-            {errors.points && (
-              <p className="text-base text-red-600 mt-1">{errors.points}</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold text-gray-700 flex items-center">
-            <Tag className="h-6 w-6 mr-3 text-gray-500" />
-            Offer Rules
-          </h2>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="rewardCouponType">Reward Coupon Type</Label>
-              <Select
-                name="rewardCouponType"
-                value={formData.rewardCouponType}
-                onValueChange={value =>
-                  handleSelectChange('rewardCouponType', value as typeof formData.rewardCouponType)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="FIXED_CART_DISCOUNT">
-                    Fixed Cart Discount
-                  </SelectItem>
-                  <SelectItem value="PERCENTAGE_DISCOUNT">
-                    Percentage Discount
-                  </SelectItem>
-                  <SelectItem value="FREE_PRODUCTS">Free Products</SelectItem>
-                  <SelectItem value="BONUS_POINTS">Bonus Points</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.rewardCouponType && (
-                <p className="text-base text-red-600 mt-1">
-                  {errors.rewardCouponType}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {formData.rewardCouponType === 'FIXED_CART_DISCOUNT' && (
-            <div className="grid gap-2">
-              <Label htmlFor="discountAmount">Discount Amount</Label>
-              <Input
-                id="discountAmount"
-                name="discountAmount"
-                type="number"
-                value={formData.discountAmount}
+            <div className="grid gap-2.5">
+              <FieldLabel htmlFor="description" hint="A short, appealing explanation of what customers get and why it is worth redeeming.">
+                Description
+              </FieldLabel>
+              <Textarea
+                id="description"
+                name="description"
+                rows={3}
+                placeholder="Tell your customers what they get and why it’s special…"
+                value={formData.description}
                 onChange={handleInputChange}
+                className="min-h-[96px] resize-none rounded-xl border-[#e7d9d1] bg-white text-sm text-gray-900 shadow-none placeholder:text-gray-400 focus-visible:border-orange-400 focus-visible:ring-2 focus-visible:ring-orange-100"
               />
-              {errors.discountAmount && (
-                <p className="text-base text-red-600 mt-1">
-                  {errors.discountAmount}
-                </p>
-              )}
             </div>
-          )}
+          </CardContent>
+        </Card>
 
-          {formData.rewardCouponType === 'PERCENTAGE_DISCOUNT' && (
-            <div className="grid gap-2">
-              <Label htmlFor="discountPercentage">Discount Percentage</Label>
-              <Input
-                id="discountPercentage"
-                name="discountPercentage"
-                type="number"
-                value={formData.discountPercentage}
-                onChange={handleInputChange}
-              />
-              {errors.discountPercentage && (
-                <p className="text-base text-red-600 mt-1">
-                  {errors.discountPercentage}
-                </p>
-              )}
-            </div>
-          )}
-
-          {formData.rewardCouponType === 'FREE_PRODUCTS' && (
-            <div className="grid gap-2">
-              <Label htmlFor="freeProductId">Free Product</Label>
-              <Select
-                name="freeProductId"
-                value={formData.freeProductId}
-                onValueChange={value =>
-                  handleSelectChange('freeProductId', value as string)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingProducts ? (
-                    <SelectItem value="loading" disabled>
-                      Loading...
+        {/* ---------------------------------------------------------------- */}
+        {/* Reward configuration                                             */}
+        {/* ---------------------------------------------------------------- */}
+        <Card className="gap-0 overflow-hidden rounded-2xl border-[#efe3dc] bg-white py-0 shadow-[0_2px_10px_rgba(31,27,24,0.04)]">
+          <CardHeader className="border-b border-[#f6ece6] px-5 py-5 sm:px-6">
+            <SectionHeader
+              icon={<Tag className="h-5 w-5" />}
+              title="Reward Configuration"
+              description="Define what the customer receives when they redeem."
+            />
+          </CardHeader>
+          <CardContent className="space-y-5 px-5 py-6 sm:px-6">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="rewardCouponType" required hint="What the customer receives after redeeming: a fixed cart discount, a percentage discount, free products or bonus points.">
+                  Reward Coupon Type
+                </FieldLabel>
+                <Select
+                  name="rewardCouponType"
+                  value={formData.rewardCouponType}
+                  onValueChange={value =>
+                    handleSelectChange('rewardCouponType', value as OfferFormValues['rewardCouponType'])
+                  }
+                >
+                  <SelectTrigger id="rewardCouponType" className="h-11 w-full rounded-xl border-[#e7d9d1] bg-white text-sm shadow-none focus-visible:ring-2 focus-visible:ring-orange-100">
+                    <SelectValue placeholder="Select a type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FIXED_CART_DISCOUNT">
+                      Fixed Cart Discount
                     </SelectItem>
-                  ) : (
-                    products?.map(product => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.title}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {errors.freeProductId && (
-                <p className="text-base text-red-600 mt-1">
-                  {errors.freeProductId}
-                </p>
+                    <SelectItem value="PERCENTAGE_DISCOUNT">
+                      Percentage Discount
+                    </SelectItem>
+                    <SelectItem value="FREE_PRODUCTS">Free Products</SelectItem>
+                    <SelectItem value="BONUS_POINTS">Bonus Points</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FieldError message={errors.rewardCouponType} />
+              </div>
+
+              {formData.rewardCouponType === 'FIXED_CART_DISCOUNT' && (
+                <div className="grid gap-2.5">
+                  <FieldLabel htmlFor="discountAmount" required hint="The amount taken off the cart total, in your store currency.">
+                    Discount Amount
+                  </FieldLabel>
+                  <Input
+                    id="discountAmount"
+                    name="discountAmount"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="e.g., 10.00"
+                    value={formData.discountAmount}
+                    onChange={handleInputChange}
+                    className={inputClassName}
+                  />
+                  <FieldError message={errors.discountAmount} />
+                </div>
+              )}
+
+              {formData.rewardCouponType === 'PERCENTAGE_DISCOUNT' && (
+                <div className="grid gap-2.5">
+                  <FieldLabel htmlFor="discountPercentage" required hint="The percentage taken off eligible items. Enter a value between 1 and 100.">
+                    Discount Percentage (%)
+                  </FieldLabel>
+                  <Input
+                    id="discountPercentage"
+                    name="discountPercentage"
+                    type="number"
+                    min={1}
+                    max={100}
+                    placeholder="e.g., 20"
+                    value={formData.discountPercentage}
+                    onChange={handleInputChange}
+                    className={inputClassName}
+                  />
+                  <FieldError message={errors.discountPercentage} />
+                </div>
+              )}
+
+              {formData.rewardCouponType === 'FREE_PRODUCTS' && (
+                <div className="grid gap-2.5">
+                  <FieldLabel htmlFor="freeProductId" required hint="The product a customer receives for free when they redeem this reward.">
+                    Free Product
+                  </FieldLabel>
+                  <Select
+                    name="freeProductId"
+                    value={formData.freeProductId}
+                    onValueChange={value =>
+                      handleSelectChange('freeProductId', value as string)
+                    }
+                  >
+                    <SelectTrigger id="freeProductId" className="h-11 w-full rounded-xl border-[#e7d9d1] bg-white text-sm shadow-none focus-visible:ring-2 focus-visible:ring-orange-100">
+                      <SelectValue placeholder="Select a product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {isLoadingProducts ? (
+                        <SelectItem value="loading" disabled>
+                          Loading...
+                        </SelectItem>
+                      ) : (
+                        products?.map(product => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.title}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FieldError message={errors.freeProductId} />
+                </div>
+              )}
+
+              {formData.rewardCouponType === 'BONUS_POINTS' && (
+                <div className="grid gap-2.5">
+                  <FieldLabel htmlFor="bonusPoints" required hint="How many bonus points a customer receives when they redeem this reward.">
+                    Bonus Points
+                  </FieldLabel>
+                  <Input
+                    id="bonusPoints"
+                    name="bonusPoints"
+                    type="number"
+                    min={1}
+                    placeholder="e.g., 100"
+                    value={formData.bonusPoints}
+                    onChange={handleInputChange}
+                    className={inputClassName}
+                  />
+                  <FieldError message={errors.bonusPoints} />
+                </div>
               )}
             </div>
-          )}
 
-          {formData.rewardCouponType === 'BONUS_POINTS' && (
-            <div className="grid gap-2">
-              <Label htmlFor="bonusPoints">Bonus Points</Label>
-              <Input
-                id="bonusPoints"
-                name="bonusPoints"
-                type="number"
-                value={formData.bonusPoints}
-                onChange={handleInputChange}
-              />
-              {errors.bonusPoints && (
-                <p className="text-base text-red-600 mt-1">
-                  {errors.bonusPoints}
-                </p>
-              )}
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="limitUsageToXProducts" hint="Limits how many units of the reward can be applied per order. Leave blank for no limit.">
+                  Limit Usage to X Products
+                </FieldLabel>
+                <Input
+                  id="limitUsageToXProducts"
+                  name="limitUsageToXProducts"
+                  type="number"
+                  min={1}
+                  placeholder="No limit"
+                  value={formData.limitUsageToXProducts}
+                  onChange={handleInputChange}
+                  className={inputClassName}
+                />
+              </div>
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="expireAfterXDays" hint="How many days after redemption the coupon expires. Leave blank if it never expires.">
+                  Expire After X Days
+                </FieldLabel>
+                <Input
+                  id="expireAfterXDays"
+                  name="expireAfterXDays"
+                  type="number"
+                  min={1}
+                  placeholder="Never expires"
+                  value={formData.expireAfterXDays}
+                  onChange={handleInputChange}
+                  className={inputClassName}
+                />
+              </div>
             </div>
-          )}
+          </CardContent>
+        </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="limitUsageToXProducts">
-                Limit Usage to X Products
-              </Label>
-              <Input
-                id="limitUsageToXProducts"
-                name="limitUsageToXProducts"
-                type="number"
-                placeholder="No limit"
-                value={formData.limitUsageToXProducts}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="expireAfterXDays">Expire After X Days</Label>
-              <Input
-                id="expireAfterXDays"
-                name="expireAfterXDays"
-                type="number"
-                placeholder="Never expires"
-                value={formData.expireAfterXDays}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold text-gray-700 flex items-center">
-            <HelpCircle className="h-6 w-6 mr-3 text-gray-500" />
-            Restrictions
-          </h2>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex items-center space-x-2">
-              <Switch
+        {/* ---------------------------------------------------------------- */}
+        {/* Restrictions & limits                                            */}
+        {/* ---------------------------------------------------------------- */}
+        <Card className="gap-0 overflow-hidden rounded-2xl border-[#efe3dc] bg-white py-0 shadow-[0_2px_10px_rgba(31,27,24,0.04)]">
+          <CardHeader className="border-b border-[#f6ece6] px-5 py-5 sm:px-6">
+            <SectionHeader
+              icon={<ShieldCheck className="h-5 w-5" />}
+              title="Restrictions & Limits"
+              description="Control when and how often this reward can be used."
+            />
+          </CardHeader>
+          <CardContent className="space-y-5 px-5 py-6 sm:px-6">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <SwitchField
                 id="allowFreeShipping"
+                label="Allow Free Shipping"
+                description="Waive delivery fees on orders using this reward."
+                hint="Removes the delivery fee for any order that uses this reward."
                 checked={formData.allowFreeShipping}
                 onCheckedChange={checked =>
                   handleSwitchChange('allowFreeShipping', checked)
                 }
               />
-              <Label htmlFor="allowFreeShipping">Allow Free Shipping</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
+              <SwitchField
                 id="individualUseOnly"
+                label="Individual Use Only"
+                description="Cannot be combined with other coupons."
+                hint="Prevents customers from stacking this reward with any other coupon or reward."
                 checked={formData.individualUseOnly}
                 onCheckedChange={checked =>
                   handleSwitchChange('individualUseOnly', checked)
                 }
               />
-              <Label htmlFor="individualUseOnly">Individual Use Only</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
+              <SwitchField
                 id="excludeSaleItems"
+                label="Exclude Sale Items"
+                description="Sale products are not eligible."
+                hint="Products already on sale will not qualify for this reward."
                 checked={formData.excludeSaleItems}
                 onCheckedChange={checked =>
                   handleSwitchChange('excludeSaleItems', checked)
                 }
               />
-              <Label htmlFor="excludeSaleItems">Exclude Sale Items</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
+              <SwitchField
                 id="allowLimitToReset"
+                label="Allow Limit to Reset"
+                description="Reset the per-customer usage limit."
+                hint="Automatically resets the per-customer usage limit after the configured period."
                 checked={formData.allowLimitToReset}
                 onCheckedChange={checked =>
                   handleSwitchChange('allowLimitToReset', checked)
                 }
               />
-              <Label htmlFor="allowLimitToReset">Allow Limit to Reset</Label>
             </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="limitPerCustomer">Limit Per Customer</Label>
-            <Input
-              id="limitPerCustomer"
-              name="limitPerCustomer"
-              type="number"
-              placeholder="No limit"
-              value={formData.limitPerCustomer}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="includedProductIds">Included Products</Label>
-            <Popover
-              open={openIncludedProducts}
-              onOpenChange={setOpenIncludedProducts}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openIncludedProducts}
-                  className="w-full justify-between"
-                >
-                  {formData.includedProductIds.length > 0
-                    ? `${formData.includedProductIds.length} product(s) selected`
-                    : 'Select products...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder="Search products..." />
-                  <CommandEmpty>No products found.</CommandEmpty>
-                  <CommandGroup>
-                    {isLoadingProducts ? (
-                      <CommandItem>Loading...</CommandItem>
-                    ) : (
-                      includedProductsOptions?.map((product: Product) => (
-                        <CommandItem
-                          key={product.id}
-                          onSelect={() =>
-                            handleMultiSelectChange(
-                              'includedProductIds',
-                              product.id
-                            )
-                          }
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              formData.includedProductIds.includes(product.id)
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            )}
-                          />
-                          {product.title}
-                        </CommandItem>
-                      ))
-                    )}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {errors.includedProductIds && (
-              <p className="text-base text-red-600 mt-1">
-                {errors.includedProductIds}
-              </p>
-            )}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="excludedProductIds">Excluded Products</Label>
-            <Popover
-              open={openExcludedProducts}
-              onOpenChange={setOpenExcludedProducts}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openExcludedProducts}
-                  className="w-full justify-between"
-                >
-                  {formData.excludedProductIds.length > 0
-                    ? `${formData.excludedProductIds.length} product(s) selected`
-                    : 'Select products...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder="Search products..." />
-                  <CommandEmpty>No products found.</CommandEmpty>
-                  <CommandGroup>
-                    {isLoadingProducts ? (
-                      <CommandItem>Loading...</CommandItem>
-                    ) : (
-                      excludedProductsOptions?.map((product: Product) => (
-                        <CommandItem
-                          key={product.id}
-                          onSelect={() =>
-                            handleMultiSelectChange(
-                              'excludedProductIds',
-                              product.id
-                            )
-                          }
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              formData.excludedProductIds.includes(product.id)
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            )}
-                          />
-                          {product.title}
-                        </CommandItem>
-                      ))
-                    )}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="beginDate">Begin Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={'outline'}
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !formData.beginDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.beginDate ? (
-                      format(formData.beginDate, 'PPP')
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.beginDate}
-                    onSelect={(date) => handleSelectChange('beginDate', date)}
-                    disabled={(date) => isBefore(date, todayStart)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="endDate">End Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={'outline'}
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !formData.endDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.endDate ? (
-                      format(formData.endDate, 'PPP')
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.endDate}
-                    onSelect={(date) => handleSelectChange('endDate', date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <div className="flex justify-end">
-        <Button
-          type="submit"
-          className="bg-orange-600 text-white hover:bg-orange-700 px-8 py-3 w-full sm:w-auto text-lg"
-          disabled={isPending}
-        >
-          {isPending ? 'Saving...' : submitButtonText}
-          <ArrowRight className="h-5 w-5 ml-2" />
-        </Button>
-      </div>
-    </form>
+            <div className="grid gap-2.5 sm:max-w-xs">
+              <FieldLabel htmlFor="limitPerCustomer" hint="The maximum number of times a single customer can redeem this reward. Leave blank for unlimited.">
+                Limit Per Customer
+              </FieldLabel>
+              <Input
+                id="limitPerCustomer"
+                name="limitPerCustomer"
+                type="number"
+                min={1}
+                placeholder="No limit"
+                value={formData.limitPerCustomer}
+                onChange={handleInputChange}
+                className={inputClassName}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="includedProductIds" hint="Only these products will qualify for the reward. Leave empty to include every product.">
+                  Included Products
+                </FieldLabel>
+                <Popover
+                  open={openIncludedProducts}
+                  onOpenChange={setOpenIncludedProducts}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openIncludedProducts}
+                      className={cn(
+                        'h-11 w-full justify-between rounded-xl border-[#e7d9d1] bg-white px-3 text-sm font-normal shadow-none hover:bg-white',
+                        formData.includedProductIds.length === 0 &&
+                          'text-gray-400'
+                      )}
+                    >
+                      {formData.includedProductIds.length > 0
+                        ? `${formData.includedProductIds.length} product(s) selected`
+                        : 'All products'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search products..." />
+                      <CommandEmpty>No products found.</CommandEmpty>
+                      <CommandGroup>
+                        {isLoadingProducts ? (
+                          <CommandItem>Loading...</CommandItem>
+                        ) : (
+                          includedProductsOptions?.map((product: Product) => (
+                            <CommandItem
+                              key={product.id}
+                              onSelect={() =>
+                                handleMultiSelectChange(
+                                  'includedProductIds',
+                                  product.id
+                                )
+                              }
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4 text-orange-600',
+                                  formData.includedProductIds.includes(
+                                    product.id
+                                  )
+                                    ? 'opacity-100'
+                                    : 'opacity-0'
+                                )}
+                              />
+                              {product.title}
+                            </CommandItem>
+                          ))
+                        )}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="excludedProductIds" hint="These products will never qualify for the reward, even if they are otherwise eligible.">
+                  Excluded Products
+                </FieldLabel>
+                <Popover
+                  open={openExcludedProducts}
+                  onOpenChange={setOpenExcludedProducts}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openExcludedProducts}
+                      className={cn(
+                        'h-11 w-full justify-between rounded-xl border-[#e7d9d1] bg-white px-3 text-sm font-normal shadow-none hover:bg-white',
+                        formData.excludedProductIds.length === 0 &&
+                          'text-gray-400'
+                      )}
+                    >
+                      {formData.excludedProductIds.length > 0
+                        ? `${formData.excludedProductIds.length} product(s) selected`
+                        : 'No products excluded'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search products..." />
+                      <CommandEmpty>No products found.</CommandEmpty>
+                      <CommandGroup>
+                        {isLoadingProducts ? (
+                          <CommandItem>Loading...</CommandItem>
+                        ) : (
+                          excludedProductsOptions?.map((product: Product) => (
+                            <CommandItem
+                              key={product.id}
+                              onSelect={() =>
+                                handleMultiSelectChange(
+                                  'excludedProductIds',
+                                  product.id
+                                )
+                              }
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4 text-orange-600',
+                                  formData.excludedProductIds.includes(
+                                    product.id
+                                  )
+                                    ? 'opacity-100'
+                                    : 'opacity-0'
+                                )}
+                              />
+                              {product.title}
+                            </CommandItem>
+                          ))
+                        )}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="beginDate" hint="The date this reward becomes available. Leave empty to start immediately.">
+                  Begin Date
+                </FieldLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="beginDate"
+                      variant="outline"
+                      className={cn(
+                        'h-11 w-full justify-start rounded-xl border-[#e7d9d1] bg-white px-3 text-left text-sm font-normal shadow-none hover:bg-white',
+                        !formData.beginDate && 'text-gray-400'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-60" />
+                      {formData.beginDate ? (
+                        format(formData.beginDate, 'PPP')
+                      ) : (
+                        <span>Pick a start date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.beginDate}
+                      onSelect={date => handleSelectChange('beginDate', date)}
+                      disabled={date => isBefore(date, todayStart)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="grid gap-2.5">
+                <FieldLabel htmlFor="endDate" hint="The date this reward stops being available. Leave empty to run indefinitely.">
+                  End Date
+                </FieldLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="endDate"
+                      variant="outline"
+                      className={cn(
+                        'h-11 w-full justify-start rounded-xl border-[#e7d9d1] bg-white px-3 text-left text-sm font-normal shadow-none hover:bg-white',
+                        !formData.endDate && 'text-gray-400'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-60" />
+                      {formData.endDate ? (
+                        format(formData.endDate, 'PPP')
+                      ) : (
+                        <span>Pick an end date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.endDate}
+                      onSelect={date => handleSelectChange('endDate', date)}
+                      disabled={date =>
+                        isBefore(
+                          date,
+                          formData.beginDate
+                            ? startOfDay(formData.beginDate)
+                            : todayStart
+                        )
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="flex flex-col-reverse items-stretch gap-3 rounded-2xl border border-[#efe3dc] bg-white px-5 py-4 shadow-[0_2px_10px_rgba(31,27,24,0.04)] sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p className="text-xs text-gray-500">
+            Fields marked <span className="text-orange-600">*</span> are
+            required.
+          </p>
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-xl bg-[#a14000] px-6 text-sm font-semibold text-white shadow-sm hover:bg-[#8a3700] sm:w-auto"
+            disabled={isPending}
+          >
+            {isPending ? 'Saving...' : submitButtonText}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </form>
+    </TooltipProvider>
   );
 }

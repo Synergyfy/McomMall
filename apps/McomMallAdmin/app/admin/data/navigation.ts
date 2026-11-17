@@ -34,7 +34,6 @@ import {
     MessageSquare,
     PanelLeft,
     Rocket,
-    Percent,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -62,7 +61,6 @@ export const navItems: NavItem[] = [
 
     { title: 'Disputes', href: '/admin/disputes', icon: AlertTriangle, description: 'Handle customer and business disputes' },
     { title: 'Campaigns', href: '/admin/campaigns', icon: Megaphone, description: 'Manage marketing campaigns' },
-    { title: 'Promotions', href: '/admin/promotions', icon: Percent, description: 'Create and manage sales promotions' },
     { title: 'Coupons & Vouchers', href: '/admin/coupons-vouchers', icon: Ticket, description: 'Manage digital coupons and vouchers' },
     { title: 'Loyalty Cashback', href: '/admin/campaign-cashback', icon: Gift, description: 'Manage loyalty reward programs' },
     { title: 'Templates', href: '/admin/templates', icon: LayoutTemplate, description: 'Email and document templates' },

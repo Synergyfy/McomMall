@@ -73,6 +73,7 @@ import {
 } from '../partner-instruments/pricing';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { VoucherService } from '../voucher/voucher.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
 import { randomUUID } from 'crypto';
 
@@ -143,6 +144,7 @@ export class BookingService {
     private readonly giftCardService: GiftCardService,
     @Inject(forwardRef(() => VoucherService))
     private readonly voucherService: VoucherService,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   async checkAvailability(checkAvailabilityDto: CheckAvailabilityDto): Promise<{
@@ -1920,7 +1922,7 @@ export class BookingService {
     bookingId: string,
     userId: string,
   ): Promise<ServiceBooking> {
-    return this.dataSource.transaction(async (manager) => {
+    const completedBooking = await this.dataSource.transaction(async (manager) => {
       const booking = await manager.findOne(ServiceBooking, {
         where: { id: bookingId },
         relations: [
@@ -2033,6 +2035,18 @@ export class BookingService {
 
       return manager.save(booking);
     });
+
+    if (completedBooking.status === BookingStatus.COMPLETED) {
+      await this.loyaltyService
+        .awardBookingPoints(completedBooking.id)
+        .catch((err) =>
+          this.logger.error(
+            `Failed to award loyalty points for booking ${completedBooking.id}: ${err?.message || err}`,
+          ),
+        );
+    }
+
+    return completedBooking;
   }
 
   async getCompletedBookingsForOwner(

@@ -7,19 +7,15 @@ import { CheckCircle2, PoundSterling, Clock, MapPin, Tag, List, Calendar } from 
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-import { useGetCategoriesBySector, useGetSubCategoriesByCategory, useGetSectors } from '@/service/taxonomy/hook';
-
 export function Step7FinalReview() {
   const { watch } = useFormContext();
   const formValues = watch();
 
-  const { data: sectors } = useGetSectors();
-  const { data: categories } = useGetCategoriesBySector(formValues.sector);
-  const { data: subcategories } = useGetSubCategoriesByCategory(formValues.category);
-
-  const sectorName = sectors?.find(s => s.id === formValues.sector)?.name || formValues.sector;
-  const categoryName = categories?.find(c => c.id === formValues.category)?.name || formValues.category;
-  const subcategoryName = subcategories?.find(s => s.id === formValues.subcategory)?.name || formValues.subcategory;
+  // Classification is inherited from the MCOM Central business profile, so the
+  // form already holds the human-readable sector/category/sub-category values.
+  const sectorName = formValues.sector;
+  const categoryName = formValues.category;
+  const subcategoryName = formValues.subcategory;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);

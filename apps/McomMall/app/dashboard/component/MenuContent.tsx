@@ -16,7 +16,6 @@ import {
   pluginMenuItems,
   historyMenuItems,
   marketingMenuItems,
-  storefrontMenuItems,
   MenuItem,
 } from '@/lib/menu-items';
 
@@ -179,7 +178,6 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
         </div>
         {(isCollapsed || expandedSection === 'Main') && renderMenuItems(visibleMainMenuItems)}
       </nav>
-      {userRole !== 'customer' && renderSection('Storefront', storefrontMenuItems)}
       {userRole !== 'customer' && renderSection('Business', listingMenuItems)}
       {userRole !== 'customer' && renderSection('Product', productMenuItems)}
       {userRole !== 'customer' && renderSection('Service', serviceMenuItems)}

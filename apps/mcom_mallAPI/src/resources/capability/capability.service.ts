@@ -7,17 +7,15 @@ import {
 } from '@nestjs/common';
 import { MembershipService } from '../membership/membership.service';
 import { CapabilityConfig as TierConfig } from './interfaces/capability-config.interface';
-import { ListingsService } from '../listings/listing.service';
 import { ProductService } from '../product/product.service';
 import { ServicesService } from '../services/services.service';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { CouponService } from '../coupon/coupon.service';
-import { PromotionService } from '../promotion/promotion.service';
+import { OfferService } from '../offer/offer.service';
 import { PlansService } from '../plans/services/plans.service';
 
 export enum ActionType {
   REQUIRE_TIER = 'REQUIRE_TIER',
-  CREATE_LISTING = 'CREATE_LISTING',
   CREATE_PRODUCT = 'CREATE_PRODUCT',
   CREATE_SERVICE = 'CREATE_SERVICE',
   CAN_SELL_PRODUCTS = 'CAN_SELL_PRODUCTS',
@@ -37,8 +35,6 @@ export class CapabilityService {
   constructor(
     @Inject(forwardRef(() => MembershipService))
     private readonly membershipService: MembershipService,
-    @Inject(forwardRef(() => ListingsService))
-    private readonly listingsService: ListingsService,
     @Inject(forwardRef(() => ProductService))
     private readonly productService: ProductService,
     @Inject(forwardRef(() => ServicesService))
@@ -47,8 +43,8 @@ export class CapabilityService {
     private readonly giftCardService: GiftCardService,
     @Inject(forwardRef(() => CouponService))
     private readonly couponService: CouponService,
-    @Inject(forwardRef(() => PromotionService))
-    private readonly promotionService: PromotionService,
+    @Inject(forwardRef(() => OfferService))
+    private readonly offerService: OfferService,
     @Inject(forwardRef(() => PlansService))
     private readonly plansService: PlansService,
   ) {}
@@ -107,9 +103,6 @@ export class CapabilityService {
     }
 
     switch (action) {
-      case ActionType.CREATE_LISTING:
-        await this.checkListingLimit(userId, config);
-        break;
       case ActionType.CAN_SELL_PRODUCTS:
         if (!config.quotas.allowProductListing) {
           throw new ForbiddenException(
@@ -163,7 +156,7 @@ export class CapabilityService {
       case ActionType.CREATE_LOYALTY_PROGRAM:
         const loyaltyCount =
           context?.currentCount ??
-          (await this.promotionService.countForUser(userId));
+          (await this.offerService.countForUser(userId));
         this.checkQuota(
           loyaltyCount,
           config.quotas.maxLoyaltyPrograms,
@@ -206,34 +199,22 @@ export class CapabilityService {
     }
 
     const [
-      listingCount,
       productCount,
       serviceCount,
       giftCardTemplateCount,
       couponTemplateCount,
       loyaltyProgramCount,
     ] = await Promise.all([
-      this.listingsService
-        .findAllForUser(userId, 1, 1)
-        .then((res) => res.meta.total),
       this.productService.countForUser(userId),
       this.servicesService.countForUser(userId),
       this.giftCardService.countTemplatesForOwner(userId),
       this.couponService.countForUser(userId),
-      this.promotionService.countForUser(userId),
+      this.offerService.countForUser(userId),
     ]);
 
     return {
       hasAccess: true,
       quotas: {
-        listings: {
-          used: listingCount,
-          limit: config.quotas.maxListings,
-          remaining:
-            config.quotas.maxListings === -1
-              ? -1
-              : Math.max(0, config.quotas.maxListings - listingCount),
-        },
         products: {
           used: productCount,
           limit: config.quotas.maxProducts,
@@ -294,20 +275,6 @@ export class CapabilityService {
       },
       features: config.featureFlags,
     };
-  }
-
-  private async checkListingLimit(userId: string, config: TierConfig) {
-    const limit = config.quotas.maxListings;
-    if (limit === -1) return;
-
-    const { meta } = await this.listingsService.findAllForUser(userId, 1, 1);
-    const currentCount = meta.total;
-
-    if (currentCount >= limit) {
-      throw new ForbiddenException(
-        `You have reached your limit of ${limit} listings.`,
-      );
-    }
   }
 
   private async checkProductLimit(userId: string, config: TierConfig) {

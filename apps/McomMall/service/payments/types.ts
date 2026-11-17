@@ -161,7 +161,6 @@ export interface SubscriptionStatusResponse {
 export interface TrialTasks {
   createdBusiness: boolean;
   createdProductOrService: boolean;
-  createdPromotion: boolean;
   createdOffer: boolean;
   createdCoupon: boolean;
 }

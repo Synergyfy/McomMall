@@ -40,6 +40,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LoyaltyContent from './LoyaltyContent';
+import { usePublicLoyaltyProgram } from '@/service/loyalty/hook';
+import { useGetPublicTimeBonuses } from '@/service/offers/hook';
 import GiftCardTabContent from '@/app/(public)/listings/[id]/components/GiftCardTabContent';
 import VoucherTabContent from '@/app/(public)/listings/[id]/components/VoucherTabContent';
 
@@ -297,19 +299,29 @@ function PromotionsTabs({
 }) {
   const isGoogle = isGoogleResult(listing);
   const businessId = isGoogle ? undefined : (listing as InHouseBusiness).id;
+  const { data: loyaltyProgram } = usePublicLoyaltyProgram(businessId);
+  const { data: timeBonuses } = useGetPublicTimeBonuses(businessId);
+  const showLoyalty =
+    loyaltyProgram?.isEnabled === true || (timeBonuses?.length ?? 0) > 0;
 
   return (
-    <Tabs defaultValue="loyalty" className="w-full">
+    <Tabs defaultValue={showLoyalty ? 'loyalty' : 'voucher'} className="w-full">
       <div className="overflow-x-auto">
-        <TabsList className="grid w-full grid-cols-3 mb-6 min-w-max">
-          <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
+        <TabsList
+          className={`grid w-full ${showLoyalty ? 'grid-cols-3' : 'grid-cols-2'} mb-6 min-w-max`}
+        >
+          {showLoyalty && (
+            <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
+          )}
           <TabsTrigger value="voucher">Voucher</TabsTrigger>
           <TabsTrigger value="gift-card">Gift Card</TabsTrigger>
         </TabsList>
       </div>
-      <TabsContent value="loyalty">
-        <LoyaltyContent businessId={businessId} />
-      </TabsContent>
+      {showLoyalty && (
+        <TabsContent value="loyalty">
+          <LoyaltyContent businessId={businessId} />
+        </TabsContent>
+      )}
       <TabsContent value="voucher">
         {businessId ? (
           <VoucherTabContent businessId={businessId} />

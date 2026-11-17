@@ -9,11 +9,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { In, Repository, DataSource } from 'typeorm';
 import { Offer } from '../offer/entities/offer.entity';
-import { OfferScope } from '../offer/offer.enum';
 import { Product } from '../product/entities/product.entity';
 import { ProductService } from '../product/product.service';
 import { ApplicableOffersDto } from './dto/applicable-offers.dto';
-import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
 import { InitiateCheckoutDto } from './dto/initiate-checkout.dto';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { Order } from '../order/entities/order.entity';
@@ -52,8 +50,6 @@ export class CheckoutService {
     private readonly offerRepository: Repository<Offer>,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
-    @InjectRepository(PromotionParticipant)
-    private readonly promotionParticipantRepository: Repository<PromotionParticipant>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
@@ -638,27 +634,11 @@ export class CheckoutService {
   ) {
     const { productIds } = applicableOffersDto;
 
-    // 1. Get user's promotion participations and calculate points per creator
-    const userParticipations = await this.promotionParticipantRepository.find({
-      where: { user: { id: userId } },
-      relations: [
-        'promotion',
-        'promotion.businesses',
-        'promotion.businesses.user',
-      ],
+    // 1. Points available to spend on rewards come from the customer's balance.
+    const customer = await this.userRepository.findOne({
+      where: { id: userId },
     });
-
-    const pointsByCreator = new Map<string, number>();
-    for (const p of userParticipations) {
-      if (p.promotion.businesses && p.promotion.businesses.length > 0) {
-        const creator = p.promotion.businesses[0].user;
-        if (creator) {
-          const creatorId = creator.id;
-          const currentPoints = pointsByCreator.get(creatorId) || 0;
-          pointsByCreator.set(creatorId, currentPoints + p.pointsEarned);
-        }
-      }
-    }
+    const availablePoints = customer?.points || 0;
 
     // 2. Fetch products
     const products = await this.productRepository.find({
@@ -674,7 +654,6 @@ export class CheckoutService {
     const offers = await this.offerRepository
       .createQueryBuilder('offer')
       .leftJoinAndSelect('offer.user', 'creator')
-      .leftJoinAndSelect('offer.businesses', 'businesses')
       .leftJoinAndSelect('offer.includedProducts', 'includedProducts')
       .leftJoinAndSelect('offer.excludedProducts', 'excludedProducts')
       .where('offer.isActive = :isActive', { isActive: true })
@@ -684,11 +663,10 @@ export class CheckoutService {
     // 4. Filter offers in-memory and format response
     const applicableOffers = offers
       .filter((offer) => {
-        // Filter by user points
-        if (!offer.user) return false;
-        const creatorId = offer.user.id;
-        const creatorSpecificPoints = pointsByCreator.get(creatorId) || 0;
-        return offer.points <= creatorSpecificPoints;
+        // Owners cannot redeem their own offers.
+        if (!offer.user || offer.user.id === userId) return false;
+        // Filter by the customer's available points
+        return offer.points <= availablePoints;
       })
       .map((offer) => {
         const applicableProductIds = products
@@ -703,43 +681,15 @@ export class CheckoutService {
               return false;
             }
 
-            // Rule 2: Scope-based inclusion.
-            switch (offer.offerScope) {
-              case OfferScope.SPECIFIC_PRODUCTS:
-                // Must be in the included list.
-                return offer.includedProducts.some((p) => p.id === product.id);
-
-              case OfferScope.SPECIFIC_LISTINGS:
-                // Must belong to one of the businesses.
-                const offerBusinessIds = offer.businesses.map((b) => b.id);
-                if (
-                  !product.business ||
-                  !offerBusinessIds.includes(product.business.id)
-                ) {
-                  return false;
-                }
-                // If there's an additional includedProducts filter, it must be met.
-                if (
-                  offer.includedProducts.length > 0 &&
-                  !offer.includedProducts.some((p) => p.id === product.id)
-                ) {
-                  return false;
-                }
-                return true;
-
-              case OfferScope.ALL_LISTINGS:
-                // If there's an includedProducts filter, it must be met.
-                if (
-                  offer.includedProducts.length > 0 &&
-                  !offer.includedProducts.some((p) => p.id === product.id)
-                ) {
-                  return false;
-                }
-                return true;
-
-              default:
-                return false;
+            // Rule 2: If an inclusion list exists, the product must be on it.
+            if (
+              offer.includedProducts.length > 0 &&
+              !offer.includedProducts.some((p) => p.id === product.id)
+            ) {
+              return false;
             }
+
+            return true;
           })
           .map((p) => p.id);
 

@@ -1,166 +1,168 @@
 'use client';
 
 import {
-  useCheckPromotions,
-  useParticipateInPromotion,
-} from '@/service/promotions/hook';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { format, isFuture } from 'date-fns';
-import { Calendar, Tag, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
+  Award,
+  Calendar,
+  Coins,
+  Gift,
+  Sparkles,
+  TicketPercent,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { motion } from 'framer-motion';
+import { useGetPublicBusinessOffers } from '@/service/offers/hook';
+import { Offer } from '@/service/offers/types';
+import { CURRENCY } from '@/lib/utils';
 
 type LoyaltyContentProps = {
   businessId?: string;
   productId?: string;
 };
 
-const LoyaltyContent = ({ businessId, productId }: LoyaltyContentProps) => {
-  const {
-    data: promotions,
-    isLoading,
-    isError,
-  } = useCheckPromotions({
-    businessId,
-    productId,
-  });
+const rewardTypeLabel: Record<Offer['rewardCouponType'], string> = {
+  PERCENTAGE_DISCOUNT: 'Discount',
+  FIXED_CART_DISCOUNT: 'Voucher',
+  FREE_PRODUCTS: 'Free Item',
+  BONUS_POINTS: 'Bonus Points',
+};
 
-  const participateMutation = useParticipateInPromotion();
+function rewardHeadline(offer: Offer): string | null {
+  switch (offer.rewardCouponType) {
+    case 'PERCENTAGE_DISCOUNT':
+      return offer.discountPercentage
+        ? `${offer.discountPercentage}% off`
+        : null;
+    case 'FIXED_CART_DISCOUNT':
+      return offer.discountAmount
+        ? `${CURRENCY}${offer.discountAmount} off`
+        : null;
+    case 'FREE_PRODUCTS':
+      return 'A free product';
+    case 'BONUS_POINTS':
+      return offer.bonusPoints ? `+${offer.bonusPoints} bonus points` : null;
+    default:
+      return null;
+  }
+}
 
-  const handleParticipate = (promotionId: string) => {
-    participateMutation.mutate(promotionId, {
-      onSuccess: () => {
-        toast.success('Successfully registered for promotion!');
-      },
-      onError: (error) => {
-        toast.error(`Failed to register: ${error.message}`);
-      },
-    });
-  };
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return null;
+  try {
+    return format(new Date(dateString), 'MMM d, yyyy');
+  } catch {
+    return null;
+  }
+};
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A';
-    return format(new Date(dateString), 'PPP');
-  };
+const LoyaltyContent = ({ businessId }: LoyaltyContentProps) => {
+  const { data: offers, isLoading, isError } = useGetPublicBusinessOffers(
+    businessId
+  );
 
   if (isLoading) {
     return (
-      <div className="space-y-4 mt-4">
-        <div className="bg-gray-100 p-6 rounded-lg animate-pulse">
-          <div className="h-6 bg-gray-300 rounded w-3/4 mb-4"></div>
-          <div className="h-4 bg-gray-300 rounded w-full mb-2"></div>
-          <div className="h-4 bg-gray-300 rounded w-5/6"></div>
-        </div>
-        <div className="bg-gray-100 p-6 rounded-lg animate-pulse">
-          <div className="h-6 bg-gray-300 rounded w-3/4 mb-4"></div>
-          <div className="h-4 bg-gray-300 rounded w-full mb-2"></div>
-          <div className="h-4 bg-gray-300 rounded w-5/6"></div>
-        </div>
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+        {[...Array(2)].map((_, i) => (
+          <div
+            key={i}
+            className="aspect-[1.58/1] animate-pulse rounded-3xl bg-gray-100"
+          />
+        ))}
       </div>
     );
   }
 
-  if (isError) {
+  if (isError || !offers || offers.length === 0) {
     return (
-      <div className="text-red-500 bg-red-50 p-4 rounded-lg">
-        <h4 className="font-bold">Error</h4>
-        <p>Could not load promotions at this time. Please try again later.</p>
+      <div className="rounded-[2.5rem] border border-dashed border-gray-200 bg-gray-50 py-20 text-center">
+        <Award className="mx-auto mb-4 text-gray-300" size={48} />
+        <h4 className="text-xl font-black text-gray-900">
+          No Rewards Available
+        </h4>
+        <p className="mt-2 text-sm font-bold text-gray-500">
+          This business hasn&apos;t added any loyalty rewards yet. Check back
+          soon.
+        </p>
       </div>
     );
   }
 
   return (
-    <div>
-      <h3 className="text-2xl font-bold border-t pt-6 text-gray-800">
-        Promotions
-      </h3>
-      {promotions && promotions.length > 0 ? (
-        <div className="space-y-6 mt-6">
-          {promotions.map((promotion) => {
-            const isFuturePromotion =
-              promotion.beginDate && isFuture(new Date(promotion.beginDate));
+    <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+      {offers.map((offer, index) => {
+        const headline = rewardHeadline(offer);
+        const expiry = formatDate(offer.endDate);
 
-            return (
-              <div
-                key={promotion.id}
-                className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300"
-              >
-                <div className="flex flex-col md:flex-row justify-between items-start">
-                  <div className="flex-grow">
-                    <h4 className="font-bold text-xl text-gray-900">
-                      {promotion.name}
-                    </h4>
-                    <p className="text-gray-600 mt-2">
-                      {promotion.description}
-                    </p>
+        return (
+          <motion.div
+            key={offer.id}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.1 }}
+            className="group relative aspect-[1.58/1]"
+          >
+            <div className="absolute inset-0 flex flex-col justify-between overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#1A1A1A] p-8 shadow-2xl">
+              <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-orange-500/10 blur-3xl" />
+
+              <div className="z-10 flex items-start justify-between">
+                <div className="min-w-0">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-orange-500 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/20">
+                      {rewardTypeLabel[offer.rewardCouponType] ?? 'Reward'}
+                    </span>
+                    {headline && (
+                      <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/80">
+                        {headline}
+                      </span>
+                    )}
                   </div>
-                  <Button
-                    className="mt-4 md:mt-0 md:ml-6 shrink-0"
-                    onClick={() => handleParticipate(promotion.id)}
-                    disabled={
-                      participateMutation.isPending || !!isFuturePromotion
-                    }
-                  >
-                    {isFuturePromotion
-                      ? 'Coming soon'
-                      : participateMutation.isPending
-                      ? 'Registering...'
-                      : 'Participate'}
-                  </Button>
+                  <h3 className="mb-2 line-clamp-2 text-2xl font-black leading-tight text-white md:text-3xl">
+                    {offer.name}
+                  </h3>
+                  <p className="line-clamp-2 max-w-[250px] text-xs font-bold text-white/40">
+                    {offer.description || 'A loyalty reward just for you.'}
+                  </p>
                 </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Tag className="h-5 w-5 mr-3 text-red-500" />
-                    <span className="font-semibold mr-2">Type:</span>
-                    <Badge variant="secondary">
-                      {promotion.promotionType}
-                    </Badge>
-                  </div>
-                  {promotion.promotionScope && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <ShieldCheck className="h-5 w-5 mr-3 text-red-500" />
-                      <span className="font-semibold mr-2">Scope:</span>
-                      <Badge variant="outline">
-                        {promotion.promotionScope}
-                      </Badge>
-                    </div>
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-orange-400">
+                  {offer.rewardCouponType === 'FREE_PRODUCTS' ? (
+                    <Gift size={28} />
+                  ) : offer.rewardCouponType === 'BONUS_POINTS' ? (
+                    <Sparkles size={28} />
+                  ) : (
+                    <TicketPercent size={28} />
                   )}
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="h-5 w-5 mr-3 text-red-500" />
-                    <span className="font-semibold mr-2">
-                      Promotion Period:
+                </div>
+              </div>
+
+              <div className="z-10 mt-auto flex items-end justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-white/60">
+                    <Calendar size={14} className="text-orange-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                      {expiry ? `Ends ${expiry}` : 'Always available'}
                     </span>
-                    <span>
-                      {formatDate(promotion.beginDate)} -{' '}
-                      {formatDate(promotion.endDate)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Coins size={14} className="text-amber-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                      Redeem at checkout
                     </span>
                   </div>
                 </div>
 
-                {promotion.termsAndConditions && (
-                  <div className="mt-4">
-                    <p className="text-xs text-gray-500">
-                      <strong>Terms & Conditions:</strong>{' '}
-                      {promotion.termsAndConditions}
-                    </p>
-                  </div>
-                )}
+                <div className="text-right">
+                  <p className="text-3xl font-black leading-none text-white">
+                    {offer.points.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
+                    Points
+                  </p>
+                </div>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-12 px-6 bg-gray-50 rounded-lg mt-6">
-          <h4 className="text-lg font-semibold text-gray-700">
-            No Promotions Available
-          </h4>
-          <p className="text-gray-500 mt-2">
-            This product does not have any active promotions at the moment.
-            Check back later!
-          </p>
-        </div>
-      )}
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };

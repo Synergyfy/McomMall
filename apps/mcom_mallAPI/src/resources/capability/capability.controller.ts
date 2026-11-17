@@ -50,7 +50,6 @@ export class CapabilityController {
     schema: {
       example: {
         quotas: {
-          maxListings: 100,
           allowProductListing: true,
           maxProducts: 50,
           maxServices: 50,

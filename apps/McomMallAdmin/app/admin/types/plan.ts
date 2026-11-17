@@ -25,7 +25,6 @@ export interface PlanPrice {
 }
 
 export interface PlanQuota {
-  maxListings: number;
   allowProductListing: boolean;
   allowServiceListing: boolean;
   maxProducts: number;

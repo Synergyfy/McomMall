@@ -2,16 +2,9 @@
 
 import { FC } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
-import { 
-  LayoutDashboard, 
-  MapPin,
-  Menu,
-  Store,
-  Megaphone,
-  Plus,
-} from 'lucide-react';
+import { LayoutDashboard, MapPin, Menu } from 'lucide-react';
 
 // ─── Regular dashboard nav items ──────────────────────────────────────────────
 interface BottomNavItemProps {
@@ -39,57 +32,6 @@ interface BottomNavProps {
 
 export const BottomNav: FC<BottomNavProps> = ({ onMenuClick }) => {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const isPromotions = pathname?.startsWith('/dashboard/promotions');
-
-  // ── Promotions bottom nav ──
-  if (isPromotions) {
-    const showStats = searchParams.get('show_stats') === 'true';
-    const showMore = searchParams.get('show_more') === 'true';
-    const isPromotionsActive = pathname === '/dashboard/promotions' && !showStats && !showMore;
-    const isNewActive = pathname.startsWith('/dashboard/promotions/new');
-    
-    return (
-      <div className="promotions-dashboard">
-        {/* BottomNavBar (Mobile Only) */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-t border-outline-variant/20 flex items-center justify-around px-2 z-50 pb-safe rounded-t-2xl shadow-lg">
-          <Link href="/dashboard" className="flex flex-col items-center justify-center flex-1 py-1 group">
-            <div className="p-1.5 rounded-xl transition-all duration-200 text-gray-400 group-hover:text-gray-600">
-              <LayoutDashboard className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-bold mt-0.5 text-gray-400">Home</span>
-          </Link>
-          
-          <Link href="/dashboard/promotions" className="flex flex-col items-center justify-center flex-1 py-1 group">
-            <div className={`p-1.5 rounded-xl transition-all duration-200 ${
-              isPromotionsActive ? 'bg-primary/10 text-primary' : 'text-gray-400 group-hover:text-gray-600'
-            }`}>
-              <Megaphone className={`w-6 h-6 ${isPromotionsActive ? 'fill-primary/10' : ''}`} />
-            </div>
-            <span className={`text-[10px] font-bold mt-0.5 ${isPromotionsActive ? 'text-primary' : 'text-gray-400'}`}>Promos</span>
-          </Link>
-
-          <Link href="/dashboard/promotions?show_more=true" className="flex flex-col items-center justify-center flex-1 py-1 group">
-            <div className={`p-1.5 rounded-xl transition-all duration-200 ${
-              showMore ? 'bg-primary/10 text-primary' : 'text-gray-400 group-hover:text-gray-600'
-            }`}>
-              <Menu className="w-6 h-6" />
-            </div>
-            <span className={`text-[10px] font-bold mt-0.5 ${showMore ? 'text-primary' : 'text-gray-400'}`}>More</span>
-          </Link>
-        </nav>
-        {/* Floating Action Button (Mobile Only, positioned above bottom nav) */}
-        {!isNewActive && (
-          <Link 
-            href="/dashboard/promotions/new" 
-            className="md:hidden fixed right-6 bottom-20 w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center z-50 hover:scale-105 active:scale-95 transition-transform duration-200"
-          >
-            <Plus className="w-8 h-8" />
-          </Link>
-        )}
-      </div>
-    );
-  }
 
   // ── Regular dashboard bottom nav ──
   return (
@@ -105,12 +47,6 @@ export const BottomNav: FC<BottomNavProps> = ({ onMenuClick }) => {
         icon={MapPin}
         label="LocalMall"
         isActive={pathname.includes('/dashboard/localmall')}
-      />
-      <BottomNavItem
-        href="/dashboard/storefront"
-        icon={Store}
-        label="Storefront"
-        isActive={pathname.includes('/dashboard/storefront')}
       />
       <button
         onClick={onMenuClick}

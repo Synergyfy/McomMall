@@ -5,11 +5,13 @@ import { Business } from '../listings/entities/listing.entity';
 import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Offer } from '../offer/entities/offer.entity';
-import { Promotion } from '../promotion/entities/promotion.entity';
 import { LoyaltyRule } from './entities/loyalty-rule.entity';
 import { LoyaltySettings } from './entities/loyalty-settings.entity';
+import { LoyaltyEarningConfig } from './entities/loyalty-earning-config.entity';
+import { LoyaltyMembership } from './entities/loyalty-membership.entity';
 import { LoyaltyService } from './loyalty.service';
 import { LoyaltyController } from './loyalty.controller';
+import { LoyaltyPublicController } from './loyalty-public.controller';
 
 @Module({
   imports: [
@@ -19,12 +21,13 @@ import { LoyaltyController } from './loyalty.controller';
       PointTransaction,
       ServiceBooking,
       Offer,
-      Promotion,
       LoyaltyRule,
       LoyaltySettings,
+      LoyaltyEarningConfig,
+      LoyaltyMembership,
     ]),
   ],
-  controllers: [LoyaltyController],
+  controllers: [LoyaltyController, LoyaltyPublicController],
   providers: [LoyaltyService],
   exports: [LoyaltyService],
 })

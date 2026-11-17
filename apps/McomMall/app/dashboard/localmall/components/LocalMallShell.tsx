@@ -8,6 +8,8 @@ import { LocalMallBottomNav, LocalMallTab } from './shared/LocalMallBottomNav';
 interface LocalMallShellProps {
   businessName: string;
   boroughName: string;
+  mallName?: string;
+  highStreetName?: string;
   activeTab: LocalMallTab;
   onTabChange: (tab: LocalMallTab) => void;
   screenStack: string[];
@@ -22,6 +24,8 @@ interface LocalMallShellProps {
 export const LocalMallShell: FC<LocalMallShellProps> = ({
   businessName,
   boroughName,
+  mallName,
+  highStreetName,
   activeTab,
   onTabChange,
   screenStack,
@@ -41,6 +45,8 @@ export const LocalMallShell: FC<LocalMallShellProps> = ({
       <LocalMallHeader
         businessName={businessName}
         boroughName={boroughName}
+        mallName={mallName}
+        highStreetName={highStreetName}
         canGoBack={canGoBack}
         onBack={onBack}
         unreadNotifications={unreadNotifications}

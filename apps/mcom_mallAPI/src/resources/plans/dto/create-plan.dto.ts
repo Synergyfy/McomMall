@@ -22,11 +22,6 @@ import type {
 } from '../entities/plan-variant.entity';
 
 export class CreatePlanQuotasDto implements PlanVariantQuotas {
-  @ApiProperty({ example: 10 })
-  @IsNumber()
-  @Min(0)
-  maxListings: number;
-
   @ApiProperty({ example: true })
   @IsBoolean()
   allowProductListing: boolean;

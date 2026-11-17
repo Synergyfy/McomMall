@@ -2,22 +2,22 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Business } from '../listings/entities/listing.entity';
 import { Event } from '../events/entities/event.entity';
-import { Promotion } from '../promotion/entities/promotion.entity';
+import { Offer } from '../offer/entities/offer.entity';
 import { DiscoverController } from './discover.controller';
 import { DiscoverService } from './discover.service';
 import { ListingsModule } from '../listings/listings.module';
 import { EventsModule } from '../events/events.module';
-import { PromotionModule } from '../promotion/promotion.module';
+import { OfferModule } from '../offer/offer.module';
 import { VisibilityModule } from '../visibility/visibility.module';
 import { MembershipModule } from '../membership/membership.module';
 import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Business, Event, Promotion]),
+    TypeOrmModule.forFeature([Business, Event, Offer]),
     ListingsModule,
     EventsModule,
-    PromotionModule,
+    OfferModule,
     VisibilityModule,
     MembershipModule,
     WalletModule,

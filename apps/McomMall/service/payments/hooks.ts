@@ -50,7 +50,6 @@ export const useGetSubscriptionStatus = () => {
 const DEFAULT_TRIAL_TASKS: TrialTasks = {
   createdBusiness: false,
   createdProductOrService: false,
-  createdPromotion: false,
   createdOffer: false,
   createdCoupon: false,
 };

@@ -31,6 +31,10 @@ export class Product extends AbstractBaseEntity {
   @Column({ type: 'jsonb', nullable: true, transformer: moneyJsonTransformer })
   variantConfig: ProductVariantConfig[];
 
+  /** Inherited from the business profile synced from MCOM Central. */
+  @Column({ nullable: true })
+  sector: string;
+
   @Column({ nullable: true })
   subCategory: string;
 

@@ -15,7 +15,7 @@ import ProductsSection from './redesign/ProductsSection';
 
 import ServicesSection from './redesign/ServicesSection';
 
-import PromotionsSection from './redesign/PromotionsSection';
+import OffersSection from './redesign/OffersSection';
 
 import ContactSection from './redesign/ContactSection';
 
@@ -66,7 +66,7 @@ const NAV_ITEMS = [
 
   { id: 'services', label: 'Services', icon: Wrench },
 
-  { id: 'promotions', label: 'Offers', icon: Tag },
+  { id: 'offers', label: 'Offers', icon: Tag },
 
   { id: 'reviews', label: 'Reviews', icon: MessageSquare },
 
@@ -153,7 +153,6 @@ function normalizeGoogleListing(google: GooglePlaceResult): InHouseBusiness {
     user: {} as any,
     giftCard: false,
     voucher: false,
-    promotion: false,
   };
 }
 
@@ -389,16 +388,16 @@ export default function ClientListingDetail({
               </section>
             )}
 
-            {/* Promotions Section */}
-            {activeSection === 'promotions' && (
-              <section id="promotions">
+            {/* Offers Section */}
+            {activeSection === 'offers' && (
+              <section id="offers">
                 <div className="mb-12">
                   <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
                     <Tag className="text-[#f58220]" /> Exclusive Offers
                   </h2>
                   <p className="text-gray-500 font-medium">Don't miss out on our special deals and loyalty rewards.</p>
                 </div>
-                <PromotionsSection listing={inHouseListing} />
+                <OffersSection listing={inHouseListing} />
               </section>
             )}
 

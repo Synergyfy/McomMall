@@ -1,234 +1,189 @@
 'use client';
 
-import * as React from 'react';
-import { useState } from 'react';
-import { Loader2, ArrowLeft, Clock, Gift } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import Link from 'next/link';
 import { toast } from 'sonner';
-import { useAddOffer } from '@/service/offers/hook';
-import { CreateOfferDto } from '@/service/offers/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  ArrowLeft,
+  Clock,
+  Gift,
+  PauseCircle,
+  PlayCircle,
+  Plus,
+  Trash2,
+} from 'lucide-react';
+import {
+  useDeleteOffer,
+  useGetOffers,
+  useUpdateOffer,
+} from '@/service/offers/hook';
 
-// Types
-type ResetUnit = 'Hours' | 'Days' | 'Weeks' | 'Months';
+export default function TimeBonusListPage() {
+  const { data: offers, isLoading, refetch } = useGetOffers();
+  const updateOffer = useUpdateOffer();
+  const deleteOffer = useDeleteOffer();
 
-interface TimeBonusFormState {
-  isActive: boolean;
-  name: string;
-  description: string;
-  bonusPoints: number;
-  limitPerCustomer: number;
-  allowLimitToReset: boolean;
-  resetAfterValue: number;
-  resetAfterUnit: ResetUnit;
-}
+  const timeBonuses = (offers ?? []).filter(
+    (offer) => offer.isTimeBonus === true
+  );
 
-export default function TimeBonusPage() {
-  const router = useRouter();
-  const { mutateAsync: addOffer, isPending } = useAddOffer();
-
-  const [formState, setFormState] = useState<TimeBonusFormState>({
-    isActive: true,
-    name: 'Daily Check-in Bonus',
-    description: 'Come back every day to earn 50 free points!',
-    bonusPoints: 50,
-    limitPerCustomer: 1,
-    allowLimitToReset: true,
-    resetAfterValue: 24,
-    resetAfterUnit: 'Hours',
-  });
-
-  const handleFormChange = <K extends keyof TimeBonusFormState>(
-    field: K,
-    value: TimeBonusFormState[K]
-  ) => {
-    setFormState(prev => ({ ...prev, [field]: value }));
+  const handleToggle = async (id: string, isActive: boolean) => {
+    try {
+      await updateOffer.mutateAsync({ id, isActive: !isActive } as any);
+      toast.success(isActive ? 'Time bonus paused' : 'Time bonus resumed');
+    } catch {
+      toast.error('Could not update the time bonus.');
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Delete this time bonus? This cannot be undone.')) {
+      return;
+    }
     try {
-        const offerDto: CreateOfferDto = {
-            name: formState.name,
-            description: formState.description,
-            points: 0, // Always 0 cost for a "Bonus" claim
-            rewardCouponType: 'BONUS_POINTS',
-            offerScope: 'ALL_LISTINGS',
-            bonusPoints: formState.bonusPoints,
-            limitPerCustomer: formState.limitPerCustomer,
-            allowLimitToReset: formState.allowLimitToReset,
-            // Note: Specific reset timing (value/unit) is handled by 'allowLimitToReset' flag in current backend version
-        };
-
-        await addOffer(offerDto);
-        toast.success('Time Bonus Reward created successfully!');
-        router.push('/dashboard/loyalty/offers');
-    } catch (error) {
-        console.error(error);
-        toast.error('Failed to create time bonus. Please try again.');
+      await deleteOffer.mutateAsync(id);
+      toast.success('Time bonus deleted');
+      refetch();
+    } catch {
+      toast.error('Could not delete the time bonus.');
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 py-8">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Time Bonus</h1>
-          <p className="text-muted-foreground">Create a recurring free points reward to encourage frequent visits.</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-orange-500" />
-              Configuration
-            </CardTitle>
-            <CardDescription>
-              Set up the details for your time-based reward.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            
-            <div className="flex items-center space-x-2 border p-4 rounded-lg bg-muted/20">
-              <Checkbox
-                id="isActive"
-                checked={formState.isActive}
-                onCheckedChange={checked => handleFormChange('isActive', !!checked)}
-              />
-              <div className="grid gap-1.5 leading-none">
-                <Label htmlFor="isActive" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Active Status
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Make this bonus immediately available to customers.
-                </p>
-              </div>
+    <div className="min-h-full bg-[#fff8f5] p-4 sm:p-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/loyalty"
+              className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Time Bonuses</h1>
+              <p className="text-sm text-gray-500">
+                Recurring bonus-point rewards customers can activate from your
+                public listing.
+              </p>
             </div>
+          </div>
+          <Link
+            href="/dashboard/loyalty/time-bonus/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+          >
+            <Plus className="h-4 w-4" /> New Time Bonus
+          </Link>
+        </header>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Reward Name</Label>
-              <Input
-                id="name"
-                value={formState.name}
-                onChange={e => handleFormChange('name', e.target.value)}
-                placeholder="e.g. Daily Bonus"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formState.description}
-                onChange={e => handleFormChange('description', e.target.value)}
-                placeholder="Explain how often customers can claim this."
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="bonusPoints" className="text-orange-600 font-semibold flex items-center gap-1">
-                  <Gift className="h-3 w-3" /> Points to Award
-                </Label>
-                <Input
-                  id="bonusPoints"
-                  type="number"
-                  min="1"
-                  value={formState.bonusPoints}
-                  onChange={e => handleFormChange('bonusPoints', Number(e.target.value))}
-                  className="font-bold"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="limitPerCustomer">Claims per Cycle</Label>
-                <Input
-                  id="limitPerCustomer"
-                  type="number"
-                  min="1"
-                  value={formState.limitPerCustomer}
-                  onChange={e => handleFormChange('limitPerCustomer', Number(e.target.value))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4 pt-4 border-t">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="allowLimitToReset"
-                  checked={formState.allowLimitToReset}
-                  onCheckedChange={checked => handleFormChange('allowLimitToReset', !!checked)}
-                />
-                <Label htmlFor="allowLimitToReset">Recurring Reward (Reset Limit)</Label>
-              </div>
-
-              {formState.allowLimitToReset && (
-                <div className="grid grid-cols-3 gap-4 pl-6 border-l-2 border-orange-100">
-                  <div className="col-span-2 space-y-2">
-                    <Label htmlFor="resetAfterValue">Reset Every</Label>
-                    <Input
-                      id="resetAfterValue"
-                      type="number"
-                      min="1"
-                      value={formState.resetAfterValue}
-                      onChange={e => handleFormChange('resetAfterValue', Number(e.target.value))}
-                      disabled // Backend limitation visual feedback
-                      className="bg-muted"
-                    />
+        {isLoading ? (
+          <p className="rounded-xl border border-gray-100 bg-white py-12 text-center text-sm text-gray-400">
+            Loading time bonuses…
+          </p>
+        ) : timeBonuses.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center">
+            <Clock className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+            <p className="text-sm font-semibold text-gray-600">
+              No time bonuses yet
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
+              Create a recurring bonus customers can claim to keep them coming
+              back.
+            </p>
+            <Link
+              href="/dashboard/loyalty/time-bonus/new"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+            >
+              <Plus className="h-4 w-4" /> Create your first time bonus
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {timeBonuses.map((bonus) => (
+              <div
+                key={bonus.id}
+                className="flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-[#a14000] ring-1 ring-orange-100">
+                      <Gift className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">{bonus.name}</p>
+                      <span
+                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          bonus.isActive
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {bonus.isActive ? 'Active' : 'Paused'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>&nbsp;</Label>
-                    <Select
-                      value={formState.resetAfterUnit}
-                      disabled // Backend limitation visual feedback
-                    >
-                      <SelectTrigger className="bg-muted">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Hours">Hours</SelectItem>
-                        <SelectItem value="Days">Days</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="text-right">
+                    <p className="text-2xl font-black leading-none text-[#a14000]">
+                      +{bonus.bonusPoints ?? 0}
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                      points
+                    </p>
                   </div>
-                  <p className="col-span-3 text-xs text-muted-foreground italic">
-                    * Exact timing customization will be enabled in a future update. Currently resets daily.
-                  </p>
                 </div>
-              )}
-            </div>
 
-            <div className="flex justify-end gap-3 pt-6">
-              <Button type="button" variant="outline" onClick={() => router.back()}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 min-w-[140px]" disabled={isPending}>
-                {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Create Bonus
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
+                <p className="mt-3 line-clamp-2 flex-1 text-xs leading-relaxed text-gray-500">
+                  {bonus.description || 'No description.'}
+                </p>
+
+                <div className="mt-4 flex items-center justify-between border-t border-gray-50 pt-3 text-[11px] text-gray-500">
+                  <span>
+                    {bonus.limitPerCustomer
+                      ? `${bonus.limitPerCustomer} claim(s) per customer`
+                      : 'Unlimited claims'}
+                    {bonus.allowLimitToReset ? ' · resets daily' : ''}
+                  </span>
+                  {bonus.endDate ? (
+                    <span>Ends {new Date(bonus.endDate).toLocaleDateString()}</span>
+                  ) : (
+                    <span>Always available</span>
+                  )}
+                </div>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <Link
+                    href={`/dashboard/loyalty/offers/edit/${bonus.id}`}
+                    className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle(bonus.id, !!bonus.isActive)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-orange-600"
+                  >
+                    {bonus.isActive ? (
+                      <>
+                        <PauseCircle className="h-4 w-4" /> Pause
+                      </>
+                    ) : (
+                      <>
+                        <PlayCircle className="h-4 w-4" /> Resume
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(bonus.id)}
+                    className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -24,19 +24,17 @@ import {
   Globe,
   MapPin,
   X,
-  Megaphone,
 } from 'lucide-react';
 
 const NearbyDiscovery = dynamic(() => import('@/components/marketplace/NearbyDiscovery'), { ssr: false });
 
 const SHORTCUTS = [
   { title: "LocalMall", icon: MapPin, href: "/dashboard/localmall", color: "text-amber-600", bg: "bg-amber-100" },
-  { title: "My Business", icon: PlusCircle, href: "/dashboard/my-business", color: "text-blue-600", bg: "bg-blue-100" },
+  { title: "My Storefront", icon: PlusCircle, href: "/dashboard/my-business", color: "text-blue-600", bg: "bg-blue-100" },
   { title: "Store", icon: ShoppingBag, href: "/dashboard/store", color: "text-orange-600", bg: "bg-orange-100" },
   { title: "Services", icon: Briefcase, href: "/dashboard/services", color: "text-purple-600", bg: "bg-purple-100" },
   { title: "Wallet", icon: Wallet, href: "/dashboard/wallet", color: "text-green-600", bg: "bg-green-100" },
   { title: "Messages", icon: MessageSquare, href: "/dashboard/messages", color: "text-pink-600", bg: "bg-pink-100" },
-  { title: "Promotion", icon: Megaphone, href: "/dashboard/promotions", color: "text-rose-600", bg: "bg-rose-100" },
   { title: "History", icon: History, href: "/dashboard/history/my-vouchers", color: "text-slate-600", bg: "bg-slate-100" },
   { title: "Settings", icon: Settings, href: "/dashboard/settings", color: "text-gray-600", bg: "bg-gray-100" },
 ];

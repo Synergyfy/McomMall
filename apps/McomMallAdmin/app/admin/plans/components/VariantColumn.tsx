@@ -20,7 +20,6 @@ import { PlanFormValues, VARIANT_HINTS } from './plan-schema';
 import { TIER_THEME } from './plan-theme';
 
 const QUOTA_FIELDS: Array<{ key: string; label: string }> = [
-  { key: 'maxListings', label: 'Listings' },
   { key: 'maxProducts', label: 'Products' },
   { key: 'maxServices', label: 'Services' },
   { key: 'maxImagesPerListing', label: 'Images/Listing' },

@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Package,
   Phone,
+  Plus,
   ShieldCheck,
   Star,
   Store,
@@ -138,23 +139,39 @@ const BusinessOverview = ({ listing }: { listing: UserListing }) => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
-            Dashboard &gt; My Business
+            Dashboard &gt; My Storefront
           </p>
           <h1 className="mt-1 text-3xl font-black tracking-tight text-gray-900">
-            My Business
+            My Storefront
           </h1>
           <p className="mt-1 text-sm text-gray-500">
             Everything about your business, synced from MCOM Central Hub, plus
             reviews collected directly on McomMall.
           </p>
         </div>
-        <Link
-          href={`/listings/${listing.id}?source=in-house`}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-        >
-          View public profile
-          <ExternalLink className="h-4 w-4" />
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/dashboard/store/products/add-product"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-orange-700"
+          >
+            <Plus className="h-4 w-4" />
+            Add Product
+          </Link>
+          <Link
+            href="/dashboard/services/add-service"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 shadow-sm transition-colors hover:bg-orange-100"
+          >
+            <Plus className="h-4 w-4" />
+            Add Service
+          </Link>
+          <Link
+            href={`/listings/${listing.id}?source=in-house`}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          >
+            View public profile
+            <ExternalLink className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
       <CentralManagedProfileNotice />

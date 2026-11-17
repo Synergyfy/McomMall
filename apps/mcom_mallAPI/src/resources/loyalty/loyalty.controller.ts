@@ -29,8 +29,9 @@ import { UserRole } from '../../common/role.enum';
 import { LoyaltyService } from './loyalty.service';
 import {
   CreateLoyaltyRuleDto,
+  JoinLoyaltyProgramDto,
   UpdateLoyaltyRuleDto,
-  UpdateLoyaltySettingsDto,
+  UpsertLoyaltyEarningConfigDto,
 } from './dto/loyalty.dto';
 import { AllocatePointsDto } from './dto/allocate-points.dto';
 import { AllocatePointsBulkDto } from './dto/allocate-points-bulk.dto';
@@ -144,22 +145,43 @@ export class LoyaltyController {
     return this.loyaltyService.removeRule(id, user);
   }
 
-  @Get('settings')
-  @ApiOperation({ summary: 'Get loyalty settings for a business' })
-  getSettings(
+
+  @Get('earning-config')
+  @ApiOperation({ summary: 'Get the loyalty earning configuration' })
+  getEarningConfig(
     @Query('businessId', ParseUUIDPipe) businessId: string,
     @CurrentUser() user: any,
   ) {
-    return this.loyaltyService.getSettings(businessId, user);
+    return this.loyaltyService.getEarningConfig(businessId, user);
   }
 
-  @Put('settings')
-  @ApiOperation({ summary: 'Update loyalty settings for a business' })
-  updateSettings(
+  @Put('earning-config')
+  @ApiOperation({ summary: 'Update the loyalty earning configuration' })
+  updateEarningConfig(
     @Query('businessId', ParseUUIDPipe) businessId: string,
-    @Body() dto: UpdateLoyaltySettingsDto,
+    @Body() dto: UpsertLoyaltyEarningConfigDto,
     @CurrentUser() user: any,
   ) {
-    return this.loyaltyService.updateSettings(businessId, dto, user);
+    return this.loyaltyService.updateEarningConfig(businessId, dto, user);
+  }
+
+  @Get('membership')
+  @Roles(UserRole.CUSTOMER, UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Check the current user loyalty membership' })
+  getMembership(
+    @Query('businessId', ParseUUIDPipe) businessId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.loyaltyService.getMembership(businessId, user.id);
+  }
+
+  @Post('join')
+  @Roles(UserRole.CUSTOMER, UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Join a business loyalty programme' })
+  joinProgram(
+    @Body() dto: JoinLoyaltyProgramDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.loyaltyService.joinProgram(dto.businessId, user.id);
   }
 }

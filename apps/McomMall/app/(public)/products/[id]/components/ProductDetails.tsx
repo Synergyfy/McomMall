@@ -432,7 +432,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
               <TabsTrigger value="description" className="py-3">Description</TabsTrigger>
               <TabsTrigger value="reviews" className="py-3">Reviews</TabsTrigger>
               <TabsTrigger value="shipping" className="py-3">Shipping & Returns</TabsTrigger>
-              <TabsTrigger value="promotions" className="py-3">Promotions</TabsTrigger>
+              <TabsTrigger value="rewards" className="py-3">Rewards</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-6 p-8 border rounded-lg text-lg">
               <div
@@ -450,8 +450,8 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                 purchase.
               </p>
             </TabsContent>
-            <TabsContent value="promotions" className="mt-6">
-              <LoyaltyContent productId={productId} />
+            <TabsContent value="rewards" className="mt-6">
+              <LoyaltyContent businessId={product.business?.id} />
             </TabsContent>
           </Tabs>
         </div>

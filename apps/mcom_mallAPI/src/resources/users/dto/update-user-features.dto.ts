@@ -8,8 +8,4 @@ export class UpdateUserFeaturesDto {
   @IsOptional()
   @IsBoolean()
   voucher?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  promotion?: boolean;
 }

@@ -247,7 +247,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
               <TabsTrigger value="description">Description</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="shipping">Shipping & Returns</TabsTrigger>
-              <TabsTrigger value="promotions">Promotions</TabsTrigger>
+              <TabsTrigger value="rewards">Rewards</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-4 p-6 border rounded-md">
               <p className="text-gray-700 whitespace-pre-wrap">
@@ -264,8 +264,8 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                 purchase.
               </p>
             </TabsContent>
-            <TabsContent value="promotions" className="mt-4">
-              <LoyaltyContent productId={productId} />
+            <TabsContent value="rewards" className="mt-4">
+              <LoyaltyContent businessId={product.business?.id} />
             </TabsContent>
           </Tabs>
         </div>

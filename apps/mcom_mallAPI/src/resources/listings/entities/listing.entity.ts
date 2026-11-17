@@ -24,10 +24,8 @@ import { BusinessServiceProviderProfile } from './service_provider_profiles.enti
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../product/entities/product.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
-import { Promotion } from '../../promotion/entities/promotion.entity';
 import { Service } from '../../services/entities/service.entity';
 import { Review } from '../../reviews/entities/review.entity';
-import { Offer } from '../../offer/entities/offer.entity';
 import { LocalMall } from '../../localmall/entities/localmall.entity';
 import { Event } from '../../events/entities/event.entity';
 
@@ -244,18 +242,8 @@ export class Business extends AbstractBaseEntity {
   })
   services: Service[];
 
-  @ManyToMany(() => Promotion, (promotion) => promotion.businesses, {
-    cascade: ['insert', 'update', 'remove'],
-  })
-  promotions: Promotion[];
-
   @OneToMany(() => Review, (review) => review.business)
   reviews: Review[];
-
-  @ManyToMany(() => Offer, (offer) => offer.businesses, {
-    cascade: ['insert', 'update', 'remove'],
-  })
-  offers: Offer[];
 
   @ManyToOne(() => LocalMall, (mall) => mall.businesses, {
     nullable: true,

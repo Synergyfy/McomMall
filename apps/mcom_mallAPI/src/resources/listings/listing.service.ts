@@ -15,10 +15,6 @@ import { UpdateBusinessDto } from './dto/listings.dto';
 import { User } from '../users/entities/user.entity';
 import { SearchBusinessDto } from './dto/listings.dto';
 import { ActivitiesService } from '../activities/activities.service';
-import { PromotionService } from '../promotion/promotion.service';
-import { Promotion } from '../promotion/entities/promotion.entity';
-import { Product } from '../product/entities/product.entity';
-import { PromotionScope } from '../promotion/promotion.enum';
 import { ListingPublicDto } from './dto/listing-public.dto';
 
 @Injectable()
@@ -34,7 +30,6 @@ export class ListingsService {
     private readonly taxonomySubcategoryRepository: Repository<TaxonomySubcategory>,
     private readonly dataSource: DataSource,
     private readonly activitiesService: ActivitiesService,
-    private readonly promotionService: PromotionService,
   ) {}
 
   async findAllForUser(userId: string, page = 1, limit = 10, status?: string) {
@@ -137,72 +132,9 @@ export class ListingsService {
       ...business,
       giftCard: business.user.giftCard,
       voucher: business.user.voucher,
-      promotion: business.user.promotion,
     };
 
-    if (user && business.products) {
-      const userPromotions = await this.promotionService.findUserPromotions(
-        user.id,
-      );
-
-      for (const product of business.products) {
-        let totalPoints = 0;
-        for (const promotion of userPromotions) {
-          if (this.isProductQualified(product, promotion, business)) {
-            totalPoints += promotion.points || 0;
-          }
-        }
-        (product as any).points = totalPoints;
-      }
-    }
-
     return response;
-  }
-
-  private isProductQualified(
-    product: Product,
-    promotion: Promotion,
-    business: Business,
-  ): boolean {
-    if (
-      promotion.excludedProducts &&
-      promotion.excludedProducts.some(
-        (excludedProduct) => excludedProduct.id === product.id,
-      )
-    ) {
-      return false;
-    }
-
-    switch (promotion.promotionScope) {
-      case PromotionScope.ALL_LISTINGS:
-        return (
-          business.user?.id &&
-          promotion.user?.id &&
-          business.user.id === promotion.user.id
-        );
-      case PromotionScope.SPECIFIC_LISTINGS:
-        return (
-          promotion.businesses &&
-          promotion.businesses.some(
-            (promoBusiness) => promoBusiness.id === business.id,
-          )
-        );
-      case PromotionScope.ALL_PRODUCTS:
-        return (
-          business.user?.id &&
-          promotion.user?.id &&
-          business.user.id === promotion.user.id
-        );
-      case PromotionScope.SPECIFIC_PRODUCTS:
-        return (
-          promotion.includedProducts &&
-          promotion.includedProducts.some(
-            (includedProduct) => includedProduct.id === product.id,
-          )
-        );
-      default:
-        return false;
-    }
   }
 
   async update(

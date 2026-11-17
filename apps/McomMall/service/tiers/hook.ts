@@ -121,7 +121,6 @@ export const useGetTiers = (type: string = 'all') => {
         qrCodeCount: 0,
         configuration: {
           quotas: {
-            maxListings: 500,
             allowProductListing: true,
             allowServiceListing: true,
             maxProducts: 200,
@@ -185,7 +184,6 @@ export const useGetTierById = (id: string) => {
         qrCodeCount: 0,
         configuration: {
           quotas: {
-            maxListings: 500,
             allowProductListing: true,
             allowServiceListing: true,
             maxProducts: 200,

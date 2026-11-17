@@ -57,7 +57,8 @@ type FormCouponType =
 
 export function OffersManager() {
   const router = useRouter();
-  const { data: offers, isLoading, error } = useGetOffers();
+  const { data: allOffers, isLoading, error } = useGetOffers();
+  const offers = (allOffers ?? []).filter((offer) => !offer.isTimeBonus);
   const { mutateAsync: deleteOffer } = useDeleteOffer();
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [offerToDelete, setOfferToDelete] = useState<string | null>(null);

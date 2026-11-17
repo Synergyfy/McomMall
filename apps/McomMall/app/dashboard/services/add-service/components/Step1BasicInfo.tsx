@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Settings, Check, ChevronsUpDown, HelpCircle, X, Store, AlertCircle } from 'lucide-react';
+import { Settings, Check, ChevronsUpDown, HelpCircle, X, Store, AlertCircle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -40,16 +40,28 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { useGetCategories, useGetSubCategoriesByCategory, useGetSectors, useGetCategoriesBySector } from '@/service/taxonomy/hook';
 import { UserListing } from '@/service/listings/types';
 import { useGetUserListings } from '@/service/listings/hook';
-import { pickCentralBusiness } from '@/lib/central-business';
+import { getBusinessTaxonomy, pickCentralBusiness } from '@/lib/central-business';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+
+const CENTRAL_BUSINESS_URL = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/dashboard/business-profile`;
+
+function ClassificationItem({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-sm font-semibold">{value || '—'}</span>
+    </div>
+  );
+}
 
 const AUDIENCE_OPTIONS = [
   "Families", "Seniors", "Students", "Professionals", "Couples", "Children", "Business Owners", "Everyone"
@@ -62,20 +74,15 @@ const COMMON_TAGS = [
 export function Step1BasicInfo() {
   const router = useRouter();
   const form = useFormContext();
-  const selectedSector = form.watch('sector');
-  const selectedCategory = form.watch('category');
   const currentBusinessId = form.watch('businessId');
+  const sectorValue = form.watch('sector');
+  const categoryValue = form.watch('category');
+  const subCategoryValue = form.watch('subcategory');
 
-  const { data: sectors } = useGetSectors();
-  const { data: categories } = useGetCategoriesBySector(selectedSector);
-  const { data: subCategories } = useGetSubCategoriesByCategory(selectedCategory);
   const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
 
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
-  const [sectorOpen, setSectorOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [showNoBusinessDialog, setShowNoBusinessDialog] = useState(false);
 
   const businesses = useMemo(() => {
@@ -95,13 +102,41 @@ export function Step1BasicInfo() {
   // Every user has one MCOM Central business. Attach services to it
   // automatically instead of asking them to pick a listing.
   const business = pickCentralBusiness(businesses);
+  const businessTaxonomy = getBusinessTaxonomy(business as any);
 
   useEffect(() => {
     const business = pickCentralBusiness(businesses);
-    if (!isLoadingListings && business && currentBusinessId !== business.id) {
+    if (isLoadingListings || !business) return;
+
+    if (currentBusinessId !== business.id) {
       form.setValue('businessId', business.id, { shouldValidate: true });
     }
-  }, [isLoadingListings, businesses, currentBusinessId, form]);
+
+    // Sector, category and sub-category are owned by MCOM Central. Mirror them
+    // onto the service so merchants never re-enter their business taxonomy.
+    const taxonomy = getBusinessTaxonomy(business as any);
+    const sector = taxonomy.sectorName || taxonomy.sectorId;
+    if (sector && sectorValue !== sector) {
+      form.setValue('sector', sector, { shouldValidate: true });
+    }
+    if (taxonomy.categoryName && categoryValue !== taxonomy.categoryName) {
+      form.setValue('category', taxonomy.categoryName, { shouldValidate: true });
+    }
+    if (
+      taxonomy.subCategoryName &&
+      subCategoryValue !== taxonomy.subCategoryName
+    ) {
+      form.setValue('subcategory', taxonomy.subCategoryName, { shouldValidate: true });
+    }
+  }, [
+    isLoadingListings,
+    businesses,
+    currentBusinessId,
+    sectorValue,
+    categoryValue,
+    subCategoryValue,
+    form,
+  ]);
 
   const toggleSelection = (fieldName: string, value: string) => {
     const currentValues = form.getValues(fieldName)?.split(',').map((v: string) => v.trim()).filter(Boolean) || [];
@@ -175,236 +210,51 @@ export function Step1BasicInfo() {
             )}
           />
 
-          {/* Sector */}
-          <FormField
-            control={form.control}
-            name="sector"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <div className="flex items-center gap-2 mb-2">
-                  <FormLabel className="text-base font-semibold">
-                    Sector <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Select the primary sector for your service.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Popover open={sectorOpen} onOpenChange={setSectorOpen}>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        className={cn(
-                          "w-full justify-between py-6",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value
-                          ? sectors?.find(
-                              (sector) => sector.id === field.value
-                            )?.name
-                          : "Select sector"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                    <Command>
-                      <CommandInput placeholder="Search sector..." />
-                      <CommandList>
-                        <CommandEmpty>No sector found.</CommandEmpty>
-                        <CommandGroup>
-                          {sectors?.map((sector) => (
-                            <CommandItem
-                              value={sector.name}
-                              key={sector.id}
-                              onSelect={() => {
-                                form.setValue("sector", sector.id, { shouldValidate: true });
-                                form.setValue("category", ""); // Reset category
-                                form.setValue("subcategory", ""); // Reset subcategory
-                                setSectorOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  sector.id === field.value
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {sector.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
+          {/* Business classification (owned by MCOM Central Hub) */}
+          <div className="flex flex-col gap-4 rounded-xl border bg-muted/30 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Store className="size-4" />
+                </span>
+                <p className="text-sm font-semibold">Business classification</p>
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Managed by MCOM Central
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Sector, category and sub-category are taken from your business profile so
+              services stay consistent with MCOM Central.
+            </p>
+            <div className="grid grid-cols-1 gap-4 rounded-lg border bg-background px-4 py-3 sm:grid-cols-3">
+              <ClassificationItem label="Sector" value={businessTaxonomy.sectorName} />
+              <ClassificationItem label="Category" value={businessTaxonomy.categoryName} />
+              <ClassificationItem
+                label="Sub-category"
+                value={businessTaxonomy.subCategoryName}
+              />
+            </div>
+            {(!sectorValue || !categoryValue) && (
+              <div className="flex flex-col gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <span>
+                  This service will inherit an incomplete classification. Add the missing
+                  details to your business profile in MCOM Central.
+                </span>
+                <a
+                  href={CENTRAL_BUSINESS_URL}
+                  className="inline-flex items-center gap-1 font-semibold text-amber-900 underline"
+                >
+                  Update business profile in MCOM Central
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             )}
-          />
-
-          {/* Category & Subcategory */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FormLabel className="text-base font-semibold">
-                      Category
-                    </FormLabel>
-                    <span className="text-xs text-muted-foreground">(Optional)</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Select the primary category that fits your service.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
-                    <PopoverTrigger asChild disabled={!selectedSector}>
-                      <FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          role="combobox"
-                          className={cn(
-                            "w-full justify-between py-6",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value
-                            ? categories?.find(
-                                (category) => category.id === field.value
-                              )?.name
-                            : "Select category"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search category..." />
-                        <CommandList>
-                          <CommandEmpty>No category found.</CommandEmpty>
-                          <CommandGroup>
-                            {categories?.map((category) => (
-                              <CommandItem
-                                value={category.name}
-                                key={category.id}
-                                onSelect={() => {
-                                  form.setValue("category", category.id);
-                                  form.setValue("subcategory", ""); // Reset subcategory
-                                  setCategoryOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    category.id === field.value
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {category.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="subcategory"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FormLabel className="text-base font-semibold">Subcategory</FormLabel>
-                    <span className="text-xs text-muted-foreground">(Optional)</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Refine your service classification with a subcategory.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
-                    <PopoverTrigger asChild disabled={!selectedCategory}>
-                      <FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          role="combobox"
-                          className={cn(
-                            "w-full justify-between py-6",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value
-                            ? subCategories?.find(
-                                (sub) => sub.id === field.value
-                              )?.name
-                            : "Select subcategory"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search subcategory..." />
-                        <CommandList>
-                          <CommandEmpty>No subcategory found.</CommandEmpty>
-                          <CommandGroup>
-                            {subCategories?.map((sub) => (
-                              <CommandItem
-                                value={sub.name}
-                                key={sub.id}
-                                onSelect={() => {
-                                  form.setValue("subcategory", sub.id);
-                                  setSubcategoryOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    sub.id === field.value
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {sub.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {form.formState.errors.sector?.message && (
+              <p className="text-xs text-red-600">
+                {String(form.formState.errors.sector.message)}
+              </p>
+            )}
           </div>
 
           {/* Short Description */}

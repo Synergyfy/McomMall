@@ -121,7 +121,6 @@ const initialData: NavGroup[] = [
         subItems: [
           { id: 'sub-loyalty-analytics', label: 'Analytics' },
           { id: 'sub-loyalty-members', label: 'Members' },
-          { id: 'sub-loyalty-promotion', label: 'Promotion' },
           { id: 'sub-loyalty-time-bonus', label: 'Time Bonus' },
           { id: 'sub-loyalty-offers', label: 'Offers' },
         ]

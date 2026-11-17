@@ -30,7 +30,6 @@ export interface User {
   centralProfileSyncedAt?: string | null;
   giftCard: boolean;
   voucher: boolean;
-  promotion: boolean;
   coupons: boolean;
   shippingAddresses?: any[]; // Allow shippingAddresses
 }
@@ -43,13 +42,10 @@ export interface UpdateUserDto {
   profilePictureUrl?: string;
   giftCard?: boolean;
   voucher?: boolean;
-  promotion?: boolean;
   coupons?: boolean;
 }
 
 export interface CustomerStats {
   totalOrders: number;
   totalSpent: number;
-  promotionPoints: number;
-  promotionsParticipating: number;
 }

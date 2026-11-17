@@ -1,5 +1,4 @@
 export interface CapabilityQuotas {
-  maxListings: number; // Total listings (product + service) -1 for unlimited
   allowProductListing: boolean;
   allowServiceListing: boolean;
   maxProducts: number; // -1 for unlimited

@@ -14,12 +14,6 @@ export class OwnerStatsDto {
   totalAmountEarnedFromGiftCard: number;
 
   @ApiProperty({
-    description: 'Total points distributed through promotions',
-    example: 10000,
-  })
-  totalAmountSpentForPromotions: number;
-
-  @ApiProperty({
     description: 'Total number of offers redeemed by customers',
     example: 50,
   })

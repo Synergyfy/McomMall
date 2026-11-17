@@ -12,8 +12,6 @@ import {
   PlayCircle,
   Gift,
   Users,
-  BarChart2,
-  Settings,
   UserPlus,
   ArrowRight,
 } from 'lucide-react';
@@ -44,7 +42,9 @@ export default function LoyaltyDashboardPage() {
   const isLoading =
     businessLoading || statsQuery.isLoading || offersQuery.isLoading;
 
-  const offers = (offersQuery.data ?? []).slice(0, 6);
+  const offers = (offersQuery.data ?? [])
+    .filter((offer) => !offer.isTimeBonus)
+    .slice(0, 6);
 
   const handleToggleOffer = async (offerId: string, isActive: boolean) => {
     try {
@@ -102,6 +102,18 @@ export default function LoyaltyDashboardPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
             >
               <Plus className="h-4 w-4" /> New Offer
+            </Link>
+            <Link
+              href="/dashboard/loyalty/time-bonus/new"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              <Star className="h-4 w-4" /> New Time Bonus
+            </Link>
+            <Link
+              href="/dashboard/loyalty/earning"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              <Coins className="h-4 w-4" /> Earning Rules
             </Link>
             <Link
               href="/dashboard/loyalty/points/allocate"
@@ -260,7 +272,7 @@ export default function LoyaltyDashboardPage() {
                             {name}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {transaction.reason || transaction.promotion?.name || transaction.offer?.name || (positive ? 'Points earned' : 'Points redeemed')}
+                            {transaction.reason || transaction.offer?.name || (positive ? 'Points earned' : 'Points redeemed')}
                           </p>
                         </div>
                         <div className="text-right">
@@ -289,11 +301,10 @@ export default function LoyaltyDashboardPage() {
               <h2 className="mb-3 text-lg font-bold text-gray-900">Quick Actions</h2>
               <div className="space-y-2">
                 {[
-                  { label: 'Analytics', href: '/dashboard/loyalty/analytics', icon: BarChart2 },
                   { label: 'Members', href: '/dashboard/loyalty/members', icon: Users },
                   { label: 'Offers', href: '/dashboard/loyalty/offers', icon: Gift },
-                  { label: 'Create Rule', href: '/dashboard/loyalty/rules/create', icon: Star },
-                  { label: 'Program Settings', href: '/dashboard/loyalty/settings', icon: Settings },
+                  { label: 'Time Bonus', href: '/dashboard/loyalty/time-bonus', icon: Star },
+                  { label: 'Earning Rules', href: '/dashboard/loyalty/earning', icon: Coins },
                 ].map(({ label, href, icon: Icon }) => (
                   <Link
                     key={label}

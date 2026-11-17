@@ -19,7 +19,6 @@ import { User } from '../users/entities/user.entity';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { OrderPayment, PaymentMethod } from './entities/order-payment.entity';
 import { Product } from '../product/entities/product.entity';
-import { PromotionEngineService } from '../promotion/promotion-engine.service';
 import { NotificationService } from '../notification/notification.service';
 import { OrderItem } from './entities/order-item.entity';
 import {
@@ -34,6 +33,7 @@ import { EligibilityLine } from '../rewards-integration/interfaces/reward-issuan
 import { RewardRedemptionReconcileService } from './reward-redemption-reconcile.service';
 import { SalesStatsDto } from './dto/sales-stats.dto';
 import { PointsService } from '../transaction/points.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { Offer } from '../offer/entities/offer.entity';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import {
@@ -126,8 +126,8 @@ export class OrderService {
     private readonly bookingService: BookingService,
     @Inject(forwardRef(() => PartnershipService))
     private readonly partnershipService: PartnershipService,
-    private readonly promotionEngineService: PromotionEngineService,
     private readonly pointsService: PointsService,
+    private readonly loyaltyService: LoyaltyService,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
     private readonly entityManager: EntityManager,
@@ -740,10 +740,16 @@ export class OrderService {
     // Validate offer BEFORE any central debit so a bad offerId can never
     // strand a successful debit outside the compensating-refund window.
     if (createCheckoutDto.offerId) {
-      offer = await this.offerRepository.findOneBy({
-        id: createCheckoutDto.offerId,
+      offer = await this.offerRepository.findOne({
+        where: { id: createCheckoutDto.offerId },
+        relations: ['user'],
       });
       if (!offer) throw new NotFoundException('Offer not found');
+      if (offer.user?.id === userId) {
+        throw new BadRequestException(
+          'You cannot redeem an offer from your own business.',
+        );
+      }
     }
 
     // --- MCOM Wallet payment path (settled through MCOM Pay) ---
@@ -1073,13 +1079,11 @@ export class OrderService {
           );
         }
 
-        if (isDirectPurchase || isCartCheckout) {
-          await this.promotionEngineService.processPurchase(
-            user,
-            savedOrder,
-            manager,
-          );
-        }
+        await this.loyaltyService.awardOrderPoints(
+          savedOrder.id,
+          user.id,
+          manager,
+        );
 
         if (isCartCheckout) {
           await this.cartService.clearCart(userId, manager);

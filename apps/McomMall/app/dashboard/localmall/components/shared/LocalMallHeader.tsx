@@ -6,6 +6,7 @@ import { ChevronLeft, Bell, Search, Info } from 'lucide-react';
 interface LocalMallHeaderProps {
   businessName: string;
   boroughName: string;
+  mallName?: string;
   highStreetName?: string;
   visibilityScore?: number;
   unreadNotifications?: number;
@@ -19,9 +20,10 @@ interface LocalMallHeaderProps {
 export const LocalMallHeader: FC<LocalMallHeaderProps> = ({
   businessName,
   boroughName,
-  highStreetName = 'Nelson Road',
-  visibilityScore = 85,
-  unreadNotifications = 3,
+  mallName,
+  highStreetName,
+  visibilityScore,
+  unreadNotifications = 0,
   canGoBack,
   onBack,
   onNotificationsClick,
@@ -40,13 +42,21 @@ export const LocalMallHeader: FC<LocalMallHeaderProps> = ({
           </button>
         )}
         <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-orange-600 uppercase tracking-widest">Local Mall</span>
-            <span className="text-xs text-gray-300">•</span>
-            <span className="text-xs font-semibold text-gray-500">{boroughName}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-bold text-orange-600 uppercase tracking-widest shrink-0">
+              {mallName || 'Local Mall'}
+            </span>
+            {boroughName && (
+              <>
+                <span className="text-xs text-gray-300">•</span>
+                <span className="text-xs font-semibold text-gray-500 truncate">
+                  {highStreetName ? `${highStreetName}, ${boroughName}` : boroughName}
+                </span>
+              </>
+            )}
           </div>
           <h2 className="text-base font-black text-gray-900 leading-tight truncate max-w-[180px] sm:max-w-xs">
-            {businessName}
+            {businessName || 'Your business'}
           </h2>
         </div>
       </div>
@@ -58,7 +68,9 @@ export const LocalMallHeader: FC<LocalMallHeaderProps> = ({
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors active:scale-95"
         >
           <Info className="w-4 h-4" />
-          <span className="text-xs font-bold">Reach Score: {visibilityScore}</span>
+          <span className="text-xs font-bold">
+            {visibilityScore != null ? `Reach Score: ${visibilityScore}` : 'Listing status'}
+          </span>
         </button>
 
         {/* Search Toggle */}

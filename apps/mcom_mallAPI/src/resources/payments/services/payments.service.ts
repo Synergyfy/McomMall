@@ -310,7 +310,6 @@ export class PaymentsService {
         const tasksMap = {
           createdBusiness: false,
           createdProductOrService: false,
-          createdPromotion: false,
           createdOffer: false,
           createdCoupon: false,
         };

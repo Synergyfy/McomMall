@@ -343,10 +343,14 @@ export class CreateServiceDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ description: 'Service sector', example: 'Home Improvement' })
+  @ApiPropertyOptional({
+    description:
+      'Service sector. Derived from the MCOM Central business profile; client values are overridden when Central provides one.',
+    example: 'Home Improvement',
+  })
   @IsString()
-  @IsNotEmpty()
-  sector: string;
+  @IsOptional()
+  sector?: string;
 
   @ApiPropertyOptional({
     description: 'Service category',

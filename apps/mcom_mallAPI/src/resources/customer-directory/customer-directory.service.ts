@@ -4,7 +4,6 @@ import { Repository, In } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Review } from '../reviews/entities/review.entity';
-import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
 import { InterestSignal } from '../interest-signals/entities/interest-signal.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { CustomerSegment } from './entities/customer-segment.entity';
@@ -37,8 +36,6 @@ export class CustomerDirectoryService {
     private readonly bookingRepository: Repository<ServiceBooking>,
     @InjectRepository(Review)
     private readonly reviewRepository: Repository<Review>,
-    @InjectRepository(PromotionParticipant)
-    private readonly participantRepository: Repository<PromotionParticipant>,
     @InjectRepository(InterestSignal)
     private readonly signalRepository: Repository<InterestSignal>,
     @InjectRepository(Business)
@@ -123,44 +120,13 @@ export class CustomerDirectoryService {
     return result;
   }
 
-  private async collectParticipantCustomers(
-    businessId: string,
-  ): Promise<Map<string, { lastVisit: Date; category: CustomerCategory }>> {
-    const participants = await this.participantRepository
-      .createQueryBuilder('participant')
-      .leftJoinAndSelect('participant.user', 'user')
-      .leftJoinAndSelect('participant.promotion', 'promotion')
-      .leftJoin('promotion.businesses', 'business')
-      .where('business.id = :businessId', { businessId })
-      .andWhere('participant.user IS NOT NULL')
-      .getMany();
-
-    const result = new Map<
-      string,
-      { lastVisit: Date; category: CustomerCategory }
-    >();
-    for (const participant of participants) {
-      const customer = participant.user as User | null;
-      if (!customer) continue;
-      const existing = result.get(customer.id);
-      if (!existing || participant.created_at > existing.lastVisit) {
-        result.set(customer.id, {
-          lastVisit: participant.created_at,
-          category: 'loyalty',
-        });
-      }
-    }
-    return result;
-  }
-
   async getDirectory(
     businessId: string,
     filters: DirectoryFilters,
   ): Promise<{ customers: any[]; total: number }> {
-    const [bookingMap, reviewMap, participantMap] = await Promise.all([
+    const [bookingMap, reviewMap] = await Promise.all([
       this.collectBookingCustomers(businessId),
       this.collectReviewCustomers(businessId),
-      this.collectParticipantCustomers(businessId),
     ]);
 
     // Merge customer engagement data keyed by user id
@@ -180,7 +146,6 @@ export class CustomerDirectoryService {
     };
     merge(bookingMap);
     merge(reviewMap);
-    merge(participantMap);
 
     const userIds = Array.from(engagement.keys());
     if (userIds.length === 0) {
@@ -270,7 +235,7 @@ export class CustomerDirectoryService {
       throw new NotFoundException(`Customer with ID ${customerId} not found`);
     }
 
-    const [bookings, reviews, participants, signals] = await Promise.all([
+    const [bookings, reviews, signals] = await Promise.all([
       this.bookingRepository.find({
         where: { user: { id: customerId } },
         relations: ['service'],
@@ -279,11 +244,6 @@ export class CustomerDirectoryService {
       this.reviewRepository.find({
         where: { user: { id: customerId }, business: { id: businessId } },
         order: { createdAt: 'DESC' },
-      }),
-      this.participantRepository.find({
-        where: { user: { id: customerId } },
-        relations: ['promotion'],
-        order: { created_at: 'DESC' },
       }),
       this.signalRepository.find({
         where: { businessId },
@@ -314,7 +274,6 @@ export class CustomerDirectoryService {
       reviewsCount: reviews.length,
       recentBookings: bookings.slice(0, 10),
       reviews: reviews.slice(0, 10),
-      promotionParticipations: participants.slice(0, 10),
       interestSignals: signals,
     };
   }

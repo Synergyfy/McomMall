@@ -1,13 +1,4 @@
-// Promotion History API Types
-
-export interface UserPromotion {
-  promotionId: string;
-  name: string;
-  description: string;
-  balance: number;
-  status: string;
-  endDate: string; // ISO 8601 date string
-}
+// Reward History API Types
 
 export interface UserTransaction {
   transactionId: string;
@@ -16,8 +7,6 @@ export interface UserTransaction {
   description: string;
   timestamp: string; // ISO 8601 date string
   details?: {
-    promotionId?: string;
-    promotionName?: string;
   };
 }
 

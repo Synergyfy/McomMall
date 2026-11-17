@@ -22,7 +22,6 @@ export interface PlanPrice {
 
 export interface PlanVariantConfiguration {
   quotas: {
-    maxListings: number;
     allowProductListing: boolean;
     allowServiceListing: boolean;
     maxProducts: number;
@@ -52,6 +51,83 @@ export interface PlanVariant {
   features: string[] | null;
   configuration: PlanVariantConfiguration;
   prices: PlanPrice[];
+}
+
+export function formatQuotaValue(value: number | undefined): string {
+  if (value === -1) return 'Unlimited';
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  return String(value);
+}
+
+export interface PlanQuotaFeature {
+  label: string;
+  value: string;
+}
+
+/** Quota rows shown on public plan cards and comparison tables. */
+export function getPlanQuotaFeatures(
+  variant: PlanVariant,
+): PlanQuotaFeature[] {
+  const quotas = variant.configuration?.quotas;
+  if (!quotas) return [];
+
+  return [
+    {
+      label: 'Products',
+      value: quotas.allowProductListing
+        ? formatQuotaValue(quotas.maxProducts)
+        : 'Not included',
+    },
+    {
+      label: 'Services',
+      value: quotas.allowServiceListing
+        ? formatQuotaValue(quotas.maxServices)
+        : 'Not included',
+    },
+    {
+      label: 'Images per listing',
+      value: formatQuotaValue(quotas.maxImagesPerListing),
+    },
+    {
+      label: 'Gift card templates',
+      value: formatQuotaValue(quotas.maxGiftCardTemplates),
+    },
+    {
+      label: 'Coupon templates',
+      value: formatQuotaValue(quotas.maxCouponTemplates),
+    },
+    {
+      label: 'Loyalty programs',
+      value: formatQuotaValue(quotas.maxLoyaltyPrograms),
+    },
+    {
+      label: 'Featured slots',
+      value: formatQuotaValue(quotas.featuredListingAllowance),
+    },
+  ];
+}
+
+export const PLAN_FEATURE_FLAGS: Array<{
+  key: keyof PlanVariantConfiguration['featureFlags'];
+  label: string;
+}> = [
+  { key: 'priorityInSearch', label: 'Priority in search' },
+  { key: 'advancedAnalytics', label: 'Advanced analytics' },
+  { key: 'dedicatedSupport', label: 'Dedicated support' },
+  { key: 'allowCustomBranding', label: 'Custom branding' },
+  { key: 'allowGroupCreation', label: 'Group creation' },
+];
+
+/** Feature flags enabled by admin, in display order. */
+export function getEnabledPlanFeatureFlags(
+  variant: PlanVariant,
+): Array<{ key: string; label: string }> {
+  const flags = variant.configuration?.featureFlags;
+  if (!flags) return [];
+  return PLAN_FEATURE_FLAGS.filter((flag) => flags[flag.key]).map((flag) => ({
+    key: flag.key,
+    label: flag.label,
+  }));
 }
 
 export interface Plan {

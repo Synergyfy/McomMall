@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/service/api';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { LocalMallShell } from './components/LocalMallShell';
 import { LocalMallTab } from './components/shared/LocalMallBottomNav';
 
@@ -58,8 +59,10 @@ export default function LocalMallPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<LocalMallTab>('home');
   const [screenStack, setScreenStack] = useState<string[]>(['home']);
-  const [businessName, setBusinessName] = useState('My Business Storefront');
-  const [boroughName, setBoroughName] = useState('Greenwich');
+  const [businessName, setBusinessName] = useState('');
+  const [boroughName, setBoroughName] = useState('');
+  const [mallName, setMallName] = useState('');
+  const [highStreetName, setHighStreetName] = useState('');
   const [postcode, setPostcode] = useState('');
   const [mallData, setMallData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +94,12 @@ export default function LocalMallPage() {
         if (res.data.borough) {
           setBoroughName(res.data.borough);
         }
+        if (res.data.mallName) {
+          setMallName(res.data.mallName);
+        }
+        if (res.data.highStreet) {
+          setHighStreetName(res.data.highStreet);
+        }
       }
     } catch (err) {
       console.error('Error fetching LocalMall feed ecosystem data:', err);
@@ -99,27 +108,29 @@ export default function LocalMallPage() {
 
   useEffect(() => {
     const loadProfile = async () => {
+      let resolvedPostcode =
+        localStorage.getItem('businessPostcode') || '';
+
       try {
-        const res = await api.get('businesses/my-profile');
-        if (res.data) {
-          setBusinessName(res.data.businessName || 'My Business Storefront');
-          if (res.data.location?.postcode) {
-            setPostcode(res.data.location.postcode);
-            localStorage.setItem('businessPostcode', res.data.location.postcode);
-            fetchEcosystemData(res.data.location.postcode);
-            return;
+        const res = await api.get('listings/mine', {
+          params: { page: 1, limit: 10 },
+        });
+        const business = pickCentralBusiness<any>(res.data?.data);
+        if (business) {
+          setBusinessName(business.businessName || '');
+          if (business.location?.postcode) {
+            resolvedPostcode = business.location.postcode;
+            localStorage.setItem('businessPostcode', resolvedPostcode);
           }
         }
       } catch (err) {
         console.error('Error loading business profile details:', err);
       }
-      
-      // Fallback if profile fails
-      const storedPostcode = localStorage.getItem('businessPostcode') || '';
-      if (storedPostcode) {
-        setPostcode(storedPostcode);
+
+      if (resolvedPostcode) {
+        setPostcode(resolvedPostcode);
       }
-      fetchEcosystemData(storedPostcode);
+      await fetchEcosystemData(resolvedPostcode);
     };
 
     loadProfile().finally(() => setLoading(false));
@@ -157,7 +168,13 @@ export default function LocalMallPage() {
 
     if (currentScreen.startsWith('profile:')) {
       const bizId = currentScreen.split(':')[1];
-      return <BusinessProfileScreen onNavigate={handleNavigate} businessId={bizId} />;
+      return (
+        <BusinessProfileScreen
+          onNavigate={handleNavigate}
+          businessId={bizId}
+          mallData={mallData}
+        />
+      );
     }
 
     switch (currentScreen) {
@@ -192,7 +209,7 @@ export default function LocalMallPage() {
       case 'clusters':
         return <ClusterScreen onNavigate={handleNavigate} mallData={mallData} />;
       case 'feed':
-        return <BoroughFeedScreen onNavigate={handleNavigate} boroughName={boroughName} />;
+        return <BoroughFeedScreen onNavigate={handleNavigate} boroughName={boroughName} mallData={mallData} />;
       case 'rankings':
         return <RankingsScreen onNavigate={handleNavigate} mallData={mallData} />;
 
@@ -222,7 +239,13 @@ export default function LocalMallPage() {
       case 'discover':
         return <DiscoverScreen onNavigate={handleNavigate} mallData={mallData} />;
       case 'interest':
-        return <InterestScreen onNavigate={handleNavigate} />;
+        return (
+          <InterestScreen
+            onNavigate={handleNavigate}
+            mallData={mallData}
+            businessName={businessName}
+          />
+        );
 
       // Expo Hub
       case 'expo':
@@ -270,6 +293,8 @@ export default function LocalMallPage() {
     <LocalMallShell
       businessName={businessName}
       boroughName={boroughName}
+      mallName={mallName}
+      highStreetName={highStreetName}
       activeTab={activeTab}
       onTabChange={handleTabChange}
       screenStack={screenStack}
@@ -279,7 +304,16 @@ export default function LocalMallPage() {
       onStatusClick={() => handleNavigate('status')}
       unreadNotifications={unreadNotifications}
     >
-      {renderActiveScreen()}
+      {loading ? (
+        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-100 border-t-orange-500" />
+          <p className="text-xs text-gray-500">
+            Loading your local mall from MCOM Central…
+          </p>
+        </div>
+      ) : (
+        renderActiveScreen()
+      )}
     </LocalMallShell>
   );
 }

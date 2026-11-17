@@ -38,6 +38,7 @@ import { ServiceSearchDto } from './dto/service-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { UserRole } from '../../common/role.enum';
+import { resolveBusinessTaxonomy } from '../../common/taxonomy/business-taxonomy';
 
 @Injectable()
 export class ServicesService {
@@ -90,7 +91,7 @@ export class ServicesService {
 
     const business = await this.businessRepository.findOne({
       where: { id: createServiceDto.businessId },
-      relations: ['user'],
+      relations: ['user', 'sector', 'category', 'subCategory'],
     });
 
     if (!business) {
@@ -126,6 +127,19 @@ export class ServicesService {
     const { bundledServices, configurableAddons, ...serviceData } =
       createServiceDto;
     delete (serviceData as Record<string, unknown>).adminDisabled;
+
+    // Classification is owned by the MCOM Central business profile. Always
+    // prefer the synced business taxonomy over whatever the client sent.
+    const taxonomy = resolveBusinessTaxonomy(business);
+    if (taxonomy.sector) serviceData.sector = taxonomy.sector;
+    if (taxonomy.category) serviceData.category = taxonomy.category;
+    if (taxonomy.subCategory) serviceData.subcategory = taxonomy.subCategory;
+
+    if (!serviceData.sector) {
+      throw new BadRequestException(
+        'Your MCOM Central business profile needs a sector before you can add a service.',
+      );
+    }
 
     const hasServiceImage =
       (serviceData.images?.length ?? 0) > 0 ||
@@ -317,7 +331,13 @@ export class ServicesService {
   ): Promise<Service> {
     const service = await this.serviceRepository.findOne({
       where: { id },
-      relations: ['business', 'business.user'],
+      relations: [
+        'business',
+        'business.user',
+        'business.sector',
+        'business.category',
+        'business.subCategory',
+      ],
     });
 
     if (!service) {
@@ -341,6 +361,12 @@ export class ServicesService {
       updateServiceDto;
     // Admin moderation is not writable by merchants, even if they send it.
     delete (serviceData as Record<string, unknown>).adminDisabled;
+
+    // Keep the service aligned with the MCOM Central business classification.
+    const taxonomy = resolveBusinessTaxonomy(service.business);
+    if (taxonomy.sector) serviceData.sector = taxonomy.sector;
+    if (taxonomy.category) serviceData.category = taxonomy.category;
+    if (taxonomy.subCategory) serviceData.subcategory = taxonomy.subCategory;
 
     // Map frontend fields to backend
     if (serviceData.images || serviceData.media) {

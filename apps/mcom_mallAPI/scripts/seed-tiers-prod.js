@@ -34,7 +34,6 @@ const defaultTiers = [
     ].join(','),
     configuration: {
       quotas: {
-        maxListings: 8,
         allowProductListing: true,
         allowServiceListing: true,
         maxProducts: 5,
@@ -73,7 +72,6 @@ const defaultTiers = [
     ].join(','),
     configuration: {
       quotas: {
-        maxListings: 40,
         allowProductListing: true,
         allowServiceListing: true,
         maxProducts: 25,
@@ -112,7 +110,6 @@ const defaultTiers = [
     ].join(','),
     configuration: {
       quotas: {
-        maxListings: 150,
         allowProductListing: true,
         allowServiceListing: true,
         maxProducts: 100,
@@ -151,7 +148,6 @@ const defaultTiers = [
     ].join(','),
     configuration: {
       quotas: {
-        maxListings: -1,
         allowProductListing: true,
         allowServiceListing: true,
         maxProducts: -1,
