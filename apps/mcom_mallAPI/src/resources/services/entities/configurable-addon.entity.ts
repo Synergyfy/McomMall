@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne, Index, DeleteDateColumn } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Service } from './service.entity';
 import { AddonPricingType } from '../service.enum';
@@ -21,7 +22,7 @@ export class ConfigurableAddon extends AbstractBaseEntity {
   @Length(1, 160)
   name: string;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   price: number;
 
   @Column({

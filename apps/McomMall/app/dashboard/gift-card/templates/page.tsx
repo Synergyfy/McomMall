@@ -61,6 +61,9 @@ const GiftCardTemplatesPage = () => {
               Home &gt; Dashboard &gt; Gift Cards &gt; Templates
             </p>
           </div>
+          <Button onClick={() => router.push('/dashboard/gift-card/templates/new')}>
+            <PlusCircle className="mr-2 h-4 w-4" /> New template
+          </Button>
         </header>
 
         {templates && templates.length > 0 ? (
@@ -78,7 +81,13 @@ const GiftCardTemplatesPage = () => {
           <div className="text-center py-24 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
             <Zap className="mx-auto text-gray-200 mb-6" size={64} />
             <h3 className="text-2xl font-black text-gray-900">No Templates Found</h3>
-            <p className="text-gray-500 font-bold mt-2">Go to the global templates catalog to find templates to issue.</p>
+            <p className="text-gray-500 font-bold mt-2">Create a gift card template to start issuing cards.</p>
+            <Button
+              className="mt-6"
+              onClick={() => router.push('/dashboard/gift-card/templates/new')}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Create template
+            </Button>
           </div>
         )}
       </main>

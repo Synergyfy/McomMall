@@ -1,5 +1,7 @@
 'use client';
 
+import { formatCurrency } from '@/lib/utils';
+
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,7 +107,7 @@ function BookingDetailSheet({
                         <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
                         <p className="text-sm text-slate-500 mb-1 font-medium">Total Paid</p>
                         <p className="text-2xl font-bold text-slate-900">
-                        £{(booking.totalAmount || booking.payment?.amount || 0).toFixed(2)}
+                        {formatCurrency(booking.totalAmount || booking.payment?.amount || 0)}
                         </p>
                         </div>
 
@@ -175,15 +177,15 @@ function BookingDetailSheet({
                             <div className="rounded-xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
                                 <div className="flex items-center justify-between p-3 text-sm">
                                     <span className="text-slate-500">Gross Total</span>
-                                    <span className="font-medium text-slate-700">£{booking.totalAmount.toFixed(2)}</span>
+                                    <span className="font-medium text-slate-700">{formatCurrency(booking.totalAmount)}</span>
                                 </div>
                                 <div className="flex items-center justify-between p-3 text-sm">
                                     <span className="text-slate-500">Platform Commission</span>
-                                    <span className="font-medium text-red-600">- £{(booking.commissionAmount || 0).toFixed(2)}</span>
+                                    <span className="font-medium text-red-600">- {formatCurrency(booking.commissionAmount || 0)}</span>
                                 </div>
                                 <div className="flex items-center justify-between p-3 text-sm bg-slate-50">
                                     <span className="text-slate-700 font-bold">Provider Payout</span>
-                                    <span className="font-bold text-emerald-600">£{(booking.providerAmount || 0).toFixed(2)}</span>
+                                    <span className="font-bold text-emerald-600">{formatCurrency(booking.providerAmount || 0)}</span>
                                 </div>
                             </div>
                         </div>
@@ -355,7 +357,7 @@ export default function AdminBookingsPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="font-semibold text-slate-900">£{(booking.totalAmount || booking.payment?.amount || 0).toFixed(2)}</span>
+                                                    <span className="font-semibold text-slate-900">{formatCurrency(booking.totalAmount || booking.payment?.amount || 0)}</span>
                                                     {booking.payoutProcessed && <span className="text-[10px] text-emerald-600 font-bold">PAID OUT</span>}
                                                 </div>
                                             </TableCell>

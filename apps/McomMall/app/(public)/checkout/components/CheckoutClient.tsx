@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Loader } from 'lucide-react';
 import OrderSummaryCard from './OrderSummaryCard';
@@ -39,7 +39,7 @@ import {
 import { Product } from '@/service/listings/types';
 
 const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 export default function CheckoutClient() {
@@ -128,6 +128,11 @@ export default function CheckoutClient() {
   );
 
   const router = useRouter();
+  const checkoutIdempotencyKey = useRef<string>(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
   const { mutate: checkout } = useCheckout();
   const { mutateAsync: createPaymentIntent, isPending: isStripeLoading } =
     useStripePayment();
@@ -375,6 +380,7 @@ export default function CheckoutClient() {
           paymentMethod: method,
           amount: totalPrice,
           transactionId,
+          idempotencyKey: checkoutIdempotencyKey.current,
         },
         couponCode: couponCode || undefined,
         offerId: selectedOffer || undefined,
@@ -398,6 +404,13 @@ export default function CheckoutClient() {
 
       checkout(checkoutData, {
         onSuccess: () => setSuccessModalOpen(true),
+        onError: (error: any) => {
+          const message =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Checkout failed. Please review your discounts and try again.';
+          alert(Array.isArray(message) ? message.join('\n') : message);
+        },
       });
     },
     [
@@ -426,7 +439,10 @@ export default function CheckoutClient() {
 
   useEffect(() => {
     if (paymentMethod === PaymentMethod.STRIPE && totalPrice > 0) {
-      createPaymentIntent(totalPrice)
+      createPaymentIntent({
+        amount: totalPrice,
+        idempotencyKey: checkoutIdempotencyKey.current,
+      })
         .then((data) => {
           setClientSecret(data.clientSecret);
         })
@@ -434,7 +450,10 @@ export default function CheckoutClient() {
           console.error('Failed to create payment intent', err)
         );
     } else if (paymentMethod === PaymentMethod.PAYPAL && totalPrice > 0) {
-      createPaypalOrderAsync(totalPrice)
+      createPaypalOrderAsync({
+        amount: totalPrice,
+        idempotencyKey: checkoutIdempotencyKey.current,
+      })
         .then((order) => {
           setOrderID(order.id);
         })
@@ -484,7 +503,7 @@ export default function CheckoutClient() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="container mx-auto px-4 sm:px-6 lg:px-8 py-12"
+        className="container mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12"
       >
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl lg:text-4xl font-extrabold text-center mb-12 text-gray-900">

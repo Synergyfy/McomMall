@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { SpendingChannel } from '../campaign-cashback.enum';
 import { UserCampaignCashback } from './user-campaign-cashback.entity';
@@ -16,12 +17,12 @@ export class UserCampaignWallet extends AbstractBaseEntity {
   })
   channelType: SpendingChannel;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   value1Balance: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   value2Balance: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   value3Balance: number;
 }

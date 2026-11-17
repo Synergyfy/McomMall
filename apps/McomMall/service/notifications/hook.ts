@@ -99,3 +99,43 @@ export const useMarkNotificationsAsSeen = () => {
     },
   });
 };
+
+// --- Merchant broadcast helpers ---
+
+export interface BroadcastResult {
+  success: boolean;
+  count: number;
+  message: string;
+}
+
+export const useBroadcastToSegment = () =>
+  useMutation<BroadcastResult, Error, Record<string, unknown>>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post('/notifications/broadcast/segment', payload);
+      return data;
+    },
+  });
+
+export const useBroadcast = () =>
+  useMutation<BroadcastResult, Error, Record<string, unknown>>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post('/notifications/broadcast', payload);
+      return data;
+    },
+  });
+
+export const useRecipientCount = (
+  businessId?: string,
+  segmentId?: string,
+  enabled = true
+) =>
+  useQuery<{ count: number }>({
+    queryKey: ['notifications', 'recipients', businessId, segmentId],
+    queryFn: async () => {
+      const { data } = await api.get('/notifications/recipients/count', {
+        params: { businessId, segmentId },
+      });
+      return data;
+    },
+    enabled: enabled && !!businessId,
+  });

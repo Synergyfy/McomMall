@@ -1,4 +1,5 @@
 import { Entity, Column, ManyToOne, OneToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { ServiceBooking } from './service-booking.entity';
@@ -15,7 +16,7 @@ export class ServicePayment extends AbstractBaseEntity {
   @Column({ type: 'enum', enum: PaymentMethod })
   paymentMethod: PaymentMethod;
 
-  @Column({ type: 'float' })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @Column()

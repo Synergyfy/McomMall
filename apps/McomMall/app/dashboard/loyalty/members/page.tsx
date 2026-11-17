@@ -1,288 +1,269 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { Search, Users, Gift, Clock, Coins, ArrowLeft } from 'lucide-react';
+import { useBusinessId } from '@/hooks/useBusinessId';
 import {
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  Gift,
-  Calendar,
-  MoreVertical,
-  ArrowUpRight,
-  AlertTriangle,
-  Sparkles,
-  Award,
-  Crown,
-  Shield,
-  Zap,
-} from 'lucide-react';
+  useLoyaltyMembers,
+  useAllocatePoints,
+} from '@/service/loyalty/hook';
+
+const formatDate = (value?: string | null) =>
+  value
+    ? new Date(value).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '—';
 
 export default function LoyaltyMembersPage() {
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { businessId, isLoading: businessLoading } = useBusinessId();
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
+  const [points, setPoints] = useState('100');
+  const [reason, setReason] = useState('Loyalty bonus');
+  const membersQuery = useLoyaltyMembers(businessId, { search, limit: 100 });
+  const allocate = useAllocatePoints();
 
-  const showToast = (action: string, name: string) => {
-    setToastMessage(`${action} for ${name} initiated!`);
-    setTimeout(() => setToastMessage(null), 3000);
+  const members = membersQuery.data?.members ?? [];
+  const tierCounts = membersQuery.data?.tierCounts ?? [];
+
+  const totalMembers = membersQuery.data?.total ?? 0;
+  const allSelected = useMemo(
+    () => members.length > 0 && members.every((member) => selected.includes(member.id)),
+    [members, selected]
+  );
+
+  const toggleAll = () => {
+    setSelected(allSelected ? [] : members.map((member) => member.id));
   };
 
-  const tiers = [
-    { level: 'Level 5', name: 'VIP Exclusive',   icon: Crown,  bg: 'from-neutral-800 to-neutral-900' },
-    { level: 'Level 4', name: 'Platinum Elite',  icon: Award,  bg: 'from-slate-400 to-slate-600' },
-    { level: 'Level 3', name: 'Gold Tier',       icon: Zap,    bg: 'from-amber-400 to-amber-600' },
-    { level: 'Level 2', name: 'Silver Standard', icon: Shield, bg: 'from-gray-300 to-gray-500' },
-  ];
+  const handleAllocate = async () => {
+    if (!businessId) {
+      toast.error('No business profile found.');
+      return;
+    }
+    const value = Number(points);
+    if (!Number.isFinite(value) || value <= 0) {
+      toast.error('Enter a positive number of points.');
+      return;
+    }
+    if (selected.length === 0) {
+      toast.error('Select at least one member.');
+      return;
+    }
 
-  const topMembers = [
-    {
-      name: 'Marcus Chen', tier: 'VIP', tierBg: 'bg-neutral-900 text-white',
-      spent: '$12,450',
-      avatar: 'https://lh3.googleusercontent.com/aida/AP1WRLv80i9GrXlRdmC6fOnXwZs5pSFU9ShlA3pEM00HGNAHXAzAeDq0urhmbmqA9Cs1xUfpw9ffvOV8Rlt1KilPd5lZr2hniqxMxnGniaXKXBbLbMrffv1oOV7WYTpeS8H7u7EV3RQ3QeqS3oGH8kePcy7Toj1kv98iWpA0g6lenIkRZCMME3WLHAXY19R-O39Nk8e3rzlympXJjYnv-IRZrQazNkR_155OOyPiwQPbL74FUfQAOiuuRJy2Cq4',
-      actions: [{ label: 'Reward', icon: Gift }, { label: 'Event', icon: Calendar }],
-    },
-    {
-      name: 'Elena Rodriguez', tier: 'PLAT', tierBg: 'bg-slate-500 text-white',
-      spent: '$8,920',
-      avatar: 'https://lh3.googleusercontent.com/aida/AP1WRLvZIkmCe417O529OiPN6pPtGcjtHCjHmHftJAZNch1T0XQYq3fzgdxnhy2ANQ7tDp2xPREdmIWbUqdngsGiKHONsFkSuhGvfmPSnZAS1wZiANcRWPdMBdO7gw-EdnacGpyZfp5ci-vfjxFpUpyrdGSsv2-WEZUaRy_k6xxvnL5LEDEJCB8Dhw5rAoHbR5XFb9kMajmxuuUexNDzpkgSV8xy84uYNyWayv2GxLXSEYwjdfOnmDuvuhAmfiM',
-      actions: [{ label: 'Upgrade', icon: ArrowUpRight }, { label: 'Reward', icon: Gift }],
-    },
-    {
-      name: 'David Kim', tier: 'GOLD', tierBg: 'bg-amber-500 text-white',
-      spent: '$5,300',
-      avatar: 'https://lh3.googleusercontent.com/aida/AP1WRLtqyhMHGHHcB3mOchxe6_FZiBZmPNcFDbrDMfgpNE_biCMj_5sgD3VX7G6RPS3l_wit9wYIUHfPkTN8TuyRwF7HLfKjEM3ZroKDy6-QzkdxcraZkLarZ17838G_9K7cIZM3Dwxwzenc7_fOdkWTu_qNnJKPiNpT7STPvC4zYVUq9j-hL-rlJXphxdyYChuI_bYBjCKIPZ7B_RGIoPtwl5obF1qO_Ph35AjLTogZB76owNWdshhmD4YuyEI',
-      actions: [{ label: 'Upgrade', icon: ArrowUpRight }, { label: 'Reward', icon: Gift }],
-    },
-  ];
-
-  const expiringSoon = [
-    { name: 'Sarah Connor', initials: 'SC', endsIn: '2 days' },
-    { name: 'John Wick',    initials: 'JW', endsIn: '5 days' },
-  ];
-
-  const distMetrics = [
-    { title: 'New Members',   value: '+128',  sub: '↑ 12%',  subColor: 'text-[#00629f]' },
-    { title: 'Avg Points',    value: '2,450', sub: '',       subColor: '' },
-    { title: 'Churn Rate',    value: '2.4%',  sub: '↓ 0.5%', subColor: 'text-green-600' },
-    { title: 'Reward Value',  value: '$12.4k', sub: '',      subColor: '' },
-  ];
+    try {
+      await allocate.mutateAsync({
+        businessId,
+        customerIds: selected,
+        points: value,
+        reason: reason || undefined,
+      });
+      toast.success(`Allocated ${value} points to ${selected.length} member(s).`);
+      setSelected([]);
+      membersQuery.refetch();
+    } catch {
+      toast.error('Could not allocate points.');
+    }
+  };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden -mx-2 sm:-mx-5 -mt-2 sm:-mt-5 min-h-full bg-[#fff8f5] text-[#1f1b18]">
+    <div className="min-h-full bg-[#fff8f5] p-4 sm:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/loyalty"
+              className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Loyalty Members</h1>
+              <p className="text-sm text-gray-500">
+                {totalMembers} member{totalMembers === 1 ? '' : 's'} with points activity.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/dashboard/loyalty/points/allocate"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              <Coins className="h-4 w-4" /> Bulk allocate
+            </Link>
+            <Link
+              href="/dashboard/loyalty/offers/new"
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+            >
+              <Gift className="h-4 w-4" /> Send offer
+            </Link>
+          </div>
+        </header>
 
-      {/* Toast */}
-      {toastMessage && (
-        <div className="fixed top-4 left-4 right-4 z-50 bg-[#1f1b18] text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-xl text-center mx-auto max-w-xs">
-          {toastMessage}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold text-gray-400">Total Members</p>
+            <p className="mt-1 text-2xl font-bold text-gray-900">{totalMembers}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold text-gray-400">Expiring Points</p>
+            <p className="mt-1 text-2xl font-bold text-orange-600">
+              {membersQuery.data?.expiringPoints ?? 0}
+            </p>
+          </div>
+          {tierCounts.slice(0, 2).map((tier) => (
+            <div key={tier.name} className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold text-gray-400">{tier.name}</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{tier.count}</p>
+            </div>
+          ))}
         </div>
-      )}
 
-      <div className="w-full px-4 pt-5 pb-36 space-y-5" style={{ boxSizing: 'border-box' }}>
-
-        {/* ── BACK ── */}
-        <Link
-          href="/dashboard/loyalty"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-800 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4 shrink-0" /> Back to Loyalty
-        </Link>
-
-        {/* ── PAGE TITLE ── */}
-        <div>
-          <h2 className="font-bold text-xl text-gray-900">Loyalty Members</h2>
-          <p className="text-xs text-gray-400 mt-0.5">1,200 active members · 88% of monthly goal</p>
-        </div>
-
-        {/* ── TIER CARDS — horizontal scroll inside page ── */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm text-gray-900">Membership Tiers</h3>
-            <button className="text-[#a14000] font-bold text-xs shrink-0 hover:underline flex items-center gap-0.5">
-              Benefits <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Scrollable row: clips to page width via overflow-x-auto on a contained div */}
-          <div className="overflow-x-auto -mx-4 px-4 pb-1">
-            <div className="flex gap-3" style={{ width: 'max-content' }}>
-              {tiers.map((tier) => {
-                const Icon = tier.icon;
-                return (
-                  <motion.div
-                    key={tier.name}
-                    whileTap={{ scale: 0.96 }}
-                    className={`w-44 h-32 rounded-2xl bg-gradient-to-br ${tier.bg} text-white relative overflow-hidden flex-shrink-0 shadow-md p-3.5 flex flex-col justify-between cursor-pointer`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <Icon className="w-6 h-6 text-white/90" />
-                      <span className="text-[8px] font-black tracking-wider opacity-60 uppercase">{tier.level}</span>
-                    </div>
-                    <div>
-                      <p className="text-[8px] opacity-75 font-semibold">Active Members</p>
-                      <h4 className="font-bold text-sm mt-0.5 leading-tight">{tier.name}</h4>
-                    </div>
-                  </motion.div>
-                );
-              })}
+        <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-gray-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search name or email…"
+                className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-orange-400 focus:outline-none"
+              />
             </div>
-          </div>
-        </section>
 
-        {/* ── TOP PERFORMING MEMBERS ── */}
-        <section className="bg-white rounded-2xl border border-[#f7ece7] shadow-[0_4px_12px_rgba(161,64,0,0.02)] p-4 space-y-3">
-          {/* Header */}
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center text-[#a14000] shrink-0">
-              <TrendingUp className="w-3.5 h-3.5" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold text-sm text-gray-900 leading-tight">Top Performing</p>
-              <p className="text-[10px] text-gray-400">Highest lifetime spent</p>
-            </div>
-          </div>
-
-          {/* Members list */}
-          <div className="space-y-2">
-            {topMembers.map((member) => (
-              <div
-                key={member.name}
-                className="flex items-center gap-2.5 p-2 rounded-xl bg-[#fff8f5] border border-[#f7ece7]"
-              >
-                {/* Avatar */}
-                <img
-                  className="w-9 h-9 rounded-full object-cover shrink-0 border border-orange-100"
-                  src={member.avatar}
-                  alt={member.name}
+            {selected.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={points}
+                  onChange={(event) => setPoints(event.target.value)}
+                  className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Points"
                 />
-                {/* Name + tier */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-xs text-gray-800 truncate">{member.name}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-black shrink-0 ${member.tierBg}`}>
-                      {member.tier}
-                    </span>
-                    <span className="text-[9px] text-gray-400 truncate">{member.spent}</span>
-                  </div>
-                </div>
-                {/* Actions — only MoreVertical on mobile to save space */}
-                <div className="flex items-center shrink-0">
-                  {member.actions.map((act) => {
-                    const ActIcon = act.icon;
-                    return (
-                      <button
-                        key={act.label}
-                        onClick={() => showToast(act.label, member.name)}
-                        className="p-1.5 text-gray-400 hover:text-[#a14000] rounded-full transition-colors active:scale-90"
-                        title={act.label}
-                      >
-                        <ActIcon className="w-3.5 h-3.5" />
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => showToast('More', member.name)}
-                    className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full transition-colors"
-                  >
-                    <MoreVertical className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <button className="w-full pt-2 border-t border-gray-100 text-[#a14000] font-bold text-xs text-center hover:underline">
-            View Full Leaderboard
-          </button>
-        </section>
-
-        {/* ── EXPIRING SOON ── */}
-        <section className="bg-white rounded-2xl border border-[#f7ece7] border-l-4 border-l-red-500 shadow-[0_4px_12px_rgba(161,64,0,0.02)] p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-            <p className="font-bold text-sm text-red-700 flex-1">Expiring Soon</p>
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
-          </div>
-
-          <div className="space-y-2">
-            {expiringSoon.map((exp) => (
-              <div
-                key={exp.name}
-                className="flex items-center gap-2 p-2.5 border border-[#f7ece7] rounded-xl bg-[#fff8f5]/50"
-              >
-                {/* Avatar */}
-                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center font-bold text-xs text-[#a14000] border border-orange-200 shrink-0">
-                  {exp.initials}
-                </div>
-                {/* Name */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-xs text-gray-800 truncate">{exp.name}</p>
-                  <p className="text-[9px] text-red-500 font-bold">Ends in {exp.endsIn}</p>
-                </div>
-                {/* Button */}
+                <input
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  className="w-44 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Reason"
+                />
                 <button
-                  onClick={() => showToast('Extension', exp.name)}
-                  className="shrink-0 px-3 py-1.5 bg-[#a14000] text-white rounded-full text-[10px] font-black hover:opacity-90 active:scale-95 transition-all"
+                  onClick={handleAllocate}
+                  disabled={allocate.isPending}
+                  className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60"
                 >
-                  Extend
+                  {allocate.isPending ? 'Allocating…' : `Allocate to ${selected.length}`}
                 </button>
               </div>
-            ))}
+            )}
           </div>
-        </section>
 
-        {/* ── RETENTION BOOST ── */}
-        <section className="bg-gradient-to-r from-[#ea580c] to-[#c2410c] p-4 rounded-2xl text-white relative overflow-hidden shadow-[0_8px_24px_rgba(234,88,12,0.15)]">
-          <div className="relative z-10 space-y-2.5">
-            <h3 className="font-bold text-sm flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-orange-200 shrink-0" /> Retention Boost
-            </h3>
-            <p className="text-xs text-orange-100 leading-relaxed">
-              Offer 500 bonus points to all Silver members expiring this month.
-            </p>
-            <button
-              onClick={() => showToast('Retention Boost Campaign', 'Silver Members')}
-              className="bg-white text-[#c2410c] px-4 py-2 rounded-full font-bold text-xs shadow-md hover:bg-orange-50 transition-all active:scale-95"
+          {membersQuery.isLoading ? (
+            <p className="py-12 text-center text-sm text-gray-400">Loading members…</p>
+          ) : members.length === 0 ? (
+            <div className="py-16 text-center">
+              <Users className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+              <p className="text-sm font-semibold text-gray-600">No loyalty members yet</p>
+              <p className="text-xs text-gray-400">
+                Members appear once they earn or redeem points.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-400">
+                    <th className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleAll}
+                        aria-label="Select all members"
+                      />
+                    </th>
+                    <th className="px-4 py-3">Member</th>
+                    <th className="px-4 py-3">Tier</th>
+                    <th className="px-4 py-3">Points</th>
+                    <th className="px-4 py-3">Earned</th>
+                    <th className="px-4 py-3">Redeemed</th>
+                    <th className="px-4 py-3">Last activity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((member) => (
+                    <tr key={member.id} className="border-b border-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(member.id)}
+                          onChange={(event) =>
+                            setSelected((prev) =>
+                              event.target.checked
+                                ? [...prev, member.id]
+                                : prev.filter((id) => id !== member.id)
+                            )
+                          }
+                          aria-label={`Select ${member.name}`}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-700">
+                            {member.name?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{member.name}</p>
+                            <p className="text-xs text-gray-500">{member.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {member.tier ? (
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+                            style={{ backgroundColor: member.tierColor || '#ea580c' }}
+                          >
+                            {member.tier}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-bold text-gray-900">{member.points}</td>
+                      <td className="px-4 py-3 text-emerald-600">{member.pointsEarned}</td>
+                      <td className="px-4 py-3 text-blue-600">{member.pointsRedeemed}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        <span className="flex items-center gap-1 text-xs">
+                          <Clock className="h-3.5 w-3.5" /> {formatDate(member.lastActivity)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {tierCounts.map((tier) => (
+            <span
+              key={tier.name}
+              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600"
             >
-              Send Campaign
-            </button>
-          </div>
-          <span className="absolute -right-4 -bottom-4 text-[100px] text-white/5 rotate-12 select-none pointer-events-none">⚡</span>
-        </section>
-
-        {/* ── LOYALTY DISTRIBUTION ── */}
-        <section className="bg-white rounded-2xl border border-[#f7ece7] shadow-[0_4px_12px_rgba(161,64,0,0.02)] p-4 space-y-4">
-          <h3 className="font-bold text-sm text-gray-900">Loyalty Distribution</h3>
-
-          {/* Bar chart */}
-          <div className="h-28 flex items-end gap-2 border-b border-gray-100 pb-1">
-            {[
-              { label: 'BR', h: '40%', color: 'bg-gray-300' },
-              { label: 'SL', h: '25%', color: 'bg-gray-400' },
-              { label: 'GD', h: '20%', color: 'bg-amber-500' },
-              { label: 'PL', h: '10%', color: 'bg-slate-500' },
-              { label: 'VP', h: '5%',  color: 'bg-neutral-900' },
-            ].map((bar) => (
-              <div key={bar.label} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                <div className={`w-full ${bar.color} rounded-t-md`} style={{ height: bar.h }} />
-                <span className="text-[8px] font-black text-gray-400">{bar.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Metrics grid */}
-          <div className="grid grid-cols-2 gap-2">
-            {distMetrics.map((met) => (
-              <div key={met.title} className="p-3 bg-[#fff8f5] rounded-xl border border-[#f7ece7]">
-                <p className="text-[9px] text-gray-400 font-semibold">{met.title}</p>
-                <p className="font-black text-sm text-gray-800 mt-0.5">
-                  {met.value}
-                  {met.sub && <span className={`text-[10px] font-bold ${met.subColor} ml-1`}>{met.sub}</span>}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: tier.color || '#ea580c' }}
+              />
+              {tier.name} · {tier.count} (from {tier.minPoints} pts)
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

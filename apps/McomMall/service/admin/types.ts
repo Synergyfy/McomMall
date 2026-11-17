@@ -1,8 +1,8 @@
 export interface PageMetaDto {
   page: number;
-  take: number;
+  limit: number;
   itemCount: number;
-  pageCount: number;
+  totalPages: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
 }

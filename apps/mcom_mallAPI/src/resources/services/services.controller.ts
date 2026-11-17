@@ -10,6 +10,7 @@ import {
   UseGuards,
   Query,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,6 +28,9 @@ import {
   ConfigurableAddonDto,
 } from './dto/create-service.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 import { UserRole } from '../../common/role.enum';
 import { ServiceSearchDto } from './dto/service-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
@@ -112,6 +116,7 @@ export class ServicesController {
   }
 
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get a single service by ID' })
   @ApiParam({ name: 'id', description: 'Service ID' })
@@ -120,11 +125,16 @@ export class ServicesController {
     description: 'The service details.',
     type: Service,
   })
-  findOne(@Param('id') id: string) {
-    return this.servicesService.findOne(id);
+  async findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    const service = await this.servicesService.findOneForViewer(id, user);
+    if (!service) {
+      throw new NotFoundException(`Service with ID ${id} not found`);
+    }
+    return service;
   }
 
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('business/:businessId')
   @ApiOperation({ summary: 'Get all services for a specific business' })
   @ApiParam({ name: 'businessId', description: 'Business ID' })
@@ -135,8 +145,13 @@ export class ServicesController {
   findAllForBusiness(
     @Param('businessId') businessId: string,
     @Query() paginationDto: PaginationDto,
+    @CurrentUser() user: User,
   ) {
-    return this.servicesService.findAllForBusiness(businessId, paginationDto);
+    return this.servicesService.findAllForBusiness(
+      businessId,
+      paginationDto,
+      user,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

@@ -43,8 +43,8 @@ export interface CashbackDto {
 export interface PurchaseVoucherDto {
     rewardDefinitionId: string;
     paymentAmount: number;
-    transactionId: string; // Stripe Intent ID or PayPal Order ID
-    paymentGateway: 'STRIPE' | 'PAYPAL';
+    transactionId: string; // Stripe Intent ID / PayPal Order ID / MCOM charge id
+    paymentGateway: 'STRIPE' | 'PAYPAL' | 'MCOM_WALLET';
 }
 
 export interface BusinessStatsResponseDto {

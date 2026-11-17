@@ -64,7 +64,6 @@ import { LocalMallModule } from './resources/localmall/localmall.module';
 import { GoogleBusinessModule } from './resources/google-business/google-business.module';
 import { EventsModule } from './resources/events/events.module';
 import { InterestSignalsModule } from './resources/interest-signals/interest-signals.module';
-import { AutomationsModule } from './resources/automations/automations.module';
 import { VisibilityModule } from './resources/visibility/visibility.module';
 import { TeamModule } from './resources/team/team.module';
 import { SsoModule } from './resources/sso/sso.module';
@@ -74,7 +73,6 @@ import { PartnerInstrumentsModule } from './resources/partner-instruments/partne
 import { DiscoverModule } from './resources/discover/discover.module';
 import { CustomerDirectoryModule } from './resources/customer-directory/customer-directory.module';
 import { LoyaltyModule } from './resources/loyalty/loyalty.module';
-import { ToolsModule } from './resources/tools/tools.module';
 import { SettingsModule } from './resources/settings/settings.module';
 import { FlashSalesModule } from './resources/flash-sales/flash-sales.module';
 import { QuizModule } from './resources/quiz/quiz.module';
@@ -111,10 +109,8 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     // EventEmitter2 from this root registration instead of calling forRoot().
     EventEmitterModule.forRoot(),
     InterestSignalsModule,
-    AutomationsModule,
     CustomerDirectoryModule,
     LoyaltyModule,
-    ToolsModule,
     SettingsModule,
     VisibilityModule,
     EventsModule,

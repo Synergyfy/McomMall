@@ -1,4 +1,5 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { VoucherProduct } from '../../voucher/entities/voucher-product.entity';
@@ -35,7 +36,7 @@ export class Event extends AbstractBaseEntity {
   @Column({ default: 'free' })
   entryType: string; // 'free' | 'paid' | 'points' | 'invite'
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   entryPrice?: number;
 
   @Column('int', { nullable: true })

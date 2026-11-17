@@ -75,6 +75,66 @@ export class PromotionController {
     return this.promotionService.create(user.id, createPromotionDto);
   }
 
+  @Get('saved')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get promotions saved by the current user" })
+  findSaved(@CurrentUser() user: User) {
+    return this.promotionService.findSavedPromotions(user.id);
+  }
+
+  @Post(':id/save')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Save a promotion for later' })
+  save(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.promotionService.savePromotion(user.id, id);
+  }
+
+  @Delete(':id/save')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove a saved promotion' })
+  unsave(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.promotionService.unsavePromotion(user.id, id);
+  }
+
+  @Get('my-participations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get promotions the current user participates in" })
+  getMyParticipations(@CurrentUser() user: User) {
+    return this.promotionService.findUserPromotions(user.id);
+  }
+
+  @Get('participants/all')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get all participants across the owner's promotions" })
+  findAllParticipants(@CurrentUser() user: User) {
+    return this.promotionService.findAllParticipantsForOwner(user.id);
+  }
+
+  @Patch('participants/:id/points')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Adjust a promotion participant's points" })
+  updateParticipantPoints(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body('amount') amount: number,
+  ) {
+    return this.promotionService.updatePoints(user.id, id, Number(amount));
+  }
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get aggregated performance for the owner's promotions" })
+  getOwnerStats(@CurrentUser() user: User) {
+    return this.promotionService.getStatsForOwner(user.id);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

@@ -18,6 +18,7 @@ import { CheckPromotionDto } from './dto/check-promotion.dto';
 import { PromotionParticipant } from './entities/promotion-participant.entity';
 import { User } from '../users/entities/user.entity';
 import { PromotionActivity } from './entities/promotion-activity.entity';
+import { SavedPromotion } from './entities/saved-promotion.entity';
 import { ActivitiesService } from '../activities/activities.service';
 import {
   PointTransaction,
@@ -48,6 +49,8 @@ export class PromotionService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(PromotionActivity)
     private readonly promotionActivityRepository: Repository<PromotionActivity>,
+    @InjectRepository(SavedPromotion)
+    private readonly savedPromotionRepository: Repository<SavedPromotion>,
     @InjectRepository(PointTransaction)
     private readonly pointTransactionRepository: Repository<PointTransaction>,
     private readonly activitiesService: ActivitiesService,
@@ -139,6 +142,7 @@ export class PromotionService {
   findAll(userId: string): Promise<Promotion[]> {
     return this.promotionRepository.find({
       where: { user: { id: userId } },
+      relations: ['businesses', 'includedProducts', 'excludedProducts'],
       order: { created_at: 'DESC' },
     });
   }
@@ -150,7 +154,9 @@ export class PromotionService {
   async findOne(userId: string, id: string): Promise<Promotion> {
     const promotion = await this.promotionRepository
       .createQueryBuilder('promotion')
-      .leftJoin('promotion.businesses', 'business')
+      .leftJoinAndSelect('promotion.businesses', 'business')
+      .leftJoinAndSelect('promotion.includedProducts', 'includedProducts')
+      .leftJoinAndSelect('promotion.excludedProducts', 'excludedProducts')
       .where('promotion.id = :id', { id })
       .andWhere('business.userId = :userId', { userId })
       .getOne();
@@ -159,6 +165,112 @@ export class PromotionService {
       throw new NotFoundException(`Promotion with ID "${id}" not found`);
     }
     return promotion;
+  }
+
+  async savePromotion(
+    userId: string,
+    promotionId: string,
+  ): Promise<SavedPromotion> {
+    const promotion = await this.promotionRepository.findOne({
+      where: { id: promotionId, isActive: true },
+    });
+    if (!promotion) {
+      throw new NotFoundException(
+        `Active promotion with ID "${promotionId}" not found`,
+      );
+    }
+
+    const existing = await this.savedPromotionRepository.findOne({
+      where: { userId, promotionId },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    return this.savedPromotionRepository.save(
+      this.savedPromotionRepository.create({ userId, promotionId }),
+    );
+  }
+
+  async unsavePromotion(userId: string, promotionId: string): Promise<void> {
+    await this.savedPromotionRepository.delete({ userId, promotionId });
+  }
+
+  async findSavedPromotions(userId: string): Promise<SavedPromotion[]> {
+    return this.savedPromotionRepository.find({
+      where: { userId },
+      relations: [
+        'promotion',
+        'promotion.businesses',
+        'promotion.includedProducts',
+      ],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  /**
+   * Aggregated per-promotion performance for the merchant list screen.
+   * Everything is computed from persisted participants/point transactions.
+   */
+  async getStatsForOwner(userId: string): Promise<any[]> {
+    const promotions = await this.findAll(userId);
+    if (promotions.length === 0) {
+      return [];
+    }
+
+    const ids = promotions.map((promotion) => promotion.id);
+
+    const participants = await this.promotionParticipantRepository
+      .createQueryBuilder('participant')
+      .select('participant.promotionId', 'promotionId')
+      .addSelect('COUNT(participant.id)', 'count')
+      .addSelect('COALESCE(SUM(participant.pointsEarned), 0)', 'points')
+      .where('participant.promotionId IN (:...ids)', { ids })
+      .groupBy('participant.promotionId')
+      .getRawMany();
+
+    const redemptions = await this.pointTransactionRepository
+      .createQueryBuilder('transaction')
+      .select('transaction.promotionId', 'promotionId')
+      .addSelect('COUNT(transaction.id)', 'count')
+      .addSelect('COALESCE(SUM(ABS(transaction.points)), 0)', 'points')
+      .where('transaction.promotionId IN (:...ids)', { ids })
+      .andWhere('transaction.type = :type', {
+        type: PointTransactionType.REDEMPTION,
+      })
+      .groupBy('transaction.promotionId')
+      .getRawMany();
+
+    const participantMap = new Map(
+      participants.map((row) => [row.promotionId, row]),
+    );
+    const redemptionMap = new Map(
+      redemptions.map((row) => [row.promotionId, row]),
+    );
+
+    return promotions.map((promotion) => {
+      const participant = participantMap.get(promotion.id);
+      const redemption = redemptionMap.get(promotion.id);
+      return {
+        id: promotion.id,
+        name: promotion.name,
+        description: promotion.description,
+        isActive: promotion.isActive,
+        beginDate: promotion.beginDate,
+        endDate: promotion.endDate,
+        promotionType: promotion.promotionType,
+        promoType: promotion.promoType,
+        targetSegment: promotion.targetSegment,
+        multiplier: promotion.multiplier,
+        bonusPoints: promotion.bonusPoints,
+        minimumSpend: promotion.minimumSpend,
+        participants: Number(participant?.count ?? 0),
+        pointsIssued: Number(participant?.points ?? 0),
+        redemptions: Number(redemption?.count ?? 0),
+        pointsRedeemed: Number(redemption?.points ?? 0),
+        businessCount: promotion.businesses?.length ?? 0,
+      };
+    });
   }
 
   async update(

@@ -44,7 +44,12 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
   const searchParams = useSearchParams();
   const isHybridFlow = searchParams.get('hybridFlow') === 'true';
   const { data: categories, isLoading: isLoadingCats } = useGetCategories();
-  const { data: subCategories, isLoading: isLoadingSubs } = useGetSubCategoriesByCategory(formData.category);
+  // Products store the category name, while the API needs the taxonomy ID.
+  const resolvedCategoryId =
+    categories?.find(
+      c => c.id === formData.category || c.name === formData.category
+    )?.id || '';
+  const { data: subCategories, isLoading: isLoadingSubs } = useGetSubCategoriesByCategory(resolvedCategoryId);
 
   const isGenderRelated = React.useMemo(() => {
     if (!formData.categoryName && !formData.subCategoryName) return false;

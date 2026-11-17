@@ -85,7 +85,11 @@ export default function EditProductPage() {
     downloadExpiry: '',
   });
 
-  const { data: subCategories } = useGetSubCategoriesByCategory(formData.category);
+  const resolvedCategoryId =
+    categories?.find(
+      (c) => c.id === formData.category || c.name === formData.category
+    )?.id || '';
+  const { data: subCategories } = useGetSubCategoriesByCategory(resolvedCategoryId);
 
   useEffect(() => {
     if (product) {
@@ -258,6 +262,8 @@ export default function EditProductPage() {
     };
 
     // Clean up payload to avoid backend validation errors
+    delete payload.images;
+    delete payload.videos;
     if (!payload.serviceProviderId) delete payload.serviceProviderId;
     if (payload.sale_price === undefined || payload.sale_price === null || isNaN(payload.sale_price)) delete payload.sale_price;
     if (payload.salePrice === undefined || payload.salePrice === null || isNaN(payload.salePrice)) delete payload.salePrice;
@@ -285,6 +291,27 @@ export default function EditProductPage() {
     });
   };
 
+  const handleSaveDraft = () => {
+    updateProduct(
+      {
+        id,
+        productStatus: 'draft',
+        title: formData.productName || product?.title,
+        category: formData.categoryName || formData.category || product?.category,
+      } as any,
+      {
+        onSuccess: () => {
+          toast.success('Saved as draft.');
+          router.push('/dashboard/store/products');
+        },
+        onError: (error: any) => {
+          console.error('Failed to save draft:', error);
+          toast.error(error.message || 'Failed to save draft');
+        },
+      }
+    );
+  };
+
   const nextStep = () => {
     window.scrollTo(0, 0);
     if (step === 3) {
@@ -299,7 +326,8 @@ export default function EditProductPage() {
     if (step === 4.1) return setStep(4.2);
     if (step === 4.2) {
       if (shippingMethod === 'shipstation') return setStep(5.5);
-      return setStep(5);
+      if (fulfillmentType.includes('pickup')) return setStep(5.1);
+      return setStep(8);
     }
     if (step === 5.5) return setStep(6);
     if (step === 6) return setStep(7);
@@ -336,7 +364,7 @@ export default function EditProductPage() {
       case 1:
         return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.back()} />;
       case 2:
-        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
+        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={handleSaveDraft} />;
       case 3:
         return <Step3PricingInventory formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
       case 4:
@@ -352,7 +380,19 @@ export default function EditProductPage() {
           />
         );
       case 4.1:
-        return <Step4ShippingOptions onSelectOption={(opt: any) => { setShippingMethod(opt); nextStep(); }} onBack={prevStep} />;
+        return (
+          <Step4ShippingOptions
+            onSelectOption={(opt: 'existing' | 'shipstation') => {
+              setShippingMethod(opt);
+              nextStep();
+            }}
+            onSkip={() => {
+              setShippingMethod('existing');
+              setStep(4.2);
+            }}
+            onBack={prevStep}
+          />
+        );
       case 4.2:
         return <Step4bDeliveryPricing formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
       case 5:
@@ -366,7 +406,7 @@ export default function EditProductPage() {
       case 7:
         return <Step7ServiceMapping onBack={prevStep} onFinish={() => setStep(8)} />;
       case 8:
-        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handleUpdate} onSaveDraft={() => { }} isPending={isPending} />;
+        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handleUpdate} onSaveDraft={handleSaveDraft} isPending={isPending} />;
       default:
         return <div>Unknown Step</div>;
     }

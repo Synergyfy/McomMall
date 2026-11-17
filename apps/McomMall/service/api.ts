@@ -13,6 +13,8 @@ const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+    Pragma: 'no-cache',
   },
 });
 

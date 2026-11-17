@@ -232,8 +232,10 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                     >
                                         <option value="public">Public</option>
                                         <option value="private">Private</option>
-                                        <option value="password">Password Protected</option>
                                     </select>
+                                    <p className="text-xs text-[#9c7349] dark:text-[#cba885]">
+                                        Private products are hidden from customers and search. Only you can see them.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -244,7 +246,7 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                         <div className="sticky top-6 rounded-xl bg-white dark:bg-[#1a120b] border border-[#e5e7eb] dark:border-[#3d2e20] p-6 shadow-sm">
                             <h3 className="font-bold text-lg text-[#1c140d] dark:text-white mb-4">Product Status</h3>
                             <div className="space-y-3">
-                                {['published', 'draft', 'scheduled'].map((status) => (
+                                {['published', 'draft'].map((status) => (
                                     <label key={status} className="flex items-center p-3 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] cursor-pointer hover:bg-[#f8f7f5] dark:hover:bg-[#2a1f16] transition-colors">
                                         <input
                                             type="radio"

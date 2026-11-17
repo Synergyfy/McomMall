@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { moneyArrayTransformer, moneyTransformer } from '../../../common/money/money';
 import { User } from '../../users/entities/user.entity';
 import { Voucher } from './voucher.entity';
 import { Expose } from 'class-transformer';
@@ -32,14 +33,7 @@ export class VoucherProduct {
   description: string;
 
   @Expose()
-  @Column('decimal', {
-    array: true,
-    nullable: true,
-    transformer: {
-      to: (value: number[]) => value,
-      from: (value: string[]) => value?.map(parseFloat),
-    },
-  })
+  @Column({ type: 'bigint', array: true, nullable: true, transformer: moneyArrayTransformer })
   fixedAmounts: number[];
 
   @Expose()
@@ -47,11 +41,11 @@ export class VoucherProduct {
   allowCustomAmount: boolean;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   minCustomAmount: number;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   maxCustomAmount: number;
 
   @Column({
@@ -96,11 +90,11 @@ export class VoucherProduct {
   vouchers: Voucher[];
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   bonusThreshold: number;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   bonusAmount: number;
 
   @Expose()
@@ -116,7 +110,7 @@ export class VoucherProduct {
   valueType: string;
 
   @Expose()
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   value: number;
 
   @Expose()

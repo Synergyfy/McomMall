@@ -286,7 +286,7 @@ export class AdminAnalyticsService {
   ): Promise<number> {
     const orderQb = this.orderRepository
       .createQueryBuilder('o')
-      .select('SUM(o.total)', 'sum')
+      .select('SUM(o.total) / 100.0', 'sum')
       .where('o.created_at BETWEEN :start AND :end', { start, end });
     if (businessIds) {
       orderQb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
@@ -295,7 +295,7 @@ export class AdminAnalyticsService {
       .createQueryBuilder('b')
       .leftJoin('b.payment', 'p')
       .leftJoin('b.service', 's')
-      .select('SUM(p.amount)', 'sum')
+      .select('SUM(p.amount) / 100.0', 'sum')
       .where('b.created_at BETWEEN :start AND :end', { start, end });
     if (businessIds) {
       bookingQb.andWhere('s."businessId" IN (:...businessIds)', {
@@ -310,7 +310,7 @@ export class AdminAnalyticsService {
         ? { sum: 0 }
         : this.membershipRepository
             .createQueryBuilder('m')
-            .select('SUM(m.amount)', 'sum')
+            .select('SUM(m.amount) / 100.0', 'sum')
             .where('m.created_at BETWEEN :start AND :end', { start, end })
             .getRawOne(),
     ]);
@@ -327,7 +327,7 @@ export class AdminAnalyticsService {
   ): Promise<AnalyticsChartPointDto[]> {
     const qb = this.orderRepository
       .createQueryBuilder('o')
-      .select('DATE(o.created_at) as date, SUM(o.total) as total')
+      .select('DATE(o.created_at) as date, SUM(o.total) / 100.0 as total')
       .where('o.created_at > :start', { start });
     if (businessIds) {
       qb.andWhere('o."businessId" IN (:...businessIds)', { businessIds });
@@ -383,7 +383,7 @@ export class AdminAnalyticsService {
       .leftJoin('o.items', 'oi')
       .leftJoin('oi.product', 'p')
       .select('p.category', 'name')
-      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .addSelect('SUM(oi.price * oi.quantity) / 100.0', 'value')
       .where('o.created_at > :monthStart', {
         monthStart: new Date(
           new Date().getFullYear(),
@@ -396,7 +396,7 @@ export class AdminAnalyticsService {
       .leftJoin('o.items', 'oi')
       .leftJoin('oi.product', 'p')
       .select('p.category', 'name')
-      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .addSelect('SUM(oi.price * oi.quantity) / 100.0', 'value')
       .where(
         'o.created_at >= :prevMonthStart AND o.created_at < :currentMonthStart',
         {
@@ -454,7 +454,7 @@ export class AdminAnalyticsService {
       .leftJoin('oi.product', 'p')
       .leftJoin('p.business', 'b')
       .select('b.businessName', 'name')
-      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .addSelect('SUM(oi.price * oi.quantity) / 100.0', 'value')
       .where('o.created_at > :monthStart', { monthStart });
     const prevQb = this.orderRepository
       .createQueryBuilder('o')
@@ -462,7 +462,7 @@ export class AdminAnalyticsService {
       .leftJoin('oi.product', 'p')
       .leftJoin('p.business', 'b')
       .select('b.businessName', 'name')
-      .addSelect('SUM(oi.price * oi.quantity)', 'value')
+      .addSelect('SUM(oi.price * oi.quantity) / 100.0', 'value')
       .where(
         'o.created_at >= :prevMonthStart AND o.created_at < :monthStart',
         { prevMonthStart, monthStart },

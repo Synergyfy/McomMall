@@ -14,10 +14,7 @@ import { User } from '../users/entities/user.entity';
 import { Membership } from './entities/membership.entity';
 import { MembershipTier } from './membership-tier.enum';
 import { McomWalletService } from '../payments/services/mcom-wallet.service';
-import {
-  SolutionsBillingCycle,
-  SolutionsPaymentProxyService,
-} from '../payments/services/solutions-payment-proxy.service';
+import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import {
@@ -62,7 +59,7 @@ export class MembershipService {
     private readonly creditRepository: Repository<MembershipCredit>,
     @Inject(forwardRef(() => McomWalletService))
     private readonly mcomWalletService: McomWalletService,
-    private readonly solutionsPaymentProxy: SolutionsPaymentProxyService,
+    private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly mcomCentralService: McomCentralService,
     private readonly plansService: PlansService,
@@ -303,6 +300,7 @@ export class MembershipService {
     clientSecret?: string;
     orderId?: string;
     approvalUrl?: string;
+    transactionId?: string;
     holdId?: string;
     expiresAt?: string;
     provider: PaymentMethod;
@@ -326,7 +324,7 @@ export class MembershipService {
     }
 
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
-      // Centralized wallet path: reserve funds now, capture on verify.
+      // MCOM Pay wallet charges settle immediately (no hold/capture round trip).
       if (!this.mcomWalletService.isEnabled()) {
         throw new BadRequestException(
           'MCOM Wallet payments are currently disabled.',
@@ -350,102 +348,71 @@ export class MembershipService {
         initiateDto.tier ||
         'membership';
       const planType = initiateDto.planType || PlanType.MONTHLY;
-      try {
-        const hold = await this.mcomWalletService.placeHold({
-          userId: centralUserId,
-          amount: Number(Number(price).toFixed(2)),
-          reference: `mall-membership-${user.id}`,
-          metadata: {
-            platform: 'mcom-mall',
-            mallUserId: user.id,
-            planVariantId: initiateDto.planVariantId,
-            tierId: initiateDto.tierId,
-            planType,
-          },
-          idempotencyKey:
-            initiateDto.idempotencyKey ||
-            this.mcomWalletService.buildKey(
-              'sub-hold',
-              user.id,
-              String(scope),
-              planType,
-            ),
-        });
-        return {
-          holdId: hold.holdId,
-          expiresAt: hold.expiresAt,
-          provider: PaymentMethod.MCOM_WALLET,
-        };
-      } catch (err: any) {
-        throw this.mcomWalletService.toHttpException(err);
-      }
-    }
-
-    if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      // Card money moves on MCOM Solutions (their Stripe account): the mall
-      // forwards the plan reference, Solutions prices it from /system/plans
-      // and returns a clientSecret the browser confirms with Solutions' key.
-      const { externalPlanId, billingCycle } =
-        await this.resolveSolutionsPlan(initiateDto);
-      const initiated = await this.solutionsPaymentProxy.stripeInitiate(
-        user.id,
-        externalPlanId,
-        billingCycle,
+      const charge = await this.paymentProviderService.createWalletCharge(
+        Number(price),
+        'GBP',
+        {
+          reference: `membership-${scope}-${user.id}`,
+          userId: user.id,
+          ...(initiateDto.idempotencyKey
+            ? { idempotencyKey: initiateDto.idempotencyKey }
+            : {}),
+          description: `MCOM Mall membership (${planType})`,
+        },
+        centralUserId,
       );
       return {
-        clientSecret: initiated.clientSecret,
+        transactionId: charge.chargeId,
+        provider: PaymentMethod.MCOM_WALLET,
+      };
+    }
+
+    const scope =
+      initiateDto.planVariantId ||
+      initiateDto.tierId ||
+      initiateDto.tier ||
+      'membership';
+
+    if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
+      // Card money moves through MCOM Pay (Central owns the Stripe account).
+      const intent =
+        await this.paymentProviderService.createStripePaymentIntent(
+          Number(price),
+          'GBP',
+          {
+            reference: `membership-${scope}-${user.id}`,
+            userId: user.id,
+            ...(initiateDto.idempotencyKey
+              ? { idempotencyKey: initiateDto.idempotencyKey }
+              : {}),
+            description: 'MCOM Mall membership',
+          },
+        );
+      return {
+        clientSecret: intent.client_secret ?? undefined,
         provider: PaymentMethod.STRIPE,
       };
     } else if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
-      // Same centralized routing for PayPal: Solutions creates the order
-      // (their PayPal account) and the browser approves on paypal.com.
-      const { externalPlanId, billingCycle } =
-        await this.resolveSolutionsPlan(initiateDto);
-      const initiated = await this.solutionsPaymentProxy.paypalInitiate(
-        user.id,
-        externalPlanId,
-        billingCycle,
-        initiateDto.returnUrl,
-        initiateDto.cancelUrl,
+      const order = await this.paymentProviderService.createPaypalOrder(
+        Number(price),
+        'GBP',
+        {
+          reference: `membership-${scope}-${user.id}`,
+          userId: user.id,
+          ...(initiateDto.idempotencyKey
+            ? { idempotencyKey: initiateDto.idempotencyKey }
+            : {}),
+          description: 'MCOM Mall membership',
+        },
       );
       return {
-        orderId: initiated.orderId,
-        approvalUrl: initiated.approvalUrl,
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? undefined,
         provider: PaymentMethod.PAYPAL,
       };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
-  }
-
-  /**
-   * Resolves the plan reference MCOM Solutions needs to price a centralized
-   * card/PayPal payment. Solutions' connector reads the plan back from
-   * GET /system/plans/:id (legacy tiers + synthesized plan variants).
-   * Legacy tier-enum purchases carry no plan id, so they cannot be priced
-   * centrally — callers must pick a real plan.
-   */
-  private async resolveSolutionsPlan(planRef: {
-    planVariantId?: string;
-    tierId?: string;
-    planType?: PlanType;
-  }): Promise<{
-    externalPlanId: string;
-    billingCycle: SolutionsBillingCycle;
-  }> {
-    const variantId = planRef.planVariantId || planRef.tierId;
-    if (variantId) {
-      const { variant } = await this.plansService.resolveActivePrice(variantId);
-      const level = variant.tierLevel?.name;
-      // Variants are one-off purchases; map to the closest named cycle for
-      // Solutions' ledger (the charged amount is identical either way).
-      const billingCycle: SolutionsBillingCycle =
-        level === PlanTier.PRO_PLUS ? 'annual' : 'quarterly';
-      return { externalPlanId: variantId, billingCycle };
-    }
-    throw new BadRequestException(
-      'Card and PayPal payments require a valid plan variant id.',
-    );
   }
 
   async verifyAndCreateMembership(
@@ -481,75 +448,76 @@ export class MembershipService {
     let verificationResult;
 
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
-      // Centralized wallet path: convert the pre-authorization hold from
-      // initiate-payment into a real SUBSCRIPTION debit. Uncaptured holds
-      // auto-expire (~24h) as a backstop.
-      if (!holdId) {
+      // MCOM Pay wallet charges settle at create time; the charge id is the
+      // transaction reference. Legacy hold ids (from older clients) are still
+      // captured for backwards compatibility.
+      const walletReference = transactionId || holdId;
+      if (!walletReference) {
         throw new BadRequestException(
-          'A wallet hold ID is required for MCOM Wallet membership payments.',
+          'A wallet payment reference is required for MCOM Wallet membership payments.',
         );
       }
-      let centralUserId = user.centralUserId;
-      if (!centralUserId) {
-        const dbUser = await this.userRepository.findOne({
-          where: { id: user.id },
-        });
-        centralUserId = dbUser?.centralUserId;
-      }
-      if (!centralUserId) {
-        throw new BadRequestException(
-          'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
-        );
-      }
-      try {
-        const captured = await this.mcomWalletService.captureHold({
-          holdId,
-          amount: Number(Number(price).toFixed(2)),
-          reference: `mall-membership-${user.id}`,
-          // Scoped per hold (not per plan): retries of the same purchase
-          // replay safely, while a new purchase can never collide with a
-          // previous capture's key on the central ledger.
-          idempotencyKey: this.mcomWalletService.buildKey(
-            'sub-capture',
-            holdId,
-          ),
-        });
-        transactionId = captured.transactionId;
-        currency = 'MCOM';
-        verificationResult = { ok: true as boolean, details: captured };
-      } catch (err: any) {
-        throw this.mcomWalletService.toHttpException(err);
+      const localCharge = await this.paymentProviderService.verifyWalletCharge(
+        walletReference,
+        Number(Number(price).toFixed(2)),
+        'GBP',
+      );
+      if (localCharge.ok) {
+        transactionId = walletReference;
+        currency = 'GBP';
+        verificationResult = localCharge;
+      } else {
+        let centralUserId = user.centralUserId;
+        if (!centralUserId) {
+          const dbUser = await this.userRepository.findOne({
+            where: { id: user.id },
+          });
+          centralUserId = dbUser?.centralUserId;
+        }
+        if (!centralUserId) {
+          throw new BadRequestException(
+            'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+          );
+        }
+        try {
+          const captured = await this.mcomWalletService.captureHold({
+            holdId: holdId || walletReference,
+            amount: Number(Number(price).toFixed(2)),
+            reference: `mall-membership-${user.id}`,
+            idempotencyKey: this.mcomWalletService.buildKey(
+              'sub-capture',
+              holdId || walletReference,
+            ),
+          });
+          transactionId = captured.transactionId;
+          currency = 'MCOM';
+          verificationResult = { ok: true as boolean, details: captured };
+        } catch (err: any) {
+          throw this.mcomWalletService.toHttpException(err);
+        }
       }
     } else if (paymentProvider === PaymentMethod.STRIPE) {
-      // Centralized card path: Solutions created the PaymentIntent (their
-      // Stripe account) and already verified it succeeded server-side in
-      // confirm — including amount vs the same plan price. Trust success.
       if (!transactionId) {
         throw new BadRequestException(
           'A Stripe payment reference is required.',
         );
       }
-      const { externalPlanId, billingCycle } = await this.resolveSolutionsPlan({
-        planVariantId,
-        tierId,
-        planType,
-      });
-      const confirmed = await this.solutionsPaymentProxy.stripeConfirm(
-        user.id,
-        externalPlanId,
-        billingCycle,
-        transactionId,
-      );
-      verificationResult = { ok: confirmed.ok, details: confirmed.details };
+      verificationResult =
+        await this.paymentProviderService.verifyStripePaymentIntent(
+          transactionId,
+          Number(Number(price).toFixed(2)),
+          'GBP',
+        );
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      // Centralized PayPal path: Solutions captures the order (their PayPal
-      // account) and validates amount/currency against the plan price.
       if (!transactionId) {
         throw new BadRequestException('A PayPal order ID is required.');
       }
-      const confirmed =
-        await this.solutionsPaymentProxy.paypalCapture(transactionId);
-      verificationResult = { ok: confirmed.ok, details: confirmed.details };
+      verificationResult =
+        await this.paymentProviderService.captureAndVerifyPaypalOrder(
+          transactionId,
+          Number(Number(price).toFixed(2)),
+          'GBP',
+        );
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }

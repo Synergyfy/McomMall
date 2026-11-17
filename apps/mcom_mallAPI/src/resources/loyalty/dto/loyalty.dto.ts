@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -6,8 +7,29 @@ import {
   IsString,
   IsUUID,
   Min,
+  ValidateNested,
 } from 'class-validator';
-import { LoyaltyRuleType } from '../entities/loyalty-rule.entity';
+import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  LoyaltyRuleTrigger,
+  LoyaltyRuleType,
+} from '../entities/loyalty-rule.entity';
+import { LoyaltyTier } from '../entities/loyalty-settings.entity';
+
+export class LoyaltyTierDto implements LoyaltyTier {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsInt()
+  @Min(0)
+  minPoints: number;
+
+  @IsString()
+  @IsOptional()
+  color?: string;
+}
 
 export class CreateLoyaltyRuleDto {
   @IsUUID()
@@ -45,6 +67,22 @@ export class CreateLoyaltyRuleDto {
   @IsOptional()
   appliesTo?: string;
 
+  @IsEnum(LoyaltyRuleTrigger)
+  @IsOptional()
+  trigger?: LoyaltyRuleTrigger;
+
+  @IsString()
+  @IsOptional()
+  targetSegment?: string;
+
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  frequencyLimit?: number;
+
+  @IsOptional()
+  minSpend?: number;
+
   @IsOptional()
   isActive?: boolean;
 }
@@ -81,6 +119,22 @@ export class UpdateLoyaltyRuleDto {
   @IsOptional()
   appliesTo?: string;
 
+  @IsEnum(LoyaltyRuleTrigger)
+  @IsOptional()
+  trigger?: LoyaltyRuleTrigger;
+
+  @IsString()
+  @IsOptional()
+  targetSegment?: string;
+
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  frequencyLimit?: number;
+
+  @IsOptional()
+  minSpend?: number;
+
   @IsOptional()
   isActive?: boolean;
 }
@@ -111,4 +165,38 @@ export class UpdateLoyaltySettingsDto {
   @IsString()
   @IsOptional()
   terms?: string;
+
+  @IsString()
+  @IsOptional()
+  programName?: string;
+
+  @IsString()
+  @IsOptional()
+  brandColor?: string;
+
+  @IsString()
+  @IsOptional()
+  accentColor?: string;
+
+  @IsString()
+  @IsOptional()
+  logoUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  heroImageUrl?: string;
+
+  @ApiPropertyOptional({ type: [LoyaltyTierDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LoyaltyTierDto)
+  @IsOptional()
+  tierConfig?: LoyaltyTierDto[];
+
+  @IsString()
+  @IsOptional()
+  redemptionMode?: string;
+
+  @IsOptional()
+  redemptionValue?: number;
 }

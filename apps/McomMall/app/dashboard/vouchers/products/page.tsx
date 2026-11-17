@@ -101,7 +101,7 @@ export default function VoucherProductsPage() {
             <div className="col-span-full py-20 text-center text-slate-500 bg-white rounded-3xl border-2 border-dashed border-gray-200">
               <Ticket className="mx-auto mb-4 text-gray-300" size={48} />
               <p className="font-bold">No voucher products found.</p>
-              <p className="text-xs mt-1">Check the global templates catalog to select one.</p>
+              <p className="text-xs mt-1">Create a voucher campaign to start selling vouchers.</p>
             </div>
           )}
         </div>

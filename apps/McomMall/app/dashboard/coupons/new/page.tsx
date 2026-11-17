@@ -196,6 +196,20 @@ export default function CouponForm() {
 
     if (Object.keys(validationErrors).length === 0) {
       try {
+        let backgroundImageUrl: string | undefined;
+        if (formData.widgetBackground) {
+          const uploadData = new FormData();
+          uploadData.append('file', formData.widgetBackground);
+          const uploadResponse = await fetch('/api/upload/coupons', {
+            method: 'POST',
+            body: uploadData,
+          });
+          if (uploadResponse.ok) {
+            const uploaded = await uploadResponse.json();
+            backgroundImageUrl = uploaded.secure_url;
+          }
+        }
+
         await createCoupon({
           title: formData.title,
           description: formData.description,
@@ -207,6 +221,13 @@ export default function CouponForm() {
           perUserLimit: formData.perUserLimit ? parseInt(formData.perUserLimit) : 1,
           expiresAt: formData.expiresAt,
           businessId: formData.businessId,
+          backgroundImageUrl,
+          individualUseOnly: formData.individualUseOnly,
+          minSpend: formData.minSpend ? parseFloat(formData.minSpend) : undefined,
+          maxSpend: formData.maxSpend ? parseFloat(formData.maxSpend) : undefined,
+          allowedEmails: formData.allowedEmails
+            ? formData.allowedEmails.split(/[,\n]/).map((email) => email.trim()).filter(Boolean)
+            : undefined,
         });
         setIsSuccess(true);
       } catch (error) {

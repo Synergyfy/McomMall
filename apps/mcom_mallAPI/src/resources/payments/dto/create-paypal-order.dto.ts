@@ -30,4 +30,8 @@ export class CreatePaypalOrderDto {
   @IsEnum(PaymentPurpose)
   @IsOptional()
   purpose?: PaymentPurpose;
+
+  @IsString()
+  @IsOptional()
+  idempotencyKey?: string;
 }

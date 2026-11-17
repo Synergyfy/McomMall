@@ -1,10 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
 import api from '@/service/api';
 
-const createStripePaymentIntent = async (amount: number) => {
-  const { data } = await api.post('/payments/stripe/create-intent', {
-    amount,
-  });
+const createStripePaymentIntent = async (payload: {
+  amount: number;
+  idempotencyKey?: string;
+}) => {
+  const { data } = await api.post('/payments/stripe/create-intent', payload);
   return data;
 };
 

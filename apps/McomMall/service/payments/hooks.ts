@@ -363,8 +363,9 @@ export interface InitiateWalletHoldRequest {
 }
 
 export interface InitiateWalletHoldResponse {
-  holdId: string;
-  expiresAt: string;
+  transactionId?: string;
+  holdId?: string;
+  expiresAt?: string;
   provider: string;
 }
 

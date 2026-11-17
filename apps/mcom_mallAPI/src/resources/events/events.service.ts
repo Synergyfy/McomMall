@@ -132,7 +132,7 @@ export class EventsService {
     });
 
     // Derived performance metrics from capacity until a registrations
-    // table is introduced (mirrors the existing automations summary pattern).
+    // table is introduced.
     const registrations = Math.floor(capacity * 0.95);
     const checkIns = Math.floor(registrations * 0.72);
     const rewardsClaimed = Math.round(checkIns * 0.45);

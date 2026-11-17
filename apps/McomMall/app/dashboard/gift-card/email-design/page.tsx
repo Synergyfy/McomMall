@@ -1,458 +1,284 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Gift, Mail, Info, PlusCircle, CreditCard } from 'lucide-react';
-
-import AnniversaryChampagne from '@/components/svgs/gift-card/AnniversaryChampagne';
-import AnniversaryHearts from '@/components/svgs/gift-card/AnniversaryHearts';
-import AnniversaryRings from '@/components/svgs/gift-card/AnniversaryRings';
-import BirthdayBalloons from '@/components/svgs/gift-card/BirthdayBalloons';
-import BirthdayCake from '@/components/svgs/gift-card/BirthdayCake';
-import BirthdayGift from '@/components/svgs/gift-card/BirthdayGift';
-import HolidayPresents from '@/components/svgs/gift-card/HolidayPresents';
-import HolidaySnowman from '@/components/svgs/gift-card/HolidaySnowman';
-import HolidayTree from '@/components/svgs/gift-card/HolidayTree';
-import OtherCelebration from '@/components/svgs/gift-card/OtherCelebration';
-import OtherCongrats from '@/components/svgs/gift-card/OtherCongrats';
-import OtherThankYou from '@/components/svgs/gift-card/OtherThankYou';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { toast } from 'sonner';
+import { ArrowLeft, Gift, Plus, Save, Trash2 } from 'lucide-react';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { cn, CURRENCY } from '@/lib/utils';
+  useCreateGiftCardTheme,
+  useDeleteGiftCardTheme,
+  useMyGiftCardThemes,
+  useUpdateGiftCardTheme,
+  type GiftCardTheme,
+} from '@/service/gift-card/themes';
+import { CURRENCY } from '@/lib/utils';
 
-type SvgComponent = React.ComponentType<{ className?: string }>;
+const CATEGORIES = ['General', 'Birthday', 'Anniversary', 'Holiday', 'Thank You'];
 
-const themes: Record<string, SvgComponent[]> = {
-  birthday: [BirthdayCake, BirthdayBalloons, BirthdayGift],
-  anniversary: [AnniversaryRings, AnniversaryChampagne, AnniversaryHearts],
-  holiday: [HolidaySnowman, HolidayTree, HolidayPresents],
-  default: [OtherThankYou, OtherCongrats, OtherCelebration],
-};
+export default function EmailDesignPage() {
+  const themesQuery = useMyGiftCardThemes();
+  const createTheme = useCreateGiftCardTheme();
+  const updateTheme = useUpdateGiftCardTheme();
+  const deleteTheme = useDeleteGiftCardTheme();
 
-type GiftCardDesign = {
-  designName: string;
-  title: string;
-  titleColor: string;
-  cardColor: string;
-  additionalContent: string;
-  contentLocation: 'Top' | 'Bottom';
-  contentAlignment: 'Left' | 'Center' | 'Right';
-  redeemButtonText: string;
-  redeemButtonColor: string;
-  redeemButtonTextColor: string;
-};
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('General');
+  const [primaryColor, setPrimaryColor] = useState('#ea580c');
+  const [secondaryColor, setSecondaryColor] = useState('#a14000');
+  const [badgeText, setBadgeText] = useState('Happy Birthday');
+  const [isPublic, setIsPublic] = useState(false);
 
-// --- MOCK DATA & DEFAULTS ---
-const initialDesign: GiftCardDesign = {
-  designName: 'Default',
-  title: 'Pimwick Dev Gift Card',
-  titleColor: '#000000',
-  cardColor: '#f0f0f0',
-  additionalContent: 'Here is some additional information for the recipient.',
-  contentLocation: 'Top',
-  contentAlignment: 'Left',
-  redeemButtonText: 'Redeem',
-  redeemButtonColor: '#ea580c', // orange-600
-  redeemButtonTextColor: '#ffffff',
-};
+  const themes = useMemo(() => themesQuery.data ?? [], [themesQuery.data]);
 
-// --- SUB-COMPONENTS ---
-const DesignForm = ({
-  design,
-  setDesign,
-}: {
-  design: GiftCardDesign;
-  setDesign: React.Dispatch<React.SetStateAction<GiftCardDesign>>;
-}) => {
-  const [openSections, setOpenSections] = useState<string[]>([
-    'general',
-    'redeem',
-  ]);
+  const selected = themes.find((theme) => theme.id === selectedId) ?? null;
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setDesign(prev => ({ ...prev, [name]: value }));
+  useEffect(() => {
+    if (!selected) return;
+    setName(selected.name);
+    setCategory(selected.category || 'General');
+    setPrimaryColor(selected.primaryColor || '#ea580c');
+    setSecondaryColor(selected.secondaryColor || '#a14000');
+    setBadgeText(selected.badgeText || '');
+    setIsPublic(selected.isPublic);
+  }, [selected]);
+
+  const resetForm = () => {
+    setSelectedId(null);
+    setName('');
+    setCategory('General');
+    setPrimaryColor('#ea580c');
+    setSecondaryColor('#a14000');
+    setBadgeText('Happy Birthday');
+    setIsPublic(false);
   };
 
-  const handleSelectChange =
-    (name: keyof GiftCardDesign) => (value: string) => {
-      setDesign(prev => ({ ...prev, [name]: value }));
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Theme name is required.');
+      return;
+    }
+    const payload: Partial<GiftCardTheme> = {
+      name: name.trim(),
+      category,
+      primaryColor,
+      secondaryColor,
+      badgeText,
+      isPublic,
     };
 
-  return (
-    <div className="space-y-6">
-      <Accordion
-        type="multiple"
-        value={openSections}
-        onValueChange={setOpenSections}
-      >
-        <AccordionItem value="general">
-          <AccordionTrigger>General</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="designName" className="text-sm font-medium mb-2 block">
-                  Design name (visible to customers)
-                </Label>
-                <Input
-                  id="designName"
-                  name="designName"
-                  value={design.designName}
-                  onChange={handleInputChange}
-                  className="text-base p-2.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="title" className="text-sm font-medium mb-2 block">Gift card title</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={design.title}
-                  onChange={handleInputChange}
-                  className="text-base p-2.5"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="titleColor" className="text-sm font-medium mb-2 block">Gift card title color</Label>
-                  <Input
-                    id="titleColor"
-                    name="titleColor"
-                    type="color"
-                    value={design.titleColor}
-                    onChange={handleInputChange}
-                    className="h-12 p-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cardColor" className="text-sm font-medium mb-2 block">Gift card color</Label>
-                  <Input
-                    id="cardColor"
-                    name="cardColor"
-                    type="color"
-                    value={design.cardColor}
-                    onChange={handleInputChange}
-                    className="h-12 p-1"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="additionalContent" className="text-sm font-medium mb-2 block">
-                  Additional content (HTML allowed)
-                </Label>
-                <Textarea
-                  id="additionalContent"
-                  name="additionalContent"
-                  value={design.additionalContent}
-                  onChange={handleInputChange}
-                  className="text-base p-2.5"
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Additional content location</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Select
-                    value={design.contentLocation}
-                    onValueChange={handleSelectChange('contentLocation')}
-                  >
-                    <SelectTrigger className="text-base p-2.5 h-12">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Top">Top</SelectItem>
-                      <SelectItem value="Bottom">Bottom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={design.contentAlignment}
-                    onValueChange={handleSelectChange('contentAlignment')}
-                  >
-                    <SelectTrigger className="text-base p-2.5 h-12">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Left">Left</SelectItem>
-                      <SelectItem value="Center">Center</SelectItem>
-                      <SelectItem value="Right">Right</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="redeem">
-          <AccordionTrigger>Redeem Button</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="redeemButtonText" className="text-sm font-medium mb-2 block">Button Text</Label>
-                <Input
-                  id="redeemButtonText"
-                  name="redeemButtonText"
-                  value={design.redeemButtonText}
-                  onChange={handleInputChange}
-                  className="text-base p-2.5"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="redeemButtonColor" className="text-sm font-medium mb-2 block">Button color</Label>
-                  <Input
-                    id="redeemButtonColor"
-                    name="redeemButtonColor"
-                    type="color"
-                    value={design.redeemButtonColor}
-                    onChange={handleInputChange}
-                    className="h-12 p-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="redeemButtonTextColor" className="text-sm font-medium mb-2 block">
-                    Button text color
-                  </Label>
-                  <Input
-                    id="redeemButtonTextColor"
-                    name="redeemButtonTextColor"
-                    type="color"
-                    value={design.redeemButtonTextColor}
-                    onChange={handleInputChange}
-                    className="h-12 p-1"
-                  />
-                </div>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-      <div className="flex items-center space-x-2">
-        <Button>Save design</Button>
-        <Button variant="destructive">Delete design</Button>
-      </div>
-    </div>
-  );
-};
-
-const CardPreview = ({
-  design,
-  selectedSvg: SelectedSvg,
-}: {
-  design: GiftCardDesign;
-  selectedSvg: SvgComponent | null;
-}) => {
-  const alignmentClasses = {
-    Left: 'items-start',
-    Center: 'items-center',
-    Right: 'items-end',
+    try {
+      if (selected) {
+        await updateTheme.mutateAsync({ id: selected.id, ...payload });
+        toast.success('Theme updated.');
+      } else {
+        await createTheme.mutateAsync(payload);
+        toast.success('Theme created.');
+        resetForm();
+      }
+    } catch {
+      toast.error('Could not save the theme.');
+    }
   };
 
-  const textAlignClasses = {
-    Left: 'text-left',
-    Center: 'text-center',
-    Right: 'text-right',
-  }
-
-  const AdditionalContent = () => (
-    <div
-      className={`w-full flex flex-col ${alignmentClasses[design.contentAlignment]} ${textAlignClasses[design.contentAlignment]}`}
-    >
-      <div dangerouslySetInnerHTML={{ __html: design.additionalContent }} />
-    </div>
-  );
+  const handleDelete = async () => {
+    if (!selected) return;
+    if (!window.confirm(`Delete "${selected.name}"?`)) return;
+    try {
+      await deleteTheme.mutateAsync(selected.id);
+      resetForm();
+      toast.success('Theme deleted.');
+    } catch {
+      toast.error('Could not delete the theme.');
+    }
+  };
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-gray-800">Email Preview</h2>
-        <Button variant="outline" size="sm">
-          <Mail className="w-4 h-4 mr-2" />
-          Send a preview email
-        </Button>
-      </div>
-      <div className="bg-white rounded-lg shadow-md border border-gray-200">
-        <div className="p-4 border-b border-gray-200">
-            <p className="text-sm text-gray-500"><strong>From:</strong> Your Business Name &lt;noreply@example.com&gt;</p>
-            <p className="text-sm text-gray-500"><strong>To:</strong> Recipient Name &lt;recipient@example.com&gt;</p>
-            <h3 className="text-lg font-semibold text-gray-800 mt-2">You&apos;ve received a gift card!</h3>
-        </div>
-        <div className="p-6 bg-gray-50 space-y-6">
-            <div className="w-full max-w-md mx-auto h-40 flex items-center justify-center">
-                {SelectedSvg ? (
-                <SelectedSvg className="w-3/4 h-3/4" />
-                ) : (
-                <Gift className="w-12 h-12 text-gray-400" />
-                )}
-            </div>
-
-            <div className="text-center text-gray-700">
-                <p>Gift card message to the recipient from the sender will appear here.</p>
-            </div>
-
-            {design.contentLocation === 'Top' && <AdditionalContent />}
-
-            <div
-                className="w-full max-w-md mx-auto aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between bg-white border"
+    <div className="min-h-full bg-[#fff8f5] p-4 sm:p-6">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/gift-card"
+              className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:text-gray-900"
             >
-                <div className="flex justify-between items-start">
-                    <h2 className="text-xl font-semibold" style={{ color: design.titleColor }}>{design.title}</h2>
-                    <CreditCard size={24} className="text-gray-400"/>
-                </div>
-
-                <div className="text-left">
-                    <p className="text-2xl md:text-3xl font-mono text-gray-700 tracking-wider">
-                        4000 1234 5678 9010
-                    </p>
-                </div>
-
-                <div className="flex justify-between items-end">
-                    <div>
-                        <p className="text-xs text-gray-500 uppercase">Card Holder</p>
-                        <p className="font-medium text-gray-800">Recipient Name</p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-500 uppercase">Expires</p>
-                        <p className="font-medium text-gray-800">12/28</p>
-                    </div>
-                    <div className="text-3xl font-bold text-gray-800">
-                        {CURRENCY}123.45
-                    </div>
-                </div>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Email Designs</h1>
+              <p className="text-sm text-gray-500">
+                Create the gift card themes used in customer emails.
+              </p>
             </div>
+          </div>
+          <button
+            onClick={resetForm}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
+          >
+            <Plus className="h-4 w-4" /> New theme
+          </button>
+        </header>
 
-             {design.contentLocation === 'Bottom' && <AdditionalContent />}
-
-            <div className="text-center mt-4">
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-3">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-400">
+              Your themes
+            </h2>
+            {themesQuery.isLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : themes.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-500">
+                No custom themes yet. Create one to brand your emails.
+              </p>
+            ) : (
+              themes.map((theme) => (
                 <button
-                    className="mt-4 px-10 py-3 rounded-lg font-bold text-lg shadow-md transition-transform transform hover:scale-105"
-                    style={{
-                    backgroundColor: design.redeemButtonColor,
-                    color: design.redeemButtonTextColor,
-                    }}
+                  key={theme.id}
+                  onClick={() => setSelectedId(theme.id)}
+                  className={`flex w-full items-center justify-between rounded-lg border p-3 text-left ${
+                    selectedId === theme.id
+                      ? 'border-orange-300 bg-orange-50'
+                      : 'border-gray-100 bg-white hover:border-orange-200'
+                  }`}
                 >
-                    {design.redeemButtonText}
-                </button>
-            </div>
-        </div>
-        <div className="p-4 border-t border-gray-200 text-center">
-             <a href="#" className="text-sm text-orange-600 hover:underline">
-              View or print your gift card
-            </a>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- MAIN PAGE COMPONENT ---
-export default function GiftCardEditorPage() {
-  const [design, setDesign] = useState<GiftCardDesign>(initialDesign);
-  const [selectedTheme, setSelectedTheme] = useState<string>('birthday');
-  const [selectedSvg, setSelectedSvg] = useState<SvgComponent | null>(
-    () => BirthdayCake
-  );
-
-  const handleThemeChange = (theme: string) => {
-    setSelectedTheme(theme);
-    setSelectedSvg(null);
-  };
-
-  const handleSvgSelect = (svg: SvgComponent) => {
-    setSelectedSvg(() => svg);
-  };
-
-  return (
-    <div className="bg-gray-100 min-h-screen font-sans">
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Header Section */}
-        <div className="mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-grow">
-              <Label htmlFor="design-select" className="mb-2 block">
-                Select a theme for your gift card.
-              </Label>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={selectedTheme}
-                  onValueChange={handleThemeChange}
-                >
-                  <SelectTrigger id="design-select" className="max-w-xs">
-                    <SelectValue placeholder="Select a theme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="birthday">Birthday Theme</SelectItem>
-                    <SelectItem value="anniversary">
-                      Anniversary Theme
-                    </SelectItem>
-                    <SelectItem value="holiday">Holiday Special</SelectItem>
-                    <SelectItem value="default">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline">
-                  <PlusCircle className="w-4 h-4 mr-2" />
-                  Create a new design
-                </Button>
-              </div>
-            </div>
-          </div>
-          {selectedTheme && themes[selectedTheme] && (
-            <div className="mt-6">
-              <Label>Select a design</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-2">
-                {themes[selectedTheme].map((Svg, index) => (
-                  <div
-                    key={index}
-                    onClick={() => handleSvgSelect(Svg)}
-                    className={cn(
-                      'cursor-pointer rounded-lg border-2 transition-all',
-                      'hover:border-orange-500 hover:shadow-lg',
-                      selectedSvg === Svg
-                        ? 'border-orange-600'
-                        : 'border-transparent'
-                    )}
-                  >
-                    <Svg className="w-full h-auto rounded-lg" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {theme.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{theme.category}</p>
                   </div>
-                ))}
+                  <span className="flex gap-1">
+                    <span
+                      className="h-4 w-4 rounded-full border border-white shadow"
+                      style={{ backgroundColor: theme.primaryColor }}
+                    />
+                    <span
+                      className="h-4 w-4 rounded-full border border-white shadow"
+                      style={{ backgroundColor: theme.secondaryColor }}
+                    />
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+
+          <div className="space-y-5 lg:col-span-2">
+            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">
+                {selected ? 'Edit theme' : 'New theme'}
+              </h2>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">Name</label>
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Category
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  >
+                    {CATEGORIES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Primary colour
+                  </label>
+                  <input
+                    type="color"
+                    value={primaryColor}
+                    onChange={(event) => setPrimaryColor(event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-gray-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Secondary colour
+                  </label>
+                  <input
+                    type="color"
+                    value={secondaryColor}
+                    onChange={(event) => setSecondaryColor(event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-gray-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Badge text
+                  </label>
+                  <input
+                    value={badgeText}
+                    onChange={(event) => setBadgeText(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <label className="mt-6 flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={isPublic}
+                    onChange={(event) => setIsPublic(event.target.checked)}
+                  />
+                  Share publicly
+                </label>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <button
+                  onClick={handleSave}
+                  disabled={createTheme.isPending || updateTheme.isPending}
+                  className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" />
+                  {selected ? 'Save changes' : 'Create theme'}
+                </button>
+                {selected && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteTheme.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete
+                  </button>
+                )}
               </div>
             </div>
-          )}
-          <div className="mt-2 flex items-center text-sm text-gray-500 gap-2">
-            <Info className="w-4 h-4" />
-            <span>
-              Edit the PW Gift Card product to specify which Email Designs can
-              be selected by the purchasing customer.
-            </span>
-          </div>
-        </div>
 
-        {/* Main Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8">
-          {/* Left Column: Form */}
-          <div className="mb-8 lg:mb-0">
-            <DesignForm design={design} setDesign={setDesign} />
-          </div>
-
-          {/* Right Column: Preview */}
-          <div>
-            <CardPreview design={design} selectedSvg={selectedSvg} />
+            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-400">
+                Preview
+              </h2>
+              <div
+                className="rounded-xl p-6 text-white shadow-inner"
+                style={{
+                  background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                }}
+              >
+                <Gift className="mb-4 h-8 w-8" />
+                {badgeText && (
+                  <p className="text-xs font-bold uppercase tracking-widest text-white/80">
+                    {badgeText}
+                  </p>
+                )}
+                <p className="mt-2 text-2xl font-bold">{name || 'Gift Card'}</p>
+                <p className="mt-1 font-mono text-sm text-white/80">
+                  •••• •••• •••• ••{String(Math.max(1, name.length)).padStart(2, '0')}
+                </p>
+                <p className="mt-4 text-3xl font-bold">{CURRENCY}50.00</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

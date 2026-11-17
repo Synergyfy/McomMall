@@ -31,13 +31,13 @@ export const VoucherTransactionHistory = () => {
 
   const { data, isLoading } = useGetVoucherTransactionHistory({
     page,
-    take: 10,
+    limit: 10,
     startDate: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
     endDate: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
   });
 
   const handlePageChange = (newPage: number) => {
-    if (newPage > 0 && newPage <= (data?.meta.pageCount || 1)) {
+    if (newPage > 0 && newPage <= (data?.meta.totalPages || 1)) {
       setPage(newPage);
     }
   };
@@ -95,7 +95,7 @@ export const VoucherTransactionHistory = () => {
               }}
             />
           </PaginationItem>
-          {Array.from({ length: data?.meta.pageCount || 1 }, (_, i) => (
+          {Array.from({ length: data?.meta.totalPages || 1 }, (_, i) => (
             <PaginationItem key={i}>
               <PaginationLink
                 href="#"

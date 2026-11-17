@@ -46,51 +46,8 @@ export default function VoucherDashboard() {
   const deleteVoucherProduct = useDeleteVoucherProduct();
   const editVoucherProduct = useEditVoucherProduct();
 
-  // Mock initial items to fallback to for rich UI presentation if DB is empty
-  const mockVoucherProducts: VoucherProduct[] = useMemo(() => [
-    {
-      id: 'mock-vp-1',
-      name: 'Summer Flash Sale',
-      description: '20% off all dog walking services this July. Minimum spend $50.',
-      voucherType: 'discount_code',
-      valueType: 'percentage',
-      value: 20,
-      rules: 'Minimum spend $50. Cannot combine with other offers.',
-      expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-      distributionChannels: ['storefront', 'email'],
-      status: 'active',
-      isEnabled: true,
-    },
-    {
-      id: 'mock-vp-2',
-      name: 'New Client Welcome',
-      description: 'First wash is free for all new furry neighbors!',
-      voucherType: 'gift_voucher',
-      valueType: 'currency',
-      value: 25,
-      rules: 'First-time users only. One voucher per household.',
-      expiryDate: null,
-      distributionChannels: ['storefront', 'qr'],
-      status: 'active',
-      isEnabled: true,
-    },
-    {
-      id: 'mock-vp-3',
-      name: 'Autumn Cafe Combo',
-      description: 'Buy one pumpkin spice latte, get one muffin free.',
-      voucherType: 'promotional_coupon',
-      valueType: 'percentage',
-      value: 50,
-      rules: 'BOGO combo deal.',
-      expiryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      distributionChannels: ['email'],
-      status: 'expired',
-      isEnabled: false,
-    }
-  ], []);
-
   const displayedProducts = useMemo(() => {
-    const list = voucherProducts && voucherProducts.length > 0 ? voucherProducts : mockVoucherProducts;
+    const list = voucherProducts ?? [];
     return list.filter(p => {
       // Expose fallback for items created prior to adding voucherType columns
       const pStatus = p.status || (p.isEnabled ? 'active' : 'draft');
@@ -101,23 +58,18 @@ export default function VoucherDashboard() {
       if (activeTab === 'redeemed') return false; // Handled separately if showing claimed logs
       return true;
     });
-  }, [voucherProducts, mockVoucherProducts, activeTab]);
+  }, [voucherProducts, activeTab]);
 
   const activeCount = useMemo(() => {
-    const list = voucherProducts && voucherProducts.length > 0 ? voucherProducts : mockVoucherProducts;
+    const list = voucherProducts ?? [];
     return list.filter(p => (p.status || (p.isEnabled ? 'active' : 'draft')) === 'active').length;
-  }, [voucherProducts, mockVoucherProducts]);
+  }, [voucherProducts]);
 
   // Handle Pause/Resume Toggle
   const handleToggleStatus = async (product: VoucherProduct) => {
     const currentStatus = product.status || (product.isEnabled ? 'active' : 'draft');
     const newStatus = currentStatus === 'active' ? 'draft' : 'active';
     const newEnabled = newStatus === 'active';
-    
-    if (product.id.startsWith('mock-')) {
-      toast.success(`Simulated campaign ${newStatus === 'active' ? 'resumed' : 'paused'} successfully!`);
-      return;
-    }
     
     try {
       await editVoucherProduct({
@@ -133,10 +85,6 @@ export default function VoucherDashboard() {
 
   // Delete Campaign
   const handleDelete = async (id: string) => {
-    if (id.startsWith('mock-')) {
-      toast.success('Mock campaign deleted successfully.');
-      return;
-    }
     try {
       await deleteVoucherProduct(id);
       toast.success('Voucher campaign deleted successfully!');
@@ -173,7 +121,7 @@ export default function VoucherDashboard() {
             <span className="text-[11px] font-bold text-[#5f5e5e] uppercase tracking-wider block">Total Active Campaigns</span>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-4xl font-black text-[#0b1c30] font-stat-lg">{activeCount}</span>
-              <span className="text-primary font-bold text-xs bg-[#ffdbcc]/50 px-2 py-0.5 rounded-full">+12% vs last month</span>
+              <span className="text-primary font-bold text-xs bg-[#ffdbcc]/50 px-2 py-0.5 rounded-full">Live</span>
             </div>
           </div>
           <div className="mt-6 flex -space-x-2">
@@ -212,32 +160,9 @@ export default function VoucherDashboard() {
                 </div>
               ))
             ) : (
-              <>
-                <div className="flex items-center justify-between p-3 bg-[#f8f9ff] rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <span className="p-2 bg-[#ffdbcc] text-primary rounded-lg">
-                      <Ticket size={16} />
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">Summer Coffee Walk (15% OFF)</p>
-                      <p className="text-[10px] text-slate-400">Redeemed by Alex Rivera • 2 mins ago</p>
-                    </div>
-                  </div>
-                  <span className="text-primary font-black text-xs">-$4.50</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-[#f8f9ff] rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <span className="p-2 bg-slate-200 text-slate-500 rounded-lg">
-                      <Ticket size={16} />
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">New Neighbor Welcome</p>
-                      <p className="text-[10px] text-slate-400">Redeemed by Sarah J. • 1 hour ago</p>
-                    </div>
-                  </div>
-                  <span className="text-primary font-black text-xs">FREE</span>
-                </div>
-              </>
+              <p className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">
+                No vouchers redeemed yet.
+              </p>
             )}
           </div>
         </div>
@@ -277,7 +202,6 @@ export default function VoucherDashboard() {
               className="space-y-4"
             >
               {displayedProducts.map((p) => {
-                const isMock = p.id.startsWith('mock-');
                 const isPromo = p.voucherType === 'promotional_coupon';
                 const isGift = p.voucherType === 'gift_voucher';
                 const expiryString = p.expiryDate 

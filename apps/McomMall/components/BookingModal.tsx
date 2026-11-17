@@ -44,13 +44,14 @@ import {
   AlertCircle,
   Zap,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Wallet
 } from 'lucide-react';
 import { CURRENCY } from '@/lib/utils';
 import { format } from 'date-fns';
 
 const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 const LoadingOverlay = () => (
@@ -77,7 +78,9 @@ export function BookingModal({
   onClose,
 }: BookingModalProps) {
   const [step, setStep] = useState<'booking' | 'payment'>('booking');
-  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'paypal' | null>(null);
+  const [paymentProvider, setPaymentProvider] = useState<
+    'stripe' | 'paypal' | 'mcom_wallet' | null
+  >(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -116,8 +119,25 @@ export function BookingModal({
     if (initiatePayment.data) {
       if (initiatePayment.data.provider === 'stripe') {
         setClientSecret(initiatePayment.data.clientSecret);
-      } else {
+      } else if (initiatePayment.data.provider === 'paypal') {
         setOrderId(initiatePayment.data.orderId);
+      } else if (initiatePayment.data.provider === 'mcom_wallet') {
+        const transactionId = initiatePayment.data.transactionId;
+        const paidAmount = initiatePayment.data.amount ?? 0;
+        setAmount(paidAmount);
+        setTotalAmount(
+          initiatePayment.data.totalAmount ?? paidAmount
+        );
+        setRewardDiscount(initiatePayment.data.rewardDiscount ?? 0);
+        if (bookingId && transactionId) {
+          verifyPayment.mutate({
+            bookingId,
+            amount: paidAmount,
+            paymentProvider: 'mcom_wallet',
+            transactionId,
+          });
+        }
+        return;
       }
       setAmount(initiatePayment.data.amount ?? 0);
       setTotalAmount(
@@ -361,7 +381,7 @@ export function BookingModal({
                         <h3 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
                           <CreditCard size={20} className="text-[#f58220]" /> Payment Method
                         </h3>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-3">
                           <button
                             onClick={() => setPaymentProvider('stripe')}
                             className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${
@@ -371,7 +391,7 @@ export function BookingModal({
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentProvider === 'stripe' ? 'bg-[#f58220] text-white' : 'bg-gray-100 text-gray-400'}`}>
                               <CreditCard size={20} />
                             </div>
-                            <span className="text-xs font-black uppercase tracking-widest">Stripe</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Card</span>
                           </button>
                           <button
                             onClick={() => setPaymentProvider('paypal')}
@@ -382,7 +402,18 @@ export function BookingModal({
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentProvider === 'paypal' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
                               <p className="font-black italic text-sm">PP</p>
                             </div>
-                            <span className="text-xs font-black uppercase tracking-widest">PayPal</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">PayPal</span>
+                          </button>
+                          <button
+                            onClick={() => setPaymentProvider('mcom_wallet')}
+                            className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${
+                              paymentProvider === 'mcom_wallet' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-100 hover:border-gray-200'
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentProvider === 'mcom_wallet' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                              <Wallet size={20} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest">MCOM</span>
                           </button>
                         </div>
                       </div>

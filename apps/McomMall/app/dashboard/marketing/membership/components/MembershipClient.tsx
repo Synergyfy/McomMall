@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 import {
   useGetMyMembership,
   useInitiateMembershipPayment,
+  useVerifyMembershipPayment,
 } from '@/service/membership/hooks';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { CheckCircle, Star } from 'lucide-react';
+import { CheckCircle, Star, Wallet } from 'lucide-react';
 import { Membership } from '@/service/membership/types';
 import { toast } from 'sonner';
 import { loadStripe } from '@stripe/stripe-js';
@@ -31,7 +34,7 @@ interface ApiError extends Error {
 }
 
 const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 const tiers = [
@@ -43,7 +46,7 @@ const tiers = [
   },
   {
     name: 'EXTENDED',
-    price: '£10/month',
+    price: '£50/month',
     features: [
       'Advanced analytics',
       'Priority support',
@@ -52,10 +55,9 @@ const tiers = [
   },
   {
     name: 'PROFESSIONAL',
-    price: '£25/month',
+    price: '£100/month',
     features: [
       'All Extended features',
-      'Group creation',
       'Dedicated account manager',
     ],
     highlight: true,
@@ -63,8 +65,13 @@ const tiers = [
 ];
 
 const MembershipClient = () => {
+  const { userRole } = useSelector((state: RootState) => state.auth);
+  const isCustomer = userRole === 'customer';
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
   const { data: membership, isLoading, error } = useGetMyMembership();
   const initiatePayment = useInitiateMembershipPayment();
+  const verifyPayment = useVerifyMembershipPayment();
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [
@@ -73,6 +80,11 @@ const MembershipClient = () => {
   ] = useState<Membership | null>(null);
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
 
+  const newIdempotencyKey = () =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `membership-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
   const handleUpgrade = (tier: string) => {
     if (tier === 'BASIC') {
       toast.info('Basic plan is free and assigned by default.');
@@ -80,7 +92,14 @@ const MembershipClient = () => {
     }
     setSelectedTier(tier);
     initiatePayment.mutate(
-      { tier },
+      {
+        tier: tier.toLowerCase() as 'basic' | 'extended' | 'professional',
+        paymentProvider: 'stripe',
+        planType: 'monthly',
+        idempotencyKey: newIdempotencyKey(),
+        returnUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+        cancelUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+      },
       {
         onSuccess: (data) => {
           setClientSecret(data.clientSecret ?? null);
@@ -94,6 +113,68 @@ const MembershipClient = () => {
           setSelectedTier(null);
         },
       }
+    );
+  };
+
+  const handleWalletUpgrade = (tier: string) => {
+    if (tier === 'BASIC') {
+      toast.info('Basic plan is free and assigned by default.');
+      return;
+    }
+    setSelectedTier(tier);
+    initiatePayment.mutate(
+      {
+        tier: tier.toLowerCase() as 'basic' | 'extended' | 'professional',
+        paymentProvider: 'mcom_wallet',
+        planType: 'monthly',
+        idempotencyKey: newIdempotencyKey(),
+      },
+      {
+        onSuccess: (data) => {
+          const transactionId = data.transactionId || data.holdId;
+          if (!transactionId) {
+            toast.error('MCOM Wallet did not return a payment reference.');
+            setSelectedTier(null);
+            return;
+          }
+          verifyPayment.mutate(
+            {
+              paymentProvider: 'mcom_wallet',
+              transactionId,
+              holdId: transactionId,
+              purchaseDetails: {
+                tier: tier.toLowerCase() as
+                  | 'basic'
+                  | 'extended'
+                  | 'professional',
+                planType: 'monthly',
+              },
+            },
+            {
+              onSuccess: (newMembership) => {
+                setSelectedTier(null);
+                handlePaymentSuccess(newMembership);
+              },
+              onError: (err: ApiError) => {
+                toast.error(
+                  err.response?.data?.message ||
+                    err.message ||
+                    'Wallet payment verification failed.',
+                );
+                setSelectedTier(null);
+              },
+            },
+          );
+        },
+        onError: (error: ApiError) => {
+          const errorMessage =
+            error.response?.data?.message ||
+            error.message ||
+            'An unexpected error occurred.';
+          toast.error(`Failed to initiate payment: ${errorMessage}`);
+          setSelectedTier(null);
+        },
+      },
     );
   };
 
@@ -113,7 +194,7 @@ const MembershipClient = () => {
     setSuccessfulMembership(null);
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (!isMounted || isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
 
   if (clientSecret && selectedTier) {
@@ -170,7 +251,7 @@ const MembershipClient = () => {
               <CardDescription>
                 You are currently on the{' '}
                 <span className="font-semibold text-primary">
-                  {membership.tier.name}
+                  {membership.tier?.name ?? 'Active plan'}
                 </span>{' '}
                 plan.
               </CardDescription>
@@ -180,6 +261,18 @@ const MembershipClient = () => {
                 Your membership is {membership.isActive ? 'active' : (membership.status || 'inactive')}{' '}
                 and expires on{' '}
                 {new Date(membership.expiresAt || membership.endDate || Date.now()).toLocaleDateString()}.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {isCustomer && (
+          <Card className="mb-8 border-orange-200 bg-orange-50">
+            <CardContent className="pt-6">
+              <p className="text-sm font-medium text-orange-900">
+                Membership plans are for business accounts only. Customer
+                accounts can shop, book services, and use their MCOM Wallet
+                without a paid membership.
               </p>
             </CardContent>
           </Card>
@@ -208,22 +301,36 @@ const MembershipClient = () => {
                   ))}
                 </ul>
               </CardContent>
-              <CardFooter>
+              {!isCustomer && (
+              <CardFooter className="flex flex-col gap-2">
                 <Button
                   onClick={() => handleUpgrade(tier.name)}
                   disabled={
                     (initiatePayment.isPending && selectedTier === tier.name) ||
-                    membership?.tier.name === tier.name
+                    membership?.tier?.name === tier.name
                   }
                   className="w-full"
                 >
                   {initiatePayment.isPending && selectedTier === tier.name
                     ? 'Loading...'
-                    : membership?.tier.name === tier.name
+                    : membership?.tier?.name === tier.name
                     ? 'Current Plan'
                     : 'Upgrade'}
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleWalletUpgrade(tier.name)}
+                  disabled={
+                    (initiatePayment.isPending || verifyPayment.isPending) &&
+                    selectedTier === tier.name
+                  }
+                  className="w-full"
+                >
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Pay with MCOM Wallet
+                </Button>
               </CardFooter>
+              )}
             </Card>
           ))}
         </div>

@@ -75,6 +75,31 @@ export const useDeactivateProduct = () => {
     });
 };
 
+// Activate Product
+export const useActivateProduct = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            try {
+                const response = await api.patch(`/admin/products/${id}/activate`);
+                return response.data;
+            } catch (error: any) {
+                const err = error as ErrorResponse;
+                throw new Error(err.response?.data?.message || err.message || 'Failed to activate product');
+            }
+        },
+        onSuccess: (data) => {
+            toast.success(data.message || 'Product activated successfully');
+            queryClient.invalidateQueries({ queryKey: ['FETCH_ALL_ADMIN_PRODUCTS'] });
+            queryClient.invalidateQueries({ queryKey: ['FETCH_ADMIN_PRODUCT_STATS'] });
+        },
+        onError: (error: Error) => {
+            toast.error(error.message);
+        },
+    });
+};
+
 // Delete Product
 export const useDeleteProduct = () => {
     const queryClient = useQueryClient();

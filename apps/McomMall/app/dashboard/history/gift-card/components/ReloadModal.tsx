@@ -16,13 +16,15 @@ interface ReloadModalProps {
   onClose: () => void;
 }
 
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+const stripePromise = (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  ? loadStripe((process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''))
   : null;
 
 const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
   const [amount, setAmount] = useState<number | ''>('');
-  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'paypal'>('stripe');
+  const [paymentProvider, setPaymentProvider] = useState<
+    'stripe' | 'paypal' | 'mcom_wallet'
+  >('stripe');
   const initiateReloadMutation = useInitiateReload();
   const verifyReloadMutation = useVerifyReload();
   const stripe = useStripe();
@@ -39,6 +41,33 @@ const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
       { code: purchase.code, reloadData: { amount, paymentProvider } },
       {
         onSuccess: async (data) => {
+          if (data.provider === 'mcom_wallet' && data.transactionId) {
+            verifyReloadMutation.mutate(
+              {
+                code: purchase.code,
+                verificationData: {
+                  paymentProvider: 'mcom_wallet',
+                  transactionId: data.transactionId,
+                  reloadDetails: { amount },
+                },
+              },
+              {
+                onSuccess: () => {
+                  toast.success('Gift card reloaded successfully!');
+                  onClose();
+                },
+                onError: (err) =>
+                  toast.error(err.message || 'Failed to verify reload.'),
+              }
+            );
+            return;
+          }
+          if (data.provider === 'paypal' && data.orderId) {
+            toast.info(
+              'PayPal approved. Complete the reload from the PayPal window.'
+            );
+            return;
+          }
           if (data.provider === 'stripe' && data.clientSecret && stripe && elements) {
             const cardElement = elements.getElement(CardElement);
             if (!cardElement) return;
@@ -106,6 +135,13 @@ const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
           >
             PayPal (Coming Soon)
           </Button>
+          <Button
+            type="button"
+            variant={paymentProvider === 'mcom_wallet' ? 'default' : 'outline'}
+            onClick={() => setPaymentProvider('mcom_wallet')}
+          >
+            MCOM Wallet
+          </Button>
         </div>
       </div>
       {paymentProvider === 'stripe' && (
@@ -115,6 +151,12 @@ const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
             <CardElement />
           </div>
         </div>
+      )}
+      {paymentProvider === 'mcom_wallet' && (
+        <p className="rounded-md border border-orange-100 bg-orange-50 p-3 text-sm text-orange-800">
+          The reload amount will be debited from your MCOM Wallet when you
+          continue.
+        </p>
       )}
       <div className="flex justify-end space-x-2">
         <Button type="button" variant="ghost" onClick={onClose}>

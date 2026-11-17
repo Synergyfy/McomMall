@@ -513,6 +513,11 @@ export class WalletService {
         await this.paymentProviderService.createStripePaymentIntent(
           initiateDto.amount,
           currency,
+          {
+            reference: `wallet-topup-${userId}`,
+            userId,
+            description: 'MCOM Wallet top-up',
+          },
         );
       return {
         clientSecret: paymentIntent.client_secret,
@@ -522,6 +527,11 @@ export class WalletService {
       const order = await this.paymentProviderService.createPaypalOrder(
         initiateDto.amount,
         currency,
+        {
+          reference: `wallet-topup-${userId}`,
+          userId,
+          description: 'MCOM Wallet top-up',
+        },
       );
       return { orderId: order.id, provider: PaymentMethod.PAYPAL };
     } else {
@@ -559,6 +569,30 @@ export class WalletService {
       throw new BadRequestException(
         `Payment verification failed: ${verificationResult.reason}`,
       );
+    }
+
+    // Credit the centralized MCOM Wallet. The idempotency key is derived from
+    // the provider transaction so retries can never double-credit.
+    const topUpUser = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    if (topUpUser?.centralUserId && this.mcomWalletService.isEnabled()) {
+      try {
+        await this.mcomWalletService.credit({
+          userId: topUpUser.centralUserId,
+          amount,
+          category: 'TRANSFER_IN',
+          description: 'MCOM Mall wallet top-up',
+          reference: transactionId,
+          metadata: { platform: 'mcom-mall', mallUserId: userId },
+          idempotencyKey: this.mcomWalletService.buildKey(
+            'topup',
+            transactionId,
+          ),
+        });
+      } catch (err: any) {
+        throw this.mcomWalletService.toHttpException(err);
+      }
     }
 
     return this.dataSource.transaction(async (manager) => {

@@ -3,12 +3,14 @@ import React from 'react';
 import { WalletSummary } from './component/WalletSummary';
 import { TransactionHistoryTable } from '../component/Tables';
 import WithdrawPage from './component/Withdraw';
+import FundWallet from './component/FundWallet';
 import { Button } from '@/components/ui/button';
 import { useWallet } from '@/service/wallet/hook';
 import { ArrowUpRight, ExternalLink, PlusCircle, RefreshCw, Wallet } from 'lucide-react';
 
 const Page = () => {
   const [showWithdraw, setShowWithdraw] = React.useState(false);
+  const [showFund, setShowFund] = React.useState(false);
   const { data: walletData, refetch, isFetching } = useWallet();
 
   if (showWithdraw) {
@@ -64,14 +66,24 @@ const Page = () => {
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFund(true)}
+            className="text-orange-700 border-orange-200 bg-orange-50 hover:bg-orange-100 gap-1.5"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Add Funds
+          </Button>
+
           <a
             href={centralPortalUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-1.5 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500 disabled:pointer-events-none disabled:opacity-50"
           >
-            <PlusCircle className="w-4 h-4" />
-            Top Up Wallet
+            <ExternalLink className="w-4 h-4" />
+            Central Wallet
           </a>
         </div>
       </div>
@@ -81,6 +93,8 @@ const Page = () => {
 
       {/* Transaction History Ledger */}
       <TransactionHistoryTable />
+
+      <FundWallet isOpen={showFund} onClose={() => setShowFund(false)} />
     </div>
   );
 };

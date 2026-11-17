@@ -10,6 +10,7 @@ import {
   Query,
   UseGuards,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -118,9 +119,14 @@ export class ProductController {
     return this.productService.findAllPublic(searchDto);
   }
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(id);
+  async findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    const product = await this.productService.findOneForViewer(id, user);
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return product;
   }
 
   @Patch(':id')

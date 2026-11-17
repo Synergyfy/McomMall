@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 
 export enum FailedRefundStatus {
   PENDING = 'pending',
@@ -26,7 +27,7 @@ export class FailedWalletRefund {
   @Column({ nullable: true })
   centralUserId: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @Column()

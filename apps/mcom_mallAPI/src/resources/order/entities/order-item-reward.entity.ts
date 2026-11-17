@@ -5,6 +5,7 @@ import {
   ManyToOne,
   Unique,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
@@ -65,7 +66,7 @@ export class OrderItemReward extends AbstractBaseEntity {
   @Column()
   targetId: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   discountAmount: number;
 
   @Column({

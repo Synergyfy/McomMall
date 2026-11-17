@@ -75,6 +75,9 @@ const CouponProductsPage = () => {
               Home &gt; Dashboard &gt; Coupons &gt; Management
             </p>
           </div>
+          <Button onClick={() => router.push('/dashboard/coupons/products/new')}>
+            <Plus className="mr-2 h-4 w-4" /> New coupon product
+          </Button>
         </header>
 
         {couponProducts && couponProducts.length > 0 ? (
@@ -91,7 +94,13 @@ const CouponProductsPage = () => {
           <div className="text-center py-24 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
             <Zap className="mx-auto text-gray-200 mb-6" size={64} />
             <h3 className="text-2xl font-black text-gray-900">No Coupon Templates</h3>
-            <p className="text-gray-500 font-bold mt-2">Go to the global templates catalog to find templates to sell.</p>
+            <p className="text-gray-500 font-bold mt-2">Create a coupon product to start selling coupon bundles.</p>
+            <Button
+              className="mt-6"
+              onClick={() => router.push('/dashboard/coupons/products/new')}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Create coupon product
+            </Button>
           </div>
         )}
 

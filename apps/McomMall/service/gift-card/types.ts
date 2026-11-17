@@ -18,6 +18,8 @@ export interface GiftCardTemplate {
   bonusAmount?: number;
   media?: string[] | null;
   logoUrl?: string | null;
+  spendingLocations?: { id: string; label: string; type: string }[] | null;
+  previewSvg?: string | null;
 }
 
 export interface CreateGiftCardTemplateDto {
@@ -35,6 +37,8 @@ export interface CreateGiftCardTemplateDto {
   bonusThreshold?: number;
   bonusAmount?: number;
   logoUrl?: string;
+  spendingLocations?: { id: string; label: string; type: string }[];
+  previewSvg?: string;
 }
 
 export interface InitiatePurchaseDto {
@@ -44,7 +48,7 @@ export interface InitiatePurchaseDto {
   recipientName: string;
   senderName: string;
   personalMessage?: string;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
 }
 
 export interface MyPurchase {
@@ -82,15 +86,16 @@ export interface MyPurchase {
 }
 
 export interface VerifyPurchaseDto {
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   transactionId: string;
   purchaseDetails: InitiatePurchaseDto;
 }
 
 export interface InitiatePurchaseResponse {
-  provider: 'stripe' | 'paypal';
+  provider: 'stripe' | 'paypal' | 'mcom_wallet';
   clientSecret?: string;
   orderId?: string;
+  transactionId?: string;
 }
 
 export interface GiftCard {
@@ -128,17 +133,18 @@ export interface GiftCardBalanceResponse {
 
 export interface InitiateReloadDto {
   amount: number;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
 }
 
 export interface InitiateReloadResponse {
-  provider: 'stripe' | 'paypal';
+  provider: 'stripe' | 'paypal' | 'mcom_wallet';
   clientSecret?: string;
   orderId?: string;
+  transactionId?: string;
 }
 
 export interface VerifyReloadDto {
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   transactionId: string;
   reloadDetails: {
     amount: number;

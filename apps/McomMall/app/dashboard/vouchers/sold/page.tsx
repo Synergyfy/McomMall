@@ -141,6 +141,13 @@ export default function SoldVouchersPage() {
                     </td>
                   </tr>
                 )}
+                {!isLoading && !isError && (!soldVouchers || soldVouchers.length === 0) && (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-sm text-slate-500">
+                      No vouchers sold yet. They will appear here after a customer purchase.
+                    </td>
+                  </tr>
+                )}
                 {soldVouchers?.map(voucher => (
                   <SoldVoucherRow key={voucher.id} voucher={voucher} />
                 ))}

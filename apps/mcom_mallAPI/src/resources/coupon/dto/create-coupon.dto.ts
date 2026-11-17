@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -7,7 +9,7 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
-import { CouponSourceType, DiscountType } from '../coupon.enum';
+import { CouponSourceType, CouponStatus, DiscountType } from '../coupon.enum';
 
 export class CreateCouponDto {
   @ApiProperty({
@@ -105,4 +107,35 @@ export class CreateCouponDto {
   @IsUUID()
   @IsOptional()
   brandingBusinessId?: string;
+
+  @ApiPropertyOptional({ enum: CouponStatus })
+  @IsEnum(CouponStatus)
+  @IsOptional()
+  status?: CouponStatus;
+
+  @ApiPropertyOptional({ description: 'Coupon artwork background image URL' })
+  @IsString()
+  @IsOptional()
+  backgroundImageUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Only one coupon per order' })
+  @IsBoolean()
+  @IsOptional()
+  individualUseOnly?: boolean;
+
+  @ApiPropertyOptional({ description: 'Minimum order spend' })
+  @IsNumber()
+  @IsOptional()
+  minSpend?: number;
+
+  @ApiPropertyOptional({ description: 'Maximum order spend' })
+  @IsNumber()
+  @IsOptional()
+  maxSpend?: number;
+
+  @ApiPropertyOptional({ description: 'Allow-list of customer emails', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowedEmails?: string[];
 }

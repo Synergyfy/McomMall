@@ -72,6 +72,12 @@ export interface CreateCouponDto {
   campaignId?: string;
   businessId?: string;
   brandingBusinessId?: string;
+  status?: string;
+  backgroundImageUrl?: string;
+  individualUseOnly?: boolean;
+  minSpend?: number;
+  maxSpend?: number;
+  allowedEmails?: string[];
 }
 
 export type UpdateCouponDto = Partial<CreateCouponDto>;

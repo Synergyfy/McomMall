@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { Request } from 'express';
 import {
@@ -108,6 +109,50 @@ export class VoucherBusinessController {
     return this.voucherService.findVoucherProductById(id, req.user.id);
   }
 
+  @Delete('products/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Archive a voucher product (Business Owner)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Voucher product archived successfully.',
+    type: VoucherProduct,
+  })
+  async deleteVoucherProduct(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.voucherService.deleteVoucherProduct(id, req.user.id);
+  }
+
+  @Patch('products/:id/status')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update voucher product status' })
+  async updateVoucherProductStatus(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('status') status: string,
+  ) {
+    return this.voucherService.updateVoucherProductStatus(
+      id,
+      req.user.id,
+      status,
+    );
+  }
+
+  @Get('products/:id/analytics')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get analytics for a voucher product' })
+  async getVoucherProductAnalytics(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const product = await this.voucherService.findVoucherProductById(
+      id,
+      req.user.id,
+    );
+    return this.voucherService.getVoucherProductAnalytics(product.id);
+  }
+
   @Get('sold')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all vouchers sold by the business' })
@@ -117,8 +162,7 @@ export class VoucherBusinessController {
     type: [Voucher],
   })
   async getSoldVouchers(@Req() req: Request) {
-    const businessId = req.user.businessId;
-    return this.voucherService.findVouchersSoldByBusiness(businessId);
+    return this.voucherService.findVouchersSoldByOwner(req.user.id);
   }
 
   @Post('redeem/manual')

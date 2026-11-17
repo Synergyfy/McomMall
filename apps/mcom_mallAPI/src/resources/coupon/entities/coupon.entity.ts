@@ -1,4 +1,5 @@
 import { Column, Entity, Index, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { CouponStatus, CouponSourceType, DiscountType } from '../coupon.enum';
 import { MarketingCampaign } from '../../campaign/entities/marketing-campaign.entity';
@@ -36,7 +37,7 @@ export class Coupon extends AbstractBaseEntity {
   sourceType: CouponSourceType;
 
   @ApiProperty({ example: 20 })
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   discountValue: number;
 
   @ApiProperty({ enum: DiscountType, example: DiscountType.PERCENTAGE })
@@ -93,6 +94,26 @@ export class Coupon extends AbstractBaseEntity {
    */
   @Column({ name: 'scope_config', type: 'jsonb', nullable: true })
   scopeConfig: Record<string, any> | null;
+
+  @ApiPropertyOptional({ description: 'Coupon artwork background image URL' })
+  @Column({ name: 'background_image_url', nullable: true })
+  backgroundImageUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Only one coupon per order' })
+  @Column({ name: 'individual_use_only', default: false })
+  individualUseOnly: boolean;
+
+  @ApiPropertyOptional({ description: 'Minimum order spend' })
+  @Column({ name: 'min_spend', type: 'bigint', nullable: true, transformer: moneyTransformer })
+  minSpend?: number | null;
+
+  @ApiPropertyOptional({ description: 'Maximum order spend' })
+  @Column({ name: 'max_spend', type: 'bigint', nullable: true, transformer: moneyTransformer })
+  maxSpend?: number | null;
+
+  @ApiPropertyOptional({ description: 'Allow-list of customer emails' })
+  @Column({ name: 'allowed_emails', type: 'jsonb', nullable: true })
+  allowedEmails?: string[] | null;
 
   @ApiPropertyOptional({ type: () => Business })
   @Index()

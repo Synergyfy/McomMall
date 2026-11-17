@@ -31,7 +31,7 @@ export interface GiftCardTemplate {
   media?: string[] | null;
 }
 
-export type PaymentProvider = "stripe" | "paypal";
+export type PaymentProvider = "stripe" | "paypal" | "mcom_wallet";
 
 export interface InitiatePurchaseDto {
   templateId: string;

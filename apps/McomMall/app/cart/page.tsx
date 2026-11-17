@@ -36,7 +36,7 @@ export default function CartPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="container mx-auto px-4 pt-28 pb-12 text-center">
         <p>Loading your cart...</p>
       </div>
     );
@@ -44,11 +44,11 @@ export default function CartPage() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="container mx-auto px-4 pt-28 pb-12 text-center">
         <h1 className="text-3xl font-bold mb-4">Your cart is empty</h1>
-        <Link href="/listings">
-          <Button>Start Shopping</Button>
-        </Link>
+        <Button asChild>
+          <Link href="/listings">Start Shopping</Link>
+        </Button>
       </div>
     );
   }
@@ -67,7 +67,7 @@ export default function CartPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 pt-28 pb-12">
       <h1 className="text-3xl font-bold mb-6">Your Shopping Cart</h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
@@ -168,9 +168,9 @@ export default function CartPage() {
               <span>Total</span>
               <span>£{total.toFixed(2)}</span>
             </div>
-            <Link href="/checkout?from=cart">
-              <Button className="w-full mt-6">Proceed to Checkout</Button>
-            </Link>
+            <Button asChild className="w-full mt-6">
+              <Link href="/checkout?from=cart">Proceed to Checkout</Link>
+            </Button>
             <Button
               variant="outline"
               className="w-full mt-2"

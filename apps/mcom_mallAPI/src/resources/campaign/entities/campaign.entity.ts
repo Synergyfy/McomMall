@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { AdPlacement, CampaignType } from '../campaign.enum';
@@ -20,7 +21,7 @@ export class Campaign extends AbstractBaseEntity {
   @Column({ type: 'timestamp', nullable: true })
   endDate: Date | null;
 
-  @Column()
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   budget: number;
 
   @Column({ nullable: true })

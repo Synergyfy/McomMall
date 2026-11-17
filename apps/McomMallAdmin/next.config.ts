@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
     pagesBufferLength: 2,
   },
   experimental: {
+    agentUpgrade: 'security',
     optimizePackageImports: [
       'lucide-react',
       'antd',

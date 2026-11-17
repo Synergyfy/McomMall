@@ -1,4 +1,5 @@
 import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Order } from './order.entity';
 import { Product } from '../../product/entities/product.entity';
@@ -19,6 +20,6 @@ export class OrderItem extends AbstractBaseEntity {
   @Column()
   quantity: number;
 
-  @Column('decimal')
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   price: number;
 }

@@ -5,6 +5,7 @@ import {
   ManyToOne,
   Unique,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { ServiceBooking } from './service-booking.entity';
 
@@ -38,7 +39,7 @@ export class BookingReward extends AbstractBaseEntity {
   @Column({ nullable: true })
   rewardType?: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   discountAmount: number;
 
   @Column({

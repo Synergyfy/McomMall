@@ -81,6 +81,79 @@ export class MoneyEngineService {
   }
 
   // --- Logic 1: The "Split" Injection (Creation) ---
+  async initiatePurchase(
+    user: User,
+    dto: {
+      rewardDefinitionId: string;
+      paymentAmount: number;
+      paymentGateway: PaymentGateway;
+      idempotencyKey?: string;
+    },
+  ): Promise<{
+    clientSecret?: string;
+    orderId?: string;
+    approvalUrl?: string | null;
+    transactionId?: string;
+    provider: PaymentGateway;
+  }> {
+    const amount = Number(dto.paymentAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Enter a valid voucher amount.');
+    }
+    const metadata = {
+      reference: `money-voucher-${dto.rewardDefinitionId}-${user.id}`,
+      userId: user.id,
+      ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
+      description: 'MCOM Mall reward voucher purchase',
+    };
+
+    if (dto.paymentGateway === PaymentGateway.MCOM_WALLET) {
+      if (!user.centralUserId) {
+        throw new BadRequestException(
+          'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+        );
+      }
+      const charge = await this.paymentProviderService.createWalletCharge(
+        amount,
+        'GBP',
+        metadata,
+        user.centralUserId,
+      );
+      return {
+        provider: PaymentGateway.MCOM_WALLET,
+        transactionId: charge.chargeId,
+      };
+    }
+
+    if (dto.paymentGateway === PaymentGateway.STRIPE) {
+      const intent =
+        await this.paymentProviderService.createStripePaymentIntent(
+          amount,
+          'GBP',
+          metadata,
+        );
+      return {
+        provider: PaymentGateway.STRIPE,
+        clientSecret: intent.client_secret ?? undefined,
+      };
+    }
+
+    if (dto.paymentGateway === PaymentGateway.PAYPAL) {
+      const order = await this.paymentProviderService.createPaypalOrder(
+        amount,
+        'GBP',
+        metadata,
+      );
+      return {
+        provider: PaymentGateway.PAYPAL,
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+      };
+    }
+
+    throw new BadRequestException('Unsupported payment gateway');
+  }
+
   async purchaseVoucher(
     userId: string,
     dto: PurchaseVoucherDto,
@@ -103,6 +176,12 @@ export class MoneyEngineService {
           dto.paymentAmount,
           currency,
         );
+    } else if (dto.paymentGateway === PaymentGateway.MCOM_WALLET) {
+      verification = await this.paymentProviderService.verifyWalletCharge(
+        dto.transactionId,
+        dto.paymentAmount,
+        'GBP',
+      );
     } else {
       throw new BadRequestException('Unsupported payment gateway');
     }
@@ -527,8 +606,8 @@ export class MoneyEngineService {
     // 1. Current Snapshot (Active Vouchers)
     const { sumReal, sumReward, countActive } = await this.dataSource.manager
       .createQueryBuilder(UserVoucher, 'uv')
-      .select('SUM(uv.realBalance)', 'sumReal')
-      .addSelect('SUM(uv.rewardBalance)', 'sumReward')
+      .select('SUM(uv.realBalance) / 100.0', 'sumReal')
+      .addSelect('SUM(uv.rewardBalance) / 100.0', 'sumReward')
       .addSelect('COUNT(uv.id)', 'countActive')
       .where('uv.ownerId = :userId', { userId })
       .andWhere('uv.state = :state', { state: VoucherState.ACTIVE })
@@ -542,7 +621,7 @@ export class MoneyEngineService {
     const businessRewards = await this.dataSource.manager
       .createQueryBuilder(VoucherTransaction, 'tx')
       .innerJoin('tx.voucher', 'voucher')
-      .select('SUM(tx.rewardAmountDelta)', 'sum')
+      .select('SUM(tx.rewardAmountDelta) / 100.0', 'sum')
       .where('voucher.ownerId = :userId', { userId })
       .andWhere('tx.sourceType = :type', {
         type: TransactionSourceType.BUSINESS_CASHBACK,
@@ -555,7 +634,7 @@ export class MoneyEngineService {
     const totalSpentResult = await this.dataSource.manager
       .createQueryBuilder(VoucherTransaction, 'tx')
       .innerJoin('tx.voucher', 'voucher')
-      .select('SUM(ABS(tx.amount))', 'sum') // Use ABS because spend is negative
+      .select('SUM(ABS(tx.amount)) / 100.0', 'sum') // Use ABS because spend is negative
       .where('voucher.ownerId = :userId', { userId })
       .andWhere('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
       .getRawOne();
@@ -590,7 +669,7 @@ export class MoneyEngineService {
     // 1. Total spent in this shop via vouchers
     const spentResult = await this.dataSource.manager
       .createQueryBuilder(VoucherTransaction, 'tx')
-      .select('SUM(ABS(tx.amount))', 'sum')
+      .select('SUM(ABS(tx.amount)) / 100.0', 'sum')
       .where('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
       .andWhere('tx.contributorId = :shopId', { shopId })
       .getRawOne();
@@ -648,7 +727,7 @@ export class MoneyEngineService {
     const getDepositSum = async (startDate: Date, endDate: Date) => {
       const result = await this.dataSource.manager
         .createQueryBuilder(VoucherTransaction, 'tx')
-        .select('SUM(tx.amount)', 'sum')
+        .select('SUM(tx.amount) / 100.0', 'sum')
         .where('tx.sourceType = :type', {
           type: TransactionSourceType.USER_DEPOSIT,
         })
@@ -666,7 +745,7 @@ export class MoneyEngineService {
     const getRewardSum = async (startDate: Date, endDate: Date) => {
       const result = await this.dataSource.manager
         .createQueryBuilder(VoucherTransaction, 'tx')
-        .select('SUM(tx.rewardAmountDelta)', 'sum')
+        .select('SUM(tx.rewardAmountDelta) / 100.0', 'sum')
         .where('tx.sourceType IN (:...types)', {
           types: [
             TransactionSourceType.SYSTEM_REWARD,
@@ -687,7 +766,7 @@ export class MoneyEngineService {
     const getUtilizationMetrics = async (startDate: Date, endDate: Date) => {
       const spent = await this.dataSource.manager
         .createQueryBuilder(VoucherTransaction, 'tx')
-        .select('SUM(ABS(tx.amount))', 'sum')
+        .select('SUM(ABS(tx.amount)) / 100.0', 'sum')
         .where('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
         .andWhere('tx.created_at BETWEEN :start AND :end', {
           start: startDate,
@@ -697,7 +776,7 @@ export class MoneyEngineService {
 
       const issued = await this.dataSource.manager
         .createQueryBuilder(VoucherTransaction, 'tx')
-        .select('SUM(tx.amount)', 'sum')
+        .select('SUM(tx.amount) / 100.0', 'sum')
         .where('tx.sourceType IN (:...types)', {
           types: [
             TransactionSourceType.USER_DEPOSIT,

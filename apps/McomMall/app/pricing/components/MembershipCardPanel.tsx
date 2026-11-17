@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import {
   Elements,
@@ -10,6 +10,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 import {
   useInitiateMembershipPayment,
   useRecordPayment,
@@ -95,7 +96,6 @@ function CardPayForm({
         currency: 'gbp',
         tierId: recordArgs.tierId,
         planVariantId: recordArgs.planVariantId,
-        viaSolutions: true,
       });
       onPaymentComplete();
     } catch (e: any) {
@@ -173,6 +173,14 @@ export default function MembershipCardPanel({
     useInitiateMembershipPayment();
   const [session, setSession] = useState<{ clientSecret: string } | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const { mutateAsync: recordPaypalPayment, isPending: isRecordingPaypal } =
+    useRecordPayment();
+  const attemptKey = useRef<string>(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `membership-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 
   const publishableKey =
     config?.publishableKey ||
@@ -190,42 +198,38 @@ export default function MembershipCardPanel({
     const handlePayPal = async () => {
       setInitError(null);
       try {
-        const origin =
-          typeof window !== 'undefined' ? window.location.origin : '';
-        // Return to /pricing (single return handler) with the purchase
-        // encoded in the URL — the PayPal redirect reloads the app, so
-        // in-memory checkout state would otherwise be lost. PayPal appends
-        // ?token=<orderId>&PayerID=... to returnUrl automatically.
-        const ref = new URLSearchParams({
-          paypal: 'return',
-          planName,
-          planPrice,
-          ...(planVariantId ? { planVariantId } : {}),
-          ...(tierId ? { tierId } : {}),
-          ...(planType ? { planType } : {}),
-        });
-        const cancelRef = new URLSearchParams({
-          paypal: 'cancelled',
-          planName,
-          planPrice,
-          ...(planVariantId ? { planVariantId } : {}),
-          ...(tierId ? { tierId } : {}),
-          ...(planType ? { planType } : {}),
-        });
         const res = await initiatePayment({
           paymentProvider: 'paypal',
           planVariantId,
           tierId,
           planType,
-          returnUrl: `${origin}/pricing?${ref.toString()}`,
-          cancelUrl: `${origin}/pricing?${cancelRef.toString()}`,
+          idempotencyKey: attemptKey.current,
         });
-        if (!res.approvalUrl) {
-          throw new Error('PayPal did not return an approval link.');
+        if (!res.orderId) {
+          throw new Error('PayPal did not return an order.');
         }
-        window.location.href = res.approvalUrl;
+        setPaypalOrderId(res.orderId);
       } catch (e: any) {
         setInitError(e?.message || 'Could not start PayPal payment.');
+      }
+    };
+
+    const handlePayPalApproved = async (orderId: string) => {
+      try {
+        await recordPaypalPayment({
+          amount: totalPrice,
+          planType: recordPlanType,
+          purpose: PaymentPurpose.MEMBERSHIP,
+          isTrial,
+          paymentGateway: PaymentGateway.PAYPAL,
+          transactionId: orderId,
+          currency: 'gbp',
+          tierId,
+          planVariantId,
+        });
+        onPaymentComplete();
+      } catch (e: any) {
+        setInitError(e?.message || 'PayPal payment could not be completed.');
       }
     };
 
@@ -236,20 +240,28 @@ export default function MembershipCardPanel({
           <span className="font-bold text-gray-800">
             £{totalPrice.toFixed(2)}
           </span>{' '}
-          with PayPal — processed securely by MCOM Solutions. You will be
-          redirected to paypal.com to approve, then returned here.
+          with PayPal — processed securely by MCOM Pay.
         </p>
         {initError && (
           <p className="mt-2 text-xs font-semibold text-red-600">{initError}</p>
         )}
-        <Button
-          type="button"
-          onClick={handlePayPal}
-          disabled={isInitiating}
-          className="mt-4 h-12 w-full rounded-xl bg-[#ffc439] text-sm font-bold text-[#003087] hover:bg-[#f5b800] disabled:opacity-50"
-        >
-          {isInitiating ? 'Redirecting…' : 'Continue with PayPal'}
-        </Button>
+        {paypalOrderId ? (
+          <div className="mt-4">
+            <PayPalCheckoutButton
+              orderID={paypalOrderId}
+              onPaymentSuccess={handlePayPalApproved}
+            />
+          </div>
+        ) : (
+          <Button
+            type="button"
+            onClick={handlePayPal}
+            disabled={isInitiating || isRecordingPaypal}
+            className="mt-4 h-12 w-full rounded-xl bg-[#ffc439] text-sm font-bold text-[#003087] hover:bg-[#f5b800] disabled:opacity-50"
+          >
+            {isInitiating ? 'Starting…' : 'Continue with PayPal'}
+          </Button>
+        )}
       </div>
     );
   }
@@ -302,6 +314,7 @@ export default function MembershipCardPanel({
         planVariantId,
         tierId,
         planType,
+        idempotencyKey: attemptKey.current,
       });
       if (!res.clientSecret) {
         throw new Error('Card payment could not be started.');

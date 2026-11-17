@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Briefcase, Clock, MapPin, Star, Calendar, CheckCircle2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ interface ServiceCardProps {
 }
 
 export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardProps) {
+    const router = useRouter();
     // Helper to extract price based on model
     const getPrice = () => {
         if (service.discountedPrice) return service.discountedPrice;
@@ -228,7 +230,10 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                             className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-semibold shadow-sm text-xs h-9"
                             onClick={(e) => {
                                 e.preventDefault();
-                                // Handle booking
+                                e.stopPropagation();
+                                if (service.id) {
+                                    router.push(`/services/${service.id}`);
+                                }
                             }}
                         >
                             <Calendar className="w-3 h-3 mr-1" />

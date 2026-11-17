@@ -180,9 +180,75 @@ export default function AddProductPage() {
   }
 
 
+  const handleSaveDraft = () => {
+    if (!formData.businessId) {
+      toast.error('Your business profile from MCOM Central Hub is required before saving a draft.');
+      return;
+    }
+
+    if (!formData.images || formData.images.length === 0) {
+      toast.error('Add at least one product image before saving a draft.');
+      setErrors({ images: 'Add at least one product image before saving a draft.' });
+      setStep(2);
+      return;
+    }
+
+    const draftTitle = formData.productName || 'Untitled product';
+    const draftPayload: Record<string, unknown> = {
+      businessId: formData.businessId,
+      title: draftTitle,
+      productName: draftTitle,
+      description:
+        formData.fullDesc ||
+        formData.shortDesc ||
+        'Draft product — description pending.',
+      shortDescription: formData.shortDesc || '',
+      category: formData.categoryName || formData.category || 'Uncategorised',
+      subCategory: formData.subCategoryName || formData.subCategory || undefined,
+      productType: formData.product_type || 'physical',
+      sku:
+        formData.sku ||
+        `${draftTitle.replace(/[^a-z0-9]/gi, '-').toUpperCase()}-${Math.random()
+          .toString(36)
+          .substring(2, 7)
+          .toUpperCase()}`,
+      price: parseFloat(formData.regular_price) || 0,
+      stock: parseInt(formData.quantity?.toString() ?? '0') || 0,
+      quantity: parseInt(formData.quantity?.toString() ?? '0') || 0,
+      media: [...(formData.images || []), ...(formData.videos || [])],
+      variations: formData.variations || [],
+      productStatus: 'draft',
+      visibility: formData.visibility || 'public',
+      fulfillmentType,
+    };
+
+    const { value: safePayload } = toSerializable<Record<string, unknown>>(draftPayload);
+
+    addProduct(safePayload as any, {
+      onSuccess: () => {
+        toast.success('Draft saved. You can find it under the Draft tab.');
+        router.push('/dashboard/store/products');
+      },
+      onError: (error: any) => {
+        console.error('Failed to save product draft:', error);
+        const parsed = parseApiError(error, ['productName', 'title', 'businessId', 'category', 'productType']);
+        setSubmitError(parsed.general || 'Failed to save draft');
+        toast.error(parsed.general || 'Failed to save draft');
+      },
+    });
+  };
+
   const handlePublish = () => {
     if (!formData.businessId) {
       toast.error('Your business profile from MCOM Central Hub is required before adding a product.');
+      return;
+    }
+
+    if (!formData.images || formData.images.length === 0) {
+      setErrors({ images: 'Add at least one product image before publishing.' });
+      setStep(2);
+      toast.error('Add at least one product image before publishing.');
+      scrollToFirstError(document.querySelector('main') ?? undefined, { delay: 180 });
       return;
     }
 
@@ -293,6 +359,8 @@ export default function AddProductPage() {
     };
 
     // Clean up payload to avoid backend validation errors
+    delete payload.images;
+    delete payload.videos;
     if (!payload.serviceProviderId) delete payload.serviceProviderId;
     if (payload.sale_price === undefined || payload.sale_price === null || isNaN(payload.sale_price)) delete payload.sale_price;
     if (payload.salePrice === undefined || payload.salePrice === null || isNaN(payload.salePrice)) delete payload.salePrice;
@@ -430,6 +498,12 @@ export default function AddProductPage() {
 
     setErrors({});
 
+    if (step === 2 && (!formData.images || formData.images.length === 0)) {
+      setErrors({ images: 'Add at least one product image before continuing.' });
+      toast.error('Add at least one product image before continuing.');
+      return;
+    }
+
     // Branching from Step 3
     if (step === 3) {
       if (formData.product_type !== 'physical') {
@@ -479,8 +553,10 @@ export default function AddProductPage() {
     if (step === 4.2) {
       if (shippingMethod === 'shipstation') {
         setStep(5.5);
+      } else if (fulfillmentType.includes('pickup')) {
+        setStep(5.1);
       } else {
-        setStep(5);
+        setStep(7.5);
       }
       return;
     }
@@ -590,7 +666,7 @@ export default function AddProductPage() {
       case 1:
         return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.push('/dashboard/store/products')} errors={errors} />;
       case 2:
-        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} errors={errors} />;
+        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={handleSaveDraft} errors={errors} />;
       case 3:
         return <Step3PricingInventory formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} errors={errors} />;
       case 4:
@@ -618,6 +694,12 @@ export default function AddProductPage() {
               setShippingMethod(opt);
               nextStep();
             }}
+            onSkip={() => {
+              // Carrier integrations are optional; continue with manual
+              // delivery pricing so products can still be published.
+              setShippingMethod('existing');
+              setStep(4.2);
+            }}
             onBack={prevStep}
           />
         );
@@ -636,7 +718,7 @@ export default function AddProductPage() {
       case 7.5:
         return <Step7Partnership formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
       case 8:
-        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} isPending={isPending} submitError={submitError} />
+        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={handleSaveDraft} isPending={isPending} submitError={submitError} />
       default:
         return <div>Unknown Step</div>;
     }
@@ -671,10 +753,14 @@ export default function AddProductPage() {
           }
         }}
         secondaryAction={{
-          label: "See it live in the Local Mall",
+          label: "View Product",
           icon: <Eye size={16} />,
           onClick: () => {
-            router.push('/dashboard/localmall');
+            if (createdProductId) {
+              router.push(`/products/${createdProductId}`);
+            } else {
+              router.push('/dashboard/store/products');
+            }
           }
         }}
         dashboardAction={{

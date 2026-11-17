@@ -224,19 +224,79 @@ export class VoucherService {
         `Business with ID "${businessId}" has no associated owner.`,
       );
     }
+    return this.findVouchersSoldByOwner(business.user.id);
+  }
+
+  async findVouchersSoldByOwner(ownerId: string): Promise<Voucher[]> {
     return this.voucherRepository.find({
-      where: { owner: { id: business.user.id } },
-      relations: ['buyer', 'recipient', 'order'],
+      where: { owner: { id: ownerId } },
+      relations: ['buyer', 'recipient', 'order', 'voucherProduct'],
+      order: { createdAt: 'DESC' },
     });
+  }
+
+  async deleteVoucherProduct(id: string, ownerId: string): Promise<VoucherProduct> {
+    const product = await this.voucherProductRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+    if (!product) {
+      throw new NotFoundException(`Voucher product with ID "${id}" not found.`);
+    }
+    if (product.user?.id !== ownerId) {
+      throw new ForbiddenException(
+        'You are not authorized to delete this voucher product.',
+      );
+    }
+    product.isEnabled = false;
+    product.status = 'archived';
+    return this.voucherProductRepository.save(product);
+  }
+
+  async updateVoucherProductStatus(
+    id: string,
+    ownerId: string,
+    status: string,
+  ): Promise<VoucherProduct> {
+    const product = await this.voucherProductRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+    if (!product) {
+      throw new NotFoundException(`Voucher product with ID "${id}" not found.`);
+    }
+    if (product.user?.id !== ownerId) {
+      throw new ForbiddenException(
+        'You are not authorized to update this voucher product.',
+      );
+    }
+    product.status = status;
+    product.isEnabled = status === 'active';
+    return this.voucherProductRepository.save(product);
   }
 
   // --- Consumer Methods ---
 
+  private async requireCentralUserId(userId: string): Promise<string> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'centralUserId'],
+    });
+    if (!user?.centralUserId) {
+      throw new BadRequestException(
+        'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+      );
+    }
+    return user.centralUserId;
+  }
+
   async initiateVoucherPurchase(
     initiateDto: InitiateVoucherPurchaseDto,
+    userId?: string,
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    transactionId?: string;
     provider: PaymentMethod;
   }> {
     const product = await this.voucherProductRepository.findOne({
@@ -259,6 +319,29 @@ export class VoucherService {
     this.validatePurchaseAmount(initiateDto.amount, product);
 
     const currency = 'GBP'; // Or get from config/product
+
+    if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
+      if (!userId) {
+        throw new BadRequestException(
+          'Sign in to pay with your MCOM Wallet.',
+        );
+      }
+      const centralUserId = await this.requireCentralUserId(userId);
+      const charge = await this.paymentProviderService.createWalletCharge(
+        initiateDto.amount,
+        currency,
+        {
+          reference: `voucher-purchase-${product.id}`,
+          userId,
+          description: 'MCOM Mall voucher purchase',
+        },
+        centralUserId,
+      );
+      return {
+        transactionId: charge.chargeId,
+        provider: PaymentMethod.MCOM_WALLET,
+      };
+    }
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
       const paymentIntent =
@@ -306,7 +389,14 @@ export class VoucherService {
     const currency = 'GBP'; // Or get from config/product
     let verificationResult;
 
-    if (paymentProvider === PaymentMethod.STRIPE) {
+    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+      verificationResult =
+        await this.paymentProviderService.verifyWalletCharge(
+          transactionId,
+          amount,
+          currency,
+        );
+    } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
@@ -480,6 +570,12 @@ export class VoucherService {
             amount,
             currency,
           );
+        } else if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+          // MCOM Pay refunds are idempotent and work for wallet charges too.
+          await this.paymentProviderService.refundStripePayment(
+            transactionId,
+            amount,
+          );
         }
       } catch (refundErr) {
         this.logger.error(
@@ -495,9 +591,11 @@ export class VoucherService {
   async initiateVoucherReload(
     code: string,
     initiateDto: InitiateReloadDto,
+    userId?: string,
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    transactionId?: string;
     provider: PaymentMethod;
   }> {
     const voucher = await this.findActiveVoucherByCode(code);
@@ -517,6 +615,29 @@ export class VoucherService {
     }
 
     const currency = 'GBP';
+
+    if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
+      if (!userId) {
+        throw new BadRequestException(
+          'Sign in to pay with your MCOM Wallet.',
+        );
+      }
+      const centralUserId = await this.requireCentralUserId(userId);
+      const charge = await this.paymentProviderService.createWalletCharge(
+        initiateDto.amount,
+        currency,
+        {
+          reference: `voucher-reload-${voucher.id}`,
+          userId,
+          description: 'MCOM Mall voucher reload',
+        },
+        centralUserId,
+      );
+      return {
+        transactionId: charge.chargeId,
+        provider: PaymentMethod.MCOM_WALLET,
+      };
+    }
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
       const paymentIntent =
@@ -566,7 +687,14 @@ export class VoucherService {
     const currency = 'GBP';
     let verificationResult;
 
-    if (paymentProvider === PaymentMethod.STRIPE) {
+    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+      verificationResult =
+        await this.paymentProviderService.verifyWalletCharge(
+          transactionId,
+          amount,
+          currency,
+        );
+    } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
@@ -1293,14 +1421,14 @@ export class VoucherService {
     const soldQuery = this.voucherTransactionRepository
       .createQueryBuilder('transaction')
       .innerJoin('transaction.voucher', 'voucher')
-      .select('SUM(transaction.amount)', 'total')
+      .select('SUM(transaction.amount) / 100.0', 'total')
       .where('voucher.ownerId = :ownerId', { ownerId })
       .andWhere('transaction.type = :type', { type: TransactionType.PURCHASE });
 
     const redeemedQuery = this.voucherTransactionRepository
       .createQueryBuilder('transaction')
       .innerJoin('transaction.voucher', 'voucher')
-      .select('SUM(transaction.amount)', 'total')
+      .select('SUM(transaction.amount) / 100.0', 'total')
       .where('voucher.ownerId = :ownerId', { ownerId })
       .andWhere('transaction.type = :type', {
         type: TransactionType.REDEMPTION,

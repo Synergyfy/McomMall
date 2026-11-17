@@ -106,7 +106,7 @@ export class PaymentProviderService {
     metadata?: Record<string, any>,
   ): Promise<Stripe.PaymentIntent> {
     if (this.mcomPay.isEnabled()) {
-      const reference = this.paymentReference(metadata, 'stripe');
+      const reference = this.paymentReference(metadata, 'stripe', amount);
       try {
         const result = await this.mcomPay.createCharge({
           amountMinor: this.mcomPay.toMinorUnits(amount),
@@ -157,7 +157,7 @@ export class PaymentProviderService {
     metadata?: Record<string, any>,
   ): Promise<any> {
     if (this.mcomPay.isEnabled()) {
-      const reference = this.paymentReference(metadata, 'paypal');
+      const reference = this.paymentReference(metadata, 'paypal', amount);
       try {
         const result = await this.mcomPay.createCharge({
           amountMinor: this.mcomPay.toMinorUnits(amount),
@@ -209,6 +209,78 @@ export class PaymentProviderService {
     } catch (error: any) {
       throw new Error(`PayPal order creation failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Charge the payer's central MCOM Wallet through MCOM Pay.
+   *
+   * Wallet charges settle immediately at create time, so the returned charge id
+   * is already paid and can be used as the local transaction reference.
+   */
+  async createWalletCharge(
+    amount: number,
+    currency: string,
+    metadata: Record<string, any> | undefined,
+    mcomUserId: string,
+  ): Promise<{ chargeId: string; status: string; amount: number }> {
+    if (!this.mcomPay.isEnabled()) {
+      throw new ServiceUnavailableException(
+        'MCOM Wallet payments are unavailable because MCOM Pay is disabled.',
+      );
+    }
+    if (!mcomUserId) {
+      throw new ServiceUnavailableException(
+        'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+      );
+    }
+
+    const reference = this.paymentReference(metadata, 'wallet', amount);
+    try {
+      const result = await this.mcomPay.createCharge({
+        amountMinor: this.mcomPay.toMinorUnits(amount),
+        currency,
+        method: 'wallet',
+        reference,
+        description: metadata?.description,
+        mcomUserId,
+        externalCustomerId: metadata?.userId
+          ? String(metadata.userId)
+          : undefined,
+        metadata,
+        idempotencyKey: this.paymentIdempotencyKey(metadata, 'wallet', amount),
+      });
+      const charge = result.charge;
+      return {
+        chargeId: charge.id,
+        status: charge.status,
+        amount: this.mcomPay.fromMinorUnits(charge.amountMinor),
+      };
+    } catch (err) {
+      throw this.mcomPay.toHttpException(err);
+    }
+  }
+
+  /** Verify a wallet charge created through MCOM Pay. */
+  async verifyWalletCharge(
+    chargeId: string,
+    expectedAmount: number,
+    currency: string,
+  ): Promise<{ ok: boolean; details?: any; reason?: string }> {
+    return this.verifyMcomPayCharge(
+      chargeId,
+      expectedAmount,
+      currency,
+      'wallet',
+    );
+  }
+
+  /** Load a charge from MCOM Pay's ledger. */
+  async getMcomCharge(chargeId: string) {
+    return this.mcomPay.getCharge(chargeId);
+  }
+
+  fromMinorUnits(amountMinor: string | number): number {
+    return this.mcomPay.fromMinorUnits(amountMinor);
   }
 
   async capturePaypalOrder(orderId: string): Promise<any> {
@@ -347,7 +419,7 @@ export class PaymentProviderService {
     chargeId: string,
     expectedAmount: number,
     currency: string,
-    method: 'stripe' | 'paypal',
+    method: 'stripe' | 'paypal' | 'wallet',
   ): Promise<{ ok: boolean; details?: any; reason?: string }> {
     let charge: any;
     try {
@@ -360,6 +432,13 @@ export class PaymentProviderService {
     }
 
     if (charge.status !== 'paid') {
+      if (method === 'wallet') {
+        return {
+          ok: false,
+          details: charge,
+          reason: `MCOM Wallet charge status ${charge.status}`,
+        };
+      }
       const handle =
         method === 'stripe'
           ? { paymentIntentId: charge.providerRef ?? undefined }
@@ -408,6 +487,7 @@ export class PaymentProviderService {
   private paymentReference(
     metadata: Record<string, any> | undefined,
     method: string,
+    amount: number,
   ): string {
     const base =
       metadata?.reference ||
@@ -417,7 +497,10 @@ export class PaymentProviderService {
       metadata?.planVariantId ||
       metadata?.tierId ||
       metadata?.userId;
-    return `${base ? `${base}-` : ''}${method}-${randomUUID()}`.slice(0, 190);
+    return `${base ? `${base}-` : ''}${method}-${amount.toFixed(2)}`.slice(
+      0,
+      190,
+    );
   }
 
   /** Idempotency key scoped to the business event and amount. */
@@ -426,15 +509,15 @@ export class PaymentProviderService {
     method: string,
     amount: number,
   ): string {
+    // Only business-event identifiers are safe as a replay key. A product or
+    // user reference is *not* unique — using it would replay an old paid charge
+    // on the next purchase of the same amount. Callers that need retries to
+    // replay must pass metadata.idempotencyKey or a stable order/booking id.
     const base =
       metadata?.idempotencyKey ||
-      metadata?.reference ||
       metadata?.orderId ||
       metadata?.bookingId ||
       metadata?.purchaseReference ||
-      metadata?.planVariantId ||
-      metadata?.tierId ||
-      metadata?.userId ||
       randomUUID();
     return this.mcomPay.buildKey('pay', method, base, amount.toFixed(2));
   }

@@ -68,10 +68,35 @@ export class WishlistService {
   }
 
   async findAll(userId: string) {
-    return this.wishlistRepository.findOne({
+    const wishlist = await this.wishlistRepository.findOne({
       where: { user: { id: userId } },
       relations: ['items', 'items.product', 'items.service'],
     });
+
+    if (!wishlist) {
+      return wishlist;
+    }
+
+    // Never expose draft, private or paused listings through the wishlist.
+    wishlist.items = (wishlist.items || []).filter((item) => {
+      if (item.product) {
+        return (
+          item.product.productStatus === 'published' &&
+          item.product.visibility === 'public' &&
+          !item.product.adminDisabled
+        );
+      }
+      if (item.service) {
+        return (
+          item.service.status === 'published' &&
+          item.service.isActive &&
+          !item.service.adminDisabled
+        );
+      }
+      return false;
+    });
+
+    return wishlist;
   }
 
   async remove(productId: string, userId: string) {

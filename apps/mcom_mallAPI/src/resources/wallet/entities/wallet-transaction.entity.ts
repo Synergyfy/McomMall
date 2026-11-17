@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Wallet } from './wallet.entity';
 
@@ -22,7 +23,7 @@ export class WalletTransaction extends AbstractBaseEntity {
   @ManyToOne(() => Wallet)
   wallet: Wallet;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @Column({
@@ -34,6 +35,6 @@ export class WalletTransaction extends AbstractBaseEntity {
   @Column('text')
   description: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   balanceAfter: number;
 }

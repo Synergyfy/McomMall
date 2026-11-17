@@ -25,7 +25,7 @@ import { UserRole } from '../../common/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { CampaignTargetType } from './campaign-cashback.enum';
-import { ContributeDto } from './dto/contribute.dto';
+import { ContributeDto, ContributionPaymentProvider } from './dto/contribute.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Campaign Cashback')
@@ -136,6 +136,20 @@ export class CampaignCashbackController {
   @ApiResponse({ status: 200, description: 'Detailed user campaign object' })
   findOne(@Param('id') id: string, @CurrentUser() user: User) {
     return this.service.findOne(id, user);
+  }
+
+  @Post(':id/contribute/initiate')
+  @ApiOperation({
+    summary: 'Create a payment for a campaign contribution',
+    description:
+      'Creates an MCOM Pay charge (card, PayPal or MCOM Wallet) for the campaign level value. Pass the returned reference to /contribute.',
+  })
+  initiateContribution(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() body: { paymentMethod: ContributionPaymentProvider },
+  ) {
+    return this.service.initiateContribution(id, user, body.paymentMethod);
   }
 
   @Post(':id/contribute')

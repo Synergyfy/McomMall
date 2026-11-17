@@ -219,6 +219,7 @@ export interface Service {
   updated_at: string;
 
   status?: string;
+  adminDisabled?: boolean;
   duration?: number;
   isFeatured?: boolean;
   isPromotionEligible?: boolean;

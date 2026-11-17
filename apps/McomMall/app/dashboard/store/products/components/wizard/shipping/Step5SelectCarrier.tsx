@@ -127,7 +127,10 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                             <p className="text-sm font-medium text-[#9c7349] dark:text-[#a08b7d]">
                                 Don't see your carrier? <a href="#" className="text-[#f48c25] hover:underline">Request integration</a>
                             </p>
-                            <button className="bg-[#1c140d] dark:bg-white text-white dark:text-[#1c140d] px-6 py-3 rounded-lg text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
+                            <button
+                                onClick={onNext}
+                                className="bg-[#1c140d] dark:bg-white text-white dark:text-[#1c140d] px-6 py-3 rounded-lg text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                            >
                                 Skip for Now
                             </button>
                         </div>

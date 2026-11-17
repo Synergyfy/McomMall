@@ -6,6 +6,7 @@ export interface PaymentDto {
   paymentMethod: PaymentMethod;
   transactionId: string;
   amount: number;
+  idempotencyKey?: string;
 }
 
 export interface DirectPurchaseDto {

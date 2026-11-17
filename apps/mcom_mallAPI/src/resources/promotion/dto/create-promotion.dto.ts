@@ -44,13 +44,41 @@ export class CreatePromotionDto {
   @IsEnum(PromotionScope)
   promotionScope: PromotionScope;
 
-  @IsInt()
+  @IsNumber()
+  @Type(() => Number)
   @IsOptional()
   multiplier: number;
 
   @IsInt()
   @IsOptional()
   bonusPoints: number;
+
+  @IsString()
+  @IsOptional()
+  promoType?: string;
+
+  @IsString()
+  @IsOptional()
+  targetSegment?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  boroughVisibility?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  highStreetVisibility?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  featuredPlacement?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  addExtraGift?: boolean;
+
+  @IsOptional()
+  settings?: Record<string, any>;
 
   @IsInt()
   @IsOptional()

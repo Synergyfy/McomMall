@@ -1,4 +1,5 @@
 import { User } from './../../users/entities/user.entity';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import {
@@ -33,13 +34,13 @@ export class ServiceProviderProfile extends AbstractBaseEntity {
   bookingUrl?: string;
 
   // Pricing Model
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   @IsOptional()
   @IsNumber()
   @Min(0)
   fixedPriceFrom?: number;
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   @IsOptional()
   @IsNumber()
   @Min(0)

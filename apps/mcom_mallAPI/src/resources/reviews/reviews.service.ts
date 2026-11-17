@@ -290,6 +290,31 @@ export class ReviewsService {
     };
   }
 
+  async replyAsOwner(
+    id: string,
+    reply: string,
+    user: User,
+  ): Promise<Review> {
+    const review = await this.reviewRepository.findOne({
+      where: { id },
+      relations: ['business', 'business.user'],
+    });
+    if (!review) {
+      throw new NotFoundException(`Review with ID ${id} not found`);
+    }
+    if (
+      !review.business ||
+      review.business.user?.id !== user.id
+    ) {
+      throw new ForbiddenException(
+        'You can only reply to reviews for your own business.',
+      );
+    }
+    review.ownerReply = reply;
+    review.ownerRepliedAt = new Date();
+    return this.reviewRepository.save(review);
+  }
+
   async findBusinessReviews(
     businessId: string,
     user?: User,

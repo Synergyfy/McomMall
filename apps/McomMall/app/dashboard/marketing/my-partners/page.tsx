@@ -41,7 +41,6 @@ import {
   List, 
   Calendar,
   Search,
-  Filter,
   ExternalLink,
   MoreVertical,
   Check,
@@ -640,9 +639,6 @@ export default function MyPartnersPage() {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
-                            <Button variant="outline" className="h-12 w-12 p-0 rounded-2xl border-slate-200 bg-white shadow-sm hover:bg-slate-50">
-                                <Filter className="h-4 w-4 text-slate-600" />
-                            </Button>
                         </div>
                     </div>
 
@@ -969,21 +965,6 @@ function PartnerDetailsDialog({ partner, onClose, onNewLink }: { partner: UserPa
                             </div>
                         </section>
 
-                        <section className="pt-8 border-t border-slate-100">
-                             <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-                                <TrendingUp className="h-5 w-5 text-emerald-500" /> Collaboration Stats
-                             </h3>
-                             <div className="grid grid-cols-2 gap-4">
-                                 <Card className="rounded-2xl bg-white border-slate-100 p-4 shadow-sm">
-                                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Shared Revenue</p>
-                                     <p className="text-2xl font-black text-slate-800">£0.00</p>
-                                 </Card>
-                                 <Card className="rounded-2xl bg-white border-slate-100 p-4 shadow-sm">
-                                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cross-Sales</p>
-                                     <p className="text-2xl font-black text-slate-800">0</p>
-                                 </Card>
-                             </div>
-                        </section>
                     </div>
                 </div>
             </DialogContent>

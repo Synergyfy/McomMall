@@ -31,8 +31,17 @@ export class Notification extends AbstractBaseEntity {
   })
   type: NotificationType;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   entityId: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  title?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  message?: string | null;
+
+  @Column({ type: 'varchar', length: 32, default: 'in_app' })
+  channel: string;
 
   @Column({ default: false })
   seen: boolean;

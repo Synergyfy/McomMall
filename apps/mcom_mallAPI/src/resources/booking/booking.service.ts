@@ -153,7 +153,7 @@ export class BookingService {
     const { serviceId, startTime, endTime } = checkAvailabilityDto;
 
     const service = await this.serviceRepository.findOne({
-      where: { id: serviceId, isActive: true },
+      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
       relations: ['business', 'business.user', 'business.businessHours'],
     });
 
@@ -312,7 +312,7 @@ export class BookingService {
     dateStr: string,
   ): Promise<string[]> {
     const service = await this.serviceRepository.findOne({
-      where: { id: serviceId, isActive: true },
+      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
       relations: ['business', 'business.user', 'business.businessHours'],
     });
 
@@ -517,7 +517,7 @@ export class BookingService {
       createBookingDto;
 
     const service = await transactionalEntityManager.findOne(Service, {
-      where: { id: serviceId, isActive: true },
+      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
       relations: [
         'business',
         'business.user',
@@ -808,6 +808,14 @@ export class BookingService {
             refundResult = await this.paymentProviderService.refundPaypalOrder(
               booking.paymentIntentId,
             );
+            booking.refundId = refundResult.id;
+          } else if (
+            booking.payment?.paymentMethod === PaymentMethod.MCOM_WALLET
+          ) {
+            refundResult =
+              await this.paymentProviderService.refundStripePayment(
+                booking.paymentIntentId,
+              );
             booking.refundId = refundResult.id;
           }
 
@@ -1316,6 +1324,7 @@ export class BookingService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    transactionId?: string;
     provider: PaymentMethod;
     amount: number;
     rewardDiscount?: number;
@@ -1335,6 +1344,16 @@ export class BookingService {
 
     if (!booking) {
       throw new NotFoundException('Booking not found.');
+    }
+
+    if (
+      booking.service.status !== 'published' ||
+      !booking.service.isActive ||
+      booking.service.adminDisabled
+    ) {
+      throw new BadRequestException(
+        'This service is currently unavailable. Payment cannot be initiated.',
+      );
     }
 
     const business = booking.service.business;
@@ -1510,6 +1529,69 @@ export class BookingService {
     booking.voucherCode = initiateDto.voucherCode ?? null;
     const currency = 'GBP';
 
+    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+      const centralUserId = booking.user?.centralUserId;
+      if (!centralUserId) {
+        throw new BadRequestException(
+          'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+        );
+      }
+
+      // A previous wallet charge may already have settled for this booking
+      // (double click / amount unchanged). Reuse it; if the payable amount
+      // changed, refund the old charge before charging the new total.
+      if (
+        booking.paymentIntentId &&
+        !booking.paymentIntentId.startsWith('pi_')
+      ) {
+        const existing = await this.paymentProviderService.verifyWalletCharge(
+          booking.paymentIntentId,
+          payableAmount,
+          currency,
+        );
+        if (existing.ok) {
+          return {
+            transactionId: booking.paymentIntentId,
+            provider: PaymentMethod.MCOM_WALLET,
+            amount: payableAmount,
+            rewardDiscount,
+            totalAmount,
+          };
+        }
+        try {
+          await this.paymentProviderService.refundStripePayment(
+            booking.paymentIntentId,
+          );
+        } catch (refundErr) {
+          this.logger.warn(
+            `Could not refund superseded wallet charge ${booking.paymentIntentId}: ${refundErr instanceof Error ? refundErr.message : refundErr}`,
+          );
+        }
+      }
+
+      const walletCharge = await this.paymentProviderService.createWalletCharge(
+        payableAmount,
+        currency,
+        {
+          bookingId: booking.id,
+          userId,
+          idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
+          description: `MCOM Mall booking ${booking.id}`,
+        },
+        centralUserId,
+      );
+      booking.paymentIntentId = walletCharge.chargeId;
+      await this.bookingRepository.save(booking);
+
+      return {
+        transactionId: walletCharge.chargeId,
+        provider: PaymentMethod.MCOM_WALLET,
+        amount: payableAmount,
+        rewardDiscount,
+        totalAmount,
+      };
+    }
+
     if (paymentProvider === PaymentMethod.STRIPE) {
       // Check if we already have a valid intent for this booking
       if (
@@ -1543,7 +1625,10 @@ export class BookingService {
         await this.paymentProviderService.createStripePaymentIntent(
           payableAmount,
           currency,
-          { bookingId: booking.id },
+          {
+            bookingId: booking.id,
+            idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
+          },
         );
       booking.paymentIntentId = paymentIntent.id;
       await this.bookingRepository.save(booking);
@@ -1560,7 +1645,10 @@ export class BookingService {
       const order = await this.paymentProviderService.createPaypalOrder(
         payableAmount,
         currency,
-        { bookingId: booking.id },
+        {
+          bookingId: booking.id,
+          idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
+        },
       );
       booking.paymentIntentId = order.id;
       await this.bookingRepository.save(booking);
@@ -1599,6 +1687,16 @@ export class BookingService {
       throw new NotFoundException('Booking not found.');
     }
 
+    if (
+      booking.service.status !== 'published' ||
+      !booking.service.isActive ||
+      booking.service.adminDisabled
+    ) {
+      throw new BadRequestException(
+        'This service is currently unavailable. Payment cannot be verified.',
+      );
+    }
+
     const business = booking.service.business;
     if (business.status !== BusinessStatus.PUBLISHED) {
       throw new BadRequestException(
@@ -1625,7 +1723,14 @@ export class BookingService {
       );
     }
 
-    if (paymentProvider === PaymentMethod.STRIPE) {
+    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+      verificationResult =
+        await this.paymentProviderService.verifyWalletCharge(
+          transactionId,
+          amount,
+          currency,
+        );
+    } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
@@ -1793,6 +1898,11 @@ export class BookingService {
             transactionId,
             amount,
             currency,
+          );
+        } else if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+          await this.paymentProviderService.refundStripePayment(
+            transactionId,
+            amount,
           );
         }
       } catch (refundErr) {
@@ -2017,6 +2127,13 @@ export class BookingService {
         booking.refundId = refundResult.id;
       } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
         refundResult = await this.paymentProviderService.refundPaypalOrder(
+          booking.paymentIntentId,
+        );
+        booking.refundId = refundResult.id;
+      } else if (
+        booking.payment?.paymentMethod === PaymentMethod.MCOM_WALLET
+      ) {
+        refundResult = await this.paymentProviderService.refundStripePayment(
           booking.paymentIntentId,
         );
         booking.refundId = refundResult.id;

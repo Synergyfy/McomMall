@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMyVouchers, transferMoney, giveCashback, purchaseVoucher, getBusinessStats, getOwnerRewardDefinitions, getCustomerStats, getPublicRewardDefinitions, spendVoucher } from './index';
+import { getMyVouchers, transferMoney, giveCashback, purchaseVoucher, initiateVoucherPurchase, getBusinessStats, getOwnerRewardDefinitions, getCustomerStats, getPublicRewardDefinitions, spendVoucher } from './index';
 import { TransferDto, CashbackDto, PurchaseVoucherDto, SpendDto } from './types';
 
 export const useGetMyVouchers = (enabled = true) => {
@@ -44,6 +44,17 @@ export const usePurchaseVoucher = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['my-vouchers'] });
         },
+    });
+};
+
+export const useInitiateMoneyVoucherPurchase = () => {
+    return useMutation({
+        mutationFn: (data: {
+            rewardDefinitionId: string;
+            paymentAmount: number;
+            paymentGateway: 'STRIPE' | 'PAYPAL' | 'MCOM_WALLET';
+            idempotencyKey?: string;
+        }) => initiateVoucherPurchase(data),
     });
 };
 

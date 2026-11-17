@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 import PricingCheckoutClient from './PricingCheckoutClient';
 import PlansList from '@/components/PlansList';
 import {
@@ -16,6 +18,9 @@ import {
 import { PlanType } from '@/service/payments/types';
 
 export default function PricingPageClient() {
+  const { userRole } = useSelector((state: RootState) => state.auth);
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
   const [selected, setSelected] = useState<{
     name: string;
     price: string;
@@ -74,6 +79,29 @@ export default function PricingPageClient() {
     });
     setIsTrial(false);
   };
+
+  if (isMounted && userRole === 'customer') {
+    return (
+      <div className="h-full p-4 md:py-10 md:px-20 flex flex-col items-center">
+        <div className="max-w-2xl w-full bg-white border rounded-2xl p-8 shadow-sm text-center space-y-3">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Business plans
+          </h1>
+          <p className="text-sm text-gray-600">
+            Membership and business packages are available to business accounts
+            only. Customer accounts can shop, book services, and use their MCOM
+            Wallet without a paid plan.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-700"
+          >
+            Back to Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (selected) {
     return (

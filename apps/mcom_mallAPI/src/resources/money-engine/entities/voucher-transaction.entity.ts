@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { UserVoucher } from './user-voucher.entity';
 
@@ -26,18 +27,18 @@ export class VoucherTransaction extends AbstractBaseEntity {
   @Column({ nullable: true })
   contributorId: string; // ID of User or Shop
 
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number; // Total amount changed (can be negative)
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   realAmountDelta: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   rewardAmountDelta: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   salesImpactBefore: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   salesImpactAfter: number;
 }

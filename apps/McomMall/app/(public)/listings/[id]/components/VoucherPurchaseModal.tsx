@@ -38,7 +38,7 @@ interface VoucherPurchaseModalProps {
 }
 
 const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 const StripePaymentForm = ({
@@ -74,7 +74,11 @@ const StripePaymentForm = ({
   return (
     <form onSubmit={handleSubmit}>
       <PaymentElement />
-      <Button disabled={isLoading || !stripe || !elements} className="mt-4 w-full">
+      <Button
+        type="submit"
+        disabled={isLoading || !stripe || !elements}
+        className="mt-4 w-full"
+      >
         {isLoading ? 'Processing...' : 'Pay Now'}
       </Button>
     </form>
@@ -92,9 +96,9 @@ export default function VoucherPurchaseModal({
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [personalMessage, setPersonalMessage] = useState('');
-  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'paypal'>(
-    'stripe'
-  );
+  const [paymentProvider, setPaymentProvider] = useState<
+    'stripe' | 'paypal' | 'mcom_wallet'
+  >('stripe');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -141,15 +145,27 @@ export default function VoucherPurchaseModal({
       voucherProductId: product.id,
       amount: Number(selectedAmount),
       paymentProvider,
-      recipientName,
-      recipientEmail,
-      personalMessage,
+      ...(recipientName.trim() ? { recipientName: recipientName.trim() } : {}),
+      ...(recipientEmail.trim()
+        ? { recipientEmail: recipientEmail.trim() }
+        : {}),
+      ...(personalMessage.trim()
+        ? { personalMessage: personalMessage.trim() }
+        : {}),
     };
     setPurchaseDetails(details);
 
     try {
       const response = await initiatePurchase.mutateAsync(details);
-      if (response.provider === 'stripe') {
+      if (response.provider === 'mcom_wallet' && response.transactionId) {
+        const verifiedVoucher = await verifyPurchase.mutateAsync({
+          paymentProvider: 'mcom_wallet',
+          transactionId: response.transactionId,
+          purchaseDetails: details,
+        });
+        onPurchaseSuccess(verifiedVoucher);
+        resetForm();
+      } else if (response.provider === 'stripe') {
         setClientSecret(response.clientSecret);
       } else {
         setPaypalOrderId(response.orderId);
@@ -298,7 +314,9 @@ export default function VoucherPurchaseModal({
                 defaultValue="stripe"
                 value={paymentProvider}
                 onValueChange={value =>
-                  setPaymentProvider(value as 'stripe' | 'paypal')
+                  setPaymentProvider(
+                    value as 'stripe' | 'paypal' | 'mcom_wallet'
+                  )
                 }
                 className="flex gap-4"
               >
@@ -307,7 +325,7 @@ export default function VoucherPurchaseModal({
                   className="flex cursor-pointer items-center gap-2 rounded-md border p-2"
                 >
                   <RadioGroupItem value="stripe" id="stripe" />
-                  Stripe
+                  Card
                 </Label>
                 <Label
                   htmlFor="paypal"
@@ -315,6 +333,13 @@ export default function VoucherPurchaseModal({
                 >
                   <RadioGroupItem value="paypal" id="paypal" />
                   PayPal
+                </Label>
+                <Label
+                  htmlFor="mcom_wallet"
+                  className="flex cursor-pointer items-center gap-2 rounded-md border p-2"
+                >
+                  <RadioGroupItem value="mcom_wallet" id="mcom_wallet" />
+                  MCOM Wallet
                 </Label>
               </RadioGroup>
             </div>

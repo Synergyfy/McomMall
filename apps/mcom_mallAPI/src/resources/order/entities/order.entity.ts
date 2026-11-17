@@ -7,6 +7,7 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { OrderPayment } from './order-payment.entity';
@@ -40,7 +41,7 @@ export class Order extends AbstractBaseEntity {
   items: OrderItem[];
 
   @ApiProperty({ example: 14.5 })
-  @Column('decimal')
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   total: number;
 
   @ApiProperty({ type: () => OrderPayment })
@@ -69,7 +70,7 @@ export class Order extends AbstractBaseEntity {
   status: OrderStatus;
 
   @ApiPropertyOptional()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   giftCardAmountApplied?: number;
 
   @ApiPropertyOptional()
@@ -77,7 +78,7 @@ export class Order extends AbstractBaseEntity {
   giftCardCode?: string;
 
   @ApiPropertyOptional()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   couponDiscountApplied?: number;
 
   @ApiPropertyOptional()
@@ -91,13 +92,13 @@ export class Order extends AbstractBaseEntity {
   @ApiPropertyOptional({
     description: 'Amount redeemed from the voucher for this order.',
   })
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   voucherAmountApplied: number;
 
   @ApiPropertyOptional({
     description: 'Total reward discount applied (MCOM Rewards issuances).',
   })
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   rewardDiscountApplied: number;
 
   @ApiProperty({ type: () => [OrderItemReward] })
@@ -130,11 +131,11 @@ export class Order extends AbstractBaseEntity {
   shippingStatus: ShippingStatus;
 
   @ApiProperty({ example: 4.5 })
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   estimatedShippingFee: number;
 
   @ApiPropertyOptional()
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   actualShippingCost: number;
 
   @ApiPropertyOptional({ example: 'royalmail' })

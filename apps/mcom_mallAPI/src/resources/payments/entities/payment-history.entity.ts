@@ -1,4 +1,5 @@
 import { Column, Entity, ManyToOne, OneToOne } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { PlanType } from '../enums/plan-type.enum';
@@ -11,7 +12,7 @@ export class PaymentHistory extends AbstractBaseEntity {
   @ManyToOne(() => User)
   user: User;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amountPaid: number;
 
   @Column({ type: 'varchar', length: 8, default: 'gbp' })

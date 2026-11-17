@@ -22,6 +22,9 @@ export const useInitiateMembershipPayment = () => {
   return useMutation<
     {
       clientSecret?: string;
+      orderId?: string;
+      approvalUrl?: string;
+      transactionId?: string;
       holdId?: string;
       expiresAt?: string;
       provider?: string;

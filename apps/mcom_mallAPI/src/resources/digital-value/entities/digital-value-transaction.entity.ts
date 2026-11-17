@@ -1,4 +1,5 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { DigitalValueMaster } from './digital-value-master.entity';
 import { DigitalValueTransactionType } from '../digital-value.enums';
@@ -14,7 +15,7 @@ export class DigitalValueTransaction extends AbstractBaseEntity {
   @Column({ name: 'digital_value_id' })
   digitalValueId: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number;
 
   @Column({

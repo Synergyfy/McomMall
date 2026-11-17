@@ -103,4 +103,22 @@ export class CreateGiftCardTemplateDto {
   @IsNumber()
   @IsOptional()
   bonusAmount?: number;
+
+  @ApiProperty({ required: false, description: 'Optional logo image URL.' })
+  @IsString()
+  @IsOptional()
+  logoUrl?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Spending locations where the gift card can be redeemed.',
+  })
+  @IsArray()
+  @IsOptional()
+  spendingLocations?: Record<string, any>[];
+
+  @ApiProperty({ required: false, description: 'Optional preview SVG markup.' })
+  @IsString()
+  @IsOptional()
+  previewSvg?: string;
 }

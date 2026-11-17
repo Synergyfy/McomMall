@@ -91,6 +91,11 @@ export default function PricingCheckoutClient({
   } = useCreatePayPalOrder();
 
   const walletIdempotencyKey = useRef<string | null>(null);
+  const paymentAttemptKey = useRef<string>(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `payment-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 
   const {
     mutateAsync: initiateWalletHold,
@@ -98,19 +103,19 @@ export default function PricingCheckoutClient({
   } = useInitiateWalletHold();
 
   useEffect(() => {
-    // Membership is wallet-only: funds are reserved server-side via holds —
-    // no Stripe intent / PayPal order is needed. PAYG keeps the legacy path.
-    if (walletEnabled) return;
     // Only fetch intent/order if we have valid conditions:
     // 1. Not a stripe redirect (which means we are coming back from stripe)
     // 2. Either (totalPrice > 0 OR it's a membership with tierId)
     // Note: Membership trial might be 0 or small amount, but backend logic handles it.
     if (!stripeRedirect) {
       if (paymentMethod === PaymentMethod.STRIPE) {
-        const payload: CreateStripeIntentRequest = {};
+        const payload: CreateStripeIntentRequest = {
+          idempotencyKey: paymentAttemptKey.current,
+        };
         if (isPayg) {
           payload.purpose = PaymentPurpose.PAYG_TOPUP;
-          payload.amount = Math.round(totalPrice * 100);
+          // The API expects pounds; MCOM Pay converts to minor units.
+          payload.amount = totalPrice;
         } else if (planVariantId || (tierId && planType)) {
           payload.purpose = PaymentPurpose.MEMBERSHIP;
           if (planVariantId) {
@@ -126,7 +131,9 @@ export default function PricingCheckoutClient({
         }
         createStripeIntent(payload);
       } else {
-        const payload: CreatePaypalOrderRequest = {};
+        const payload: CreatePaypalOrderRequest = {
+          idempotencyKey: paymentAttemptKey.current,
+        };
         if (isPayg) {
           payload.purpose = PaymentPurpose.PAYG_TOPUP;
           payload.amount = totalPrice;
@@ -161,7 +168,6 @@ export default function PricingCheckoutClient({
   // &token=<orderId>). Complete the purchase once: Solutions captures the
   // order server-side during record, then the membership is recorded.
   useEffect(() => {
-    if (!walletEnabled) return;
     if (paypalReturnState !== 'return' || !paypalOrderToken) return;
     if (paypalReturnHandled.current) return;
     paypalReturnHandled.current = true;
@@ -176,7 +182,6 @@ export default function PricingCheckoutClient({
       currency: 'gbp',
       tierId,
       planVariantId,
-      viaSolutions: true,
     }).then(() => setSuccessModalOpen(true)).catch(() => {
       // Error toast already shown by useRecordPayment.
     });
@@ -245,13 +250,18 @@ export default function PricingCheckoutClient({
     }
     setIsPayingWithWallet(true);
     try {
-      const hold = await initiateWalletHold({
+      const initiated = await initiateWalletHold({
         paymentProvider: 'mcom_wallet',
         planVariantId,
         tierId,
         planType,
         idempotencyKey: walletIdempotencyKey.current,
       });
+      const walletReference =
+        initiated.transactionId || initiated.holdId || undefined;
+      if (!walletReference) {
+        throw new Error('MCOM Wallet did not return a payment reference.');
+      }
       const recordPlanType = planType || PlanType.MONTHLY;
       await recordPaymentAsync({
         amount: totalPrice,
@@ -259,9 +269,8 @@ export default function PricingCheckoutClient({
         purpose: PaymentPurpose.MEMBERSHIP,
         isTrial,
         paymentGateway: PaymentGateway.MCOM_WALLET,
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        currency: 'mcom',
+        transactionId: walletReference,
+        currency: 'gbp',
         tierId,
         planVariantId,
       });

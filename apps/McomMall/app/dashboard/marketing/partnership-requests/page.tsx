@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useGetReceivedItemRequests as useGetReceivedPartnershipRequests, useRespondToItemPartnershipRequest as useRespondToPartnershipRequest } from '@/service/partnerships/hooks';
+import { useGetReceivedItemRequests as useGetReceivedPartnershipRequests, useRespondToItemPartnershipRequest as useRespondToPartnershipRequest, useGetReceivedUserRequests, useRespondToUserPartnershipRequest } from '@/service/partnerships/hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast, Toaster } from 'sonner';
-import { ItemPartnershipRequest, PartnershipStatus } from '@/service/partnerships/types';
+import { ItemPartnershipRequest, PartnershipStatus, UserPartnershipRequest } from '@/service/partnerships/types';
 import { CheckCircle, XCircle, Info, GitPullRequest, ArrowRight, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -150,8 +150,74 @@ const PartnershipRequestCard = ({ request }: { request: ItemPartnershipRequest }
   );
 };
 
+const OwnerRequestCard = ({ request }: { request: UserPartnershipRequest }) => {
+  const respond = useRespondToUserPartnershipRequest();
+  const sender = request.sender;
+  const name =
+    sender?.name ||
+    `${sender?.firstName ?? ''} ${sender?.lastName ?? ''}`.trim() ||
+    sender?.email ||
+    'Business owner';
+
+  const handleResponse = (status: PartnershipStatus) => {
+    respond.mutate(
+      { id: request.id, dto: { status } },
+      {
+        onSuccess: () => toast.success(`Request ${status}.`),
+        onError: () => toast.error('Could not respond to the request.'),
+      }
+    );
+  };
+
+  return (
+    <Card className="rounded-2xl border border-slate-200 shadow-md">
+      <CardHeader className="flex flex-row items-center gap-4">
+        <Avatar className="h-14 w-14">
+          <AvatarImage src={sender?.profilePictureUrl || ''} />
+          <AvatarFallback className="bg-orange-100 text-orange-700 font-bold">
+            {name.charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <CardTitle className="text-base">{name}</CardTitle>
+          <CardDescription>{sender?.email}</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm text-slate-600">
+        <p className="rounded-xl bg-slate-50 p-3 italic">
+          {request.message || 'Would like to partner with you.'}
+        </p>
+        <Badge variant="outline" className="capitalize">
+          {request.status}
+        </Badge>
+      </CardContent>
+      {request.status === 'pending' && (
+        <CardFooter className="flex justify-end gap-3">
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => handleResponse('declined')}
+            disabled={respond.isPending}
+          >
+            Decline
+          </Button>
+          <Button
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => handleResponse('accepted')}
+            disabled={respond.isPending}
+          >
+            Accept
+          </Button>
+        </CardFooter>
+      )}
+    </Card>
+  );
+};
+
 export default function PartnershipRequestsPage() {
   const { data: requests, isLoading, isError, error } = useGetReceivedPartnershipRequests();
+  const ownerRequests = useGetReceivedUserRequests();
 
   const renderContent = () => {
     if (isLoading) {
@@ -212,6 +278,23 @@ export default function PartnershipRequestsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {renderContent()}
         </div>
+
+        {((ownerRequests.data ?? []).length > 0 || ownerRequests.isLoading) && (
+          <section className="mt-12">
+            <h2 className="mb-4 text-xl font-bold text-slate-900">
+              Owner partnership requests
+            </h2>
+            {ownerRequests.isLoading ? (
+              <p className="text-sm text-slate-500">Loading…</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(ownerRequests.data ?? []).map((request) => (
+                  <OwnerRequestCard key={request.id} request={request} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </>
   );

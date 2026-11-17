@@ -9,14 +9,8 @@ import {
   MapPin,
   Menu,
   Store,
-  Users,
-  Heart,
-  MessageSquare,
-  Star,
   Megaphone,
-  BarChart2,
   Plus,
-  Calendar,
 } from 'lucide-react';
 
 // ─── Regular dashboard nav items ──────────────────────────────────────────────
@@ -38,15 +32,6 @@ const BottomNavItem: FC<BottomNavItemProps> = ({ href, icon: Icon, label, isActi
   </Link>
 );
 
-// ─── Engagement-specific tabs ─────────────────────────────────────────────────
-const engagementTabs = [
-  { label: 'Overview',  icon: LayoutDashboard, href: '/dashboard/engagement' },
-  { label: 'Customers', icon: Users,           href: '/dashboard/engagement/customers' },
-  { label: 'Loyalty',   icon: Heart,           href: '/dashboard/engagement/loyalty' },
-  { label: 'Messages',  icon: MessageSquare,   href: '/dashboard/engagement/messages' },
-  { label: 'Reviews',   icon: Star,            href: '/dashboard/engagement/reviews' },
-];
-
 // ─── Component ────────────────────────────────────────────────────────────────
 interface BottomNavProps {
   onMenuClick: () => void;
@@ -55,7 +40,6 @@ interface BottomNavProps {
 export const BottomNav: FC<BottomNavProps> = ({ onMenuClick }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isEngagement = pathname.startsWith('/dashboard/engagement');
   const isPromotions = pathname?.startsWith('/dashboard/promotions');
 
   // ── Promotions bottom nav ──
@@ -85,13 +69,6 @@ export const BottomNav: FC<BottomNavProps> = ({ onMenuClick }) => {
             <span className={`text-[10px] font-bold mt-0.5 ${isPromotionsActive ? 'text-primary' : 'text-gray-400'}`}>Promos</span>
           </Link>
 
-          <Link href="/dashboard/events" className="flex flex-col items-center justify-center flex-1 py-1 group">
-            <div className="p-1.5 rounded-xl transition-all duration-200 text-gray-400 group-hover:text-gray-600">
-              <Calendar className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-bold mt-0.5 text-gray-400">Events</span>
-          </Link>
-
           <Link href="/dashboard/promotions?show_more=true" className="flex flex-col items-center justify-center flex-1 py-1 group">
             <div className={`p-1.5 rounded-xl transition-all duration-200 ${
               showMore ? 'bg-primary/10 text-primary' : 'text-gray-400 group-hover:text-gray-600'
@@ -111,72 +88,6 @@ export const BottomNav: FC<BottomNavProps> = ({ onMenuClick }) => {
           </Link>
         )}
       </div>
-    );
-  }
-
-  const isEvents = pathname?.startsWith('/dashboard/events');
-
-  // ── Events bottom nav ──
-  if (isEvents) {
-    const isEventsActive = pathname === '/dashboard/events';
-    return (
-      <div className="events-dashboard">
-        {/* BottomNavBar (Mobile Only) */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-t border-outline-variant/20 flex items-center justify-around px-2 z-50 pb-safe rounded-t-2xl shadow-lg">
-          <Link href="/dashboard" className="flex flex-col items-center justify-center flex-1 py-1 group">
-            <div className="p-1.5 rounded-xl transition-all duration-200 text-gray-400 group-hover:text-gray-600">
-              <LayoutDashboard className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-bold mt-0.5 text-gray-400">Home</span>
-          </Link>
-          
-          <Link href="/dashboard/promotions" className="flex flex-col items-center justify-center flex-1 py-1 group">
-            <div className="p-1.5 rounded-xl transition-all duration-200 text-gray-400 group-hover:text-gray-600">
-              <Megaphone className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-bold mt-0.5 text-gray-400">Deals</span>
-          </Link>
-
-          <Link href="/dashboard/events" className="flex flex-col items-center justify-center flex-1 py-1 group">
-            <div className={`p-1.5 rounded-xl transition-all duration-200 ${
-              isEventsActive ? 'bg-primary/10 text-primary' : 'text-gray-400 group-hover:text-gray-600'
-            }`}>
-              <Calendar className={`w-6 h-6 ${isEventsActive ? 'fill-primary/10' : ''}`} />
-            </div>
-            <span className={`text-[10px] font-bold mt-0.5 ${isEventsActive ? 'text-primary' : 'text-gray-400'}`}>Events</span>
-          </Link>
-
-          <button onClick={onMenuClick} className="flex flex-col items-center justify-center flex-1 py-1 group">
-            <div className="p-1.5 rounded-xl text-gray-400 group-hover:text-gray-600 transition-all duration-200">
-              <Menu className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-bold mt-0.5 text-gray-400">More</span>
-          </button>
-        </nav>
-      </div>
-    );
-  }
-
-  // ── Engagement bottom nav ──
-  if (isEngagement) {
-    return (
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-t border-gray-100 flex items-center justify-around px-2 z-50 pb-safe">
-        {engagementTabs.map((tab) => {
-          const isActive =
-            tab.href === '/dashboard/engagement'
-              ? pathname === '/dashboard/engagement'
-              : pathname.startsWith(tab.href);
-          return (
-            <BottomNavItem
-              key={tab.label}
-              href={tab.href}
-              icon={tab.icon}
-              label={tab.label}
-              isActive={isActive}
-            />
-          );
-        })}
-      </nav>
     );
   }
 

@@ -35,7 +35,9 @@ export default function CouponPurchaseModal({
   onPurchaseSuccess,
 }: CouponPurchaseModalProps) {
   const [amount, setAmount] = useState<number | ''>('');
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<
+    'stripe' | 'paypal' | 'mcom_wallet'
+  >('stripe');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,6 +65,32 @@ export default function CouponPurchaseModal({
       },
       {
         onSuccess: (data) => {
+          if (paymentMethod === 'mcom_wallet' && data.data.transactionId) {
+            verifyPurchase.mutate(
+              {
+                purchaseDetails: {
+                  couponProductId: product.id,
+                  amount: Number(amount),
+                },
+                paymentProvider: 'mcom_wallet',
+                transactionId: data.data.transactionId,
+              },
+              {
+                onSuccess: (verified) => {
+                  onPurchaseSuccess(verified.data);
+                },
+                onError: () => {
+                  toast.error(
+                    'Wallet payment succeeded but the coupon could not be issued. Please contact support.'
+                  );
+                },
+                onSettled: () => {
+                  setIsProcessing(false);
+                },
+              }
+            );
+            return;
+          }
           if (paymentMethod === 'stripe' && data.data.clientSecret) {
             setClientSecret(data.data.clientSecret);
           } else if (paymentMethod === 'paypal' && data.data.orderId) {
@@ -130,16 +158,22 @@ export default function CouponPurchaseModal({
                 <Label>Payment Method</Label>
                 <RadioGroup
                   value={paymentMethod}
-                  onValueChange={(value: 'stripe' | 'paypal') => setPaymentMethod(value)}
-                  className="flex space-x-4"
+                  onValueChange={(value: 'stripe' | 'paypal' | 'mcom_wallet') =>
+                    setPaymentMethod(value)
+                  }
+                  className="flex flex-wrap gap-4"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="stripe" id="stripe" />
-                    <Label htmlFor="stripe">Stripe</Label>
+                    <Label htmlFor="stripe">Card</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="paypal" id="paypal" />
                     <Label htmlFor="paypal">PayPal</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="mcom_wallet" id="mcom_wallet" />
+                    <Label htmlFor="mcom_wallet">MCOM Wallet</Label>
                   </div>
                 </RadioGroup>
               </div>

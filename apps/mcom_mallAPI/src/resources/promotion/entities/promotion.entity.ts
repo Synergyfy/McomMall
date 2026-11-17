@@ -6,6 +6,7 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
+import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { Product } from '../../product/entities/product.entity';
@@ -42,16 +43,37 @@ export class Promotion extends AbstractBaseEntity {
   @Column({ type: 'enum', enum: PromotionScope, nullable: true })
   promotionScope: PromotionScope;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
   multiplier: number;
 
   @Column({ type: 'int', nullable: true })
   bonusPoints: number;
 
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  promoType?: string | null;
+
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  targetSegment?: string | null;
+
+  @Column({ default: false })
+  boroughVisibility: boolean;
+
+  @Column({ default: false })
+  highStreetVisibility: boolean;
+
+  @Column({ default: false })
+  featuredPlacement: boolean;
+
+  @Column({ default: false })
+  addExtraGift: boolean;
+
+  @Column({ type: 'jsonb', nullable: true })
+  settings?: Record<string, any> | null;
+
   @Column({ type: 'int', nullable: true })
   limitPerCustomer: number;
 
-  @Column({ type: 'decimal' })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   minimumSpend: number;
 
   @Column({ type: 'int', default: 0 })

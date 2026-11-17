@@ -1,4 +1,5 @@
 import { Business } from '../../listings/entities/listing.entity';
+import { moneyJsonTransformer, moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
@@ -18,16 +19,16 @@ export class Product extends AbstractBaseEntity {
   @ManyToOne(() => Business, (business) => business.products)
   business: Business;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, transformer: moneyJsonTransformer })
   attributes: ProductAttribute[];
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, transformer: moneyJsonTransformer })
   variations: ProductVariation[];
 
   @Column({ type: 'boolean', default: true })
   useVariantPricing: boolean;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, transformer: moneyJsonTransformer })
   variantConfig: ProductVariantConfig[];
 
   @Column({ nullable: true })
@@ -63,10 +64,10 @@ export class Product extends AbstractBaseEntity {
   @Column()
   productType: string;
 
-  @Column({ type: 'float' })
+  @Column({ type: 'bigint', transformer: moneyTransformer })
   price: number;
 
-  @Column({ type: 'float', nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   salePrice: number;
 
   @Column({ nullable: true })
@@ -124,6 +125,9 @@ export class Product extends AbstractBaseEntity {
 
   @Column('varchar', { default: 'draft' })
   productStatus: string;
+
+  @Column({ default: false })
+  adminDisabled: boolean;
 
   @Column('varchar', { default: 'draft' })
   visibility: string;

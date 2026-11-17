@@ -29,7 +29,7 @@ export interface VoucherProduct {
 export interface InitiateVoucherPurchaseDto {
   voucherProductId: string;
   amount: number;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   recipientName?: string;
   recipientEmail?: string;
   personalMessage?: string;
@@ -94,7 +94,7 @@ export interface CreateVoucherProductDto {
 export type UpdateVoucherProductDto = Partial<CreateVoucherProductDto>;
 
 export interface VerifyVoucherPurchaseDto {
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   transactionId: string;
   purchaseDetails: InitiateVoucherPurchaseDto;
 }
@@ -109,6 +109,11 @@ export interface PayPalVoucherPurchaseResponse {
   orderId: string;
 }
 
+export interface WalletVoucherPurchaseResponse {
+  provider: 'mcom_wallet';
+  transactionId: string;
+}
+
 export interface PurchaseVoucherDto {
   voucherProductId: string;
   amount: number;
@@ -117,7 +122,7 @@ export interface PurchaseVoucherDto {
 
 export interface InitiateReloadDto {
   amount: number;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
 }
 
 interface ReloadDetailsDto {
@@ -126,7 +131,7 @@ interface ReloadDetailsDto {
 
 export interface VerifyReloadDto {
   reloadDetails: ReloadDetailsDto;
-  paymentProvider: 'stripe' | 'paypal';
+  paymentProvider: 'stripe' | 'paypal' | 'mcom_wallet';
   transactionId: string;
 }
 /** Balance of a voucher the signed-in user is entitled to (checkout). */

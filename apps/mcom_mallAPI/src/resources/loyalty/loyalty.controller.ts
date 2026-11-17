@@ -10,6 +10,8 @@ import {
   Query,
   ParseUUIDPipe,
   UseGuards,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,6 +33,8 @@ import {
   UpdateLoyaltySettingsDto,
 } from './dto/loyalty.dto';
 import { AllocatePointsDto } from './dto/allocate-points.dto';
+import { AllocatePointsBulkDto } from './dto/allocate-points-bulk.dto';
+import { PointTransactionType } from '../transaction/entities/point-transaction.entity';
 
 @ApiTags('Loyalty')
 @ApiBearerAuth()
@@ -46,6 +50,15 @@ export class LoyaltyController {
     return this.loyaltyService.allocatePoints(dto, user);
   }
 
+  @Post('points/allocate-bulk')
+  @ApiOperation({ summary: 'Allocate loyalty points to several customers' })
+  allocatePointsBulk(
+    @Body() dto: AllocatePointsBulkDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.loyaltyService.allocatePointsBulk(dto, user);
+  }
+
   @Get('stats')
   @ApiOperation({ summary: 'Get loyalty program stats for a business' })
   async getStats(
@@ -53,6 +66,38 @@ export class LoyaltyController {
     @CurrentUser() user: any,
   ) {
     return this.loyaltyService.getStats(businessId, user);
+  }
+
+  @Get('members')
+  @ApiOperation({ summary: 'List loyalty members for a business' })
+  async getMembers(
+    @Query('businessId', ParseUUIDPipe) businessId: string,
+    @CurrentUser() user: any,
+    @Query('search') search?: string,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit?: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset?: number,
+  ) {
+    return this.loyaltyService.getMembers(businessId, user, {
+      search,
+      limit,
+      offset,
+    });
+  }
+
+  @Get('transactions')
+  @ApiOperation({ summary: 'List point transactions for a business' })
+  async getTransactions(
+    @Query('businessId', ParseUUIDPipe) businessId: string,
+    @CurrentUser() user: any,
+    @Query('type') type?: PointTransactionType,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
+  ) {
+    return this.loyaltyService.getTransactions(businessId, user, {
+      type,
+      page,
+      limit,
+    });
   }
 
   @Get('customer/:customerId')
