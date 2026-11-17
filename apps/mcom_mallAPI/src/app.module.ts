@@ -28,7 +28,6 @@ import { CartModule } from './resources/cart/cart.module';
 import { MessagingModule } from './resources/messaging/messaging.module';
 import { WishlistModule } from './resources/wishlist/wishlist.module';
 import { BookingModule } from './resources/booking/booking.module';
-import { PromotionModule } from './resources/promotion/promotion.module';
 import { ServicesModule } from './resources/services/services.module';
 import { OfferModule } from './resources/offer/offer.module';
 import { NotificationModule } from './resources/notification/notification.module';
@@ -169,7 +168,6 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     WishlistModule,
     BookingModule,
     ServicesModule,
-    PromotionModule,
     OfferModule,
     NotificationModule,
     ReviewsModule,

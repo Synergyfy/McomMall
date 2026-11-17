@@ -4,7 +4,6 @@ import {
   MessageSquare,
   BookOpen,
   Plus,
-  List,
   Wallet,
   ShoppingBag,
   Store,
@@ -14,19 +13,14 @@ import {
   UserPen,
   Heart,
   LogOut,
-  Megaphone,
   CreditCard,
   History,
   Users,
   Timer,
-  Scan,
   Gift,
   Coins,
   LifeBuoy,
-  Zap,
   MapPin,
-  BarChart2,
-  Trophy,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -51,6 +45,7 @@ export const mainMenuItems: MenuItem[] = [
     icon: Timer,
   },
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
+
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
   {
@@ -69,57 +64,9 @@ export const mainMenuItems: MenuItem[] = [
 
 export const listingMenuItems: MenuItem[] = [
   {
-    title: 'My Business',
+    title: 'My Storefront',
     href: '/dashboard/my-business',
     icon: Store,
-  },
-];
-
-export const storefrontMenuItems: MenuItem[] = [
-  {
-    title: 'Storefront Hub',
-    href: '/dashboard/storefront',
-    icon: SquareDashedKanban,
-  },
-  {
-    title: 'Business Profile',
-    href: '/dashboard/storefront/profile',
-    icon: UserPen,
-  },
-  {
-    title: 'Appearance',
-    href: '/dashboard/storefront/appearance',
-    icon: Settings,
-  },
-  {
-    title: 'Verification',
-    href: '/dashboard/storefront/verification',
-    icon: Scan,
-  },
-  {
-    title: 'Visibility Settings',
-    href: '/dashboard/storefront/visibility',
-    icon: Zap,
-  },
-  {
-    title: 'Readiness Score',
-    href: '/dashboard/storefront/readiness',
-    icon: Trophy,
-  },
-  {
-    title: 'Borough Campaigns',
-    href: '/dashboard/storefront/boroughs',
-    icon: Megaphone,
-  },
-  {
-    title: 'Interest Signals',
-    href: '/dashboard/storefront/signals',
-    icon: BarChart2,
-  },
-  {
-    title: 'Claim Campaigns',
-    href: '/dashboard/storefront/activations',
-    icon: List,
   },
 ];
 
@@ -179,7 +126,7 @@ export const marketingMenuItems: MenuItem[] = [
 export const historyMenuItems: MenuItem[] = [
   {
     title: 'Reward History',
-    href: '/dashboard/history/promotion-history',
+    href: '/dashboard/history/reward-history',
     icon: History,
   },
   {
@@ -233,22 +180,16 @@ export const pluginMenuItems: MenuItem[] = [
   {
     title: 'Loyalty & Reward',
     href: '/dashboard/loyalty',
-    icon: Settings,
+    icon: Coins,
     subMenu: [
-      // { title: 'Dashboard', href: '/dashboard/loyalty' },
-      { title: 'Analytics', href: '/dashboard/loyalty/analytics' },
-      // { title: 'Customer view', href: '/dashboard/loyalty/customer' },
+      { title: 'Overview', href: '/dashboard/loyalty' },
+      { title: 'Earning Rules', href: '/dashboard/loyalty/earning' },
       { title: 'Members', href: '/dashboard/loyalty/members' },
-      { title: 'Time Bonus', href: '/dashboard/loyalty/time-bonus' },
       { title: 'Offers', href: '/dashboard/loyalty/offers' },
-      // { title: 'Settings', href: '/dashboard/loyalty/settings' },
+      { title: 'Time Bonus', href: '/dashboard/loyalty/time-bonus' },
     ],
   },
-  {
-    title: 'Promotion',
-    href: '/dashboard/promotions',
-    icon: Megaphone,
-  },
+
   {
     title: 'Gift Card',
     href: '/dashboard/gift-card',
@@ -270,7 +211,7 @@ export const pluginMenuItems: MenuItem[] = [
     icon: Settings,
     subMenu: [
       { title: 'Dashboard', href: '/dashboard/vouchers' },
-      { title: 'Create Campaign', href: '/dashboard/vouchers/new' },
+      { title: 'Create Voucher', href: '/dashboard/vouchers/new' },
       { title: 'Redemption Log', href: '/dashboard/vouchers/sold' },
       { title: 'Analytics', href: '/dashboard/vouchers/analytics' },
     ],

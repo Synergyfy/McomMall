@@ -48,7 +48,6 @@ import {
   Zap,
   Check,
   Package,
-  Store,
   Clock,
   ExternalLink,
 } from 'lucide-react';
@@ -107,10 +106,6 @@ function QuotaPreview({ variant }: { variant?: PlanVariant }) {
         <span className="text-[10px] text-slate-400 font-normal">Level Quotas</span>
       </div>
       <div className="grid grid-cols-2 gap-2 text-slate-600">
-        <div className="flex items-center gap-1.5">
-          <Store className="h-3.5 w-3.5 text-slate-400" />
-          <span>Listings: <strong>{quotas?.maxListings === -1 ? 'Unlimited' : (quotas?.maxListings ?? '—')}</strong></span>
-        </div>
         <div className="flex items-center gap-1.5">
           <Package className="h-3.5 w-3.5 text-slate-400" />
           <span>Products: <strong>{quotas?.maxProducts === -1 ? 'Unlimited' : (quotas?.maxProducts ?? '—')}</strong></span>

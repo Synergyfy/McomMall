@@ -41,10 +41,9 @@ POST /system/plans
   "monthlyPrice": 29.99,
   "quarterlyPrice": 79.99,
   "annualPrice": 299.99,
-  "features": ["Priority support", "Increased listing limit", "Custom domain"],
+  "features": ["Priority support", "Custom domain"],
   "configuration": {
     "quotas": {
-      "maxListings": 100,
       "allowProductListing": true,
       "allowServiceListing": true,
       "maxProducts": 50,
@@ -84,7 +83,7 @@ POST /system/plans
   "monthlyPrice": 29.99,
   "quarterlyPrice": 79.99,
   "annualPrice": 299.99,
-  "features": ["Priority support", "Increased listing limit", "Custom domain"],
+  "features": ["Priority support", "Custom domain"],
   "configuration": { "...": "..." },
   "isActive": true,
   "isDefault": false,
@@ -162,10 +161,10 @@ Send only the fields you want to change:
 ```json
 {
   "monthlyPrice": 34.99,
-  "features": ["Priority support", "Unlimited listings"],
+  "features": ["Priority support"],
   "configuration": {
     "quotas": {
-      "maxListings": -1
+      "maxProducts": 100
     }
   }
 }
@@ -214,7 +213,6 @@ No API key needed — these are open to the public.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `maxListings` | number | `-1` for unlimited |
 | `allowProductListing` | boolean | |
 | `allowServiceListing` | boolean | |
 | `maxProducts` | number | `-1` for unlimited |

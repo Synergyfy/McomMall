@@ -11,7 +11,6 @@ import { BusinessStatus } from '../listings/listing.enum';
 import { Review } from '../reviews/entities/review.entity';
 import { Event } from '../events/entities/event.entity';
 import { Offer } from '../offer/entities/offer.entity';
-import { Promotion } from '../promotion/entities/promotion.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { InterestSignal } from '../interest-signals/entities/interest-signal.entity';
 import {
@@ -28,8 +27,6 @@ import { EventRsvp, EventRsvpStatus } from './entities/event-rsvp.entity';
 import {
   RedeemRewardDto,
   RedeemCodeDto,
-  ListCustomerPromotionsQueryDto,
-  CustomerPromotionFilter,
 } from './dto/customer.dto';
 import {
   RewardRedemptionStatus,
@@ -38,7 +35,6 @@ import {
 } from './reward.enum';
 import {
   CustomerHomeResponseDto,
-  PromotionItemResponseDto,
   CustomerRewardsResponseDto,
   RedeemRewardResponseDto,
   RedeemCodeResponseDto,
@@ -66,8 +62,6 @@ export class CustomerService {
     private readonly eventRepository: Repository<Event>,
     @InjectRepository(Offer)
     private readonly offerRepository: Repository<Offer>,
-    @InjectRepository(Promotion)
-    private readonly promotionRepository: Repository<Promotion>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(InterestSignal)
@@ -147,7 +141,7 @@ export class CustomerService {
     ] = await Promise.all([
       this.offerRepository.find({
         where: { isActive: true },
-        relations: ['businesses'],
+        relations: ['user', 'user.businesses'],
         take: 50,
       }),
       this.campaignRepository.find({
@@ -235,143 +229,9 @@ export class CustomerService {
         name: offer.name,
         description: offer.description ?? '',
         points: offer.points ?? 0,
-        businesses: (offer.businesses ?? []).map((b) => b.businessName),
+        businesses: (offer.user?.businesses ?? []).map((b) => b.businessName),
       })),
     };
-  }
-
-  async getPromotions(
-    query: ListCustomerPromotionsQueryDto,
-  ): Promise<PromotionItemResponseDto[]> {
-    const now = new Date();
-
-    const [offers, promotions, campaigns] = await Promise.all([
-      this.offerRepository.find({
-        where: { isActive: true },
-        relations: ['businesses', 'businesses.location'],
-        take: 100,
-      }),
-      this.promotionRepository.find({
-        where: { isActive: true },
-        relations: ['businesses', 'businesses.location'],
-        take: 100,
-      }),
-      this.campaignRepository.find({
-        relations: ['business', 'business.location'],
-        take: 100,
-      }),
-    ]);
-
-    const items: PromotionItemResponseDto[] = [];
-
-    for (const offer of offers) {
-      const business = (offer.businesses ?? [])[0];
-      items.push({
-        id: offer.id,
-        title: offer.name,
-        businessName: business ? business.businessName : 'MCOM Partner',
-        benefitValue: offer.discountPercentage
-          ? `${offer.discountPercentage}% OFF`
-          : offer.discountAmount
-            ? `${offer.discountAmount} OFF`
-            : `${offer.points} PTS`,
-        description: offer.description ?? '',
-        longDescription: offer.description ?? '',
-        borough: business?.location?.resolvedArea ?? null,
-        expiresAt: offer.endDate,
-        expiryText: offer.endDate
-          ? this.formatExpiry(offer.endDate, now)
-          : 'Limited time',
-        promotionType: 'daily',
-        image: business?.bannerUrl ?? null,
-        isActive: offer.isActive,
-      });
-    }
-
-    for (const promotion of promotions) {
-      const business = (promotion.businesses ?? [])[0];
-      items.push({
-        id: promotion.id,
-        title: promotion.name,
-        businessName: business ? business.businessName : 'MCOM Partner',
-        benefitValue: promotion.bonusPoints
-          ? `${promotion.bonusPoints} BONUS PTS`
-          : promotion.multiplier
-            ? `${promotion.multiplier}x POINTS`
-            : 'DEAL',
-        description: promotion.description ?? '',
-        longDescription: promotion.description ?? '',
-        borough: business?.location?.resolvedArea ?? null,
-        expiresAt: promotion.endDate,
-        expiryText: promotion.endDate
-          ? this.formatExpiry(promotion.endDate, now)
-          : 'Limited time',
-        promotionType: 'flash',
-        image: business?.bannerUrl ?? null,
-        isActive: promotion.isActive,
-      });
-    }
-
-    for (const campaign of campaigns) {
-      items.push({
-        id: campaign.id,
-        title: `${campaign.business?.businessName ?? 'Campaign'} ${campaign.type.replace(/_/g, ' ')}`,
-        businessName: campaign.business?.businessName ?? 'MCOM Partner',
-        benefitValue: 'CAMPAIGN',
-        description: 'Active neighbourhood campaign',
-        longDescription: 'Active neighbourhood campaign',
-        borough: campaign.displayOnlyIfRegion ?? null,
-        expiresAt: campaign.endDate,
-        expiryText: campaign.endDate
-          ? this.formatExpiry(campaign.endDate, now)
-          : 'Limited time',
-        promotionType: 'borough',
-        image: campaign.business?.bannerUrl ?? null,
-        isActive: true,
-      });
-    }
-
-    const filtered = items.filter((item) => {
-      if (!query.type || query.type === CustomerPromotionFilter.ALL) {
-        return true;
-      }
-      if (query.type === CustomerPromotionFilter.FLASH) {
-        return item.promotionType === 'flash';
-      }
-      if (query.type === CustomerPromotionFilter.BOROUGH) {
-        return (
-          item.promotionType === 'borough' &&
-          (!query.borough || item.borough === query.borough)
-        );
-      }
-      if (query.type === CustomerPromotionFilter.EXPIRING) {
-        return (
-          item.expiresAt &&
-          new Date(item.expiresAt).getTime() - now.getTime() < 24 * 3600 * 1000
-        );
-      }
-      if (query.type === CustomerPromotionFilter.NEARBY) {
-        if (!query.lat || !query.lng || !item.expiresAt) {
-          return true;
-        }
-        const itemBorough = item.borough;
-        return !query.borough || itemBorough === query.borough;
-      }
-      if (query.type === CustomerPromotionFilter.SAVED) {
-        return false;
-      }
-      return true;
-    });
-
-    return filtered.sort((a, b) => {
-      const aExp = a.expiresAt
-        ? new Date(a.expiresAt).getTime()
-        : Number.MAX_SAFE_INTEGER;
-      const bExp = b.expiresAt
-        ? new Date(b.expiresAt).getTime()
-        : Number.MAX_SAFE_INTEGER;
-      return aExp - bExp;
-    });
   }
 
   async getRewards(userId: string): Promise<CustomerRewardsResponseDto> {
@@ -621,7 +481,7 @@ export class CustomerService {
         }),
         this.offerRepository.find({
           where: { isActive: true },
-          relations: ['businesses'],
+          relations: ['user', 'user.businesses'],
           take: 100,
         }),
         this.eventRepository.find({
@@ -662,12 +522,12 @@ export class CustomerService {
         startDate: campaign.startDate,
         endDate: campaign.endDate,
       })),
-      promotions: activeOffers.map((offer) => ({
+      rewards: activeOffers.map((offer) => ({
         id: offer.id,
         name: offer.name,
         description: offer.description ?? '',
         points: offer.points ?? 0,
-        businesses: (offer.businesses ?? []).map((b) => b.businessName),
+        businesses: (offer.user?.businesses ?? []).map((b) => b.businessName),
       })),
       events: events.map((event) => ({
         id: event.id,
@@ -703,7 +563,14 @@ export class CustomerService {
   ): Promise<CustomerBusinessProfileResponseDto> {
     const business = await this.businessRepository.findOne({
       where: { id: businessId },
-      relations: ['category', 'reviews', 'reviews.user', 'offers', 'events'],
+      relations: [
+        'category',
+        'reviews',
+        'reviews.user',
+        'user',
+        'user.offers',
+        'events',
+      ],
     });
     if (!business) {
       throw new NotFoundException(`Business with ID ${businessId} not found`);
@@ -736,7 +603,7 @@ export class CustomerService {
         comment: review.comment,
         createdAt: review.createdAt,
       })),
-      offers: (business.offers ?? [])
+      offers: (business.user?.offers ?? [])
         .filter((offer) => offer.isActive)
         .map((offer) => ({
           id: offer.id,

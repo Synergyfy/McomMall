@@ -21,7 +21,7 @@ export class DiscoverController {
   @Get('home')
   @ApiOperation({
     summary:
-      'Get Discover home feed data (businesses, promotions, events, rewards)',
+      'Get Discover home feed data (businesses, events, rewards)',
   })
   async getHomeFeed(
     @CurrentUser() user: User,
@@ -47,17 +47,6 @@ export class DiscoverController {
   @ApiOperation({ summary: 'Get events for Discover' })
   async getEvents(@CurrentUser() user: User, @Query() query: EventsQueryDto) {
     return this.discoverService.getEvents(user?.id, query);
-  }
-
-  @Public()
-  @UseGuards(OptionalJwtAuthGuard)
-  @Get('promotions')
-  @ApiOperation({ summary: 'Get promotions for Discover' })
-  async getPromotions(
-    @CurrentUser() user: User,
-    @Query() query: DiscoverQueryDto,
-  ) {
-    return this.discoverService.getPromotions(user?.id, query);
   }
 
   @Public()

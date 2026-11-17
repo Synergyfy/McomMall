@@ -25,7 +25,6 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
-import { QueryUserPromotionsDto } from './dto/query-user-promotions.dto';
 import { QueryTransactionHistoryDto } from './dto/query-transaction-history.dto';
 import { QueryRedeemedOffersDto } from './dto/query-redeemed-offers.dto';
 import { SearchOwnerDto } from './dto/search-owner.dto';
@@ -141,20 +140,6 @@ export class UsersController {
       throw new ForbiddenException();
     }
     return this.usersService.getRedeemedOffers(id, query);
-  }
-
-  @ApiOperation({ summary: "Get user's promotions and balances" })
-  @ApiResponse({ status: 200, description: 'Return promotions and balances.' })
-  @Get(':id/promotions')
-  getPromotions(
-    @Req() req,
-    @Param('id') id: string,
-    @Query() query: QueryUserPromotionsDto,
-  ) {
-    if (req.user.id !== id) {
-      throw new ForbiddenException();
-    }
-    return this.usersService.getPromotions(id, query);
   }
 
   @ApiOperation({ summary: "Get user's transaction history" })

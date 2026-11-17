@@ -15,7 +15,6 @@ import { Product } from '../product/entities/product.entity';
 import { Service } from '../services/entities/service.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
-import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
 import { OwnerStatsDto } from './dto/owner-stats.dto';
 import { CustomerStatsDto } from './dto/customer-stats.dto';
@@ -48,8 +47,6 @@ export class StatsService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(ServiceBooking)
     private readonly bookingRepository: Repository<ServiceBooking>,
-    @InjectRepository(PromotionParticipant)
-    private readonly promotionParticipantRepository: Repository<PromotionParticipant>,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
   ) {}
@@ -87,13 +84,6 @@ export class StatsService {
       .where('gift_card.owner = :userId', { userId })
       .getRawOne();
 
-    const promotionsQuery = this.promotionParticipantRepository
-      .createQueryBuilder('participant')
-      .select('SUM(participant.pointsEarned)', 'sum')
-      .leftJoin('participant.promotion', 'promotion')
-      .where('promotion.user = :userId', { userId })
-      .getRawOne();
-
     const offersRedeemedQuery = this.transactionRepository
       .createQueryBuilder('t')
       .leftJoin('t.offer', 'offer')
@@ -126,7 +116,6 @@ export class StatsService {
       walletDetails,
       productOrders,
       giftCard,
-      promotions,
       offersRedeemed,
       voucher,
       productCount,
@@ -136,7 +125,6 @@ export class StatsService {
       walletDetailsQuery,
       productOrdersQuery,
       giftCardQuery,
-      promotionsQuery,
       offersRedeemedQuery,
       voucherQuery,
       productCountQuery,
@@ -154,7 +142,6 @@ export class StatsService {
     return {
       totalAmountEarnedFromProductOrders: +productOrders.sum || 0,
       totalAmountEarnedFromGiftCard: +giftCard.sum || 0,
-      totalAmountSpentForPromotions: +promotions.sum || 0,
       totalOffersRedeemed: offersRedeemed,
       totalAmountSpentOnCoupon: 0,
       totalAmountOfVoucherPurchased: +voucher.sum || 0,
@@ -181,11 +168,6 @@ export class StatsService {
     const serviceBookedQuery = this.bookingRepository.count({
       where: { user: { id: userId } },
     });
-
-    const promotionsParticipatingQuery =
-      this.promotionParticipantRepository.count({
-        where: { user: { id: userId } },
-      });
 
     const pointsEarnedQuery = this.pointTransactionRepository
       .createQueryBuilder('pt')
@@ -219,7 +201,6 @@ export class StatsService {
       productOrders,
       orderItemsCount,
       serviceBooked,
-      promotionsParticipating,
       pointsEarned,
       pointsRedeemed,
       voucher,
@@ -228,7 +209,6 @@ export class StatsService {
       productOrdersQuery,
       orderItemsCountQuery,
       serviceBookedQuery,
-      promotionsParticipatingQuery,
       pointsEarnedQuery,
       pointsRedeemedQuery,
       voucherQuery,
@@ -239,7 +219,6 @@ export class StatsService {
       totalAmountSpentOnProductOrdered: +productOrders.sum || 0,
       totalNumberOfProductOrdered: orderItemsCount,
       totalNumberOfServiceBooked: serviceBooked,
-      totalNumberOfPromotionsParticipating: promotionsParticipating,
       totalNumberOfPointsEarned: +pointsEarned.sum || 0,
       totalNumberOfPointsRedeemed: +pointsRedeemed.sum || 0,
       totalAmountSpentOnVoucher: +voucher.sum || 0,
@@ -444,13 +423,6 @@ export class StatsService {
           description:
             'Merchant stores in your borough using loyalty vouchers experience a 22% footfall conversion lift.',
           actionLink: '/dashboard/vouchers',
-        },
-        {
-          id: 'action-2',
-          title: 'Complete Google Place Verification',
-          description:
-            'Verification increases local mapping impressions by up to 30%.',
-          actionLink: '/dashboard/storefront/verification',
         },
       ],
     };

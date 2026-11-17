@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, PlusCircle, Upload } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -249,7 +250,14 @@ export default function GiftCardDashboardPage() {
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="space-y-6">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-3">
+            <Link
+              href="/dashboard/gift-card/templates/new"
+              className="inline-flex items-center gap-2 rounded-full bg-orange-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:scale-105 hover:bg-orange-700 active:scale-95"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Create Template
+            </Link>
             <FeatureToggle featureName="giftCard" />
           </div>
           <SummaryDisplay />

@@ -22,6 +22,14 @@ import { User } from '../users/entities/user.entity';
 export class OfferController {
   constructor(private readonly offerService: OfferService) {}
 
+  @Post('time-bonus/:id/activate')
+  activateTimeBonus(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.offerService.activateTimeBonus(user.id, id);
+  }
+
   @Post('apply')
   applyOffer(@CurrentUser() user: User, @Body() applyOfferDto: ApplyOfferDto) {
     return this.offerService.applyOffer(user.id, applyOfferDto);

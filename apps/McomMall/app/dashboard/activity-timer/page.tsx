@@ -220,10 +220,6 @@ const ActivityTimerPage: FC = () => {
     let lockReason = "";
 
     if (config?.quotas && usage) {
-      if (task.key === 'CREATE_BUSINESS' && usage.currentListings >= config.quotas.maxListings) {
-        isLocked = true;
-        lockReason = "Max listings reached";
-      }
       if (task.key === 'ADD_PRODUCT_SERVICE') {
         if (usage.currentProducts >= config.quotas.maxProducts) {
           isLocked = true;

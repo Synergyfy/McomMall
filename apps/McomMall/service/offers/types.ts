@@ -25,6 +25,7 @@ export interface Offer {
   discountPercentage?: number;
   freeProductId?: string;
   bonusPoints?: number;
+  isTimeBonus?: boolean;
   limitUsageToXProducts?: number;
   expireAfterXDays?: number;
   allowFreeShipping?: boolean;
@@ -34,17 +35,12 @@ export interface Offer {
   allowLimitToReset?: boolean;
   includedProducts?: Product[];
   excludedProducts?: Product[];
-  businesses?: Product[];
-  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS';
-  businessIds?: string[];
   created_at: string; // ISO
   updated_at: string; // ISO
 }
 
 // Based on the Create Offer DTO
 export interface CreateOfferDto {
-  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS';
-  businessIds?: string[];
   name: string;
   description?: string;
   points: number;
@@ -59,6 +55,7 @@ export interface CreateOfferDto {
   discountPercentage?: number;
   freeProductId?: string;
   bonusPoints?: number;
+  isTimeBonus?: boolean;
   limitUsageToXProducts?: number;
   expireAfterXDays?: number;
   allowFreeShipping?: boolean;

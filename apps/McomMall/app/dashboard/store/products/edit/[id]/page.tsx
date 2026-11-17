@@ -17,7 +17,8 @@ import Step8Finalize from '../../components/wizard/Step8Finalize';
 import { ProductStatusModal } from '../../components/wizard/lib/ProductStatusModal';
 import { useAuth } from '@/service/auth/hook';
 import { useGetProductById, useUpdateProduct } from '@/service/store/products/hook';
-import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { useGetUserListings } from '@/service/listings/hook';
+import { getBusinessTaxonomy, pickCentralBusiness } from '@/lib/central-business';
 import { toSerializable } from '@/lib/form-validation';
 import { toast } from 'sonner';
 
@@ -28,7 +29,7 @@ export default function EditProductPage() {
   const { user } = useAuth();
   const { data: product, isLoading: isLoadingProduct } = useGetProductById(id);
   const { mutate: updateProduct, isPending } = useUpdateProduct();
-  const { data: categories } = useGetCategories();
+  const { data: userListings } = useGetUserListings(1, 100);
 
   const [step, setStep] = useState(1);
   const [isUpdated, setIsUpdated] = useState(false);
@@ -37,6 +38,8 @@ export default function EditProductPage() {
 
   const [formData, setFormData] = useState<any>({
     productName: '',
+    sector: '',
+    sectorName: '',
     category: '',
     categoryName: '',
     subCategory: '',
@@ -85,18 +88,14 @@ export default function EditProductPage() {
     downloadExpiry: '',
   });
 
-  const resolvedCategoryId =
-    categories?.find(
-      (c) => c.id === formData.category || c.name === formData.category
-    )?.id || '';
-  const { data: subCategories } = useGetSubCategoriesByCategory(resolvedCategoryId);
-
   useEffect(() => {
     if (product) {
       const initialData = {
         productName: product.title || '',
         category: product.category || '',
+        categoryName: product.category || '',
         subCategory: product.subCategory || '',
+        subCategoryName: product.subCategory || '',
         shortDesc: product.shortDescription || '',
         fullDesc: product.description || '',
         product_type: product.productType || 'physical',
@@ -148,29 +147,33 @@ export default function EditProductPage() {
     }
   }, [product]);
 
-  // Resolve category Name to ID
+  // Keep the product aligned with the classification of the merchant's
+  // MCOM Central business. Existing product values are used as a fallback when
+  // Central has not mirrored a taxonomy label yet.
   useEffect(() => {
-    if (categories && formData.category && !formData.categoryName) {
-      const cat = categories.find(c => c.id === formData.category || c.name === formData.category);
-      if (cat && cat.id !== formData.category) {
-        setFormData((prev: any) => ({ ...prev, category: cat.id, categoryName: cat.name }));
-      } else if (cat) {
-        setFormData((prev: any) => ({ ...prev, categoryName: cat.name }));
-      }
-    }
-  }, [categories, formData.category]);
+    const business = pickCentralBusiness(userListings?.data);
+    if (!business) return;
 
-  // Resolve subcategory Name to ID
-  useEffect(() => {
-    if (subCategories && formData.subCategory && !formData.subCategoryName) {
-      const sub = subCategories.find(s => s.id === formData.subCategory || s.name === formData.subCategory);
-      if (sub && sub.id !== formData.subCategory) {
-        setFormData((prev: any) => ({ ...prev, subCategory: sub.id, subCategoryName: sub.name }));
-      } else if (sub) {
-        setFormData((prev: any) => ({ ...prev, subCategoryName: sub.name }));
+    const taxonomy = getBusinessTaxonomy(business as any);
+    const sectorValue = taxonomy.sectorId || taxonomy.sectorName;
+
+    setFormData((prev: any) => {
+      const next = { ...prev };
+      if (sectorValue) {
+        next.sector = sectorValue;
+        next.sectorName = taxonomy.sectorName || prev.sectorName;
       }
-    }
-  }, [subCategories, formData.subCategory]);
+      if (taxonomy.categoryName) {
+        next.category = taxonomy.categoryId || taxonomy.categoryName;
+        next.categoryName = taxonomy.categoryName;
+      }
+      if (taxonomy.subCategoryName) {
+        next.subCategory = taxonomy.subCategoryId || taxonomy.subCategoryName;
+        next.subCategoryName = taxonomy.subCategoryName;
+      }
+      return next;
+    });
+  }, [userListings]);
 
   const updateFormData = (newData: any) => {
     setFormData((prev: any) => ({ ...prev, ...newData }));

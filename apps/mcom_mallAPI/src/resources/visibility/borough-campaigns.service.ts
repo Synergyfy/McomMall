@@ -1,16 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BoroughCampaign } from './entities/borough-campaign.entity';
-import { BoroughParticipation } from './entities/borough-participation.entity';
 
 @Injectable()
 export class BoroughCampaignsService {
   constructor(
     @InjectRepository(BoroughCampaign)
     private readonly campaignRepository: Repository<BoroughCampaign>,
-    @InjectRepository(BoroughParticipation)
-    private readonly participationRepository: Repository<BoroughParticipation>,
   ) {}
 
   async findAll(): Promise<BoroughCampaign[]> {
@@ -53,38 +50,5 @@ export class BoroughCampaignsService {
     }
 
     return campaigns;
-  }
-
-  async participate(
-    campaignId: string,
-    businessId: string,
-  ): Promise<BoroughParticipation> {
-    const campaign = await this.campaignRepository.findOne({
-      where: { id: campaignId },
-    });
-    if (!campaign) {
-      throw new NotFoundException(
-        `Borough campaign with ID ${campaignId} not found`,
-      );
-    }
-
-    // Check if already participating
-    let participation = await this.participationRepository.findOne({
-      where: { campaignId, businessId },
-    });
-
-    if (!participation) {
-      participation = this.participationRepository.create({
-        campaignId,
-        businessId,
-      });
-      await this.participationRepository.save(participation);
-
-      // Increment campaign merchant count
-      campaign.merchantCount += 1;
-      await this.campaignRepository.save(campaign);
-    }
-
-    return participation;
   }
 }

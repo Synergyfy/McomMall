@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Service } from 'src/resources/services/entities/service.entity';
 import { Business } from 'src/resources/listings/entities/listing.entity';
 import { PricingModel } from 'src/resources/services/service.enum';
+import { resolveBusinessTaxonomy } from 'src/common/taxonomy/business-taxonomy';
 import { Repository } from 'typeorm';
 import {
   AdminServiceStatus,
@@ -131,17 +132,25 @@ export class AdminServicesService {
   async create(dto: CreateAdminServiceDto): Promise<Service> {
     const business = await this.businessRepository.findOne({
       where: { id: dto.businessId },
+      relations: ['sector', 'category', 'subCategory'],
     });
     if (!business) {
       throw new NotFoundException(
         `Business with ID ${dto.businessId} was not found`,
       );
     }
+
+    // Admin-created services inherit the same Central business taxonomy as the
+    // merchant-facing flow; the DTO's category is only a fallback.
+    const taxonomy = resolveBusinessTaxonomy(business);
+
     const service = this.servicesRepository.create({
       name: dto.name,
       businessId: dto.businessId,
       description: dto.description,
-      category: dto.category,
+      sector: taxonomy.sector || undefined,
+      category: taxonomy.category || dto.category,
+      subcategory: taxonomy.subCategory || undefined,
       fixedPrice: dto.fixedPrice,
       duration: dto.duration ?? 0,
       pricingModel: PricingModel.FIXED,

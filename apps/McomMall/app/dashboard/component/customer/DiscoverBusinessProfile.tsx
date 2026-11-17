@@ -5,16 +5,15 @@ import {
   ArrowLeft, Heart, Share2, QrCode, UserPlus, Star, Coffee, Calendar, Map,
   ShoppingBag, Dumbbell, Lock, Zap, CheckCircle, Sparkles, X, Award, Info,
   Store, Clock, Phone, Mail, MapPin, MessageCircle, BookOpen,
-  ChevronRight, Check, Users, Gift, Tag,
+  ChevronRight, Check, Users, Gift,
 } from 'lucide-react';
 import api from '@/service/api';
 import { useDiscoverEvents, useDiscoverRewards } from '@/hooks/useDiscover';
 
-type ProfileTab = 'storefront' | 'promotions' | 'events' | 'rewards' | 'reviews' | 'about';
+type ProfileTab = 'storefront' | 'events' | 'rewards' | 'reviews' | 'about';
 
 const PROFILE_TABS: { id: ProfileTab; label: string; icon: React.FC<{ className?: string }> }[] = [
   { id: 'storefront', label: 'Storefront', icon: Store },
-  { id: 'promotions', label: 'Promotions', icon: Tag },
   { id: 'events', label: 'Events', icon: Calendar },
   { id: 'rewards', label: 'Rewards', icon: Award },
   { id: 'reviews', label: 'Reviews', icon: Star },
@@ -236,7 +235,6 @@ export const DiscoverBusinessProfile: React.FC<DiscoverBusinessProfileProps> = (
 
         <div className="p-5">
           {activeTab === 'storefront' && <StorefrontTab biz={biz} />}
-          {activeTab === 'promotions' && <PromotionsTab biz={biz} isRedeemed={isRedeemed} onRedeem={() => onRedeem(businessId, biz.flashSaleTitle)} />}
           {activeTab === 'events' && <EventsTab biz={biz} businessId={businessId} registeredEvents={registeredEvents} onJoinEvent={onJoinEvent} />}
           {activeTab === 'rewards' && <RewardsTab biz={biz} businessId={businessId} points={points} onCollectReward={onCollectReward} showToast={showToast} />}
           {activeTab === 'reviews' && <ReviewsTab />}
@@ -329,35 +327,6 @@ function StorefrontTab({ biz }: { biz: any }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function PromotionsTab({ biz, isRedeemed, onRedeem }: { biz: any; isRedeemed: boolean; onRedeem: () => void }) {
-  return (
-    <div className="space-y-4">
-      <div className="bg-[#fff1ec] rounded-2xl p-5 relative overflow-hidden">
-        <div className="relative z-10">
-          <span className="text-[9px] font-bold text-[#a14000] uppercase tracking-wider">Flash Deal</span>
-          <h4 className="text-lg font-extrabold text-[#261812] mt-1">{biz.flashSaleTitle}</h4>
-          <p className="text-xs text-[#5a4136] mt-1">{biz.flashSaleDesc}</p>
-          <button onClick={onRedeem} disabled={isRedeemed}
-            className={`mt-4 px-6 py-2.5 rounded-xl text-xs font-bold active:scale-95 transition-all ${isRedeemed ? 'bg-emerald-100 text-emerald-700' : 'bg-[#a14000] text-white shadow-md'}`}>
-            {isRedeemed ? 'Redeemed ✓' : 'Redeem Offer'}
-          </button>
-        </div>
-        <Zap className="absolute -right-4 -bottom-4 w-20 h-20 text-[#ff9969] opacity-30" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {['Loyalty Bonus', 'Seasonal Campaign', 'Borough Campaign', 'QR Promotion'].map((p, i) => (
-          <div key={i} className="bg-white rounded-2xl p-4 border border-[#e2bfb0]/30 text-center">
-            <Gift className="w-6 h-6 text-[#a14000] mx-auto mb-2" />
-            <p className="text-xs font-bold text-[#261812]">{p}</p>
-            <span className="text-[8px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full mt-2 inline-block">Active</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

@@ -14,6 +14,8 @@ import {
   PlanVariant,
   formatPlanPrice,
   getActivePrice,
+  getEnabledPlanFeatureFlags,
+  getPlanQuotaFeatures,
   getPriceAmount,
   getSellableVariants,
   getTierLabel,
@@ -51,29 +53,8 @@ export default function PlanCard({ plan, onSelect }: PlanCardProps) {
 
   const price = getActivePrice(selected);
   const formattedPrice = formatPlanPrice(getPriceAmount(price));
-  const quotas = selected.configuration?.quotas;
-
-  const quotaItems = quotas
-    ? [
-        { label: `${quotas.maxListings} Listings`, value: quotas.maxListings > 0 },
-        { label: `${quotas.maxProducts} Products`, value: quotas.maxProducts > 0 },
-        { label: `${quotas.maxServices} Services`, value: quotas.maxServices > 0 },
-        {
-          label: `${quotas.maxCouponTemplates} Coupon Templates`,
-          value: quotas.maxCouponTemplates > 0,
-        },
-        {
-          label: `${quotas.maxGiftCardTemplates} Gift Card Templates`,
-          value: quotas.maxGiftCardTemplates > 0,
-        },
-        {
-          label: `${quotas.maxLoyaltyPrograms} Loyalty Programs`,
-          value: quotas.maxLoyaltyPrograms > 0,
-        },
-      ].filter((item) => item.value)
-    : [];
-
-  const displayFeatures = (selected.features ?? []).slice(0, 6);
+  const quotaFeatures = getPlanQuotaFeatures(selected);
+  const enabledFlags = getEnabledPlanFeatureFlags(selected);
 
   return (
     <motion.div
@@ -142,37 +123,34 @@ export default function PlanCard({ plan, onSelect }: PlanCardProps) {
             })}
           </div>
 
-          {quotaItems.length > 0 && (
+          {quotaFeatures.length > 0 && (
             <ul className="space-y-2 mb-2">
-              {quotaItems.map((item, index) => (
+              {quotaFeatures.map((item) => (
                 <li
-                  key={`quota-${index}`}
-                  className="flex items-start text-sm text-gray-700 font-medium"
+                  key={item.label}
+                  className="flex items-center justify-between text-sm text-gray-700 font-medium"
                 >
-                  <Check
-                    className="mr-2 h-4 w-4 flex-shrink-0 mt-1"
-                    style={{ color: themeColor }}
-                  />
-                  {item.label}
+                  <span>{item.label}</span>
+                  <span className="font-semibold">{item.value}</span>
                 </li>
               ))}
             </ul>
           )}
 
-          {displayFeatures.length > 0 && (
+          {enabledFlags.length > 0 && (
             <>
               <hr className="border-gray-100 my-2" />
               <ul className="space-y-2">
-                {displayFeatures.map((feature, index) => (
+                {enabledFlags.map((flag) => (
                   <li
-                    key={index}
+                    key={flag.key}
                     className="flex items-start text-sm text-gray-700"
                   >
                     <Check
                       className="mr-2 h-4 w-4 flex-shrink-0 mt-1"
                       style={{ color: themeColor }}
                     />
-                    {feature}
+                    {flag.label}
                   </li>
                 ))}
               </ul>

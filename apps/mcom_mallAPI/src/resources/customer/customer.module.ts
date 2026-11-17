@@ -10,7 +10,6 @@ import { Business } from '../listings/entities/listing.entity';
 import { Review } from '../reviews/entities/review.entity';
 import { Event } from '../events/entities/event.entity';
 import { Offer } from '../offer/entities/offer.entity';
-import { Promotion } from '../promotion/entities/promotion.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { InterestSignal } from '../interest-signals/entities/interest-signal.entity';
 import { PointTransaction } from '../transaction/entities/point-transaction.entity';
@@ -30,7 +29,6 @@ import { EventRsvp } from './entities/event-rsvp.entity';
       Review,
       Event,
       Offer,
-      Promotion,
       Campaign,
       InterestSignal,
       PointTransaction,

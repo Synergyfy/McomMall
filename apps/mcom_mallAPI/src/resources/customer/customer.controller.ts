@@ -31,12 +31,10 @@ import {
   RedeemRewardDto,
   RedeemCodeDto,
   RsvpEventDto,
-  ListCustomerPromotionsQueryDto,
   UpdateChallengeProgressDto,
 } from './dto/customer.dto';
 import {
   CustomerHomeResponseDto,
-  PromotionItemResponseDto,
   CustomerRewardsResponseDto,
   RedeemRewardResponseDto,
   RedeemCodeResponseDto,
@@ -74,24 +72,6 @@ export class CustomerController {
   @ApiInternalServerErrorResponse({ description: 'Unexpected database error' })
   getHome(@CurrentUser() user: User) {
     return this.customerService.getHome(user.id);
-  }
-
-  @Get('promotions')
-  @Roles(UserRole.CUSTOMER, UserRole.OWNER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'List customer-facing promotions feed',
-    description:
-      'Returns a unified promotions feed built from active offers, promotions and neighbourhood campaigns. Filterable by type.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Promotions feed retrieved',
-    type: [PromotionItemResponseDto],
-  })
-  @ApiUnauthorizedResponse({ description: 'Missing or expired JWT token' })
-  getPromotions(@Query() query: ListCustomerPromotionsQueryDto) {
-    return this.customerService.getPromotions(query);
   }
 
   @Get('rewards')
@@ -160,7 +140,7 @@ export class CustomerController {
   @ApiOperation({
     summary: 'Get discover feed for the customer app',
     description:
-      'Aggregates trending businesses, borough campaigns, promotions, upcoming events and the nearby business directory.',
+      'Aggregates trending businesses, borough campaigns, rewards, upcoming events and the nearby business directory.',
   })
   @ApiResponse({
     status: 200,

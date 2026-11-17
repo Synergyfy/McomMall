@@ -22,7 +22,6 @@ import {
   serviceKnownFields,
 } from './schema';
 import { ProductStatusModal } from '../../store/products/components/wizard/lib/ProductStatusModal';
-import { useGetCategories, useGetSubCategoriesByCategory, useGetCategoriesBySector } from '@/service/taxonomy/hook';
 import { cn } from '@/lib/utils';
 
 import { Step1BasicInfo } from './components/Step1BasicInfo';
@@ -142,11 +141,6 @@ function AddServicePageContent() {
     },
   });
 
-  const sectorId = form.watch('sector');
-  const { data: categories } = useGetCategoriesBySector(sectorId);
-  const categoryId = form.watch('category');
-  const { data: subcategories } = useGetSubCategoriesByCategory(categoryId ?? '');
-
   /**
    * Validates only the fields owned by the given step. `trigger` re-runs the
    * resolver but react-hook-form only applies errors for the requested names,
@@ -212,10 +206,6 @@ function AddServicePageContent() {
         regions: data.deliveryConfig.regions?.split(',').map((s: string) => s.trim()).filter(Boolean),
       } : undefined;
 
-      // Taxonomy mapping
-      const categoryName = categories?.find(c => c.id === data.category)?.name || data.category;
-      const subcategoryName = subcategories?.find(s => s.id === data.subcategory)?.name || data.subcategory;
-
       const parseNum = (val: any) => {
         if (val === undefined || val === null || val === '') return undefined;
         const n = parseFloat(val);
@@ -230,8 +220,8 @@ function AddServicePageContent() {
         sector: data.sector,
         shortDesc: data.shortDescription || '',
         fullDesc: data.description || '',
-        category: categoryName || '',
-        subcategory: subcategoryName || '',
+        category: data.category || '',
+        subcategory: data.subcategory || '',
         targetAudience: targetAudience || [],
         tags: tags || [],
         

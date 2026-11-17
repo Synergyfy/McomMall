@@ -14,12 +14,10 @@ import { DiscoverBusinessProfile } from './DiscoverBusinessProfile';
 import { DiscoverFilterPanel } from './DiscoverFilterPanel';
 import {
   useDiscoverBusinesses,
-  useDiscoverPromotions,
   useDiscoverEvents,
   useBoroughCampaigns,
   useHighStreet,
   DiscoverBusiness,
-  DiscoverPromotion,
   DiscoverEvent,
 } from '@/hooks/useDiscover';
 
@@ -106,13 +104,11 @@ export const DiscoverLocal: React.FC = () => {
     limit: 10,
   });
 
-  const { data: apiPromotions, loading: promotionsLoading } = useDiscoverPromotions({ limit: 5 });
   const { data: apiEvents, loading: eventsLoading } = useDiscoverEvents({ tab: 'upcoming', limit: 4 });
   const { data: apiBoroughCampaigns, loading: campaignsLoading } = useBoroughCampaigns(selectedBorough);
   const { data: apiHighStreet, loading: highStreetLoading } = useHighStreet(selectedBorough);
 
   const businesses = apiBusinesses?.items || [];
-  const promotions = apiPromotions?.items || [];
   const events = apiEvents?.items || [];
   const boroughCampaigns = apiBoroughCampaigns || [];
   const highStreet = apiHighStreet || [];
@@ -153,7 +149,7 @@ export const DiscoverLocal: React.FC = () => {
     });
   };
 
-  const handleRedeemPromotion = (id: string, title: string) => {
+  const handleRedeemOffer = (id: string, title: string) => {
     setShowRedeemFlow(id);
     setRedeemStep(0);
   };
@@ -193,10 +189,9 @@ export const DiscoverLocal: React.FC = () => {
         onNavigate={navigateToDetails}
         onToggleFav={toggleFavorite}
         points={points}
-        promotions={promotions}
         events={events}
         rewards={[]}
-        onRedeem={handleRedeemPromotion}
+        onRedeem={handleRedeemOffer}
         onJoinEvent={handleRegisterEvent}
       />;
       case 'trending': return <TrendingTabContent items={businesses.slice(0, 3)} onNavigate={navigateToDetails} />;
@@ -498,7 +493,7 @@ export const DiscoverLocal: React.FC = () => {
           onBack={handleBack}
           onToggleFav={toggleFavorite}
           onToggleFollow={handleToggleFollow}
-          onRedeem={handleRedeemPromotion}
+          onRedeem={handleRedeemOffer}
           onJoinEvent={handleRegisterEvent}
           onCollectReward={handleCollectReward}
           showToast={showToast}
@@ -594,7 +589,7 @@ export const DiscoverLocal: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-[9px] text-[#8e7164] font-medium">Code: {showRedeemFlow?.substring(0, 3).toUpperCase()}{Math.floor(1000 + Math.random() * 9000)}</p>
-                <button onClick={() => { setRedeemStep(3); handleRedeemPromotion(showRedeemFlow, ''); }} className="w-full py-3 bg-[#a14000] text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md">I've Showed This at Store</button>
+                <button onClick={() => { setRedeemStep(3); handleRedeemOffer(showRedeemFlow, ''); }} className="w-full py-3 bg-[#a14000] text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md">I've Showed This at Store</button>
                 <button onClick={() => setRedeemStep(1)} className="w-full py-2 text-[10px] font-bold text-[#5a4136]">Back</button>
               </div>
             )}
@@ -843,10 +838,10 @@ export const DiscoverLocal: React.FC = () => {
 
 /* ===== TAB CONTENT COMPONENTS ===== */
 
-function NearbyTabContent({ businesses, favorites, hoveredCard, onHover, onNavigate, onToggleFav, points, promotions, events, rewards, onRedeem, onJoinEvent }: {
+function NearbyTabContent({ businesses, favorites, hoveredCard, onHover, onNavigate, onToggleFav, points, events, rewards, onRedeem, onJoinEvent }: {
   businesses: any[]; favorites: Record<string, boolean>; hoveredCard: string | null; onHover: (id: string | null) => void;
   onNavigate: (id: string) => void; onToggleFav: (id: string, e?: React.MouseEvent) => void; points: number;
-  promotions: DiscoverPromotion[]; events: DiscoverEvent[]; rewards: any[];
+  events: DiscoverEvent[]; rewards: any[];
   onRedeem: (id: string, title: string) => void; onJoinEvent: (id: string, title: string) => void;
 }) {
   return (
@@ -855,27 +850,11 @@ function NearbyTabContent({ businesses, favorites, hoveredCard, onHover, onNavig
       <div className="bg-[#a14000] text-white p-5 rounded-2xl relative overflow-hidden">
         <div className="relative z-10">
           <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Live Near You</span>
-          <h3 className="text-lg font-extrabold mt-1">{promotions.length} Active Offers Nearby</h3>
-          <p className="text-xs text-orange-100 mt-1">Rewards, flash deals & more within 1km</p>
+          <h3 className="text-lg font-extrabold mt-1">{rewards.length} Rewards Available Nearby</h3>
+          <p className="text-xs text-orange-100 mt-1">Redeem points for rewards at checkout</p>
         </div>
         <div className="absolute -right-6 -bottom-6 opacity-10">
           <MapPin className="w-24 h-24" />
-        </div>
-      </div>
-      {/* Promotions Strip */}
-      <div className="-mx-5 overflow-x-auto no-scrollbar px-5">
-        <div className="flex gap-3 pb-2">
-          {promotions.map(p => (
-            <button key={p.id} onClick={() => onRedeem(p.id, p.title)}
-              className="flex-shrink-0 w-48 bg-white rounded-2xl p-4 border border-[#e2bfb0]/30 shadow-sm text-left hover:shadow-md transition-all active:scale-95">
-              <span className="text-[9px] font-bold text-[#a14000] bg-[#ff9969]/20 px-2 py-0.5 rounded-full">{p.value || 'OFFER'}</span>
-              <p className="text-sm font-bold text-[#261812] mt-2">{p.title}</p>
-              <p className="text-[10px] text-[#5a4136] mt-0.5">{p.business?.businessName || 'Business'}</p>
-              <p className="text-[9px] text-red-500 font-semibold mt-2 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {p.expiryText || 'Limited time'}
-              </p>
-            </button>
-          ))}
         </div>
       </div>
       {/* Nearby Stores */}
@@ -980,7 +959,7 @@ function TrendingTabContent({ items, onNavigate }: { items: DiscoverBusiness[]; 
       <div className="bg-gradient-to-r from-[#a14000] to-[#ff6900] text-white p-5 rounded-2xl">
         <TrendingUp className="w-6 h-6 mb-2" />
         <h3 className="text-lg font-extrabold">Trending in Your Borough</h3>
-        <p className="text-xs text-orange-100 mt-1">Popular businesses and promotions right now</p>
+        <p className="text-xs text-orange-100 mt-1">Popular businesses and offers right now</p>
       </div>
       {items.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center border border-[#e2bfb0]/30">
@@ -1092,13 +1071,13 @@ function HighStreetTabContent({ streets, showToast }: { streets: any[]; showToas
       <div className="bg-gradient-to-r from-[#a14000] to-[#ff6900] text-white p-5 rounded-2xl">
         <Store className="w-6 h-6 mb-2" />
         <h3 className="text-lg font-extrabold">High Street Activity</h3>
-        <p className="text-xs text-orange-100 mt-1">Active storefronts, live campaigns & walk-in promotions</p>
+        <p className="text-xs text-orange-100 mt-1">Active storefronts, live campaigns & walk-in deals</p>
       </div>
       {streets.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center border border-[#e2bfb0]/30">
           <Store className="w-8 h-8 text-[#8e7164] mx-auto mb-2" />
           <p className="text-xs font-bold text-[#5a4136]">No High Street Activity</p>
-          <p className="text-[10px] text-[#8e7164] mt-1">Check back for high street promotions</p>
+          <p className="text-[10px] text-[#8e7164] mt-1">Check back for high street activity</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -1123,19 +1102,6 @@ function HighStreetTabContent({ streets, showToast }: { streets: any[]; showToas
           ))}
         </div>
       )}
-      {/* Walk-in Promotions */}
-      <div className="bg-white rounded-2xl p-5 border border-[#e2bfb0]/30">
-        <h4 className="text-sm font-bold text-[#261812] mb-3">Walk-in Promotions</h4>
-        <div className="grid grid-cols-2 gap-3">
-          {['20% Off First Visit', 'Free Coffee with Walk-in', 'Double Points Today', 'Free Trial Session'].map((p, i) => (
-            <div key={i} className="bg-[#fff1ec] rounded-xl p-3 text-center">
-              <QrCode className="w-5 h-5 text-[#a14000] mx-auto mb-1" />
-              <p className="text-[10px] font-bold text-[#261812]">{p}</p>
-              <span className="text-[8px] text-[#5a4136]">QR required</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

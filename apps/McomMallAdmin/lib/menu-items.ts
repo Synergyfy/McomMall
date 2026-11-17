@@ -101,8 +101,8 @@ export const serviceMenuItems: MenuItem[] = [
 
 export const historyMenuItems: MenuItem[] = [
   {
-    title: 'Promotion History',
-    href: '/dashboard/history/promotion-history',
+    title: 'Reward History',
+    href: '/dashboard/history/reward-history',
     icon: History,
   },
 ];

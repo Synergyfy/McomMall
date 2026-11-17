@@ -20,17 +20,6 @@ export interface DiscoverBusiness {
   longitude?: number;
 }
 
-export interface DiscoverPromotion {
-  id: string;
-  title: string;
-  description: string;
-  business?: { businessName: string };
-  value?: string;
-  expiryText?: string;
-  startDate: string;
-  endDate: string;
-}
-
 export interface DiscoverEvent {
   id: string;
   title: string;
@@ -65,7 +54,6 @@ export interface DiscoverReward {
 
 export interface DiscoverHomeFeed {
   businesses: DiscoverBusiness[];
-  promotions: DiscoverPromotion[];
   events: DiscoverEvent[];
   rewards: DiscoverReward[];
 }
@@ -165,35 +153,6 @@ export function useDiscoverEvents(params?: {
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch events');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
-
-  return { data, loading, error, refetch: fetch };
-}
-
-export function useDiscoverPromotions(params?: {
-  limit?: number;
-}) {
-  const [data, setData] = useState<PaginatedResponse<DiscoverPromotion> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const paramsRef = useRef(params);
-  paramsRef.current = params;
-
-  const fetch = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/discover/promotions', { params: paramsRef.current });
-      setData(response.data);
-      setError(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch promotions');
     } finally {
       setLoading(false);
     }

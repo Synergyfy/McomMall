@@ -24,6 +24,7 @@ import { PartnerInstrumentsModule } from '../partner-instruments/partner-instrum
 import { CouponModule } from '../coupon/coupon.module';
 import { GiftCardModule } from '../gift-card/gift-card.module';
 import { VoucherModule } from '../voucher/voucher.module';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { VoucherModule } from '../voucher/voucher.module';
     forwardRef(() => CouponModule),
     forwardRef(() => GiftCardModule),
     forwardRef(() => VoucherModule),
+    LoyaltyModule,
   ],
   controllers: [BookingController],
   providers: [BookingService],

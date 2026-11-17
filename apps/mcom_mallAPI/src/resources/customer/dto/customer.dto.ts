@@ -38,51 +38,6 @@ export class RsvpEventDto {
   eventId: string;
 }
 
-export enum CustomerPromotionFilter {
-  ALL = 'all',
-  NEARBY = 'nearby',
-  FLASH = 'flash',
-  BOROUGH = 'borough',
-  SAVED = 'saved',
-  EXPIRING = 'expiring',
-}
-
-export class ListCustomerPromotionsQueryDto {
-  @ApiProperty({
-    description: 'Filter promotions by type',
-    enum: CustomerPromotionFilter,
-    required: false,
-    default: CustomerPromotionFilter.ALL,
-  })
-  @IsOptional()
-  @IsEnum(CustomerPromotionFilter)
-  type?: CustomerPromotionFilter;
-
-  @ApiProperty({
-    description: 'Latitude for nearby filtering',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  lat?: string;
-
-  @ApiProperty({
-    description: 'Longitude for nearby filtering',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  lng?: string;
-
-  @ApiProperty({
-    description: 'Borough name for filtering',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  borough?: string;
-}
-
 export class UpdateChallengeProgressDto {
   @ApiProperty({ example: 50, minimum: 0 })
   @IsNumber()

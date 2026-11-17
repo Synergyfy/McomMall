@@ -126,7 +126,6 @@ const DashboardPage: FC = () => {
         setActiveTab={(tab) => {
           if (tab === 'home') router.push('/dashboard');
           else if (tab === 'discover') router.push('/dashboard/discover');
-          else if (tab === 'promotions') router.push('/dashboard/promotions');
           else if (tab === 'rewards') router.push('/dashboard/rewards');
           else if (tab === 'profile') router.push('/dashboard/my-profile');
         }}

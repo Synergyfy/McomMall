@@ -13,6 +13,7 @@ import {
   Lock
 } from 'lucide-react';
 import api from '@/service/api';
+import { pickCentralBusiness } from '@/lib/central-business';
 
 // ─── VISIBILITY SETTINGS SCREEN ──────────────────────────────────────────────
 interface VisibilitySettingsScreenProps {
@@ -30,8 +31,10 @@ export const VisibilitySettingsScreen: FC<VisibilitySettingsScreenProps> = ({
 
   const fetchSettings = async () => {
     try {
-      const profileRes = await api.get('businesses/my-profile');
-      const biz = profileRes.data;
+      const profileRes = await api.get('listings/mine', {
+        params: { page: 1, limit: 10 },
+      });
+      const biz = pickCentralBusiness<any>(profileRes.data?.data);
       if (biz?.id) {
         setMyBusiness(biz);
         const settingsRes = await api.get(`visibility/${biz.id}`);
@@ -137,8 +140,10 @@ export const AudienceSettingsScreen: FC<AudienceSettingsScreenProps> = ({
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const profileRes = await api.get('businesses/my-profile');
-        const biz = profileRes.data;
+        const profileRes = await api.get('listings/mine', {
+          params: { page: 1, limit: 10 },
+        });
+        const biz = pickCentralBusiness<any>(profileRes.data?.data);
         if (biz?.id) {
           setMyBusiness(biz);
           const settingsRes = await api.get(`visibility/${biz.id}`);
@@ -225,13 +230,11 @@ export const BoostVisibilityScreen: FC<BoostVisibilityScreenProps> = ({
       if (res.data?.url) {
         window.location.href = res.data.url;
       } else {
-        alert('Stripe redirect url missing, using sandbox approval.');
-        onNavigate('visibility');
+        alert('Could not start the boost checkout. Please try again.');
       }
     } catch (err) {
       console.error('Error initiating stripe payment checkout:', err);
-      alert('Sandbox Mode: Boost payment simulated successfully!');
-      onNavigate('visibility');
+      alert('Could not start the boost checkout. Please try again.');
     } finally {
       setBoosting(false);
     }

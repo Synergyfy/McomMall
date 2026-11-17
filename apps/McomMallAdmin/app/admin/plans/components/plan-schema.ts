@@ -9,7 +9,6 @@ import {
 } from '@/app/admin/types/plan';
 
 const quotaSchema = z.object({
-  maxListings: z.coerce.number().min(0),
   allowProductListing: z.boolean(),
   allowServiceListing: z.boolean(),
   maxProducts: z.coerce.number().min(0),
@@ -76,7 +75,6 @@ export const VARIANT_HINTS: Record<PlanTier, string> = {
 
 export const DEFAULT_CONFIGURATION = {
   quotas: {
-    maxListings: 10,
     allowProductListing: true,
     allowServiceListing: true,
     maxProducts: 5,

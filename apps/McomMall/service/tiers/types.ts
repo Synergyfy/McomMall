@@ -1,5 +1,4 @@
 export interface TierQuotas {
-  maxListings: number;
   maxProducts: number;
   maxServices: number;
   maxCouponTemplates: number;

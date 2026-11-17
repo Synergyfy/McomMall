@@ -58,14 +58,6 @@ export const BUSINESS_ACTIVITY_TASKS: MockTaskDefinition[] = [
     timer: 'TRIAL',
   },
   {
-    key: 'CREATE_PROMOTION',
-    title: 'Launch a promotion',
-    description:
-      'Create a promotion to attract nearby customers to your business.',
-    url: '/dashboard/promotions/new',
-    timer: 'TRIAL',
-  },
-  {
     key: 'CREATE_COUPON',
     title: 'Create your first coupon',
     description: 'Set up a coupon to drive repeat visits and loyalty.',
@@ -102,14 +94,12 @@ export const BUSINESS_ACTIVITY_TASKS: MockTaskDefinition[] = [
 // capability API. Keep usage low so the demo tasks are actionable.
 export const MOCK_CAPABILITY_CONFIG = {
   quotas: {
-    maxListings: 5,
     maxProducts: 10,
     maxCouponTemplates: 5,
   },
 };
 
 export const MOCK_CAPABILITY_USAGE = {
-  currentListings: 0,
   currentProducts: 0,
   currentCoupons: 0,
 };

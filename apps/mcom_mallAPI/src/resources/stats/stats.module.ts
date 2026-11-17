@@ -13,7 +13,6 @@ import { Product } from '../product/entities/product.entity';
 import { Service } from '../services/entities/service.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
-import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
 import { UsersModule } from '../users/users.module';
 import { OrderModule } from '../order/order.module';
 import { GiftCardModule } from '../gift-card/gift-card.module';
@@ -24,7 +23,6 @@ import { ProductModule } from '../product/product.module';
 import { ServicesModule } from '../services/services.module';
 import { ListingsModule } from '../listings/listings.module';
 import { BookingModule } from '../booking/booking.module';
-import { PromotionModule } from '../promotion/promotion.module';
 import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
@@ -41,7 +39,6 @@ import { WalletModule } from '../wallet/wallet.module';
       Service,
       Business,
       ServiceBooking,
-      PromotionParticipant,
     ]),
     UsersModule,
     OrderModule,
@@ -53,7 +50,6 @@ import { WalletModule } from '../wallet/wallet.module';
     ServicesModule,
     ListingsModule,
     BookingModule,
-    PromotionModule,
     forwardRef(() => WalletModule),
   ],
   controllers: [StatsController],

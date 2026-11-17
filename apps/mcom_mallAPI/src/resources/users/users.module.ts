@@ -6,9 +6,8 @@ import { User } from './entities/user.entity';
 import { HashService } from '../../common/hash/hash.service';
 import { Social } from './entities/social.entity';
 import { Transaction } from '../transaction/entities/transaction.entity';
-import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
-import { PromotionActivity } from '../promotion/entities/promotion-activity.entity';
 import { Offer } from '../offer/entities/offer.entity';
+import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 import { EmailModule } from '../email/email.module';
 import { ServiceProviderProfile } from '../service-provider-profile/entities/service-provider-profile.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
@@ -23,9 +22,8 @@ import { PlansModule } from '../plans/plans.module';
       ServiceProviderProfile,
       Social,
       Transaction,
-      PromotionParticipant,
-      PromotionActivity,
       Offer,
+      PointTransaction,
       Wallet,
     ]),
     EmailModule,

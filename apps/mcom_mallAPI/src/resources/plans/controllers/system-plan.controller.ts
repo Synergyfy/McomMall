@@ -60,10 +60,6 @@ export class SystemPlanController {
   getSchema() {
     return {
       quotas: {
-        maxListings: {
-          type: 'number',
-          description: 'Maximum listings allowed (-1 for unlimited)',
-        },
         allowProductListing: {
           type: 'boolean',
           description: 'Whether product listings are allowed',

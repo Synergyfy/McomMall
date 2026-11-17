@@ -7,7 +7,6 @@ import {
   Settings,
   ShoppingBag,
   Star,
-  Store,
   Ticket,
   Wallet,
   type LucideIcon,
@@ -27,7 +26,6 @@ export interface UserMenuLink {
  */
 const BUSINESS_LINKS: UserMenuLink[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Storefront', href: '/dashboard/storefront', icon: Store },
   { title: 'Products', href: '/dashboard/store/products', icon: Package },
   { title: 'Orders', href: '/dashboard/store/orders', icon: ShoppingBag },
   { title: 'Bookings', href: '/dashboard/bookings', icon: Calendar },

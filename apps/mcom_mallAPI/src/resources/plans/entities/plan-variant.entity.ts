@@ -14,7 +14,6 @@ import { PlanPrice } from './plan-price.entity';
 import { PlanVariantFeature } from './plan-variant-feature.entity';
 
 export interface PlanVariantQuotas {
-  maxListings: number;
   allowProductListing: boolean;
   allowServiceListing: boolean;
   maxProducts: number;
@@ -70,7 +69,7 @@ export class PlanVariant extends AbstractBaseEntity {
 
   @ApiProperty({
     description: 'Display-only bullet list for pricing pages',
-    example: ['Priority support', '10 listings'],
+    example: ['Priority support', 'Advanced analytics'],
     nullable: true,
   })
   @Column({ type: 'simple-array', nullable: true })

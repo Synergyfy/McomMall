@@ -5,7 +5,6 @@ import {
   DollarSign,
   ShoppingBag,
   Gift,
-  Tag,
   Users,
   Wallet,
   Package,
@@ -14,7 +13,6 @@ import {
   Star,
   Ticket,
   ShoppingCart,
-  Handshake,
   Book,
 } from "lucide-react";
 import {
@@ -52,13 +50,6 @@ const OwnerStatsMap: StatItemConfig[] = [
     label: "Gift Card Sales",
     icon: Gift,
     color: "text-blue-500",
-    isCurrency: true,
-  },
-  {
-    key: "totalAmountSpentForPromotions",
-    label: "Promotion Spending",
-    icon: Tag,
-    color: "text-rose-500",
     isCurrency: true,
   },
   {
@@ -133,13 +124,6 @@ const CustomerStatsMap: StatItemConfig[] = [
     label: "Services Booked",
     icon: Book,
     color: "text-purple-500",
-    isCurrency: false,
-  },
-  {
-    key: "totalNumberOfPromotionsParticipating",
-    label: "Promotions Joined",
-    icon: Handshake,
-    color: "text-amber-500",
     isCurrency: false,
   },
   {

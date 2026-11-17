@@ -99,8 +99,8 @@ export default function VoucherDashboard() {
       {/* Top Header */}
       <div className="flex justify-between items-center pb-4 border-b border-[#e2bfb0]/30">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-primary">Vouchers & Coupons</h1>
-          <p className="text-sm text-[#5f5e5e] font-medium mt-1">Design, distribute, and track your local merchant vouchers</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">Vouchers</h1>
+          <p className="text-sm text-[#5f5e5e] font-medium mt-1">Create, distribute, and track your local merchant vouchers</p>
         </div>
         <div className="flex items-center gap-4">
           <button 
@@ -108,7 +108,7 @@ export default function VoucherDashboard() {
             className="hidden md:flex items-center gap-2 px-6 py-3 bg-primary-container text-white rounded-full font-bold text-xs shadow-md hover:scale-105 active:scale-95 transition-all"
           >
             <PlusCircle size={16} />
-            Start Designing
+            Create Voucher
           </button>
         </div>
       </div>
@@ -292,7 +292,7 @@ export default function VoucherDashboard() {
                 onClick={() => router.push('/dashboard/vouchers/new')}
                 className="px-6 py-3 bg-primary-container text-white font-bold rounded-full text-xs shadow-md hover:scale-105 active:scale-95 transition-all"
               >
-                Create Campaign
+                Create Voucher
               </button>
             </motion.div>
           )}

@@ -6,7 +6,6 @@ import { PlanTier } from '../../resources/plans/enums/plan-tier.enum';
 import { CreatePlanDto } from '../../resources/plans/dto/create-plan.dto';
 
 interface QuotaOverrides {
-  maxListings?: number;
   allowProductListing?: boolean;
   allowServiceListing?: boolean;
   maxProducts?: number;
@@ -32,7 +31,6 @@ function configuration(
 ) {
   return {
     quotas: {
-      maxListings: 10,
       allowProductListing: true,
       allowServiceListing: true,
       maxProducts: 10,
@@ -74,7 +72,6 @@ const PLANS: CreatePlanDto[] = [
         features: ['25 listings', '180 days access', 'Priority in search'],
         configuration: configuration(
           {
-            maxListings: 25,
             maxProducts: 25,
             maxServices: 25,
             maxImagesPerListing: 5,
@@ -97,7 +94,6 @@ const PLANS: CreatePlanDto[] = [
         ],
         configuration: configuration(
           {
-            maxListings: 50,
             maxProducts: 50,
             maxServices: 50,
             maxImagesPerListing: 10,
@@ -127,7 +123,6 @@ const PLANS: CreatePlanDto[] = [
         features: ['25 listings', '90 days access', 'Priority in search'],
         configuration: configuration(
           {
-            maxListings: 25,
             maxProducts: 25,
             maxServices: 25,
             maxImagesPerListing: 5,
@@ -150,7 +145,6 @@ const PLANS: CreatePlanDto[] = [
         ],
         configuration: configuration(
           {
-            maxListings: 60,
             maxProducts: 60,
             maxServices: 60,
             maxImagesPerListing: 10,
@@ -177,7 +171,6 @@ const PLANS: CreatePlanDto[] = [
         ],
         configuration: configuration(
           {
-            maxListings: 120,
             maxProducts: 120,
             maxServices: 120,
             maxImagesPerListing: 15,
@@ -208,7 +201,6 @@ const PLANS: CreatePlanDto[] = [
         features: ['60 listings', '90 days access', 'Advanced analytics'],
         configuration: configuration(
           {
-            maxListings: 60,
             maxProducts: 60,
             maxServices: 60,
             maxImagesPerListing: 10,
@@ -231,7 +223,6 @@ const PLANS: CreatePlanDto[] = [
         ],
         configuration: configuration(
           {
-            maxListings: 150,
             maxProducts: 150,
             maxServices: 150,
             maxImagesPerListing: 15,
@@ -258,7 +249,6 @@ const PLANS: CreatePlanDto[] = [
         ],
         configuration: configuration(
           {
-            maxListings: 500,
             maxProducts: 300,
             maxServices: 300,
             maxImagesPerListing: 20,

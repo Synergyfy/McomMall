@@ -119,47 +119,6 @@ export class CustomerHomeResponseDto {
   nearbyDeals: NearbyDealDto[];
 }
 
-export class PromotionItemResponseDto {
-  @ApiProperty({ example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
-  id: string;
-
-  @ApiProperty({ example: '50% Off All Burgers' })
-  title: string;
-
-  @ApiProperty({ example: 'Grill House NYC' })
-  businessName: string;
-
-  @ApiProperty({ example: '50% OFF' })
-  benefitValue: string;
-
-  @ApiProperty({ example: 'Massive flash sale' })
-  description: string;
-
-  @ApiProperty({ example: 'Massive flash sale, today only.' })
-  longDescription: string;
-
-  @ApiPropertyOptional({ example: 'Manhattan', nullable: true })
-  borough?: string | null;
-
-  @ApiPropertyOptional({ example: '2026-09-30T23:59:59.000Z', nullable: true })
-  expiresAt?: Date | null;
-
-  @ApiProperty({ example: 'Ends in 2h 15m' })
-  expiryText: string;
-
-  @ApiProperty({ example: 'flash' })
-  promotionType: string;
-
-  @ApiPropertyOptional({
-    example: 'https://cdn.example.com/banner.png',
-    nullable: true,
-  })
-  image?: string | null;
-
-  @ApiProperty({ example: true })
-  isActive: boolean;
-}
-
 export class RewardResponseDto {
   @ApiProperty({ example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
   id: string;
@@ -537,7 +496,7 @@ export class DiscoverResponseDto {
   boroughCampaigns: DiscoverCampaignDto[];
 
   @ApiProperty({ type: [NearbyDealDto] })
-  promotions: NearbyDealDto[];
+  rewards: NearbyDealDto[];
 
   @ApiProperty({ type: [CustomerEventsResponseDto] })
   events: CustomerEventsResponseDto[];

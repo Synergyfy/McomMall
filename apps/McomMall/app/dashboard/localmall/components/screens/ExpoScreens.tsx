@@ -130,7 +130,7 @@ export const VirtualBoothSetupScreen: FC<VirtualBoothSetupScreenProps> = ({
     setSuccess(false);
 
     try {
-      // Mock Booth saving by saving settings in local storage/submitting to support ticketing
+      // Booth setup requests are logged as support tickets for the MCOM team.
       await api.post('support-tickets', {
         subject: `Virtual Booth Setup Request: ${boothTitle}`,
         description: `Booth Banner URL: ${bannerUrl}`,
@@ -158,7 +158,7 @@ export const VirtualBoothSetupScreen: FC<VirtualBoothSetupScreenProps> = ({
             <label className="text-[10px] font-bold text-gray-400 uppercase">Booth Name</label>
             <input 
               type="text"
-              placeholder="e.g. Greenwich Artisan Bread Stall"
+              placeholder="e.g. Local Artisan Bread Stall"
               value={boothTitle}
               onChange={(e) => setBoothTitle(e.target.value)}
               className="px-3.5 py-3 bg-gray-50 border border-gray-150 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-800"

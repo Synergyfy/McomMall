@@ -19,7 +19,6 @@ import { PartnershipRequest } from '../partnership/entities/partnership-request.
 import { PartnershipRequestStatus } from '../partnership/partnership.enum';
 import { ActivitiesService } from '../activities/activities.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-import { PromotionService } from '../promotion/promotion.service';
 import { OrderItem } from '../order/entities/order-item.entity';
 import {
   CapabilityService,
@@ -29,6 +28,7 @@ import { ProductSearchDto } from './dto/product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { UserRole } from '../../common/role.enum';
+import { resolveBusinessTaxonomy } from '../../common/taxonomy/business-taxonomy';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -43,8 +43,6 @@ export class ProductService {
     @InjectRepository(PartnershipRequest)
     private partnershipRequestRepository: Repository<PartnershipRequest>,
     private readonly activitiesService: ActivitiesService,
-    @Inject(forwardRef(() => PromotionService))
-    private readonly promotionService: PromotionService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
   ) {}
@@ -72,6 +70,20 @@ export class ProductService {
     const { serviceProviderId, ...restOfDto } = createProductDto;
     // Admin moderation is not writable by merchants, even if they send it.
     delete (restOfDto as Record<string, unknown>).adminDisabled;
+
+    // Classification is owned by the MCOM Central business profile. Always
+    // prefer the synced business taxonomy over whatever the client sent.
+    const taxonomy = resolveBusinessTaxonomy(business);
+    if (taxonomy.sector) restOfDto.sector = taxonomy.sector;
+    if (taxonomy.category) restOfDto.category = taxonomy.category;
+    if (taxonomy.subCategory) restOfDto.subCategory = taxonomy.subCategory;
+
+    if (!restOfDto.category) {
+      throw new BadRequestException(
+        'Your MCOM Central business profile needs a category before you can add a product.',
+      );
+    }
+
     let serviceProvider: User | undefined;
 
     if (serviceProviderId) {
@@ -186,7 +198,13 @@ export class ProductService {
   async findOne(id: string) {
     const product = await this.productRepository.findOne({
       where: { id },
-      relations: ['business', 'business.user'],
+      relations: [
+        'business',
+        'business.user',
+        'business.sector',
+        'business.category',
+        'business.subCategory',
+      ],
     });
     if (!product) {
       return null;
@@ -247,6 +265,12 @@ export class ProductService {
     const { serviceProviderId, ...restOfDto } = updateProductDto;
     // Admin moderation is not writable by merchants, even if they send it.
     delete (restOfDto as Record<string, unknown>).adminDisabled;
+
+    // Keep the product aligned with the MCOM Central business classification.
+    const taxonomy = resolveBusinessTaxonomy(product.business);
+    if (taxonomy.sector) restOfDto.sector = taxonomy.sector;
+    if (taxonomy.category) restOfDto.category = taxonomy.category;
+    if (taxonomy.subCategory) restOfDto.subCategory = taxonomy.subCategory;
 
     if (restOfDto.variations && restOfDto.variations.length > 0) {
       restOfDto.variations = restOfDto.variations.map((v) => ({
@@ -385,28 +409,6 @@ export class ProductService {
       skip: (page - 1) * limit,
       take: limit,
     });
-
-    if (user) {
-      const userPromotions = await this.promotionService.findUserPromotions(
-        user.id,
-      );
-
-      for (const product of data) {
-        let totalPoints = 0;
-        for (const promotion of userPromotions) {
-          if (
-            this.promotionService.isProductQualified(
-              product,
-              promotion,
-              product.business,
-            )
-          ) {
-            totalPoints += promotion.bonusPoints || 0;
-          }
-        }
-        (product as any).points = totalPoints;
-      }
-    }
 
     return {
       data,

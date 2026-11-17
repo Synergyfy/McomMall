@@ -73,7 +73,6 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
   const taskLabels: Record<keyof TrialTasks, string> = {
     createdBusiness: 'Create a business',
     createdProductOrService: 'Create a product or service',
-    createdPromotion: 'Create a promotion',
     createdOffer: 'Create an offer',
     createdCoupon: 'Create a coupon',
   };

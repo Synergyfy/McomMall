@@ -8,11 +8,14 @@ import { useGetMyMembership } from '@/service/membership/hooks';
 import { useGetPlans } from '@/service/plans/hooks';
 import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
 import {
+  PLAN_FEATURE_FLAGS,
   Plan,
   PlanTierLevelName,
   PlanVariant,
   formatPlanPrice,
   getActivePrice,
+  getEnabledPlanFeatureFlags,
+  getPlanQuotaFeatures,
   getPriceAmount,
   getTierLabel,
   getVariantDurationLabel,
@@ -176,6 +179,10 @@ export default function MembershipPlansDashboard() {
         getPriceAmount(getActivePrice(b.variant)),
     );
 
+  const quotaLabels = sortedEntries[0]
+    ? getPlanQuotaFeatures(sortedEntries[0].variant).map((item) => item.label)
+    : [];
+
   const scrollToPlans = () => {
     document.getElementById('plans-container')?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -309,10 +316,6 @@ export default function MembershipPlansDashboard() {
               </h5>
               <div className="space-y-2">
                 <div className="flex justify-between py-2 border-b border-gray-100 text-xs">
-                  <span className="font-semibold text-gray-700">Listings</span>
-                  <span className="text-emerald-600 font-bold">Up to {privilegeQuotas.maxListings}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-100 text-xs">
                   <span className="font-semibold text-gray-700">Products & Services</span>
                   <span className="text-emerald-600 font-bold">
                     {privilegeQuotas.maxProducts} products · {privilegeQuotas.maxServices} services
@@ -419,6 +422,8 @@ export default function MembershipPlansDashboard() {
           const price = getActivePrice(variant);
           const amount = getPriceAmount(price);
           const duration = getVariantDurationLabel(variant);
+          const quotaFeatures = getPlanQuotaFeatures(variant);
+          const enabledFlags = getEnabledPlanFeatureFlags(variant);
 
           return (
             <div
@@ -455,21 +460,33 @@ export default function MembershipPlansDashboard() {
                 </span>
 
                 <div className="mt-6 border-t border-gray-100 pt-5 space-y-3.5">
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Features:</span>
-                  <ul className="space-y-2.5">
-                    {(variant.features ?? []).slice(0, 5).map((feature, idx) => (
-                      <li key={idx} className="flex gap-2 items-start text-xs text-gray-500">
-                        <CheckCircle2 className="w-4 h-4 text-[#ff6900] shrink-0 mt-0.5" />
-                        <span className="leading-relaxed">{feature}</span>
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">Included:</span>
+                  <ul className="space-y-2">
+                    {quotaFeatures.map((item) => (
+                      <li
+                        key={item.label}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <span className="text-gray-500">{item.label}</span>
+                        <span className="font-semibold text-gray-800">
+                          {item.value}
+                        </span>
                       </li>
                     ))}
-                    <li className="flex gap-2 items-start text-xs text-gray-500">
-                      <CheckCircle2 className="w-4 h-4 text-[#ff6900] shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">
-                        Up to {variant.configuration?.quotas?.maxListings ?? 0} listings
-                      </span>
-                    </li>
                   </ul>
+                  {enabledFlags.length > 0 && (
+                    <ul className="space-y-2 border-t border-gray-100 pt-3">
+                      {enabledFlags.map((flag) => (
+                        <li
+                          key={flag.key}
+                          className="flex gap-2 items-start text-xs text-gray-600"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-[#ff6900] shrink-0 mt-0.5" />
+                          <span className="leading-relaxed">{flag.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
 
@@ -530,36 +547,24 @@ export default function MembershipPlansDashboard() {
                   </td>
                 ))}
               </tr>
-              {[
-                { label: 'Listings', get: (variant: PlanVariant) => `${variant.configuration?.quotas?.maxListings ?? 0}` },
-                { label: 'Products', get: (variant: PlanVariant) => `${variant.configuration?.quotas?.maxProducts ?? 0}` },
-                { label: 'Services', get: (variant: PlanVariant) => `${variant.configuration?.quotas?.maxServices ?? 0}` },
-                { label: 'Images Per Listing', get: (variant: PlanVariant) => `${variant.configuration?.quotas?.maxImagesPerListing ?? 0}` },
-                { label: 'Gift Card Templates', get: (variant: PlanVariant) => `${variant.configuration?.quotas?.maxGiftCardTemplates ?? 0}` },
-                { label: 'Coupon Templates', get: (variant: PlanVariant) => `${variant.configuration?.quotas?.maxCouponTemplates ?? 0}` },
-                { label: 'Loyalty Programs', get: (variant: PlanVariant) => `${variant.configuration?.quotas?.maxLoyaltyPrograms ?? 0}` },
-                { label: 'Featured Slots', get: (variant: PlanVariant) => `${variant.configuration?.quotas?.featuredListingAllowance ?? 0}` },
-              ].map((row) => (
-                <tr key={row.label} className="hover:bg-gray-50/50">
-                  <td className="py-4 font-semibold text-gray-700">{row.label}</td>
+              {quotaLabels.map((label) => (
+                <tr key={label} className="hover:bg-gray-50/50">
+                  <td className="py-4 font-semibold text-gray-700">{label}</td>
                   {sortedEntries.map(({ plan, variant }) => (
                     <td key={plan.id} className="py-4 px-4 text-center font-medium text-gray-800">
-                      {row.get(variant)}
+                      {getPlanQuotaFeatures(variant).find(
+                        (item) => item.label === label,
+                      )?.value ?? '—'}
                     </td>
                   ))}
                 </tr>
               ))}
-              {[
-                { label: 'Priority In Search', key: 'priorityInSearch' },
-                { label: 'Advanced Analytics', key: 'advancedAnalytics' },
-                { label: 'Dedicated Support', key: 'dedicatedSupport' },
-                { label: 'Custom Branding', key: 'allowCustomBranding' },
-              ].map((row) => (
+              {PLAN_FEATURE_FLAGS.map((row) => (
                 <tr key={row.label} className="hover:bg-gray-50/50">
                   <td className="py-4 font-semibold text-gray-700">{row.label}</td>
                   {sortedEntries.map(({ plan, variant }) => {
                     const enabled =
-                      (variant?.configuration?.featureFlags as Record<string, boolean> | undefined)?.[row.key] ?? false;
+                      variant.configuration?.featureFlags?.[row.key] ?? false;
                     return (
                       <td key={plan.id} className="py-4 px-4 text-center">
                         {enabled ? (

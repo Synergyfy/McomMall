@@ -109,6 +109,11 @@ export class Service extends AbstractBaseEntity {
   @Column({ default: false })
   isQuoteModel: boolean;
 
+  /** Inherited from the business profile synced from MCOM Central. */
+  @Column({ nullable: true })
+  @ApiProperty({ description: 'Sector', example: 'Home Improvement' })
+  sector: string;
+
   @Column({ nullable: true })
   @ApiProperty({ description: 'Category', example: 'Home Services' })
   category: string;

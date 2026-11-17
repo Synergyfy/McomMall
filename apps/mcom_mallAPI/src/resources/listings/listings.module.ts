@@ -21,7 +21,6 @@ import { ListingsGoogleController } from './listings-google.controller';
 import { GooglePlacesService } from './google-places.service';
 import { ServicesModule } from '../services/services.module';
 import { ActivitiesModule } from '../activities/activities.module';
-import { PromotionModule } from '../promotion/promotion.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { LocalMallModule } from '../localmall/localmall.module';
 
@@ -50,7 +49,6 @@ import { LocalMallModule } from '../localmall/localmall.module';
     }),
     ServicesModule,
     ActivitiesModule,
-    forwardRef(() => PromotionModule),
   ],
   controllers: [ListingsController, ListingsGoogleController],
   providers: [ListingsService, GooglePlacesService],

@@ -19,7 +19,6 @@ export class AdminActivitiesService {
         'service',
         'order',
         'booking',
-        'promotion',
       ],
     });
   }

@@ -1,6 +1,8 @@
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
+  IsObject,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -139,64 +141,63 @@ export class UpdateLoyaltyRuleDto {
   isActive?: boolean;
 }
 
-export class UpdateLoyaltySettingsDto {
+export class UpsertLoyaltyEarningConfigDto {
   @IsOptional()
-  isEnabled?: boolean;
+  @IsBoolean()
+  isActive?: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  earnOnProducts?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  earnOnServices?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
-  @IsOptional()
   pointsPerCurrency?: number;
 
-  @IsInt()
-  @Min(1)
   @IsOptional()
-  pointsMultiplier?: number;
-
   @IsInt()
   @Min(0)
-  @IsOptional()
-  signupBonusPoints?: number;
+  fixedPointsPerOrder?: number;
 
-  @IsString()
   @IsOptional()
-  redemptionApproval?: string;
+  minSpend?: number;
 
-  @IsString()
   @IsOptional()
-  terms?: string;
-
-  @IsString()
-  @IsOptional()
-  programName?: string;
-
-  @IsString()
-  @IsOptional()
-  brandColor?: string;
-
-  @IsString()
-  @IsOptional()
-  accentColor?: string;
-
-  @IsString()
-  @IsOptional()
-  logoUrl?: string;
-
-  @IsString()
-  @IsOptional()
-  heroImageUrl?: string;
-
-  @ApiPropertyOptional({ type: [LoyaltyTierDto] })
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => LoyaltyTierDto)
-  @IsOptional()
-  tierConfig?: LoyaltyTierDto[];
-
-  @IsString()
-  @IsOptional()
-  redemptionMode?: string;
+  @IsUUID('all', { each: true })
+  includedProductIds?: string[];
 
   @IsOptional()
-  redemptionValue?: number;
+  @IsArray()
+  @IsUUID('all', { each: true })
+  excludedProductIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  includedServiceIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  excludedServiceIds?: string[];
+
+  @IsOptional()
+  @IsObject()
+  productPointOverrides?: Record<string, number>;
+
+  @IsOptional()
+  @IsObject()
+  servicePointOverrides?: Record<string, number>;
+}
+
+export class JoinLoyaltyProgramDto {
+  @IsUUID()
+  @IsNotEmpty()
+  businessId: string;
 }

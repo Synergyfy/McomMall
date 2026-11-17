@@ -326,7 +326,7 @@ export const ShareExchangeScreen: FC<ShareExchangeScreenProps> = ({
   onNavigate,
   mallData,
 }) => {
-  const points = mallData?.pointsBalance ?? 2400;
+  const points = mallData?.pointsBalance ?? 0;
   const ecosystemPool = (mallData?.businesses?.length ?? 0) * 1200;
 
   return (
@@ -439,7 +439,7 @@ export const CampaignBuilderScreen: FC<CampaignBuilderScreenProps> = ({
             <label className="text-[10px] font-bold text-gray-400 uppercase">Campaign Title</label>
             <input 
               type="text"
-              placeholder="e.g. Greenwich Bakeries & Cafes Double Point Weekend"
+              placeholder="e.g. Local Bakeries & Cafes Double Point Weekend"
               value={campaignTitle}
               onChange={(e) => setCampaignTitle(e.target.value)}
               className="px-3.5 py-3 bg-gray-50 border border-gray-150 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-800"

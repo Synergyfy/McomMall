@@ -30,6 +30,4 @@ export interface UpdateUserDto {
 export interface CustomerStats {
   totalOrders: number;
   totalSpent: number;
-  promotionPoints: number;
-  promotionsParticipating: number;
 }

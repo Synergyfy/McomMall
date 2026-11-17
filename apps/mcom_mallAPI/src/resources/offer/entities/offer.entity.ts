@@ -8,9 +8,8 @@ import {
 } from 'typeorm';
 import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../listings/entities/listing.entity';
 import { Product } from '../../product/entities/product.entity';
-import { RewardCouponType, OfferScope } from '../offer.enum';
+import { RewardCouponType } from '../offer.enum';
 import { Transaction } from '../../transaction/entities/transaction.entity';
 import { User } from '../../users/entities/user.entity';
 
@@ -73,23 +72,12 @@ export class Offer extends AbstractBaseEntity {
   @Column({ type: 'int', nullable: true })
   bonusPoints: number;
 
-  @Column({
-    type: 'enum',
-    enum: OfferScope,
-    nullable: true,
-  })
-  offerScope: OfferScope;
+  /** Marks bonus-point offers created through the Time Bonus flow. */
+  @Column({ default: false })
+  isTimeBonus: boolean;
 
   @ManyToOne(() => Product, { nullable: true })
   freeProduct: Product;
-
-  @ManyToMany(() => Business, (business) => business.offers)
-  @JoinTable({
-    name: 'offer_businesses',
-    joinColumn: { name: 'offer_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'business_id', referencedColumnName: 'id' },
-  })
-  businesses: Business[];
 
   @ManyToMany(() => Product, { cascade: true })
   @JoinTable({

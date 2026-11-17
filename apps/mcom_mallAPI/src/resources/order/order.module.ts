@@ -1,7 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CartModule } from '../cart/cart.module';
-import { PromotionModule } from '../promotion/promotion.module';
 import { Order } from './entities/order.entity';
 import { OrderPayment } from './entities/order-payment.entity';
 import { FailedWalletRefund } from './entities/failed-wallet-refund.entity';
@@ -33,6 +32,7 @@ import { ShippingModule } from '../shipping/shipping.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { RewardsIntegrationModule } from '../rewards-integration/rewards-integration.module';
 import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -53,7 +53,6 @@ import { PartnerInstrumentsModule } from '../partner-instruments/partner-instrum
       ShippingAddress,
     ]),
     CartModule,
-    forwardRef(() => PromotionModule),
     NotificationModule,
     forwardRef(() => CouponModule),
     TransactionModule,
@@ -67,6 +66,7 @@ import { PartnerInstrumentsModule } from '../partner-instruments/partner-instrum
     forwardRef(() => PaymentsModule),
     forwardRef(() => RewardsIntegrationModule),
     PartnerInstrumentsModule,
+    LoyaltyModule,
   ],
   controllers: [OrderController],
   providers: [

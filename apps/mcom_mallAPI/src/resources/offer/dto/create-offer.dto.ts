@@ -9,19 +9,10 @@ import {
   IsArray,
   ValidateIf,
   IsNumber,
-  IsNotEmpty,
 } from 'class-validator';
-import { RewardCouponType, OfferScope } from '../offer.enum';
+import { RewardCouponType } from '../offer.enum';
 
 export class CreateOfferDto {
-  @IsEnum(OfferScope)
-  offerScope: OfferScope;
-
-  @ValidateIf((o) => o.offerScope === OfferScope.SPECIFIC_LISTINGS)
-  @IsArray()
-  @IsUUID('all', { each: true })
-  businessIds: string[];
-
   @IsString()
   name: string;
 
@@ -32,6 +23,10 @@ export class CreateOfferDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isTimeBonus?: boolean;
 
   @IsInt()
   points: number;
@@ -95,15 +90,9 @@ export class CreateOfferDto {
   @IsBoolean()
   allowLimitToReset?: boolean;
 
-  @ValidateIf(
-    (o) =>
-      o.offerScope === OfferScope.SPECIFIC_PRODUCTS ||
-      o.includedProductIds !== undefined,
-  )
+  @IsOptional()
   @IsArray()
   @IsUUID('all', { each: true })
-  @ValidateIf((o) => o.offerScope === OfferScope.SPECIFIC_PRODUCTS)
-  @IsNotEmpty()
   includedProductIds?: string[];
 
   @IsOptional()

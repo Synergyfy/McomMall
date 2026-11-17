@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { StatusBadge } from '../shared/StatusBadge';
 import api from '@/service/api';
+import { pickCentralBusiness } from '@/lib/central-business';
 
 interface StatusScreenProps {
   onNavigate: (screen: string) => void;
@@ -33,9 +34,12 @@ export const StatusScreen: FC<StatusScreenProps> = ({
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await api.get('businesses/my-profile');
-        if (res.data) {
-          setProfile(res.data);
+        const res = await api.get('listings/mine', {
+          params: { page: 1, limit: 10 },
+        });
+        const business = pickCentralBusiness<any>(res.data?.data);
+        if (business) {
+          setProfile(business);
         }
       } catch (err) {
         console.error('Error fetching business profile:', err);
@@ -68,8 +72,13 @@ export const StatusScreen: FC<StatusScreenProps> = ({
             </div>
             <div>
               <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Listing Profile</p>
-              <h2 className="text-lg font-black text-gray-900 leading-tight">{businessName}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{mallData?.borough || 'Local'} Borough Mall</p>
+              <h2 className="text-lg font-black text-gray-900 leading-tight">
+                {businessName || 'Your business'}
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {mallData?.mallName || 'Local Mall'}
+                {mallData?.borough ? ` · ${mallData.borough}` : ''}
+              </p>
             </div>
           </div>
           <div className="self-start sm:self-auto">
@@ -146,7 +155,9 @@ export const StatusScreen: FC<StatusScreenProps> = ({
             </div>
             <div>
               <p className="text-xs font-bold text-gray-900">Mcom Support Manager</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">Assigned to {mallData?.borough || 'Local'} District</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                Assigned to {mallData?.mallName || 'your local mall'}
+              </p>
             </div>
           </div>
           <button 

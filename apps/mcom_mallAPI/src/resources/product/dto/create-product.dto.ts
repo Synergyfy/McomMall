@@ -126,13 +126,23 @@ export class CreateProductDto {
   @IsString()
   title?: string;
 
-  @ApiProperty({
-    description: "The product's main category.",
+  @ApiPropertyOptional({
+    description:
+      "The product's sector. Inherited from the MCOM Central business profile.",
+    example: 'Retail',
+  })
+  @IsOptional()
+  @IsString()
+  sector?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "The product's main category. Derived from the MCOM Central business profile; client values are overridden when Central provides one.",
     example: 'Groceries',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  category: string;
+  category?: string;
 
   @ApiPropertyOptional({
     description: "The product's sub-category.",

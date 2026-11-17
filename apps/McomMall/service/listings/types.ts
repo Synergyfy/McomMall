@@ -99,7 +99,6 @@ export interface User {
   role: string;
   giftCard: boolean;
   voucher: boolean;
-  promotion: boolean;
   coupon?: boolean;
   profilePictureUrl?: string | null;
   lastLogin?: string | null;
@@ -467,7 +466,6 @@ export interface InHouseBusiness {
   user: User;
   giftCard: boolean;
   voucher: boolean;
-  promotion: boolean;
 }
 
 export type InHouseBusinessResults = InHouseBusiness[];

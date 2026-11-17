@@ -1,9 +1,9 @@
 'use client';
 
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 import {
-  ChevronRight,
+  ChevronLeft,
   CheckCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -72,27 +72,26 @@ export default function EditOfferPage() {
         allowLimitToReset: offer.allowLimitToReset || false,
         includedProductIds: offer.includedProducts?.map(p => p.id) || [],
         excludedProductIds: offer.excludedProducts?.map(p => p.id) || [],
-        offerScope: offer.offerScope,
-        businessIds: offer.businesses?.map(b => b.id) || [],
       }
     : {};
 
   return (
-    <div className="bg-gray-50/50 min-h-screen p-4 sm:p-6 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2 sm:mb-0">
-              Edit Offer
-            </h1>
-            <div className="text-base text-gray-500 flex items-center space-x-1">
-              <span>Home</span>
-              <ChevronRight className="h-4 w-4" />
-              <span className="text-gray-700">Dashboard</span>
-              <ChevronRight className="h-4 w-4" />
-              <span className="text-gray-700">Offers</span>
-            </div>
-          </div>
+    <div className="-mx-2 -mt-2 min-h-full bg-[#faf7f5] px-4 py-6 sm:-mx-5 sm:-mt-5 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-4xl">
+        <Link
+          href="/dashboard/loyalty/offers"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 transition-colors hover:text-gray-900"
+        >
+          <ChevronLeft className="h-4 w-4" /> Back to Offers
+        </Link>
+
+        <header className="mt-4 mb-6">
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-gray-900 sm:text-3xl">
+            Edit Offer
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-gray-500">
+            Update the details, reward rules and restrictions for this offer.
+          </p>
         </header>
 
         <OfferForm

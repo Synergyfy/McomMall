@@ -12,7 +12,6 @@ import { AdminProductsController } from './controllers/products.admin.controller
 import { AdminServicesController } from './controllers/services.admin.controller';
 import { AdminOrdersController } from './controllers/orders.admin.controller';
 import { AdminBookingsController } from './controllers/bookings.admin.controller';
-import { AdminPromotionsController } from './controllers/promotions.admin.controller';
 import { AdminTransactionsController } from './controllers/transactions.admin.controller';
 import { AdminAnalyticsController } from './controllers/analytics.admin.controller';
 import { AdminActivitiesService } from './services/activities.admin.service';
@@ -21,7 +20,6 @@ import { AdminProductsService } from './services/products.admin.service';
 import { AdminServicesService } from './services/services.admin.service';
 import { AdminOrdersService } from './services/orders.admin.service';
 import { AdminBookingsService } from './services/bookings.admin.service';
-import { AdminPromotionsService } from './services/promotions.admin.service';
 import { AdminTransactionsService } from './services/transactions.admin.service';
 import { AdminAnalyticsService } from './services/analytics.admin.service';
 import { Activity } from '../activities/entities/activity.entity';
@@ -31,7 +29,6 @@ import { Service } from '../services/entities/service.entity';
 import { Order } from '../order/entities/order.entity';
 import { RentalBooking } from '../booking/entities/rental-booking.entity';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
-import { Promotion } from '../promotion/entities/promotion.entity';
 import { MembershipPayment } from '../membership/entities/membership-payment.entity';
 import { OrderModule } from '../order/order.module';
 
@@ -46,7 +43,6 @@ import { OrderModule } from '../order/order.module';
       Order,
       RentalBooking,
       ServiceBooking,
-      Promotion,
       MembershipPayment,
     ]),
     HashModule,
@@ -62,7 +58,6 @@ import { OrderModule } from '../order/order.module';
     AdminServicesController,
     AdminOrdersController,
     AdminBookingsController,
-    AdminPromotionsController,
     AdminTransactionsController,
     AdminAnalyticsController,
   ],
@@ -74,7 +69,6 @@ import { OrderModule } from '../order/order.module';
     AdminServicesService,
     AdminOrdersService,
     AdminBookingsService,
-    AdminPromotionsService,
     AdminTransactionsService,
     AdminAnalyticsService,
   ],

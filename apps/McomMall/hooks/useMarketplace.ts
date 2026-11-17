@@ -275,32 +275,3 @@ export function useMarketplaceCoupons(params?: {
 
   return { data, loading, error, refetch: fetch };
 }
-
-export function usePublicPromotions(params?: {
-  limit?: number;
-}) {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const paramsRef = useRef(params);
-  paramsRef.current = params;
-
-  const fetch = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/promotions/active', { params: paramsRef.current });
-      setData(response.data);
-      setError(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch promotions');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
-
-  return { data, loading, error, refetch: fetch };
-}

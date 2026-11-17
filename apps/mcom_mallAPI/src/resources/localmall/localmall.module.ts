@@ -6,7 +6,9 @@ import { Business } from '../listings/entities/listing.entity';
 import { User } from '../users/entities/user.entity';
 import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 import { OnboardingDeciderService } from './onboarding-decider.service';
+import { LocalMallFeedService } from './localmall-feed.service';
 import { LocalMallController } from './localmall.controller';
+import { SsoModule } from '../sso/sso.module';
 
 @Module({
   imports: [
@@ -17,9 +19,10 @@ import { LocalMallController } from './localmall.controller';
       User,
       PointTransaction,
     ]),
+    SsoModule,
   ],
   controllers: [LocalMallController],
-  providers: [OnboardingDeciderService],
+  providers: [OnboardingDeciderService, LocalMallFeedService],
   exports: [OnboardingDeciderService],
 })
 export class LocalMallModule {}

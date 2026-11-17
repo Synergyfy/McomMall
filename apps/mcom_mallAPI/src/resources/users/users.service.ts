@@ -14,9 +14,8 @@ import { ServiceProviderProfile } from '../service-provider-profile/entities/ser
 import { HashService } from '../../common/hash/hash.service';
 import { Social } from './entities/social.entity';
 import { Transaction } from '../transaction/entities/transaction.entity';
-import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
-import { PromotionActivity } from '../promotion/entities/promotion-activity.entity';
 import { Offer } from '../offer/entities/offer.entity';
+import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 import { EmailService } from '../email/email.service';
 import { UserRole } from '../../common/role.enum';
 import { Wallet } from '../wallet/entities/wallet.entity';
@@ -36,12 +35,10 @@ export class UsersService {
     private socialRepository: Repository<Social>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
-    @InjectRepository(PromotionParticipant)
-    private promotionParticipantRepository: Repository<PromotionParticipant>,
-    @InjectRepository(PromotionActivity)
-    private promotionActivityRepository: Repository<PromotionActivity>,
     @InjectRepository(Offer)
     private offerRepository: Repository<Offer>,
+    @InjectRepository(PointTransaction)
+    private pointTransactionRepository: Repository<PointTransaction>,
     private readonly hashService: HashService,
     private readonly emailService: EmailService,
     private readonly dataSource: DataSource,
@@ -481,107 +478,40 @@ export class UsersService {
     };
   }
 
-  async getPromotions(userId: string, query: any) {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-
-    const { status = 'active' } = query;
-    const queryBuilder = this.promotionParticipantRepository
-      .createQueryBuilder('participant')
-      .leftJoinAndSelect('participant.promotion', 'promotion')
-      .where('participant.userId = :userId', { userId });
-
-    if (status === 'active') {
-      queryBuilder.andWhere(
-        '(promotion.endDate IS NULL OR promotion.endDate > :now)',
-        { now: new Date() },
-      );
-    } else if (status === 'expired') {
-      queryBuilder.andWhere('promotion.endDate < :now', { now: new Date() });
-    }
-
-    const participants = await queryBuilder.getMany();
-
-    return {
-      status: 'success',
-      data: {
-        promotions: participants.map((p) => ({
-          promotion_id: p.promotion.id,
-          name: p.promotion.name,
-          description: p.promotion.description,
-          balance: p.pointsEarned,
-          status:
-            p.promotion.endDate && p.promotion.endDate < new Date()
-              ? 'expired'
-              : 'active',
-          end_date: p.promotion.endDate,
-        })),
-      },
-    };
-  }
-
   async getTransactionHistory(userId: string, query: any) {
-    const { page = 1, limit = 20, type, promotion_id } = query;
+    const { page = 1, limit = 20, type } = query;
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    const allTransactions = [];
+    const transactions = await this.pointTransactionRepository.find({
+      where: { user: { id: userId } },
+      relations: ['offer'],
+      order: { created_at: 'DESC' },
+    });
 
-    // Fetch earning transactions
-    if (type !== 'spend') {
-      const earnQueryOptions: any = {
-        where: { user: { id: userId } },
-        relations: ['promotion'],
-      };
-      if (promotion_id) {
-        earnQueryOptions.where.promotion = { id: promotion_id };
-      }
-      const activities =
-        await this.promotionActivityRepository.find(earnQueryOptions);
-      const earnTransactions = activities.map((a) => ({
-        transaction_id: `earn_${a.id}`,
-        type: 'earn',
-        points: a.pointsEarned,
-        description: `Points earned from ${a.promotion?.name || 'a promotion'}`,
-        timestamp: a.created_at,
+    const allTransactions = transactions
+      .filter((transaction) => {
+        if (type === 'earn') return transaction.points >= 0;
+        if (type === 'spend') return transaction.points < 0;
+        return true;
+      })
+      .map((transaction) => ({
+        transaction_id: transaction.id,
+        type: transaction.points >= 0 ? 'earn' : 'spend',
+        points: transaction.points,
+        description: transaction.offer
+          ? `Redeemed '${transaction.offer.name}'`
+          : transaction.reason ||
+            (transaction.points >= 0 ? 'Points earned' : 'Points redeemed'),
+        timestamp: transaction.created_at,
         details: {
-          promotion_id: a.promotion?.id,
-          promotion_name: a.promotion?.name,
+          offer_id: transaction.offer?.id,
+          offer_name: transaction.offer?.name,
         },
       }));
-      allTransactions.push(...earnTransactions);
-    }
-
-    // Fetch spending transactions
-    if (type !== 'earn' && !promotion_id) {
-      // Cannot filter spending by promotion
-      const spendTransactions = await this.transactionRepository.find({
-        where: { user: { id: userId }, offer: { id: Not(IsNull()) } },
-        relations: ['offer'],
-      });
-      const mappedSpend = spendTransactions.map((t) => ({
-        transaction_id: `spend_${t.id}`,
-        type: 'spend',
-        points: -t.offer.points,
-        description: `Redeemed '${t.offer.name}'`,
-        timestamp: t.created_at,
-        details: {
-          offer_id: t.offer.id,
-          offer_name: t.offer.name,
-        },
-      }));
-      allTransactions.push(...mappedSpend);
-    }
-
-    // Sort all transactions by date
-    allTransactions.sort(
-      (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
-    );
 
     // Apply pagination
     const total_items = allTransactions.length;
@@ -668,14 +598,6 @@ export class UsersService {
       await manager.query('DELETE FROM transactions WHERE "userId" = $1', [
         userId,
       ]);
-      await manager.query(
-        'DELETE FROM promotion_participants WHERE "userId" = $1',
-        [userId],
-      );
-      await manager.query(
-        'DELETE FROM promotion_activities WHERE "userId" = $1',
-        [userId],
-      );
       await manager.query('DELETE FROM voucher_products WHERE "userId" = $1', [
         userId,
       ]);

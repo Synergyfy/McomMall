@@ -7,7 +7,6 @@ import {
   Home,
   Compass,
   Star,
-  Tag,
   Grid3X3,
   Building2,
   Wallet,
@@ -15,7 +14,7 @@ import {
   User,
 } from 'lucide-react';
 
-type TabId = 'home' | 'discover' | 'promotions' | 'rewards' | 'more';
+type TabId = 'home' | 'discover' | 'rewards' | 'more';
 
 export const CustomerBottomNav: React.FC = () => {
   const pathname = usePathname();
@@ -24,7 +23,6 @@ export const CustomerBottomNav: React.FC = () => {
   const getActiveTab = (): TabId => {
     if (pathname === '/dashboard') return 'home';
     if (pathname?.startsWith('/dashboard/discover')) return 'discover';
-    if (pathname?.startsWith('/dashboard/promotions')) return 'promotions';
     if (pathname?.startsWith('/dashboard/rewards')) return 'rewards';
     if (
       pathname?.startsWith('/dashboard/localmall') ||
@@ -41,7 +39,6 @@ export const CustomerBottomNav: React.FC = () => {
   const tabs: { id: TabId; href?: string; icon: React.ElementType; label: string; onClick?: () => void }[] = [
     { id: 'home', href: '/dashboard', icon: Home, label: 'Home' },
     { id: 'discover', href: '/dashboard/discover', icon: Compass, label: 'Discover' },
-    { id: 'promotions', href: '/dashboard/promotions', icon: Tag, label: 'Promotions' },
     { id: 'rewards', href: '/dashboard/rewards', icon: Star, label: 'Rewards' },
     { id: 'more', icon: Grid3X3, label: 'More', onClick: () => setShowMore(true) },
   ];

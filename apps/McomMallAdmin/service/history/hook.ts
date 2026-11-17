@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import {
-  UserPromotion,
   UserTransaction,
   RedeemedOffer,
   PaginatedResponse,
@@ -8,13 +7,6 @@ import {
 import api from '../api';
 
 // API Functions
-
-const fetchUserPromotions = async (
-  userId: string
-): Promise<{ data: { promotions: UserPromotion[] } }> => {
-  const { data } = await api.get(`/users/${userId}/promotions`);
-  return data;
-};
 
 const fetchUserTransactions = async (
   userId: string,
@@ -39,14 +31,6 @@ const fetchRedeemedOffers = async (
 };
 
 // React Query Hooks
-
-export const useGetUserPromotions = (userId: string | null) => {
-  return useQuery<{ data: { promotions: UserPromotion[] } }, Error>({
-    queryKey: ['userPromotions', userId],
-    queryFn: () => fetchUserPromotions(userId!),
-    enabled: userId !== null,
-  });
-};
 
 export const useGetUserTransactions = (
   userId: string | null,

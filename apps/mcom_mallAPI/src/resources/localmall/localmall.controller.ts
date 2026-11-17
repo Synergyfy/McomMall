@@ -9,28 +9,23 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { OnboardingDeciderService } from './onboarding-decider.service';
+import { LocalMallFeedService } from './localmall-feed.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
-import { LocalMall } from './entities/localmall.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
-import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 
 @Controller('localmall')
 export class LocalMallController {
   constructor(
     private readonly onboardingDeciderService: OnboardingDeciderService,
-    @InjectRepository(LocalMall)
-    private readonly localMallRepository: Repository<LocalMall>,
+    private readonly localMallFeedService: LocalMallFeedService,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(PointTransaction)
-    private readonly pointTransactionRepository: Repository<PointTransaction>,
   ) {}
 
   @Public()
@@ -41,7 +36,7 @@ export class LocalMallController {
   }
 
   @Public()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('customer/feed')
   async getCustomerFeed(
     @Query('lat') lat?: string,
@@ -49,175 +44,12 @@ export class LocalMallController {
     @Query('postcode') postcode?: string,
     @CurrentUser() user?: User,
   ) {
-    let resolvedBorough = 'Southwark'; // Default fallback
-    let userLat = parseFloat(lat);
-    let userLon = parseFloat(lon);
-
-    if (postcode) {
-      try {
-        const deciderResult =
-          await this.onboardingDeciderService.checkLocation(postcode);
-        if (deciderResult && deciderResult.resolvedArea) {
-          resolvedBorough = deciderResult.resolvedArea;
-          userLat = deciderResult.latitude;
-          userLon = deciderResult.longitude;
-        }
-      } catch (err) {
-        console.error('Error resolving postcode in feed:', err);
-      }
-    } else if (!isNaN(userLat) && !isNaN(userLon)) {
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLon}&format=json&addressdetails=1`,
-          {
-            headers: {
-              'User-Agent': 'McomMall-Customer/1.0 (contact@mcommall.com)',
-            },
-          },
-        );
-        if (response.ok) {
-          const data = await response.json();
-          const addr = data.address || {};
-          const borough =
-            addr.suburb ||
-            addr.neighbourhood ||
-            addr.city_district ||
-            addr.town ||
-            addr.city ||
-            '';
-          if (borough) {
-            resolvedBorough = borough
-              .replace(/London Borough of /i, '')
-              .replace(/Borough of /i, '')
-              .replace(/City of /i, '')
-              .trim();
-          }
-        }
-      } catch (err) {
-        console.error('Reverse geocoding error:', err);
-      }
-    }
-
-    const mallName = `${resolvedBorough} Local Mall`;
-
-    // Fetch businesses in this local mall with their active offers and campaigns
-    const mall = await this.localMallRepository.findOne({
-      where: { name: mallName },
-      relations: [
-        'businesses',
-        'businesses.location',
-        'businesses.category',
-        'businesses.offers',
-        'businesses.campaigns',
-      ],
+    return this.localMallFeedService.getCustomerFeed({
+      user,
+      postcode,
+      lat,
+      lon,
     });
-
-    const businesses = mall ? mall.businesses : [];
-
-    const nearbyDeals = [];
-    const activeCampaigns = [];
-    if (mall && mall.businesses) {
-      const now = new Date();
-      for (const b of mall.businesses) {
-        if (b.offers) {
-          for (const offer of b.offers) {
-            if (offer.isActive) {
-              const daysLeft = offer.endDate
-                ? Math.max(
-                    0,
-                    Math.ceil(
-                      (new Date(offer.endDate).getTime() - now.getTime()) /
-                        (1000 * 3600 * 24),
-                    ),
-                  )
-                : 3;
-              nearbyDeals.push({
-                business: b.businessName,
-                deal: offer.name,
-                points: offer.points || 50,
-                expires: `${daysLeft}d`,
-              });
-            }
-          }
-        }
-        if (b.campaigns) {
-          for (const camp of b.campaigns) {
-            const isActive =
-              new Date(camp.startDate) <= now &&
-              (!camp.endDate || new Date(camp.endDate) >= now);
-            if (isActive) {
-              const daysLeft = camp.endDate
-                ? Math.max(
-                    0,
-                    Math.ceil(
-                      (new Date(camp.endDate).getTime() - now.getTime()) /
-                        (1000 * 3600 * 24),
-                    ),
-                  )
-                : 3;
-              activeCampaigns.push({
-                id: camp.id,
-                title: `${b.businessName} - ${camp.type.replace(/_/g, ' ')}`,
-                budget: camp.budget,
-                expires: `${daysLeft}d`,
-              });
-            }
-          }
-        }
-      }
-    }
-
-    // Count live active consumers in database (UserRole.CUSTOMER)
-    const consumerCount = await this.businessRepository.manager.count(User, {
-      where: { role: 'customer' as any },
-    });
-
-    let pointsBalance = 2400;
-    let weeklyPointsEarned = 0;
-    if (user && user.id) {
-      const dbUser = await this.userRepository.findOne({
-        where: { id: user.id },
-      });
-      if (dbUser) {
-        pointsBalance = dbUser.points;
-      }
-
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-      const weeklyTransactionResult = await this.pointTransactionRepository
-        .createQueryBuilder('pt')
-        .select('SUM(pt.points)', 'total')
-        .where('pt.userId = :userId', { userId: user.id })
-        .andWhere('pt.points > 0') // only count earned points
-        .andWhere('pt.created_at >= :oneWeekAgo', { oneWeekAgo })
-        .getRawOne();
-
-      weeklyPointsEarned = weeklyTransactionResult?.total
-        ? parseInt(weeklyTransactionResult.total)
-        : 0;
-    }
-
-    return {
-      borough: resolvedBorough,
-      mallName,
-      mallId: mall ? mall.id : null,
-      businesses: businesses.map((b) => ({
-        id: b.id,
-        businessName: b.businessName,
-        shortDescription: b.shortDescription,
-        logoUrl: b.logoUrl,
-        category: b.category ? b.category.name : 'Store',
-        address: b.location ? b.location.addressLine1 : '',
-        isClaimed: b.isClaimed,
-        isVerified: b.isVerified,
-      })),
-      pointsBalance,
-      weeklyPointsEarned,
-      consumerCount,
-      activeCampaigns,
-      nearbyDeals,
-    };
   }
 
   @UseGuards(JwtAuthGuard)

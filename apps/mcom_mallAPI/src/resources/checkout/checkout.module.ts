@@ -8,7 +8,6 @@ import { Product } from '../product/entities/product.entity';
 import { UsersModule } from '../users/users.module';
 import { OfferModule } from '../offer/offer.module';
 import { ProductModule } from '../product/product.module';
-import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
 import { Order } from '../order/entities/order.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
 import { GiftCardModule } from '../gift-card/gift-card.module';
@@ -25,7 +24,6 @@ import { VoucherModule } from '../voucher/voucher.module';
       User,
       Offer,
       Product,
-      PromotionParticipant,
       Order,
       OrderItem,
       ShippingAddress,

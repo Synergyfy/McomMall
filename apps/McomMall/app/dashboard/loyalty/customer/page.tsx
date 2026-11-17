@@ -53,7 +53,7 @@ export default function LoyaltyCustomerPage() {
             ) : customers.length === 0 ? (
               <p className="p-6 text-center text-sm text-gray-500">
                 No engaged customers found. Customers appear here once they book,
-                review or join a promotion.
+                review or redeem a reward.
               </p>
             ) : (
               customers.map((customer) => (
@@ -141,7 +141,7 @@ export default function LoyaltyCustomerPage() {
                       >
                         <div>
                           <p className="font-medium text-gray-800">
-                            {transaction.reason || transaction.promotion?.name || transaction.offer?.name || transaction.type}
+                            {transaction.reason || transaction.offer?.name || transaction.type}
                           </p>
                           <p className="text-xs text-gray-400">{formatDate(transaction.created_at)}</p>
                         </div>

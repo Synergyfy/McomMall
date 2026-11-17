@@ -27,9 +27,6 @@ class FeatureFlags {
 
 class Quotas {
   @ApiProperty({ type: QuotaDetail })
-  listings: QuotaDetail;
-
-  @ApiProperty({ type: QuotaDetail })
   products: QuotaDetail;
 
   @ApiProperty({ type: QuotaDetail })
