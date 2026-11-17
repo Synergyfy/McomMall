@@ -27,6 +27,21 @@ export class VoucherTransaction extends AbstractBaseEntity {
   @Column({ nullable: true })
   contributorId: string; // ID of User or Shop
 
+  /**
+   * Typed contributor so business cashback can never be confused with a user
+   * deposit again (`user` | `business` | `system`).
+   */
+  @Column({ name: 'contributor_type', nullable: true })
+  contributorType: string | null;
+
+  /** Business the transaction was bound to (spend / cashback / issuance). */
+  @Column({ name: 'business_id', type: 'uuid', nullable: true })
+  businessId: string | null;
+
+  /** Order or booking id, so per-reference real/reward splits are auditable. */
+  @Column({ name: 'reference_id', type: 'varchar', nullable: true })
+  referenceId: string | null;
+
   @Column({ type: 'bigint', transformer: moneyTransformer })
   amount: number; // Total amount changed (can be negative)
 

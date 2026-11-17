@@ -14,6 +14,11 @@ export interface DefinitionResponseDto {
     scopeType?: string;
     validShops?: any[];
     utilization?: number;
+    faceValue?: number | null;
+    maxCashbackPercent?: number;
+    validProductIds?: string[];
+    validServiceIds?: string[];
+    expiresAt?: string | null;
 }
 
 export interface RewardDefinitionsResponse {
@@ -23,9 +28,22 @@ export interface RewardDefinitionsResponse {
 
 export interface UserVoucherResponseDto {
     id: string;
+    code?: string;
     totalBalance: number;
     state: string;
     definition: DefinitionResponseDto;
+    faceValue?: number | null;
+    functionalType?: string | null;
+    contributionRemaining?: number;
+    expiresAt?: string | null;
+}
+
+export interface IssueVoucherDto {
+    rewardDefinitionId: string;
+    recipientUserId?: string;
+    recipientEmail?: string;
+    expiresAt?: string;
+    issuanceId?: string;
 }
 
 export interface TransferDto {
@@ -51,6 +69,10 @@ export interface BusinessStatsResponseDto {
     totalSpentInShop: number;
     customersCount: number;
     cashbackGivenCount: number;
+    cashbackGivenAmount?: number;
+    rewardRedeemedAmount?: number;
+    realRedeemedAmount?: number;
+    salesAttributed?: number;
 }
 
 export interface SpendDto {
@@ -59,8 +81,28 @@ export interface SpendDto {
     shopId: string;
 }
 
+export interface InitiateContributionDto {
+    amount: number;
+    paymentGateway: 'STRIPE' | 'PAYPAL' | 'MCOM_WALLET';
+}
+
+export interface ContributeToVoucherDto {
+    amount: number;
+    paymentGateway: 'STRIPE' | 'PAYPAL' | 'MCOM_WALLET';
+    transactionId: string;
+}
+
+export interface ContributionInitiateResponse {
+    clientSecret?: string;
+    orderId?: string;
+    approvalUrl?: string | null;
+    transactionId?: string;
+    provider: string;
+}
+
 export interface CustomerStatsResponseDto {
     activeVouchersCount: number;
+    activeVoucherCouponsCount?: number;
     totalCurrentBalance: number;
     currentRealBalance: number;
     currentRewardBalance: number;

@@ -29,6 +29,7 @@ const BUSINESS_LINKS: UserMenuLink[] = [
   { title: 'Products', href: '/dashboard/store/products', icon: Package },
   { title: 'Orders', href: '/dashboard/store/orders', icon: ShoppingBag },
   { title: 'Bookings', href: '/dashboard/bookings', icon: Calendar },
+  { title: 'Deals', href: '/dashboard/deals', icon: Ticket },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { title: 'Settings', href: '/dashboard/settings', icon: Settings },
@@ -41,8 +42,8 @@ const CUSTOMER_LINKS: UserMenuLink[] = [
   { title: 'Wishlist', href: '/dashboard/wishlist', icon: Heart },
   { title: 'Rewards', href: '/dashboard/rewards', icon: Star },
   {
-    title: 'Coupons & Vouchers',
-    href: '/dashboard/coupons-vouchers',
+    title: 'Deals',
+    href: '/dashboard/deals',
     icon: Ticket,
   },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },

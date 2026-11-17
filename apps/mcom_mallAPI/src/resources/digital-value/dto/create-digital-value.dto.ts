@@ -2,12 +2,13 @@ import {
   IsEnum,
   IsNumber,
   IsOptional,
+  IsString,
   IsUUID,
   Min,
   IsDateString,
   IsObject,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DigitalValueType } from '../digital-value.enums';
 
 export class CreateDigitalValueDto {
@@ -19,6 +20,15 @@ export class CreateDigitalValueDto {
   })
   @IsEnum(DigitalValueType)
   type: DigitalValueType;
+
+  @ApiPropertyOptional({
+    example: 'MCOM-ABC123',
+    description:
+      'Optional external code. Used when mirroring an existing wallet so both ledgers share a code.',
+  })
+  @IsOptional()
+  @IsString()
+  code?: string;
 
   @ApiProperty({
     example: 100.0,

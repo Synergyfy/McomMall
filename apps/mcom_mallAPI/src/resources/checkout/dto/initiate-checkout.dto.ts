@@ -74,6 +74,31 @@ export class InitiateCheckoutDto {
   voucherAmount?: number;
 
   @ApiPropertyOptional({
+    description:
+      'The code of the Voucher Coupon to apply as a single-use discount.',
+  })
+  @IsString()
+  @IsOptional()
+  priceReducerCode?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'The code of the money-engine wallet to apply to the checkout.',
+  })
+  @IsString()
+  @IsOptional()
+  moneyVoucherCode?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'The amount to redeem from the money-engine wallet (defaults to full balance).',
+  })
+  @IsNumber()
+  @IsPositive()
+  @IsOptional()
+  moneyVoucherAmount?: number;
+
+  @ApiPropertyOptional({
     description: 'The ID of the coupon to apply to the checkout.',
   })
   @IsString()

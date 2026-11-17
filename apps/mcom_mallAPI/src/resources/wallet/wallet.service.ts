@@ -415,6 +415,9 @@ export class WalletService {
         } else if (type === WalletTransactionType.EARNING_TERMINAL_CASHBACK) {
           wallet.earningsFromTerminalCashback =
             Number(wallet.earningsFromTerminalCashback) + amount;
+          // Cashback is spending power, not withdrawable cash.
+          wallet.lockedCashbackBalance =
+            Number(wallet.lockedCashbackBalance ?? 0) + amount;
         }
       }
 
@@ -754,9 +757,12 @@ export class WalletService {
         throw new NotFoundException('Wallet not found');
       }
 
-      if (Number(wallet.earningsBalance) < dto.amount) {
+      const withdrawable =
+        Number(wallet.earningsBalance) -
+        Number(wallet.lockedCashbackBalance ?? 0);
+      if (withdrawable < dto.amount) {
         throw new BadRequestException(
-          'Insufficient earnings balance for this withdrawal',
+          'Insufficient withdrawable earnings balance for this withdrawal. Cashback stays inside the network.',
         );
       }
 

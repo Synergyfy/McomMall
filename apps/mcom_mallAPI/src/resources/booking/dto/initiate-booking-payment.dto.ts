@@ -41,4 +41,17 @@ export class InitiateBookingPaymentDto {
   @IsNumber()
   @Type(() => Number)
   voucherAmount?: number;
+
+  @IsOptional()
+  @IsString()
+  priceReducerCode?: string;
+
+  @IsOptional()
+  @IsString()
+  moneyVoucherCode?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  moneyVoucherAmount?: number;
 }

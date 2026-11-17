@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { CouponService } from './coupon.service';
 
 /**
@@ -37,5 +38,29 @@ describe('CouponService locked redemption reads', () => {
     await expect(
       (service as any).lockAndLoadCoupon(repo, 'MISSING'),
     ).resolves.toBeNull();
+  });
+});
+
+describe('CouponService legacy coupon products', () => {
+  it('retires coupon-product purchases when ledger consolidation is enabled', () => {
+    const service = Object.create(CouponService.prototype) as CouponService;
+    (service as any).featureFlags = {
+      isLedgerConsolidationEnabled: () => true,
+    };
+
+    expect(() =>
+      (service as any).assertLegacyCouponProductsDisabled(),
+    ).toThrow(BadRequestException);
+  });
+
+  it('keeps coupon-product purchases when consolidation is off', () => {
+    const service = Object.create(CouponService.prototype) as CouponService;
+    (service as any).featureFlags = {
+      isLedgerConsolidationEnabled: () => false,
+    };
+
+    expect(() =>
+      (service as any).assertLegacyCouponProductsDisabled(),
+    ).not.toThrow();
   });
 });

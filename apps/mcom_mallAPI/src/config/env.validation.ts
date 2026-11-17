@@ -45,6 +45,27 @@ export const envValidationSchema = Joi.object({
     .optional(),
   MCOM_PLATFORM_CALLERS: Joi.string().allow('').optional(),
   MALL_PARTNER_RATE_LIMIT_PER_MINUTE: Joi.number().min(1).optional(),
+  // Coupon-voucher alignment flags (money-engine defaults: on).
+  FEATURE_FUNCTIONAL_TYPE_ENFORCEMENT: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  FEATURE_MONEY_VOUCHER_CHECKOUT: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  FEATURE_DEALS_HUB: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  FEATURE_CASHBACK_CAP: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
+  FEATURE_LEDGER_CONSOLIDATION: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
   MCOM_WALLET_ENABLED: Joi.string()
     .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
     .allow('')

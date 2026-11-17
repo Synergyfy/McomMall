@@ -21,6 +21,9 @@ import {
   CreateRewardDefinitionDto,
   PurchaseVoucherDto,
   CashbackInjectionDto,
+  ContributeToVoucherDto,
+  InitiateContributionDto,
+  IssueVoucherDto,
   SpendDto,
   UserVoucherResponseDto,
   TransferDto,
@@ -163,6 +166,28 @@ export class MoneyEngineController {
     return this.moneyEngineService.getAdminAnalytics();
   }
 
+  @Get('admin/settlement')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Settlement and reward-liability report (Admin Only)',
+    description:
+      'Per-business real vs reward redemption, cashback injected and outstanding reward liability.',
+  })
+  async getSettlementReport() {
+    return this.moneyEngineService.getSettlementReport();
+  }
+
+  @Get('admin/analytics/definitions/:id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Reward Definition Performance (Admin Only)',
+    description:
+      'Issued wallets, attributed sales, outstanding value, cashback credited and redemption rate for one definition.',
+  })
+  async getDefinitionAnalytics(@Param('id') id: string) {
+    return this.moneyEngineService.getDefinitionAnalytics(id);
+  }
+
   @Get('admin/vouchers')
   @Roles(UserRole.ADMIN)
   @ApiOperation({
@@ -225,6 +250,22 @@ export class MoneyEngineController {
     return this.moneyEngineService.initiatePurchase(user, dto);
   }
 
+  @Post('vouchers/issue')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Issue a Voucher Coupon or campaign wallet',
+    description:
+      'Admins can issue any definition. Businesses can issue a VCoupon (price reducer) only when they own one of its listings. Spending-power issuance is admin-only because it mints reward value.',
+  })
+  @ApiBody({ type: IssueVoucherDto })
+  async issueVoucher(
+    @Body() dto: IssueVoucherDto,
+    @CurrentUser() user: User,
+  ) {
+    const voucher = await this.moneyEngineService.issueVoucher(dto, user);
+    return this.mapToResponse(voucher);
+  }
+
   @Post('purchase')
   @Roles(UserRole.CUSTOMER)
   @ApiOperation({
@@ -246,6 +287,43 @@ export class MoneyEngineController {
     return this.mapToResponse(voucher);
   }
 
+  @Post('vouchers/:code/contribute/initiate')
+  @Roles(UserRole.CUSTOMER, UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Start a Voucher Contribution',
+    description:
+      'Creates the provider payment (card, PayPal or MCOM Wallet) before the contribution is credited.',
+  })
+  @ApiBody({ type: InitiateContributionDto })
+  async initiateContribution(
+    @Param('code') code: string,
+    @Body() dto: InitiateContributionDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.moneyEngineService.initiateContribution(code, dto, user);
+  }
+
+  @Post('vouchers/:code/contribute')
+  @Roles(UserRole.CUSTOMER, UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Contribute to a Voucher',
+    description:
+      'Lets friends or family top up an existing wallet up to its face-value target.',
+  })
+  @ApiBody({ type: ContributeToVoucherDto })
+  async contributeToVoucher(
+    @Param('code') code: string,
+    @Body() dto: ContributeToVoucherDto,
+    @CurrentUser() user: User,
+  ) {
+    const voucher = await this.moneyEngineService.contributeToVoucher(
+      code,
+      dto,
+      user,
+    );
+    return this.mapToResponse(voucher);
+  }
+
   @Get('me/stats')
   @Roles(UserRole.CUSTOMER)
   @ApiOperation({
@@ -263,7 +341,7 @@ export class MoneyEngineController {
   }
 
   @Get('me')
-  @Roles(UserRole.CUSTOMER)
+  @Roles(UserRole.CUSTOMER, UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Get My Vouchers',
     description:
@@ -302,8 +380,11 @@ export class MoneyEngineController {
     description: 'Cashback reward injected successfully.',
     type: UserVoucherResponseDto,
   })
-  async injectCashback(@Body() dto: CashbackInjectionDto) {
-    const voucher = await this.moneyEngineService.injectCashback(dto);
+  async injectCashback(
+    @Body() dto: CashbackInjectionDto,
+    @CurrentUser() user: User,
+  ) {
+    const voucher = await this.moneyEngineService.injectCashback(dto, user);
     return this.mapToResponse(voucher);
   }
 
@@ -329,8 +410,11 @@ export class MoneyEngineController {
     summary: 'Get Specific Shop Stats',
     description: 'Get stats for a specific shop owned by the user.',
   })
-  async getShopStats(@Param('shopId') shopId: string) {
-    return this.moneyEngineService.getBusinessStats(shopId);
+  async getShopStats(
+    @Param('shopId') shopId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.moneyEngineService.getBusinessStatsForShop(shopId, user);
   }
 
   // --- SHARED / SYSTEM ENDPOINTS ---
@@ -348,8 +432,21 @@ export class MoneyEngineController {
     description: 'Voucher funds deducted successfully.',
     type: UserVoucherResponseDto,
   })
-  async spend(@Body() dto: SpendDto) {
-    const voucher = await this.moneyEngineService.spend(dto);
+  async spend(@Body() dto: SpendDto, @CurrentUser() user: User) {
+    const voucher = await this.moneyEngineService.spend(dto, user);
+    return this.mapToResponse(voucher);
+  }
+
+  @Post('pos/spend')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Spend a customer wallet at the point of sale (business)',
+    description:
+      'Business-initiated spend. The authenticated caller must own the shop the spend is attributed to.',
+  })
+  @ApiBody({ type: SpendDto })
+  async posSpend(@Body() dto: SpendDto, @CurrentUser() user: User) {
+    const voucher = await this.moneyEngineService.posSpend(dto, user);
     return this.mapToResponse(voucher);
   }
 
@@ -367,26 +464,62 @@ export class MoneyEngineController {
     status: 201,
     description: 'Balance transfer completed successfully.',
   })
-  async transfer(@Body() dto: TransferDto) {
+  async transfer(@Body() dto: TransferDto, @CurrentUser() user: User) {
     await this.moneyEngineService.transfer(
       dto.fromVoucherId,
       dto.toVoucherId,
       dto.amount,
+      user,
     );
     return { success: true, message: 'Transfer completed' };
   }
 
   // Helper to hide internal state
   private mapToResponse(voucher: UserVoucher): UserVoucherResponseDto {
+    const faceValue =
+      voucher.faceValue ?? voucher.definition?.faceValue ?? null;
+    const functionalType =
+      voucher.functionalType ?? voucher.definition?.functionalType ?? null;
+
+    const realRatio = Number(voucher.definition?.splitRatio?.real ?? 0);
+    const realTarget =
+      voucher.realContributionTarget ??
+      (faceValue !== null && faceValue !== undefined
+        ? Math.round(Number(faceValue) * realRatio * 100) / 100
+        : null);
+    const contributionRemaining =
+      realTarget === null
+        ? undefined
+        : Math.max(0, Math.round((Number(realTarget) - Number(voucher.realBalance)) * 100) / 100);
+
     return {
       id: voucher.id,
       code: voucher.code,
       totalBalance: voucher.totalBalance,
+      faceValue,
+      functionalType,
       state: voucher.state,
+      contributionRemaining,
+      expiresAt: voucher.expiresAt
+        ? new Date(voucher.expiresAt).toISOString()
+        : null,
       definition: {
         name: voucher.definition?.name,
         description: voucher.definition?.description,
         visualType: voucher.definition?.visualType,
+        functionalType: voucher.definition?.functionalType,
+        faceValue: voucher.definition?.faceValue ?? null,
+        maxCashbackPercent: voucher.definition?.maxCashbackPercent,
+        splitRatio: voucher.definition?.splitRatio,
+        scopeType: voucher.definition?.scopeType,
+        validShopIds: (voucher.definition?.validShops ?? []).map(
+          (shop) => shop.id,
+        ),
+        validProductIds: voucher.definition?.validProductIds ?? [],
+        validServiceIds: voucher.definition?.validServiceIds ?? [],
+        expiresAt: voucher.definition?.expiresAt
+          ? new Date(voucher.definition.expiresAt).toISOString()
+          : null,
       },
     };
   }

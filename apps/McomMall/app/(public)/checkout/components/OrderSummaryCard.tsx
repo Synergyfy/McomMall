@@ -21,6 +21,8 @@ interface OrderSummaryCardProps {
   couponDiscount: number;
   giftCardDiscount: number;
   voucherDiscount: number;
+  moneyVoucherDiscount?: number;
+  priceReducerDiscount?: number;
   offerDiscount: number;
   rewardDiscount?: number;
   serviceBookings?: ServiceBookingDetailsDto[] | null;
@@ -38,6 +40,8 @@ export default function OrderSummaryCard({
   couponDiscount,
   giftCardDiscount,
   voucherDiscount,
+  moneyVoucherDiscount = 0,
+  priceReducerDiscount = 0,
   offerDiscount,
   rewardDiscount = 0,
   serviceBookings,
@@ -268,6 +272,16 @@ export default function OrderSummaryCard({
         {renderDiscountLine(
           'Voucher',
           voucherDiscount,
+          <Percent className="h-5 w-5" />
+        )}
+        {renderDiscountLine(
+          'Voucher Coupon',
+          priceReducerDiscount,
+          <Ticket className="h-5 w-5" />
+        )}
+        {renderDiscountLine(
+          'Money Voucher',
+          moneyVoucherDiscount,
           <Percent className="h-5 w-5" />
         )}
         {renderDiscountLine(

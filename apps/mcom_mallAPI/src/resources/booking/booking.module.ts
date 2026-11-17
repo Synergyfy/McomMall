@@ -25,6 +25,7 @@ import { CouponModule } from '../coupon/coupon.module';
 import { GiftCardModule } from '../gift-card/gift-card.module';
 import { VoucherModule } from '../voucher/voucher.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { MoneyEngineModule } from '../money-engine/money-engine.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { LoyaltyModule } from '../loyalty/loyalty.module';
     forwardRef(() => GiftCardModule),
     forwardRef(() => VoucherModule),
     LoyaltyModule,
+    MoneyEngineModule,
   ],
   controllers: [BookingController],
   providers: [BookingService],

@@ -414,10 +414,14 @@ export class InstrumentScopeService {
         return !!line.businessId && ids.includes(line.businessId);
       }
       case ScopeMode.ITEMS: {
-        if (line.kind === 'product') {
-          return ((scope as any).productIds ?? []).includes(line.id);
-        }
-        return ((scope as any).serviceIds ?? []).includes(line.id);
+        const itemMatches =
+          line.kind === 'product'
+            ? ((scope as any).productIds ?? []).includes(line.id)
+            : ((scope as any).serviceIds ?? []).includes(line.id);
+        if (!itemMatches) return false;
+        const itemListingIds = (scope as any).listingIds ?? [];
+        if (itemListingIds.length === 0) return true;
+        return !!line.businessId && itemListingIds.includes(line.businessId);
       }
       default:
         return true;

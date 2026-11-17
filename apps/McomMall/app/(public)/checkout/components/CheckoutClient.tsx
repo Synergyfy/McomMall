@@ -20,6 +20,7 @@ import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import { useCheckGiftCardBalance } from '@/service/gift-card/hook';
 import { useVoucherBalance } from '@/service/vouchers/hook';
+import { useGetMyVouchers } from '@/service/money-engine/hook';
 import {
   useGetApplicableOffers,
   useApplyOffer,
@@ -52,6 +53,8 @@ export default function CheckoutClient() {
   );
   const quantityFromUrl = searchParams.get('quantity');
   const variantsFromUrl = searchParams.get('variants');
+  const moneyVoucherFromUrl = searchParams.get('moneyVoucherCode');
+  const priceReducerFromUrl = searchParams.get('priceReducerCode');
 
   const { data: product, isLoading: isProductLoading } = useGetProductById(
     productId || ''
@@ -111,6 +114,14 @@ export default function CheckoutClient() {
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [isVoucherLoading, setVoucherLoading] = useState(false);
 
+  const [moneyVoucherCode, setMoneyVoucherCode] = useState('');
+  const [moneyVoucherDiscount, setMoneyVoucherDiscount] = useState(0);
+  const [isMoneyVoucherLoading, setMoneyVoucherLoading] = useState(false);
+
+  const [priceReducerCode, setPriceReducerCode] = useState('');
+  const [priceReducerDiscount, setPriceReducerDiscount] = useState(0);
+  const [isPriceReducerLoading, setPriceReducerLoading] = useState(false);
+
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [offerDiscount, setOfferDiscount] = useState(0);
   const [isOfferLoading, setOfferLoading] = useState(false);
@@ -140,6 +151,7 @@ export default function CheckoutClient() {
   const validateCoupon = useValidateCoupon();
   const { mutateAsync: checkGiftCardBalance } = useCheckGiftCardBalance();
   const { mutateAsync: applyVoucher } = useVoucherBalance();
+  const { data: myVouchers } = useGetMyVouchers();
   const applyOffer = useApplyOffer();
 
   const productIds = fromCart
@@ -261,6 +273,8 @@ export default function CheckoutClient() {
     offerDiscount +
     giftCardDiscount +
     voucherDiscount +
+    moneyVoucherDiscount +
+    priceReducerDiscount +
     rewardDiscount;
   const totalPrice = Math.max(0, subtotal - totalDiscount);
 
@@ -285,6 +299,77 @@ export default function CheckoutClient() {
   const handleApplyVoucherDiscount = (code: string, amount: number) => {
     setVoucherDiscount(amount);
     setVoucherCode(code);
+  };
+
+  const handleCheckMoneyVoucherBalance = async (code: string) => {
+    setMoneyVoucherLoading(true);
+    try {
+      const wallet = (myVouchers ?? []).find((voucher) => voucher.code === code);
+      if (!wallet) {
+        alert('Money voucher not found in your wallet.');
+        return;
+      }
+      if (wallet.state !== 'active') {
+        alert('This money voucher is not active.');
+        return;
+      }
+      return Number(wallet.totalBalance);
+    } finally {
+      setMoneyVoucherLoading(false);
+    }
+  };
+
+  const handleApplyMoneyVoucherDiscount = (code: string, amount: number) => {
+    const otherDiscounts =
+      couponDiscount +
+      offerDiscount +
+      giftCardDiscount +
+      voucherDiscount +
+      priceReducerDiscount +
+      rewardDiscount;
+    const maxApplicable = Math.max(0, subtotal - otherDiscounts);
+    setMoneyVoucherCode(code);
+    setMoneyVoucherDiscount(Math.min(amount, maxApplicable));
+  };
+
+  const handleCheckPriceReducerBalance = async (code: string) => {
+    setPriceReducerLoading(true);
+    try {
+      const wallet = (myVouchers ?? []).find((voucher) => voucher.code === code);
+      if (!wallet) {
+        alert('Voucher Coupon not found in your wallet.');
+        return;
+      }
+      if (wallet.functionalType !== 'price_reducer') {
+        alert('This code is not a Voucher Coupon.');
+        return;
+      }
+      if (wallet.state !== 'active') {
+        alert('This Voucher Coupon is not active.');
+        return;
+      }
+      const value = Number(wallet.faceValue ?? 0);
+      if (value <= 0) {
+        alert('This Voucher Coupon has no discount value.');
+        return;
+      }
+      return value;
+    } finally {
+      setPriceReducerLoading(false);
+    }
+  };
+
+  const handleApplyPriceReducerDiscount = (code: string, amount: number) => {
+    const otherDiscounts =
+      couponDiscount +
+      offerDiscount +
+      giftCardDiscount +
+      voucherDiscount +
+      moneyVoucherDiscount +
+      rewardDiscount;
+    const maxApplicable = Math.max(0, subtotal - otherDiscounts);
+    setPriceReducerCode(code);
+    setPriceReducerDiscount(Math.min(amount, maxApplicable));
   };
 
   const handleCheckGiftCardBalance = async (code: string) => {
@@ -386,10 +471,13 @@ export default function CheckoutClient() {
         offerId: selectedOffer || undefined,
         giftCardCode: giftCardCode || undefined,
         voucherCode: voucherCode || undefined,
+        priceReducerCode: priceReducerCode || undefined,
         serviceBookings:
           serviceBookings.length > 0 ? serviceBookings : undefined,
         giftCardAmount: giftCardDiscount || undefined,
         voucherAmount: voucherDiscount || undefined,
+        moneyVoucherCode: moneyVoucherCode || undefined,
+        moneyVoucherAmount: moneyVoucherDiscount || undefined,
         rewardApplications:
           rewardApplications.length > 0 ? rewardApplications : undefined,
       };
@@ -429,6 +517,9 @@ export default function CheckoutClient() {
       selectedVariants,
       giftCardDiscount,
       voucherDiscount,
+      moneyVoucherCode,
+      moneyVoucherDiscount,
+      priceReducerCode,
       rewardApplications,
       paymentMethod,
     ]
@@ -577,6 +668,22 @@ export default function CheckoutClient() {
                     onApply={handleApplyVoucherDiscount}
                     isLoading={isVoucherLoading}
                   />
+                  <VoucherInput
+                    title="money voucher"
+                    placeholder="Enter money voucher code"
+                    defaultCode={moneyVoucherFromUrl ?? undefined}
+                    onCheckBalance={handleCheckMoneyVoucherBalance}
+                    onApply={handleApplyMoneyVoucherDiscount}
+                    isLoading={isMoneyVoucherLoading}
+                  />
+                  <VoucherInput
+                    title="voucher coupon"
+                    placeholder="Enter Voucher Coupon code"
+                    defaultCode={priceReducerFromUrl ?? undefined}
+                    onCheckBalance={handleCheckPriceReducerBalance}
+                    onApply={handleApplyPriceReducerDiscount}
+                    isLoading={isPriceReducerLoading}
+                  />
                 </div>
               </div>
             </div>
@@ -595,6 +702,8 @@ export default function CheckoutClient() {
                   couponDiscount={couponDiscount}
                   giftCardDiscount={giftCardDiscount}
                   voucherDiscount={voucherDiscount}
+                  moneyVoucherDiscount={moneyVoucherDiscount}
+                  priceReducerDiscount={priceReducerDiscount}
                   offerDiscount={offerDiscount}
                   rewardDiscount={rewardDiscount}
                   serviceBookings={serviceBookingsForOrder}

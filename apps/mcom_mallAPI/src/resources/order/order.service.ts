@@ -15,6 +15,7 @@ import { Repository, EntityManager, In } from 'typeorm';
 import { CartService } from '../cart/cart.service';
 import { CouponService } from '../coupon/coupon.service';
 import { Order } from './entities/order.entity';
+import { OrderStatus } from './enums/order-status.enum';
 import { User } from '../users/entities/user.entity';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { OrderPayment, PaymentMethod } from './entities/order-payment.entity';
@@ -43,6 +44,9 @@ import {
 import { Business } from '../listings/entities/listing.entity';
 import { BusinessStatus } from '../listings/listing.enum';
 import { VoucherService } from '../voucher/voucher.service';
+import { MoneyEngineService } from '../money-engine/money-engine.service';
+import { FunctionalType } from '../money-engine/entities/reward-definition.entity';
+import { FeatureFlagsService } from '../../common/feature-flags/feature-flags.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
 import { DiscountType } from '../coupon/coupon.enum';
 import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
@@ -148,6 +152,8 @@ export class OrderService {
     private readonly rewardReconcileService: RewardRedemptionReconcileService,
     private readonly instrumentScopeService: InstrumentScopeService,
     private readonly partnerCallbacks: PartnerCallbackService,
+    private readonly moneyEngineService: MoneyEngineService,
+    private readonly featureFlags: FeatureFlagsService,
   ) {}
 
   private validateBusinessAndOwner(business: Business) {
@@ -456,8 +462,63 @@ export class OrderService {
       }
     }
 
+    // Voucher Coupon (price reducer): single-use discount in the discount slot.
+    const scopeSubtotalForPriceReducer = round2(
+      scopeLines.reduce((sum, line) => sum + line.lineTotal, 0),
+    );
+    let priceReducerAmountToApply = 0;
+    if (createCheckoutDto.priceReducerCode) {
+      try {
+        const priceReducer = await this.moneyEngineService.getOwnedByCode(
+          createCheckoutDto.priceReducerCode,
+          { id: userId },
+        );
+        const scope = this.moneyEngineService.getScopeForDefinition(
+          priceReducer.definition,
+        );
+        const isScoped = !!scope && scope.mode !== ScopeMode.NO_SCOPE;
+        const eligible = this.instrumentScopeService.computeEligiblePayable(
+          scope,
+          scopeLines,
+          scopeSubtotalForPriceReducer,
+          Math.max(
+            0,
+            totalBeforeRedemption -
+              couponAmountToApply -
+              rewardDiscountTotal,
+          ),
+        );
+        if (isScoped && eligible.eligibleSubtotal <= 0) {
+          throw new UnprocessableEntityException(
+            'SCOPE_NO_ELIGIBLE_LINES: this Voucher Coupon does not apply to any item in the cart.',
+          );
+        }
+        const resolved = await this.moneyEngineService.resolvePriceReducer(
+          createCheckoutDto.priceReducerCode,
+          { id: userId },
+          isScoped
+            ? eligible.eligibleSubtotal
+            : Math.max(
+                0,
+                totalBeforeRedemption -
+                  couponAmountToApply -
+                  rewardDiscountTotal,
+              ),
+        );
+        priceReducerAmountToApply = resolved.amount;
+      } catch (error) {
+        if (error instanceof UnprocessableEntityException) throw error;
+        throw new BadRequestException(
+          `Invalid Voucher Coupon: ${error.message}`,
+        );
+      }
+    }
+
     const totalAfterDiscounts = round2(
-      totalBeforeRedemption - couponAmountToApply - rewardDiscountTotal,
+      totalBeforeRedemption -
+        couponAmountToApply -
+        rewardDiscountTotal -
+        priceReducerAmountToApply,
     );
 
     // Dynamic Shipping Fee Calculation (Royal Mail pricing API with DB fallback)
@@ -659,7 +720,69 @@ export class OrderService {
       }
     }
 
-    const finalAmount = round2(totalAfterGiftCard - voucherAmountToApply);
+    const totalAfterVoucher = round2(
+      totalAfterGiftCard - voucherAmountToApply,
+    );
+    let moneyVoucherAmountToApply = 0;
+    if (createCheckoutDto.moneyVoucherCode) {
+      try {
+        if (!this.featureFlags.isMoneyVoucherCheckoutEnabled()) {
+          throw new BadRequestException(
+            'Money vouchers are not enabled at checkout.',
+          );
+        }
+
+        const moneyVoucher = await this.moneyEngineService.getOwnedByCode(
+          createCheckoutDto.moneyVoucherCode,
+          { id: userId },
+        );
+        const behavior =
+          moneyVoucher.functionalType ??
+          moneyVoucher.definition?.functionalType;
+        if (behavior === FunctionalType.PRICE_REDUCER) {
+          throw new BadRequestException(
+            'This voucher can only be applied as a discount, not as payment.',
+          );
+        }
+
+        const scope = this.moneyEngineService.getScopeForDefinition(
+          moneyVoucher.definition,
+        );
+        const isScoped = !!scope && scope.mode !== ScopeMode.NO_SCOPE;
+        const eligible = this.instrumentScopeService.computeEligiblePayable(
+          scope,
+          scopeLines,
+          itemSubtotalForInstruments,
+          totalAfterVoucher,
+        );
+        if (isScoped && eligible.eligibleSubtotal <= 0) {
+          throw new UnprocessableEntityException(
+            'SCOPE_NO_ELIGIBLE_LINES: this voucher does not apply to any item in the cart.',
+          );
+        }
+
+        const maxApplicable = isScoped
+          ? eligible.eligibleSubtotal
+          : totalAfterVoucher;
+        const balance = round2(
+          Number(moneyVoucher.realBalance) +
+            Number(moneyVoucher.rewardBalance),
+        );
+        moneyVoucherAmountToApply = computeInstrumentApplication({
+          requested: createCheckoutDto.moneyVoucherAmount,
+          balance,
+          eligiblePayable: maxApplicable,
+          remainingPayable: totalAfterVoucher,
+        });
+      } catch (error) {
+        if (error instanceof UnprocessableEntityException) throw error;
+        throw new BadRequestException(
+          `Invalid money voucher: ${error.message}`,
+        );
+      }
+    }
+
+    const finalAmount = round2(totalAfterVoucher - moneyVoucherAmountToApply);
 
     this.logger.log(
       `[checkout] instruments ${JSON.stringify({
@@ -818,6 +941,10 @@ export class OrderService {
           items: [],
           total: finalAmount,
           payment: savedPayment,
+          // A fully-discounted order has nothing to charge. There is no
+          // provider webhook to complete it, so settle it immediately.
+          status:
+            finalAmount <= 0 ? OrderStatus.COMPLETED : OrderStatus.PENDING,
           shippingAddress,
           carrierCode,
           estimatedShippingFee,
@@ -827,6 +954,11 @@ export class OrderService {
               ? (appliedCoupon?.code ?? createCheckoutDto.couponCode ?? null)
               : null,
           couponDiscountApplied: couponAmountToApply,
+          priceReducerCode:
+            priceReducerAmountToApply > 0
+              ? (createCheckoutDto.priceReducerCode ?? null)
+              : null,
+          priceReducerAmountApplied: priceReducerAmountToApply,
           giftCardCode:
             giftCardAmountToApply > 0
               ? (createCheckoutDto.giftCardCode ?? null)
@@ -834,6 +966,11 @@ export class OrderService {
           giftCardAmountApplied: giftCardAmountToApply,
           voucherCode: voucherAmountToApply > 0 ? createCheckoutDto.voucherCode ?? null : null,
           voucherAmountApplied: voucherAmountToApply,
+          moneyVoucherCode:
+            moneyVoucherAmountToApply > 0
+              ? createCheckoutDto.moneyVoucherCode ?? null
+              : null,
+          moneyVoucherAmountApplied: moneyVoucherAmountToApply,
         };
         if (offer) {
           orderData.appliedOffer = offer;
@@ -863,6 +1000,50 @@ export class OrderService {
             savedOrder,
             manager,
           );
+        }
+
+        if (
+          createCheckoutDto.priceReducerCode &&
+          priceReducerAmountToApply > 0
+        ) {
+          const priceReducerBusinessId =
+            businessContextId ??
+            savedOrder.items?.[0]?.product?.business?.id ??
+            null;
+          await this.moneyEngineService.redeemPriceReducer(
+            {
+              code: createCheckoutDto.priceReducerCode,
+              amount: priceReducerAmountToApply,
+              userId,
+              businessId: priceReducerBusinessId,
+              referenceId: savedOrder.id,
+              source: 'checkout',
+            },
+            manager,
+          );
+        }
+
+        if (
+          createCheckoutDto.moneyVoucherCode &&
+          moneyVoucherAmountToApply > 0
+        ) {
+          const redemption = await this.moneyEngineService.redeemForOrder(
+            {
+              code: createCheckoutDto.moneyVoucherCode,
+              amount: moneyVoucherAmountToApply,
+              userId,
+              businessId: businessContextId ?? null,
+            },
+            savedOrder,
+            manager,
+          );
+          savedOrder.moneyVoucherRealAmountApplied = round2(
+            redemption.realDeduction,
+          );
+          savedOrder.moneyVoucherRewardAmountApplied = round2(
+            redemption.rewardDeduction,
+          );
+          await manager.save(Order, savedOrder);
         }
 
         if (createCheckoutDto.couponCode && couponAmountToApply > 0) {

@@ -40,6 +40,9 @@ import {
 } from '../partner-instruments/pricing';
 import { VoucherService } from '../voucher/voucher.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
+import { MoneyEngineService } from '../money-engine/money-engine.service';
+import { FunctionalType } from '../money-engine/entities/reward-definition.entity';
+import { FeatureFlagsService } from '../../common/feature-flags/feature-flags.service';
 
 @Injectable()
 export class CheckoutService {
@@ -65,6 +68,8 @@ export class CheckoutService {
     private readonly shippingPricingService: ShippingPricingService,
     private readonly instrumentScopeService: InstrumentScopeService,
     private readonly voucherService: VoucherService,
+    private readonly moneyEngineService: MoneyEngineService,
+    private readonly featureFlags: FeatureFlagsService,
   ) {}
 
   async initiateCheckout(
@@ -78,6 +83,9 @@ export class CheckoutService {
       couponCode,
       voucherCode,
       voucherAmount,
+      priceReducerCode,
+      moneyVoucherCode,
+      moneyVoucherAmount,
       shippingAddressId,
       carrierCode,
     } = initiateCheckoutDto;
@@ -209,7 +217,50 @@ export class CheckoutService {
       });
     }
 
-    const totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
+    // Apply a Voucher Coupon (price reducer) as a single-use discount in the
+    // discount slot, before shipping. It never pays the bill like a wallet.
+    let priceReducerDiscount = 0;
+    if (priceReducerCode) {
+      try {
+        const priceReducer = await this.moneyEngineService.getOwnedByCode(
+          priceReducerCode,
+          user,
+        );
+        const scope = this.moneyEngineService.getScopeForDefinition(
+          priceReducer.definition,
+        );
+        const eligible = this.instrumentScopeService.computeEligiblePayable(
+          scope,
+          scopeLines,
+          itemSubtotalForInstruments,
+          Math.max(0, subtotal - couponDiscount),
+        );
+        const isScoped = !!scope && scope.mode !== ScopeMode.NO_SCOPE;
+        if (isScoped && eligible.eligibleSubtotal <= 0) {
+          throw new UnprocessableEntityException(
+            'SCOPE_NO_ELIGIBLE_LINES: this Voucher Coupon does not apply to any item in the cart.',
+          );
+        }
+        const resolved = await this.moneyEngineService.resolvePriceReducer(
+          priceReducerCode,
+          user,
+          isScoped
+            ? eligible.eligibleSubtotal
+            : Math.max(0, subtotal - couponDiscount),
+        );
+        priceReducerDiscount = resolved.amount;
+      } catch (error) {
+        if (error instanceof UnprocessableEntityException) throw error;
+        throw new BadRequestException(
+          `Invalid Voucher Coupon: ${error.message}`,
+        );
+      }
+    }
+
+    const totalAfterCoupon = Math.max(
+      0,
+      subtotal - couponDiscount - priceReducerDiscount,
+    );
 
     // Dynamic Shipping Fee Calculation (Royal Mail pricing API with DB fallback)
     let estimatedShippingFee = 0;
@@ -329,8 +380,68 @@ export class CheckoutService {
       });
     }
 
-    const remainingTotal = round2(
+    const totalAfterVoucher = round2(
       totalWithShipping - giftCardAmountToApply - voucherAmountToApply,
+    );
+
+    // Apply a money-engine wallet if provided (spend-like instruments only).
+    let moneyVoucherAmountToApply = 0;
+    if (moneyVoucherCode) {
+      if (!this.featureFlags.isMoneyVoucherCheckoutEnabled()) {
+        throw new BadRequestException(
+          'Money vouchers are not enabled at checkout.',
+        );
+      }
+
+      const moneyVoucher = await this.moneyEngineService.getOwnedByCode(
+        moneyVoucherCode,
+        user,
+      );
+      const behavior =
+        moneyVoucher.functionalType ??
+        moneyVoucher.definition?.functionalType;
+      if (behavior === FunctionalType.PRICE_REDUCER) {
+        throw new BadRequestException(
+          'This voucher can only be applied as a discount, not as payment.',
+        );
+      }
+
+      const balance = round2(
+        Number(moneyVoucher.realBalance) +
+          Number(moneyVoucher.rewardBalance),
+      );
+      const moneyVoucherScope =
+        this.moneyEngineService.getScopeForDefinition(
+          moneyVoucher.definition,
+        );
+      const isScoped =
+        !!moneyVoucherScope && moneyVoucherScope.mode !== ScopeMode.NO_SCOPE;
+      const eligible = this.instrumentScopeService.computeEligiblePayable(
+        moneyVoucherScope,
+        scopeLines,
+        itemSubtotalForInstruments,
+        totalAfterVoucher,
+      );
+      if (isScoped && eligible.eligibleSubtotal <= 0) {
+        throw new UnprocessableEntityException(
+          'SCOPE_NO_ELIGIBLE_LINES: this voucher does not apply to any item in the cart.',
+        );
+      }
+      moneyVoucherAmountToApply = computeInstrumentApplication({
+        requested: moneyVoucherAmount,
+        balance,
+        eligiblePayable: isScoped
+          ? eligible.eligibleSubtotal
+          : totalAfterVoucher,
+        remainingPayable: totalAfterVoucher,
+      });
+    }
+
+    const remainingTotal = round2(
+      totalWithShipping -
+        giftCardAmountToApply -
+        voucherAmountToApply -
+        moneyVoucherAmountToApply,
     );
 
     // Create pending order in a transaction
@@ -347,8 +458,14 @@ export class CheckoutService {
         giftCardCode: giftCardAmountToApply > 0 ? giftCardCode : null,
         couponCode: couponDiscount > 0 ? couponCode : null,
         couponDiscountApplied: couponDiscount,
+        priceReducerCode:
+          priceReducerDiscount > 0 ? priceReducerCode : null,
+        priceReducerAmountApplied: priceReducerDiscount,
         voucherCode: voucherAmountToApply > 0 ? voucherCode : null,
         voucherAmountApplied: voucherAmountToApply,
+        moneyVoucherCode:
+          moneyVoucherAmountToApply > 0 ? moneyVoucherCode : null,
+        moneyVoucherAmountApplied: moneyVoucherAmountToApply,
         shippingAddress,
         carrierCode,
         estimatedShippingFee,
@@ -452,7 +569,9 @@ export class CheckoutService {
       order.total -
       (order.giftCardAmountApplied || 0) -
       (order.couponDiscountApplied || 0) -
-      (order.voucherAmountApplied || 0);
+      (order.priceReducerAmountApplied || 0) -
+      (order.voucherAmountApplied || 0) -
+      (order.moneyVoucherAmountApplied || 0);
 
     // Verify payment if one was made
     if (remainingTotal > 0) {
@@ -574,6 +693,9 @@ export class CheckoutService {
         }
       }
 
+      const orderBusinessId =
+        orderItemsForStock?.items?.[0]?.product?.business?.id ?? null;
+
       // Redeem gift card
       if (lockedOrder.giftCardCode && lockedOrder.giftCardAmountApplied > 0) {
         const redeemDto: RedeemGiftCardDto = {
@@ -611,6 +733,24 @@ export class CheckoutService {
         );
       }
 
+      // Redeem Voucher Coupon (single-use discount, same transaction)
+      if (
+        lockedOrder.priceReducerCode &&
+        Number(lockedOrder.priceReducerAmountApplied) > 0
+      ) {
+        await this.moneyEngineService.redeemPriceReducer(
+          {
+            code: lockedOrder.priceReducerCode,
+            amount: round2(Number(lockedOrder.priceReducerAmountApplied)),
+            userId,
+            businessId: orderBusinessId,
+            referenceId: lockedOrder.id,
+            source: 'checkout',
+          },
+          manager,
+        );
+      }
+
       // Redeem Voucher (same transaction, after coupon/gift card)
       if (lockedOrder.voucherCode && lockedOrder.voucherAmountApplied > 0) {
         await this.voucherService.redeemForOrder(
@@ -620,6 +760,29 @@ export class CheckoutService {
           },
           lockedOrder,
           manager,
+        );
+      }
+
+      // Redeem money-engine wallet (same transaction, after native voucher)
+      if (
+        lockedOrder.moneyVoucherCode &&
+        Number(lockedOrder.moneyVoucherAmountApplied) > 0
+      ) {
+        const redemption = await this.moneyEngineService.redeemForOrder(
+          {
+            code: lockedOrder.moneyVoucherCode,
+            amount: round2(Number(lockedOrder.moneyVoucherAmountApplied)),
+            userId,
+            businessId: orderBusinessId,
+          },
+          lockedOrder,
+          manager,
+        );
+        lockedOrder.moneyVoucherRealAmountApplied = round2(
+          redemption.realDeduction,
+        );
+        lockedOrder.moneyVoucherRewardAmountApplied = round2(
+          redemption.rewardDeduction,
         );
       }
 

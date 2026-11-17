@@ -1,6 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMyVouchers, transferMoney, giveCashback, purchaseVoucher, initiateVoucherPurchase, getBusinessStats, getOwnerRewardDefinitions, getCustomerStats, getPublicRewardDefinitions, spendVoucher } from './index';
-import { TransferDto, CashbackDto, PurchaseVoucherDto, SpendDto } from './types';
+import {
+    getMyVouchers,
+    transferMoney,
+    giveCashback,
+    purchaseVoucher,
+    initiateVoucherPurchase,
+    getBusinessStats,
+    getOwnerRewardDefinitions,
+    getCustomerStats,
+    getPublicRewardDefinitions,
+    spendVoucher,
+    posSpendVoucher,
+    issueVoucher,
+    initiateVoucherContribution,
+    contributeToVoucher,
+} from './index';
+import {
+    TransferDto,
+    CashbackDto,
+    PurchaseVoucherDto,
+    SpendDto,
+    InitiateContributionDto,
+    ContributeToVoucherDto,
+    IssueVoucherDto,
+} from './types';
 
 export const useGetMyVouchers = (enabled = true) => {
     return useQuery({
@@ -17,6 +40,30 @@ export const useSpendVoucher = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['my-vouchers'] });
             queryClient.invalidateQueries({ queryKey: ['business-stats'] });
+        },
+    });
+};
+
+export const usePosSpendVoucher = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: SpendDto) => posSpendVoucher(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['my-vouchers'] });
+            queryClient.invalidateQueries({ queryKey: ['business-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['FETCH_MY_DEALS'] });
+        },
+    });
+};
+
+export const useIssueVoucher = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: IssueVoucherDto) => issueVoucher(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['my-vouchers'] });
+            queryClient.invalidateQueries({ queryKey: ['FETCH_MY_DEALS'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
         },
     });
 };
@@ -87,5 +134,24 @@ export const useGetPublicRewardDefinitions = (enabled = true) => {
         queryKey: ['public-reward-definitions'],
         queryFn: (() => getPublicRewardDefinitions()),
         enabled,
+    });
+};
+
+export const useInitiateVoucherContribution = () => {
+    return useMutation({
+        mutationFn: ({ code, ...data }: { code: string } & InitiateContributionDto) =>
+            initiateVoucherContribution(code, data),
+    });
+};
+
+export const useContributeToVoucher = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ code, ...data }: { code: string } & ContributeToVoucherDto) =>
+            contributeToVoucher(code, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['FETCH_MY_DEALS'] });
+            queryClient.invalidateQueries({ queryKey: ['my-vouchers'] });
+        },
     });
 };

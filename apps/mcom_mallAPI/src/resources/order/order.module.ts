@@ -33,6 +33,7 @@ import { PaymentsModule } from '../payments/payments.module';
 import { RewardsIntegrationModule } from '../rewards-integration/rewards-integration.module';
 import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { MoneyEngineModule } from '../money-engine/money-engine.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { LoyaltyModule } from '../loyalty/loyalty.module';
     forwardRef(() => RewardsIntegrationModule),
     PartnerInstrumentsModule,
     LoyaltyModule,
+    MoneyEngineModule,
   ],
   controllers: [OrderController],
   providers: [

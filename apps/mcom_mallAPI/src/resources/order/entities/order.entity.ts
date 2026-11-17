@@ -96,6 +96,59 @@ export class Order extends AbstractBaseEntity {
   voucherAmountApplied: number;
 
   @ApiPropertyOptional({
+    description: 'Money-engine wallet code applied to this order.',
+  })
+  @Column({ nullable: true })
+  moneyVoucherCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Amount redeemed from the money-engine wallet for this order.',
+  })
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
+  moneyVoucherAmountApplied: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Real-money portion of the money-engine wallet redeemed for this order.',
+  })
+  @Column({
+    name: 'money_voucher_real_amount_applied',
+    type: 'bigint',
+    default: 0,
+    transformer: moneyTransformer,
+  })
+  moneyVoucherRealAmountApplied: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Reward portion of the money-engine wallet redeemed for this order.',
+  })
+  @Column({
+    name: 'money_voucher_reward_amount_applied',
+    type: 'bigint',
+    default: 0,
+    transformer: moneyTransformer,
+  })
+  moneyVoucherRewardAmountApplied: number;
+
+  @ApiPropertyOptional({
+    description: 'Voucher Coupon code applied as a single-use discount.',
+  })
+  @Column({ name: 'price_reducer_code', nullable: true })
+  priceReducerCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Discount amount applied by the Voucher Coupon.',
+  })
+  @Column({
+    name: 'price_reducer_amount_applied',
+    type: 'bigint',
+    default: 0,
+    transformer: moneyTransformer,
+  })
+  priceReducerAmountApplied: number;
+
+  @ApiPropertyOptional({
     description: 'Total reward discount applied (MCOM Rewards issuances).',
   })
   @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })

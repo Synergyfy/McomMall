@@ -16,6 +16,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config();
 import commissionConfig from './config/commission.config';
 import { envValidationSchema } from './config/env.validation';
+import { FeatureFlagsModule } from './common/feature-flags/feature-flags.module';
 import { AuthModule } from './resources/auth/auth.module';
 import { ListingsModule } from './resources/listings/listings.module';
 import { ClaimModule } from './resources/claim/claim.module';
@@ -87,6 +88,8 @@ import { QualityModule } from './resources/quality/quality.module';
 import { ExposModule } from './resources/expos/expos.module';
 import { WebhooksModule } from './resources/webhooks/webhooks.module';
 import { InstitutionalPartnersModule } from './resources/institutional-partners/institutional-partners.module';
+import { DealsModule } from './resources/deals/deals.module';
+import { InstrumentsModule } from './resources/instruments/instruments.module';
 
 @Module({
   imports: [
@@ -104,6 +107,8 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
     ExposModule,
     WebhooksModule,
     InstitutionalPartnersModule,
+    DealsModule,
+    InstrumentsModule,
     // Single global EventEmitter instance. Modules (order, shipping, …) inject
     // EventEmitter2 from this root registration instead of calling forRoot().
     EventEmitterModule.forRoot(),
@@ -146,6 +151,7 @@ import { InstitutionalPartnersModule } from './resources/institutional-partners/
         abortEarly: false,
       },
     }),
+    FeatureFlagsModule,
     TypeOrmModule.forRootAsync({
       useFactory: async () => ({
         ...dataSource.options,

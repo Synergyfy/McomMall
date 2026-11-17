@@ -7,7 +7,11 @@ import {
     BusinessStatsResponseDto,
     SpendDto,
     RewardDefinitionsResponse,
-    CustomerStatsResponseDto
+    CustomerStatsResponseDto,
+    InitiateContributionDto,
+    ContributeToVoucherDto,
+    ContributionInitiateResponse,
+    IssueVoucherDto,
 } from './types';
 
 export const getMyVouchers = async (): Promise<UserVoucherResponseDto[]> => {
@@ -55,6 +59,37 @@ export const getBusinessStats = async (): Promise<BusinessStatsResponseDto> => {
 
 export const spendVoucher = async (data: SpendDto): Promise<void> => {
     await api.post('/money-engine/spend', data);
+};
+
+export const posSpendVoucher = async (data: SpendDto): Promise<void> => {
+    await api.post('/money-engine/pos/spend', data);
+};
+
+export const issueVoucher = async (data: IssueVoucherDto): Promise<UserVoucherResponseDto> => {
+    const response = await api.post<UserVoucherResponseDto>('/money-engine/vouchers/issue', data);
+    return response.data;
+};
+
+export const initiateVoucherContribution = async (
+    code: string,
+    data: InitiateContributionDto,
+): Promise<ContributionInitiateResponse> => {
+    const response = await api.post<ContributionInitiateResponse>(
+        `/money-engine/vouchers/${code}/contribute/initiate`,
+        data,
+    );
+    return response.data;
+};
+
+export const contributeToVoucher = async (
+    code: string,
+    data: ContributeToVoucherDto,
+): Promise<UserVoucherResponseDto> => {
+    const response = await api.post<UserVoucherResponseDto>(
+        `/money-engine/vouchers/${code}/contribute`,
+        data,
+    );
+    return response.data;
 };
 
 export const getOwnerRewardDefinitions = async (page = 1, limit = 10): Promise<RewardDefinitionsResponse> => {

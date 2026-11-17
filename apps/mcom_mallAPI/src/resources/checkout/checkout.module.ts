@@ -17,6 +17,7 @@ import { ShippingAddress } from '../shipping-address/entities/shipping-address.e
 import { ShippingModule } from '../shipping/shipping.module';
 import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
 import { VoucherModule } from '../voucher/voucher.module';
+import { MoneyEngineModule } from '../money-engine/money-engine.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { VoucherModule } from '../voucher/voucher.module';
     ShippingModule,
     PartnerInstrumentsModule,
     VoucherModule,
+    MoneyEngineModule,
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],
