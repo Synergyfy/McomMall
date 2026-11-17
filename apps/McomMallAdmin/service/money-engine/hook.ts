@@ -68,6 +68,25 @@ export const useCreateRewardDefinition = () => {
     return createDefinition;
 };
 
+export const useIssueVoucher = () => {
+    const { mutate } = useSWRConfig();
+
+    const issueVoucher = async (data: {
+        rewardDefinitionId: string;
+        recipientEmail?: string;
+        recipientUserId?: string;
+        expiresAt?: string;
+        issuanceId?: string;
+    }) => {
+        const response = await api.post('/money-engine/vouchers/issue', data);
+        mutate('/money-engine/admin/vouchers');
+        mutate('/money-engine/admin/definitions');
+        return response.data;
+    };
+
+    return issueVoucher;
+};
+
 export const useDeleteRewardDefinition = () => {
     const { mutate } = useSWRConfig();
 

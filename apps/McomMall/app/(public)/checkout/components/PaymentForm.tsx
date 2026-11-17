@@ -44,6 +44,47 @@ export default function PaymentForm({
     onPaymentSuccess('mcom_wallet', PaymentMethod.MCOM_WALLET);
   };
 
+  // Discounts can cover the whole order (Coupon Voucher, Voucher Coupon,
+  // cashback). In that case there is nothing to charge, but the order still
+  // needs to be placed and the instruments consumed.
+  if (totalPrice <= 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="space-y-6"
+      >
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
+          Payment Details
+        </h2>
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-6 space-y-4">
+          <p className="text-lg font-bold text-emerald-800">
+            No payment needed
+          </p>
+          <p className="text-sm text-emerald-700">
+            Your discounts cover the full order. Place the order to redeem the
+            instruments in your wallet.
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              const transactionId =
+                typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                  ? `free-${crypto.randomUUID()}`
+                  : `free-${Date.now()}`;
+              setPaymentMethod(PaymentMethod.STRIPE);
+              onPaymentSuccess(transactionId, PaymentMethod.STRIPE);
+            }}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base font-bold"
+          >
+            Place order — £0.00
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

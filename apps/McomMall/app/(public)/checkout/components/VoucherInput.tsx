@@ -11,24 +11,32 @@ interface VoucherInputProps {
   onCheckBalance: (code: string) => Promise<number | void>;
   onApply: (code: string, amount: number) => void;
   isLoading: boolean;
+  title?: string;
+  placeholder?: string;
+  defaultCode?: string;
 }
 
 export default function VoucherInput({
   onCheckBalance,
   onApply,
   isLoading,
+  title = 'voucher',
+  placeholder = 'Enter voucher code',
+  defaultCode,
 }: VoucherInputProps) {
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(defaultCode ?? '');
   const [balance, setBalance] = useState<number | null>(null);
   const [redemptionAmount, setRedemptionAmount] = useState<number | string>("");
   const [showScanner, setShowScanner] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const checkedDefaultRef = useRef<string | null>(null);
 
   const handleCheckBalance = async () => {
     if (code) {
       const newBalance = await onCheckBalance(code);
       if (typeof newBalance === "number") {
         setBalance(newBalance);
+        setRedemptionAmount(newBalance.toFixed(2));
       }
     }
   };
@@ -38,6 +46,18 @@ export default function VoucherInput({
       onApply(code, Number(redemptionAmount));
     }
   };
+
+  useEffect(() => {
+    if (!defaultCode || checkedDefaultRef.current === defaultCode) return;
+    checkedDefaultRef.current = defaultCode;
+    setCode(defaultCode);
+    onCheckBalance(defaultCode).then((newBalance) => {
+      if (typeof newBalance === "number") {
+        setBalance(newBalance);
+        setRedemptionAmount(newBalance.toFixed(2));
+      }
+    });
+  }, [defaultCode, onCheckBalance]);
 
   useEffect(() => {
     if (showScanner) {
@@ -57,6 +77,7 @@ export default function VoucherInput({
         onCheckBalance(decodedText).then((newBalance) => {
           if (typeof newBalance === "number") {
             setBalance(newBalance);
+            setRedemptionAmount(newBalance.toFixed(2));
           }
         });
       };
@@ -95,7 +116,7 @@ export default function VoucherInput({
             setBalance(null);
             setRedemptionAmount("");
           }}
-          placeholder="Enter voucher code"
+          placeholder={placeholder}
           className="flex-grow h-12 text-lg"
           disabled={isLoading}
         />
@@ -160,7 +181,7 @@ export default function VoucherInput({
       {showScanner && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-4 relative w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Scan Voucher QR Code</h2>
+            <h2 className="text-xl font-bold mb-4">Scan {title} QR Code</h2>
             <div id="qr-code-reader-voucher" />
             <Button
               onClick={() => setShowScanner(false)}

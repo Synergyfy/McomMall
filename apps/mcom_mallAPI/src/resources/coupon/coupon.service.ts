@@ -60,6 +60,7 @@ import {
 import { InstrumentScopeDto } from '../partner-instruments/dto/instrument-scope.dto';
 import { PartnerRequestContext } from '../partner-instruments/instrument-scope.service';
 import { markReplayed } from '../partner-instruments/replay';
+import { FeatureFlagsService } from '../../common/feature-flags/feature-flags.service';
 
 @Injectable()
 export class CouponService {
@@ -92,9 +93,24 @@ export class CouponService {
     private readonly eventEmitter?: EventEmitter2,
     @Optional()
     private readonly instrumentScopeService?: InstrumentScopeService,
+    @Optional()
+    private readonly featureFlags?: FeatureFlagsService,
   ) {}
 
   private readonly logger = new Logger(CouponService.name);
+
+  /**
+   * Legacy coupon products stored a reloadable balance in `coupon.metadata`.
+   * Phase 4b retires new purchases of that shape; balance instruments must be
+   * issued as vouchers (or money-engine wallets) instead.
+   */
+  private assertLegacyCouponProductsDisabled(): void {
+    if (this.featureFlags?.isLedgerConsolidationEnabled()) {
+      throw new BadRequestException(
+        'Coupon products are retired. Use vouchers for balance-based instruments.',
+      );
+    }
+  }
 
   async create(dto: CreateCouponDto, creator?: User): Promise<Coupon> {
     const {
@@ -1159,6 +1175,7 @@ export class CouponService {
     dto: { couponProductId: string; amount: number; paymentMethod: string },
     userId: string,
   ) {
+    this.assertLegacyCouponProductsDisabled();
     const product = await this.couponProductRepository.findOne({
       where: { id: dto.couponProductId, isEnabled: true },
       relations: ['user'],
@@ -1256,6 +1273,7 @@ export class CouponService {
     },
     userId: string,
   ): Promise<any> {
+    this.assertLegacyCouponProductsDisabled();
     const method = this.normalizeCouponPaymentMethod(dto.paymentProvider);
     const amount = Number(dto.purchaseDetails?.amount);
     const productId = dto.purchaseDetails?.couponProductId;
@@ -1356,6 +1374,7 @@ export class CouponService {
     dto: { amount: number; paymentMethod: string },
     userId: string,
   ) {
+    this.assertLegacyCouponProductsDisabled();
     const coupon = await this.findCouponByCode(code);
     const metadata = (coupon.metadata ?? {}) as Record<string, any>;
     if (metadata.buyerId !== userId) {
@@ -1422,6 +1441,7 @@ export class CouponService {
     },
     userId: string,
   ): Promise<any> {
+    this.assertLegacyCouponProductsDisabled();
     const coupon = await this.findCouponByCode(code);
     const metadata = (coupon.metadata ?? {}) as Record<string, any>;
     if (metadata.buyerId !== userId) {

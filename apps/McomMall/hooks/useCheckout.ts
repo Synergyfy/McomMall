@@ -43,10 +43,13 @@ export interface CreateCheckoutDto {
   couponCode?: string;
   offerId?: string;
   voucherCode?: string;
+  priceReducerCode?: string;
   giftCardCode?: string;
+  moneyVoucherCode?: string;
   serviceBookings?: ServiceBookingDetailsDto[];
   giftCardAmount?: number;
   voucherAmount?: number;
+  moneyVoucherAmount?: number;
   rewardApplications?: RewardApplicationDto[];
 }
 
@@ -58,10 +61,13 @@ const checkout = async (checkoutData: CreateCheckoutDto) => {
     couponCode,
     offerId,
     voucherCode,
+    priceReducerCode,
     giftCardCode,
+    moneyVoucherCode,
     serviceBookings,
     giftCardAmount,
     voucherAmount,
+    moneyVoucherAmount,
     rewardApplications,
   } = checkoutData;
   const { data } = await api.post('/order/checkout', {
@@ -71,10 +77,13 @@ const checkout = async (checkoutData: CreateCheckoutDto) => {
     couponCode,
     offerId,
     voucherCode,
+    priceReducerCode,
     giftCardCode,
+    moneyVoucherCode,
     serviceBookings,
     giftCardAmount,
     voucherAmount,
+    moneyVoucherAmount,
     rewardApplications,
   });
   return data;

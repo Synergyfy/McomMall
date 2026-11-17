@@ -79,7 +79,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
-import { useCreateRewardDefinition, useGetRewardDefinitions, useGetMoneyEngineAnalytics, useDeleteRewardDefinition, useGetAdminVouchers } from '@/service/money-engine/hook';
+import { useCreateRewardDefinition, useIssueVoucher, useGetRewardDefinitions, useGetMoneyEngineAnalytics, useDeleteRewardDefinition, useGetAdminVouchers } from '@/service/money-engine/hook';
 import { CreateRewardDefinitionDto, RewardDefinition } from '@/service/money-engine/types';
 import { useGetAdminListings } from '@/service/listings/hook';
 import { AdminListing } from '@/service/listings/types';
@@ -90,6 +90,7 @@ const couponVoucherSchema = z.object({
     name: z.string().min(3, 'Name must be at least 3 characters'),
     description: z.string().optional(),
     faceValue: z.coerce.number().min(1, 'Value must be at least 1'),
+    maxCashbackPercent: z.coerce.number().min(0).max(100).default(50),
     splitRatio: z.string(),
     scopeType: z.enum(['any_shop', 'specific_shops', 'expo_only', 'campaign_only']),
     visualType: z.enum(['coupon', 'voucher']).default('voucher'),
@@ -97,6 +98,9 @@ const couponVoucherSchema = z.object({
     burnStrategy: z.enum(['reward_first', 'real_first', 'proportional']).default('reward_first'),
     seasonalLabel: z.string(),
     validShopIds: z.array(z.string()).optional().default([]),
+    validProductIds: z.string().optional().default(''),
+    validServiceIds: z.string().optional().default(''),
+    expiresAt: z.string().optional(),
     isActive: z.boolean().default(true),
 });
 
@@ -185,6 +189,29 @@ export default function CouponVoucherControl() {
     const { data: listingsData, isLoading: isListingsLoading } = useGetAdminListings({ limit: 100 });
     const createRewardDefinition = useCreateRewardDefinition();
     const deleteRewardDefinition = useDeleteRewardDefinition();
+    const issueVoucher = useIssueVoucher();
+    const [issueDefinition, setIssueDefinition] = useState<RewardDefinition | null>(null);
+    const [issueEmail, setIssueEmail] = useState('');
+    const [issueExpiry, setIssueExpiry] = useState('');
+
+    const handleIssueVoucher = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!issueDefinition) return;
+        try {
+            await issueVoucher({
+                rewardDefinitionId: issueDefinition.id,
+                recipientEmail: issueEmail,
+                expiresAt: issueExpiry || undefined,
+            });
+            toast.success(`Issue ${issueDefinition.name} to ${issueEmail}`);
+            setIssueDefinition(null);
+            setIssueEmail('');
+            setIssueExpiry('');
+        } catch (error: any) {
+            const message = error.response?.data?.message || error.message;
+            toast.error(Array.isArray(message) ? message.join('\n') : message);
+        }
+    };
 
     const listings = listingsData?.data || [];
 
@@ -194,6 +221,7 @@ export default function CouponVoucherControl() {
             name: '',
             description: '',
             faceValue: 100,
+            maxCashbackPercent: 50,
             splitRatio: '50-50',
             scopeType: 'any_shop',
             visualType: 'voucher',
@@ -201,6 +229,9 @@ export default function CouponVoucherControl() {
             burnStrategy: 'reward_first',
             seasonalLabel: 'Spring',
             validShopIds: [],
+            validProductIds: '',
+            validServiceIds: '',
+            expiresAt: '',
             isActive: true,
         }
     });
@@ -231,23 +262,41 @@ export default function CouponVoucherControl() {
             const reward = parseInt(rewardStr) / 100;
 
             const payload: CreateRewardDefinitionDto = {
-                name: `${values.name} £${values.faceValue}`,
+                name: values.name,
                 description: values.description || `${values.splitRatio} Split voucher for ${values.seasonalLabel} campaign`,
                 visualType: values.visualType,
                 functionalType: values.functionalType,
                 burnStrategy: values.burnStrategy,
+                faceValue: values.faceValue,
+                maxCashbackPercent: values.maxCashbackPercent,
                 splitRatio: {
                     real,
                     reward,
                 },
                 scopeType: values.scopeType,
-                validShopIds: values.scopeType === 'specific_shops' ? values.validShopIds : undefined,
+                validShopIds:
+                    values.scopeType !== 'any_shop'
+                        ? values.validShopIds
+                        : undefined,
+                validProductIds: values.validProductIds
+                    ? values.validProductIds
+                          .split(',')
+                          .map((id) => id.trim())
+                          .filter(Boolean)
+                    : undefined,
+                validServiceIds: values.validServiceIds
+                    ? values.validServiceIds
+                          .split(',')
+                          .map((id) => id.trim())
+                          .filter(Boolean)
+                    : undefined,
                 seasonalLabels: [values.seasonalLabel, new Date().getFullYear().toString()],
+                expiresAt: values.expiresAt || undefined,
                 isActive: values.isActive,
             };
 
             await createRewardDefinition(payload);
-            toast.success('Coupon Voucher definition created successfully!');
+            toast.success('Deal template created successfully!');
             setIsCreateModalOpen(false);
             form.reset();
         } catch (error: any) {
@@ -318,7 +367,7 @@ export default function CouponVoucherControl() {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
                             <Ticket className="h-8 w-8 text-orange-600" />
-                            Coupon-Voucher Control
+                            Deals & Voucher Control
                         </h1>
                         <p className="text-slate-500 mt-1">Manage and issue controlled spending value within the network.</p>
                     </div>
@@ -329,12 +378,12 @@ export default function CouponVoucherControl() {
                         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                             <DialogTrigger asChild>
                                 <Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-200">
-                                    <Plus className="mr-2 h-4 w-4" /> Create New Coupon-Voucher
+                                    <Plus className="mr-2 h-4 w-4" /> Create Deal Template
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[600px] border-none shadow-2xl p-0 overflow-hidden flex flex-col max-h-[95vh]">
                                 <DialogHeader className="p-6 pb-2">
-                                    <DialogTitle className="text-2xl">Create Coupon Voucher</DialogTitle>
+                                    <DialogTitle className="text-2xl">Create Deal Template</DialogTitle>
                                     <DialogDescription>
                                         Define the parameters for a new spending reward.
                                     </DialogDescription>
@@ -390,6 +439,28 @@ export default function CouponVoucherControl() {
                                                         {...form.register('faceValue')}
                                                     />
                                                     {form.formState.errors.faceValue && <p className="text-xs text-red-500">{form.formState.errors.faceValue.message}</p>}
+                                                </div>
+
+                                                {/* Max cashback cap */}
+                                                <div className="grid gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Label htmlFor="maxCashbackPercent">Max Cashback (%)</Label>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p className="w-64">Cumulative cashback businesses may add to this voucher, as a share of its face value.</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </div>
+                                                    <Input
+                                                        id="maxCashbackPercent"
+                                                        type="number"
+                                                        placeholder="50"
+                                                        {...form.register('maxCashbackPercent')}
+                                                    />
+                                                    {form.formState.errors.maxCashbackPercent && <p className="text-xs text-red-500">{form.formState.errors.maxCashbackPercent.message}</p>}
                                                 </div>
 
                                                 {/* Split Ratio */}
@@ -488,10 +559,51 @@ export default function CouponVoucherControl() {
                                                     </Select>
                                                 </div>
                                             </div>
+
+                                            <div className="grid gap-2 max-w-xs">
+                                                <Label htmlFor="expiresAt">Expires at (optional)</Label>
+                                                <Input
+                                                    id="expiresAt"
+                                                    type="datetime-local"
+                                                    {...form.register('expiresAt')}
+                                                />
+                                                <p className="text-[11px] text-slate-400">
+                                                    Applied to every wallet issued from this definition.
+                                                </p>
+                                            </div>
+
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="validProductIds">
+                                                        Product allow-list (optional)
+                                                    </Label>
+                                                    <Input
+                                                        id="validProductIds"
+                                                        placeholder="product-uuid-1, product-uuid-2"
+                                                        {...form.register('validProductIds')}
+                                                    />
+                                                    <p className="text-[11px] text-slate-400">
+                                                        Comma-separated product ids. Leave empty for any product.
+                                                    </p>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="validServiceIds">
+                                                        Service allow-list (optional)
+                                                    </Label>
+                                                    <Input
+                                                        id="validServiceIds"
+                                                        placeholder="service-uuid-1, service-uuid-2"
+                                                        {...form.register('validServiceIds')}
+                                                    />
+                                                    <p className="text-[11px] text-slate-400">
+                                                        Comma-separated service ids. Leave empty for any service.
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {/* Specific Shops Selection Detail - Enhanced UI */}
-                                        {watchScopeType === 'specific_shops' && (
+                                        {watchScopeType !== 'any_shop' && (
                                             <motion.div
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
@@ -636,8 +748,8 @@ export default function CouponVoucherControl() {
                                                             <SelectValue placeholder="Select function" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="spending_power">Spending Power</SelectItem>
-                                                            <SelectItem value="price_reducer">Price Reducer</SelectItem>
+                                                            <SelectItem value="spending_power">Coupon Voucher (Spending Power)</SelectItem>
+                                                            <SelectItem value="price_reducer">Voucher Coupon (Price Reducer)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -886,6 +998,13 @@ export default function CouponVoucherControl() {
                                                         <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl border-slate-100">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                className="cursor-pointer"
+                                                                onClick={() => setIssueDefinition(voucher)}
+                                                            >
+                                                                <Gift className="mr-2 h-4 w-4 text-orange-500" />
+                                                                Issue to customer
+                                                            </DropdownMenuItem>
                                                             <DropdownMenuItem className="cursor-pointer">
                                                                 <Activity className="mr-2 h-4 w-4 text-slate-400" />
                                                                 View Usage Log
@@ -1157,6 +1276,51 @@ export default function CouponVoucherControl() {
                         </div>
                     </TabsContent>
                 </Tabs>
+
+                <Dialog
+                    open={Boolean(issueDefinition)}
+                    onOpenChange={(open) => {
+                        if (!open) setIssueDefinition(null);
+                    }}
+                >
+                    <DialogContent className="sm:max-w-[460px]">
+                        <DialogHeader>
+                            <DialogTitle>Issue {issueDefinition?.name}</DialogTitle>
+                            <DialogDescription>
+                                Send this wallet or Voucher Coupon to a customer who
+                                already has an MCOM Mall account.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleIssueVoucher} className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="issueEmail">Customer email</Label>
+                                <Input
+                                    id="issueEmail"
+                                    type="email"
+                                    value={issueEmail}
+                                    onChange={(event) => setIssueEmail(event.target.value)}
+                                    placeholder="customer@example.com"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="issueExpiry">Expires (optional)</Label>
+                                <Input
+                                    id="issueExpiry"
+                                    type="datetime-local"
+                                    value={issueExpiry}
+                                    onChange={(event) => setIssueExpiry(event.target.value)}
+                                />
+                            </div>
+                            <Button
+                                type="submit"
+                                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                                Issue
+                            </Button>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </TooltipProvider >
     );

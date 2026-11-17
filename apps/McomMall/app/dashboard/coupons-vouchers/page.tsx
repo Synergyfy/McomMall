@@ -75,8 +75,10 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 import { HistoryCoupon, HistoryVoucher } from '@/app/dashboard/component/HistoryMarketingCards';
-import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useInitiateMoneyVoucherPurchase, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
+import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useInitiateMoneyVoucherPurchase, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher, usePosSpendVoucher } from '@/service/money-engine/hook';
 import { useGetUserProfile } from '@/service/user/hook';
+import { useGetUserListings } from '@/service/listings/hook';
+import { pickCentralBusiness } from '@/lib/central-business';
 import { useGetAllCoupons, useSaveCoupon, useGetSavedCoupons, useGetCoupons } from '@/service/coupons/hook';
 import { UserVoucherResponseDto } from '@/service/money-engine/types';
 import { DiscountType, Coupon } from '@/service/coupons/types';
@@ -111,6 +113,7 @@ interface VoucherDisplayData {
     rewardRatio?: number;
     realRatio?: number;
     shops?: (string | { name?: string; id?: string | number })[];
+    expiresAt?: string | null;
 }
 
 // --- COMPONENTS ---
@@ -183,6 +186,8 @@ export default function CouponsVouchersPage() {
 
     // API Hooks
     const { data: userProfile } = useGetUserProfile();
+    const { data: listingsData } = useGetUserListings();
+    const businessId = pickCentralBusiness(listingsData?.data)?.id;
     const { data: myVouchersResponse } = useGetMyVouchers(isCustomer);
     const { data: businessStats } = useGetBusinessStats(isBusiness);
     const { data: definitionsResponse } = useGetOwnerRewardDefinitions(isBusiness);
@@ -196,6 +201,7 @@ export default function CouponsVouchersPage() {
 
     const initiateMoneyVoucherPurchase = useInitiateMoneyVoucherPurchase();
     const spendMutation = useSpendVoucher();
+    const posSpendMutation = usePosSpendVoucher();
     const { savedCoupons, isLoading: isSavedCouponsLoading } = useGetSavedCoupons();
 
     // Form states
@@ -293,6 +299,7 @@ export default function CouponsVouchersPage() {
             realRatio: (v.definition.splitRatio?.real || 0.5) * 100,
             scope: v.definition.scopeType === 'any_shop' ? 'Any Shop' : (v.definition.scopeType || 'Any Shop'),
             shops: v.definition.validShops || [],
+            expiresAt: v.expiresAt ?? v.definition.expiresAt ?? null,
             transactions: []
         }));
     }, [myVouchersResponse]);
@@ -324,19 +331,28 @@ export default function CouponsVouchersPage() {
         return Number(topUpAmount) / realRatio;
     }, [selectedVoucherDefinition, topUpAmount]);
 
-    const rewardRatioPercent = useMemo(() => {
-        if (!selectedVoucherDefinition) return 50;
-        return (selectedVoucherDefinition.splitRatio?.reward || 0.5) * 100;
+    // Face-value definitions have a fixed real-money price: the customer pays
+    // the real share and receives the full advertised spending value.
+    useEffect(() => {
+        if (
+            selectedVoucherDefinition?.faceValue &&
+            selectedVoucherDefinition.splitRatio
+        ) {
+            const price =
+                Number(selectedVoucherDefinition.faceValue) *
+                Number(selectedVoucherDefinition.splitRatio.real || 0);
+            setTopUpAmount(price.toFixed(2));
+        }
     }, [selectedVoucherDefinition]);
 
     const handleGiveCashback = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedUserVoucher || !cashbackAmount || !userProfile?.id) {
+        if (!selectedUserVoucher || !cashbackAmount || !businessId) {
             toast.error('Please enter customer voucher ID and amount');
             return;
         }
         try {
-            await cashbackMutation.mutateAsync({ userVoucherId: selectedUserVoucher, amount: Number(cashbackAmount), shopId: userProfile?.id || '' });
+            await cashbackMutation.mutateAsync({ userVoucherId: selectedUserVoucher, amount: Number(cashbackAmount), shopId: businessId });
             toast.success(`Successfully injected £${cashbackAmount} cashback`);
             setIsCashbackModalOpen(false);
             setCashbackAmount('');
@@ -349,12 +365,13 @@ export default function CouponsVouchersPage() {
 
     const handleSpendVoucher = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!spendVoucherId || !spendAmount || !userProfile?.id) {
+        if (!spendVoucherId || !spendAmount || !businessId) {
             toast.error('Please enter voucher ID and amount');
             return;
         }
         try {
-            await spendMutation.mutateAsync({ userVoucherId: spendVoucherId, amount: Number(spendAmount), shopId: userProfile?.id || '' });
+            const mutation = isBusiness ? posSpendMutation : spendMutation;
+            await mutation.mutateAsync({ userVoucherId: spendVoucherId, amount: Number(spendAmount), shopId: businessId });
             toast.success(`Successfully charged £${spendAmount} from voucher`);
             setIsSpendModalOpen(false);
             setSpendAmount('');
@@ -494,7 +511,7 @@ export default function CouponsVouchersPage() {
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
                             <Gift className="w-8 h-8 text-orange-600" />
-                            Coupon-voucher
+                            Reward Hub
                         </h1>
                         <p className="text-gray-500 mt-1">Manage your spending power and reward network...</p>
                     </div>
@@ -504,19 +521,17 @@ export default function CouponsVouchersPage() {
                     {isBusiness ? (
                         <>
                             <StatCard title="Total Revenue" value={`£${businessStats?.totalSpentInShop?.toFixed(2) ?? '0.00'}`} icon={TrendingUp} description="Revenue from vouchers" trend="up" />
-                            <StatCard title="Cashback Given" value={businessStats?.cashbackGivenCount ?? 0} icon={Wallet} description="Distributed rewards" />
+                            <StatCard title="Cashback Given" value={`£${businessStats?.cashbackGivenAmount?.toFixed(2) ?? '0.00'}`} icon={Wallet} description="Reward value injected" />
                             <StatCard title="Customers" value={businessStats?.customersCount ?? 0} icon={Users} description="Unique customers" />
                             <StatCard title="Avg. Spend" value={`£${businessStats?.customersCount ? (businessStats.totalSpentInShop / businessStats.customersCount).toFixed(2) : '0.00'}`} icon={Zap} description="Per customer" />
-                            <StatCard title="Active Network" value="12" icon={Send} description="Connected shops" />
-                            <StatCard title="Growth" value="+15%" icon={ArrowUpRight} description="Last 30 days" trend="up" />
+                            <StatCard title="Reward Redeemed" value={`£${businessStats?.rewardRedeemedAmount?.toFixed(2) ?? '0.00'}`} icon={Send} description="Network reward spent here" />
+                            <StatCard title="Attributed Sales" value={`£${businessStats?.salesAttributed?.toFixed(2) ?? '0.00'}`} icon={ArrowUpRight} description="Spend linked to wallets" trend="up" />
                         </>
                     ) : (
                         <>
                             <StatCard title="Active Vouchers" value={customerStats?.activeVouchersCount ?? 0} icon={Zap} description="Available now" />
                             <StatCard title="Total Balance" value={`£${customerStats?.totalCurrentBalance?.toFixed(2) ?? '0.00'}`} icon={Wallet} description="Spending power" />
                             <StatCard title="Total Spent" value={`£${customerStats?.totalSpent?.toFixed(2) ?? '0.00'}`} icon={ArrowUpRight} description="Lifetime spend" trend="up" />
-                            <StatCard title="Rewards Earned" value={`£${customerStats ? customerStats.currentRewardBalance.toFixed(2) : '0.00'}`} icon={Gift} description="Cashback value" />
-                            <StatCard title="Real Money" value={`£${customerStats?.currentRealBalance?.toFixed(2) ?? '0.00'}`} icon={TrendingUp} description="Your personal funds" />
                             <StatCard title="Rewards from Business" value={`£${customerStats?.totalBusinessRewardsReceived?.toFixed(2) ?? '0.00'}`} icon={Send} description="Total rewards received" />
                         </>
                     )}
@@ -624,7 +639,7 @@ export default function CouponsVouchersPage() {
                                                 <CouponTicketFull
                                                     key={vt.id}
                                                     title={vt.name}
-                                                    subtitle={`Split: ${vt.split} · ${vt.usageScope}`}
+                                                    subtitle={vt.usageScope}
                                                     valueLabel={vt.seasonalLabel}
                                                     validUntil={vt.status}
                                                     footerText={vt.id.slice(0, 12)}
@@ -765,7 +780,7 @@ export default function CouponsVouchersPage() {
                             <DialogTitle>{purchaseStep === 'select' ? 'Purchase Voucher' : 'Complete Payment'}</DialogTitle>
                             {purchaseStep === 'select' && (
                                 <DialogDescription>
-                                    Buy a new voucher package with real money. Your payment will be converted into voucher balance with bonus matching rewards based on the selected package.
+                                    Buy a voucher package with real money. Your payment unlocks the stated spending value in your MCOM wallet.
                                 </DialogDescription>
                             )}
                         </DialogHeader>
@@ -783,12 +798,18 @@ export default function CouponsVouchersPage() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Payment Amount (£)</Label>
-                                    <Input type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)} className="rounded-xl" />
+                                    <Label>Price (£)</Label>
+                                    <Input
+                                        type="number"
+                                        value={topUpAmount}
+                                        onChange={(e) => setTopUpAmount(e.target.value)}
+                                        readOnly={Boolean(selectedVoucherDefinition?.faceValue)}
+                                        className="rounded-xl"
+                                    />
                                     {selectedVoucherDefinition && (
                                         <div className="flex justify-between items-center mt-1">
-                                            <p className="text-[10px] text-orange-600 font-bold">Total Power: £{totalPower.toFixed(2)}</p>
-                                            <p className="text-[10px] text-gray-400 font-medium">Matching: {rewardRatioPercent}%</p>
+                                            <p className="text-[10px] text-orange-600 font-bold">You get £{totalPower.toFixed(2)} to spend</p>
+                                            <p className="text-[10px] text-gray-400 font-medium">Fixed voucher value</p>
                                         </div>
                                     )}
                                 </div>
@@ -903,22 +924,16 @@ export default function CouponsVouchersPage() {
                                     <div className="text-2xl font-black text-slate-900 mt-1">£{selectedVoucherForDetails?.balance?.toFixed(2)}</div>
                                 </div>
                                 <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 shadow-sm group hover:border-orange-200 transition-colors">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Split Ratio</span>
-                                    <div className="text-2xl font-black text-slate-900 mt-1">{selectedVoucherForDetails?.split}</div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expires</span>
+                                    <div className="text-sm font-black text-slate-900 mt-1">
+                                        {selectedVoucherForDetails?.expiresAt
+                                            ? new Date(selectedVoucherForDetails.expiresAt).toLocaleDateString()
+                                            : 'No expiry'}
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="space-y-3">
-                                <div className="p-5 bg-orange-50/50 rounded-3xl flex gap-4 items-center border border-orange-100/50">
-                                    <div className="bg-orange-600 p-2.5 rounded-2xl shadow-orange-200 shadow-lg text-white">
-                                        <Zap className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <div className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Reward Matching</div>
-                                        <div className="text-sm font-bold text-slate-700">Matching Power: {selectedVoucherForDetails?.rewardRatio || '50'}%</div>
-                                    </div>
-                                </div>
-
                                 <div className="p-5 bg-blue-50/50 rounded-3xl flex gap-4 items-start border border-blue-100/50">
                                     <div className="bg-blue-600 p-2.5 rounded-2xl shadow-blue-200 shadow-lg text-white mt-0.5">
                                         <Globe className="w-5 h-5" />

@@ -7,6 +7,7 @@ import { UserVoucher } from './entities/user-voucher.entity';
 import { VoucherTransaction } from './entities/voucher-transaction.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { PaymentHistory } from '../payments/entities/payment-history.entity';
+import { DigitalValueModule } from '../digital-value/digital-value.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PaymentHistory } from '../payments/entities/payment-history.entity';
       PaymentHistory,
     ]),
     PaymentsModule,
+    DigitalValueModule,
   ],
   controllers: [MoneyEngineController],
   providers: [MoneyEngineService],

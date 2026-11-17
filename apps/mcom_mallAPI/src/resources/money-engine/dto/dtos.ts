@@ -1,9 +1,14 @@
 import {
+  IsDateString,
   IsEnum,
+  IsInt,
+  IsEmail,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
+  Min,
   ValidateNested,
   IsArray,
   IsBoolean,
@@ -11,6 +16,7 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  BurnStrategy,
   FunctionalType,
   ScopeType,
   SplitRatioConfig,
@@ -57,6 +63,33 @@ export class CreateRewardDefinitionDto {
   @Type(() => SplitRatioDto)
   splitRatio: SplitRatioDto;
 
+  @ApiProperty({
+    example: 100,
+    description: 'Canonical total worth in GBP. Required for new definitions.',
+  })
+  @IsNumber()
+  @Min(0.01)
+  faceValue: number;
+
+  @ApiPropertyOptional({
+    example: 50,
+    description:
+      'Maximum cumulative cashback as a percentage of face value (0-100).',
+  })
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  maxCashbackPercent?: number;
+
+  @ApiPropertyOptional({
+    enum: BurnStrategy,
+    example: BurnStrategy.REAL_FIRST,
+  })
+  @IsEnum(BurnStrategy)
+  @IsOptional()
+  burnStrategy?: BurnStrategy;
+
   @ApiProperty({ enum: ScopeType, example: ScopeType.ANY_SHOP })
   @IsEnum(ScopeType)
   scopeType: ScopeType;
@@ -74,10 +107,64 @@ export class CreateRewardDefinitionDto {
   @IsOptional()
   seasonalLabels?: string[];
 
+  @ApiPropertyOptional({
+    example: ['product-uuid-1'],
+    description: 'Optional allow-list of products this voucher can buy.',
+  })
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  validProductIds?: string[];
+
+  @ApiPropertyOptional({
+    example: ['service-uuid-1'],
+    description: 'Optional allow-list of services this voucher can buy.',
+  })
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  validServiceIds?: string[];
+
+  @ApiPropertyOptional({
+    example: '2026-12-31T23:59:59.000Z',
+    description: 'Wallets issued from this definition expire at this instant.',
+  })
+  @IsDateString()
+  @IsOptional()
+  expiresAt?: string;
+
   @ApiPropertyOptional({ default: true })
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+}
+
+export class IssueVoucherDto {
+  @ApiProperty({ description: 'Template to issue from.' })
+  @IsUUID()
+  rewardDefinitionId: string;
+
+  @ApiPropertyOptional({ description: 'Existing user id to issue to.' })
+  @IsUUID()
+  @IsOptional()
+  recipientUserId?: string;
+
+  @ApiPropertyOptional({ description: 'Existing user email to issue to.' })
+  @IsEmail()
+  @IsOptional()
+  recipientEmail?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional per-issuance expiry override.',
+  })
+  @IsDateString()
+  @IsOptional()
+  expiresAt?: string;
+
+  @ApiPropertyOptional({
+    description: 'Idempotency key for campaign/partner issuance.',
+  })
+  @IsString()
+  @IsOptional()
+  issuanceId?: string;
 }
 
 export class UpdateRewardDefinitionDto extends PartialType(
@@ -105,6 +192,32 @@ export class PurchaseVoucherDto {
   })
   @IsString()
   transactionId: string;
+
+  @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.STRIPE })
+  @IsEnum(PaymentGateway)
+  paymentGateway: PaymentGateway;
+}
+
+export class ContributeToVoucherDto {
+  @ApiProperty({ example: 10 })
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
+
+  @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.STRIPE })
+  @IsEnum(PaymentGateway)
+  paymentGateway: PaymentGateway;
+
+  @ApiProperty({ example: 'pi_3M...' })
+  @IsString()
+  transactionId: string;
+}
+
+export class InitiateContributionDto {
+  @ApiProperty({ example: 10 })
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
 
   @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.STRIPE })
   @IsEnum(PaymentGateway)
@@ -146,6 +259,24 @@ export class DefinitionResponseDto {
   description: string;
   @ApiProperty()
   visualType: string;
+  @ApiPropertyOptional({ example: 'spending_power' })
+  functionalType?: string;
+  @ApiPropertyOptional({ example: 100 })
+  faceValue?: number | null;
+  @ApiPropertyOptional({ example: 50 })
+  maxCashbackPercent?: number;
+  @ApiPropertyOptional({ example: { real: 0.5, reward: 0.5 } })
+  splitRatio?: { real: number; reward: number };
+  @ApiPropertyOptional({ example: 'any_shop' })
+  scopeType?: string;
+  @ApiPropertyOptional({ example: [] })
+  validShopIds?: string[];
+  @ApiPropertyOptional({ example: [] })
+  validProductIds?: string[];
+  @ApiPropertyOptional({ example: [] })
+  validServiceIds?: string[];
+  @ApiPropertyOptional()
+  expiresAt?: string | null;
 }
 
 export class UserVoucherResponseDto {
@@ -161,8 +292,28 @@ export class UserVoucherResponseDto {
   })
   totalBalance: number;
 
+  @ApiPropertyOptional({
+    example: 100.0,
+    description: 'Canonical worth when the definition provides one',
+  })
+  faceValue?: number | null;
+
+  @ApiPropertyOptional({
+    example: 'spending_power',
+    description: 'Behaviour snapshot used at redemption',
+  })
+  functionalType?: string | null;
+
   @ApiProperty({ example: 'active' })
   state: string;
+
+  @ApiPropertyOptional({
+    description: 'How much more value the wallet can still collect from contributors.',
+  })
+  contributionRemaining?: number;
+
+  @ApiPropertyOptional()
+  expiresAt?: string | null;
 
   @ApiProperty({ type: DefinitionResponseDto })
   definition: DefinitionResponseDto;
@@ -230,11 +381,32 @@ export class BusinessStatsResponseDto {
 
   @ApiProperty()
   customersCount: number;
+
+  @ApiProperty()
+  cashbackGivenCount: number;
+
+  @ApiProperty()
+  cashbackGivenAmount: number;
+
+  @ApiProperty()
+  rewardRedeemedAmount: number;
+
+  @ApiProperty()
+  realRedeemedAmount: number;
+
+  @ApiProperty()
+  salesAttributed: number;
 }
 
 export class CustomerMoneyStatsDto {
   @ApiProperty({ example: 5, description: 'Number of active vouchers owned' })
   activeVouchersCount: number;
+
+  @ApiProperty({
+    example: 2,
+    description: 'Number of active Voucher Coupons (discount entitlements)',
+  })
+  activeVoucherCouponsCount: number;
 
   @ApiProperty({
     example: 500.0,

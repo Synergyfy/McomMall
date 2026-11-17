@@ -9,9 +9,14 @@ export interface CreateRewardDefinitionDto {
     visualType: 'coupon' | 'voucher';
     functionalType: 'price_reducer' | 'spending_power';
     splitRatio: SplitRatioDto;
+    faceValue: number;
+    maxCashbackPercent?: number;
     scopeType: 'any_shop' | 'specific_shops' | 'expo_only' | 'campaign_only';
     validShopIds?: string[];
+    validProductIds?: string[];
+    validServiceIds?: string[];
     seasonalLabels?: string[];
+    expiresAt?: string;
     isActive?: boolean;
     burnStrategy?: 'reward_first' | 'real_first' | 'proportional';
 }

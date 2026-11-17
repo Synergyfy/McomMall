@@ -28,6 +28,58 @@ export class UserVoucher extends AbstractBaseEntity {
   @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   rewardBalance: number;
 
+  /** Canonical total worth snapshot, copied from the definition at issuance. */
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
+  faceValue: number | null;
+
+  /** Cumulative cashback credited by businesses, used to enforce the cap. */
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
+  cashbackCredited: number;
+
+  /** Cumulative value this wallet has driven through the network. */
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
+  salesAttributed: number;
+
+  /**
+   * How much real money this wallet is allowed to collect from the owner and
+   * friends/family. `null` means "no contribution cap beyond faceValue".
+   * A purchased wallet sets this to the amount already paid, so it cannot be
+   * topped up; a campaign-issued wallet sets it to the real share target.
+   */
+  @Column({
+    name: 'real_contribution_target',
+    type: 'bigint',
+    nullable: true,
+    transformer: moneyTransformer,
+  })
+  realContributionTarget: number | null;
+
+  /**
+   * Behaviour snapshot (`spending_power` | `price_reducer`). Copied from the
+   * definition so redemption does not depend on a nullable join.
+   */
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  functionalType: string | null;
+
+  /** Wallet expiry. Enforced lazily on every read/write path. */
+  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  expiresAt: Date | null;
+
+  /** User who issued a campaign/promotional wallet, when applicable. */
+  @Column({ name: 'issued_by_user_id', type: 'uuid', nullable: true })
+  issuedByUserId: string | null;
+
+  /** Business that issued a Voucher Coupon, when applicable. */
+  @Column({ name: 'issuer_business_id', type: 'uuid', nullable: true })
+  issuerBusinessId: string | null;
+
+  /**
+   * Partner/campaign idempotency key. When supplied, issuing the same key
+   * twice returns the original wallet instead of minting a second one.
+   */
+  @Column({ name: 'issuance_id', nullable: true })
+  issuanceId: string | null;
+
   @Column({
     type: 'enum',
     enum: VoucherState,

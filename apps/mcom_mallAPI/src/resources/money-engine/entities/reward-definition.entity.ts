@@ -1,7 +1,8 @@
 import { Column, Entity, JoinTable, ManyToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
+import { moneyTransformer } from '../../../common/money/money';
 import { Business } from '../../listings/entities/listing.entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum VisualType {
   COUPON = 'coupon',
@@ -68,6 +69,25 @@ export class RewardDefinition extends AbstractBaseEntity {
   @Column({ type: 'jsonb' })
   splitRatio: SplitRatioConfig;
 
+  @ApiPropertyOptional({
+    example: 100,
+    description: 'Canonical total worth in GBP. Stored as pence.',
+  })
+  @Column({
+    type: 'bigint',
+    nullable: true,
+    transformer: moneyTransformer,
+  })
+  faceValue: number | null;
+
+  @ApiPropertyOptional({
+    example: 50,
+    description:
+      'Maximum cumulative cashback as a percentage of face value (0-100).',
+  })
+  @Column({ type: 'integer', default: 50 })
+  maxCashbackPercent: number;
+
   @ApiProperty({ enum: BurnStrategy, default: BurnStrategy.REAL_FIRST })
   @Column({
     type: 'enum',
@@ -96,6 +116,37 @@ export class RewardDefinition extends AbstractBaseEntity {
   @ApiProperty({ example: ['Spring', '2026'], nullable: true })
   @Column({ type: 'simple-array', nullable: true })
   seasonalLabels: string[];
+
+  /**
+   * Optional item-level scope. When either list is present the voucher can only
+   * be spent on those products/services, regardless of `scopeType`.
+   */
+  @ApiPropertyOptional({
+    example: ['product-uuid-1'],
+    description: 'Allow-list of product ids for item-scoped vouchers.',
+  })
+  @Column({
+    name: 'valid_product_ids',
+    type: 'simple-array',
+    nullable: true,
+  })
+  validProductIds: string[] | null;
+
+  @ApiPropertyOptional({
+    example: ['service-uuid-1'],
+    description: 'Allow-list of service ids for item-scoped vouchers.',
+  })
+  @Column({
+    name: 'valid_service_ids',
+    type: 'simple-array',
+    nullable: true,
+  })
+  validServiceIds: string[] | null;
+
+  /** When set, newly issued wallets expire at this instant. */
+  @ApiPropertyOptional({ example: '2026-12-31T23:59:59.000Z' })
+  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  expiresAt: Date | null;
 
   @ApiProperty({ default: true })
   @Column({ default: true })

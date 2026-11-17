@@ -1,4 +1,8 @@
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { CheckoutService } from './checkout.service';
 import { OrderStatus } from '../order/enums/order-status.enum';
 
@@ -6,6 +10,9 @@ const product = {
   id: 'product-b',
   title: 'Product B',
   business: { id: 'business-b' },
+  productStatus: 'published',
+  visibility: 'public',
+  adminDisabled: false,
   enableStockManagement: false,
   stock: 100,
   weight: 1,
@@ -63,24 +70,62 @@ function buildService(overrides: Record<string, any> = {}) {
     findVoucherByCode: jest.fn(),
     redeemForOrder: jest.fn(),
   };
+  const shippingAddressRepository = {
+    findOne: jest.fn(),
+  };
+  const paymentProviderService = {
+    verifyWalletCharge: jest.fn().mockResolvedValue({ ok: true }),
+    verifyStripePaymentIntent: jest.fn().mockResolvedValue({ ok: true }),
+    captureAndVerifyPaypalOrder: jest.fn().mockResolvedValue({ ok: true }),
+    createStripePaymentIntent: jest
+      .fn()
+      .mockResolvedValue({ client_secret: 'pi_secret' }),
+    createPaypalOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'paypal-order', approvalUrl: null }),
+    createWalletCharge: jest.fn().mockResolvedValue({ chargeId: 'charge-1' }),
+  };
+  const mcomWalletService = {
+    buildKey: jest.fn(() => 'key'),
+    captureHold: jest.fn(),
+    toHttpException: jest.fn((error) => error),
+  };
+  const shippingPricingService = {
+    getShippingFee: jest.fn().mockResolvedValue({ fee: 0 }),
+  };
+  const moneyEngineService = {
+    getOwnedByCode: jest.fn(),
+    getScopeForDefinition: jest.fn(),
+    resolvePriceReducer: jest.fn(),
+    redeemForOrder: jest.fn().mockResolvedValue({
+      voucher: { id: 'mv-1', code: 'MV-1' },
+      realDeduction: 5,
+      rewardDeduction: 0,
+    }),
+    redeemPriceReducer: jest.fn(),
+  };
+  const featureFlags = {
+    isMoneyVoucherCheckoutEnabled: jest.fn(() => false),
+  };
 
   const service = new CheckoutService(
-    userRepository as any,
-    {} as any,
-    productRepository as any,
-    {} as any,
-    orderRepository as any,
-    orderItemRepository as any,
-    {} as any,
-    giftCardService as any,
-    {} as any,
-    {} as any,
-    dataSource as any,
-    productService as any,
-    couponService as any,
-    {} as any,
-    instrumentScopeService as any,
-    voucherService as any,
+    userRepository as any, // user
+    {} as any, // offer
+    productRepository as any, // product
+    orderRepository as any, // order
+    orderItemRepository as any, // order item
+    shippingAddressRepository as any, // shipping address
+    giftCardService as any, // gift card
+    paymentProviderService as any, // payment provider
+    mcomWalletService as any, // mcom wallet
+    dataSource as any, // data source
+    productService as any, // product service
+    couponService as any, // coupon
+    shippingPricingService as any, // shipping pricing
+    instrumentScopeService as any, // instrument scope
+    voucherService as any, // voucher
+    moneyEngineService as any, // money engine
+    featureFlags as any, // feature flags
   );
 
   return {
@@ -94,6 +139,8 @@ function buildService(overrides: Record<string, any> = {}) {
     giftCardService,
     voucherService,
     instrumentScopeService,
+    moneyEngineService,
+    featureFlags,
     ...overrides,
   };
 }
@@ -235,15 +282,93 @@ describe('CheckoutService instrument scope', () => {
     expect(result.paymentRequired).toBe(false);
     expect(result.remainingTotal).toBe(0);
   });
+
+  it('applies a money-engine wallet as a payment instrument', async () => {
+    const {
+      service,
+      orderRepository,
+      moneyEngineService,
+      featureFlags,
+      instrumentScopeService,
+    } = buildService();
+    featureFlags.isMoneyVoucherCheckoutEnabled.mockReturnValue(true);
+    moneyEngineService.getOwnedByCode.mockResolvedValue({
+      id: 'mv-1',
+      code: 'MV-1',
+      state: 'active',
+      realBalance: 25,
+      rewardBalance: 0,
+      functionalType: 'spending_power',
+      definition: { scopeType: 'any_shop' },
+    });
+    moneyEngineService.getScopeForDefinition.mockReturnValue(null);
+    instrumentScopeService.computeEligiblePayable.mockReturnValue({
+      eligibleSubtotal: 10,
+      lines: [],
+    });
+
+    const result = await service.initiateCheckout('user-1', {
+      items,
+      moneyVoucherCode: 'MV-1',
+      moneyVoucherAmount: 5,
+    } as any);
+
+    expect(result.remainingTotal).toBe(5);
+    expect(result.paymentRequired).toBe(true);
+    expect(orderRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        moneyVoucherCode: 'MV-1',
+        moneyVoucherAmountApplied: 5,
+      }),
+    );
+  });
+
+  it('rejects money vouchers when the checkout flag is off', async () => {
+    const { service } = buildService();
+
+    await expect(
+      service.initiateCheckout('user-1', {
+        items,
+        moneyVoucherCode: 'MV-1',
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects a price-reducer wallet as a payment instrument', async () => {
+    const { service, moneyEngineService, featureFlags } = buildService();
+    featureFlags.isMoneyVoucherCheckoutEnabled.mockReturnValue(true);
+    moneyEngineService.getOwnedByCode.mockResolvedValue({
+      id: 'mv-1',
+      code: 'MV-1',
+      state: 'active',
+      realBalance: 25,
+      rewardBalance: 0,
+      functionalType: 'price_reducer',
+      definition: { scopeType: 'any_shop' },
+    });
+
+    await expect(
+      service.initiateCheckout('user-1', {
+        items,
+        moneyVoucherCode: 'MV-1',
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
 });
 
 describe('CheckoutService completion', () => {
   it('consumes gift card, coupon and voucher exactly once', async () => {
-    const { service, orderRepository, couponService, giftCardService, voucherService } =
-      buildService();
+    const {
+      service,
+      orderRepository,
+      couponService,
+      giftCardService,
+      voucherService,
+      moneyEngineService,
+    } = buildService();
     const order = {
       id: 'order-1',
-      total: 30,
+      total: 35,
       status: OrderStatus.PENDING,
       giftCardCode: 'GC-1',
       giftCardAmountApplied: 10,
@@ -251,6 +376,8 @@ describe('CheckoutService completion', () => {
       couponDiscountApplied: 10,
       voucherCode: 'V-1',
       voucherAmountApplied: 10,
+      moneyVoucherCode: 'MV-1',
+      moneyVoucherAmountApplied: 5,
     };
     const lockedOrder = { ...order };
     const orderWithItems = { ...order, items: [] };
@@ -279,6 +406,11 @@ describe('CheckoutService completion', () => {
     );
     expect(voucherService.redeemForOrder).toHaveBeenCalledWith(
       { code: 'V-1', amount: 10 },
+      expect.objectContaining({ id: 'order-1' }),
+      expect.anything(),
+    );
+    expect(moneyEngineService.redeemForOrder).toHaveBeenCalledWith(
+      { code: 'MV-1', amount: 5, userId: 'user-1', businessId: null },
       expect.objectContaining({ id: 'order-1' }),
       expect.anything(),
     );

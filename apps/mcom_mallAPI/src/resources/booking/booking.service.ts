@@ -74,6 +74,9 @@ import {
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { VoucherService } from '../voucher/voucher.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { MoneyEngineService } from '../money-engine/money-engine.service';
+import { FunctionalType } from '../money-engine/entities/reward-definition.entity';
+import { FeatureFlagsService } from '../../common/feature-flags/feature-flags.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
 import { randomUUID } from 'crypto';
 
@@ -145,6 +148,8 @@ export class BookingService {
     @Inject(forwardRef(() => VoucherService))
     private readonly voucherService: VoucherService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly moneyEngineService: MoneyEngineService,
+    private readonly featureFlags: FeatureFlagsService,
   ) {}
 
   async checkAvailability(checkAvailabilityDto: CheckAvailabilityDto): Promise<{
@@ -1421,7 +1426,35 @@ export class BookingService {
       couponDiscount = round2(Math.max(0, couponDiscount));
     }
 
-    const afterCoupon = round2(totalAmount - rewardDiscount - couponDiscount);
+    let priceReducerAmount = 0;
+    if (initiateDto.priceReducerCode) {
+      const priceReducer = await this.moneyEngineService.getOwnedByCode(
+        initiateDto.priceReducerCode,
+        booking.user,
+      );
+      const scope = this.moneyEngineService.getScopeForDefinition(
+        priceReducer.definition,
+      );
+      const isScoped = !!scope && scope.mode !== ScopeMode.NO_SCOPE;
+      if (
+        isScoped &&
+        !this.instrumentScopeService.matches(scope, scopeLine)
+      ) {
+        throw new UnprocessableEntityException(
+          'SCOPE_NO_ELIGIBLE_LINES: this Voucher Coupon does not apply to this booking.',
+        );
+      }
+      const resolved = await this.moneyEngineService.resolvePriceReducer(
+        initiateDto.priceReducerCode,
+        booking.user,
+        Math.max(0, totalAmount - rewardDiscount - couponDiscount),
+      );
+      priceReducerAmount = resolved.amount;
+    }
+
+    const afterCoupon = round2(
+      totalAmount - rewardDiscount - couponDiscount - priceReducerAmount,
+    );
     let giftCardAmount = 0;
     if (initiateDto.giftCardCode) {
       const card = await this.giftCardService.findActiveCardByCode(
@@ -1507,8 +1540,61 @@ export class BookingService {
       });
     }
 
+    const afterVoucher = round2(afterGiftCard - voucherAmount);
+    let moneyVoucherAmount = 0;
+    if (initiateDto.moneyVoucherCode) {
+      if (!this.featureFlags.isMoneyVoucherCheckoutEnabled()) {
+        throw new BadRequestException(
+          'Money vouchers are not enabled at checkout.',
+        );
+      }
+
+      const moneyVoucher = await this.moneyEngineService.getOwnedByCode(
+        initiateDto.moneyVoucherCode,
+        booking.user,
+      );
+      const behavior =
+        moneyVoucher.functionalType ??
+        moneyVoucher.definition?.functionalType;
+      if (behavior === FunctionalType.PRICE_REDUCER) {
+        throw new BadRequestException(
+          'This voucher can only be applied as a discount, not as payment.',
+        );
+      }
+
+      const scope = this.moneyEngineService.getScopeForDefinition(
+        moneyVoucher.definition,
+      );
+      const isScoped = !!scope && scope.mode !== ScopeMode.NO_SCOPE;
+      if (
+        isScoped &&
+        !this.instrumentScopeService.matches(scope, scopeLine)
+      ) {
+        throw new UnprocessableEntityException(
+          'SCOPE_NO_ELIGIBLE_LINES: this voucher does not apply to this booking.',
+        );
+      }
+
+      const balance = round2(
+        Number(moneyVoucher.realBalance) +
+          Number(moneyVoucher.rewardBalance),
+      );
+      moneyVoucherAmount = computeInstrumentApplication({
+        requested: initiateDto.moneyVoucherAmount,
+        balance,
+        eligiblePayable: afterVoucher,
+        remainingPayable: afterVoucher,
+      });
+    }
+
     const payableAmount = round2(
-      totalAmount - rewardDiscount - couponDiscount - giftCardAmount - voucherAmount,
+      totalAmount -
+        rewardDiscount -
+        couponDiscount -
+        priceReducerAmount -
+        giftCardAmount -
+        voucherAmount -
+        moneyVoucherAmount,
     );
     if (payableAmount < 0) {
       throw new BadRequestException('Payable amount cannot be negative.');
@@ -1525,10 +1611,15 @@ export class BookingService {
     booking.rewardDiscountApplied = rewardDiscount;
     booking.couponDiscountApplied = couponDiscount;
     booking.couponCode = initiateDto.couponCode ?? null;
+    booking.priceReducerAmountApplied = priceReducerAmount;
+    booking.priceReducerCode =
+      priceReducerAmount > 0 ? (initiateDto.priceReducerCode ?? null) : null;
     booking.giftCardAmountApplied = giftCardAmount;
     booking.giftCardCode = initiateDto.giftCardCode ?? null;
     booking.voucherAmountApplied = voucherAmount;
     booking.voucherCode = initiateDto.voucherCode ?? null;
+    booking.moneyVoucherAmountApplied = moneyVoucherAmount;
+    booking.moneyVoucherCode = initiateDto.moneyVoucherCode ?? null;
     const currency = 'GBP';
 
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
@@ -1809,6 +1900,44 @@ export class BookingService {
               bookingId: booking.id,
             },
             manager,
+          );
+        }
+        if (
+          booking.priceReducerCode &&
+          Number(booking.priceReducerAmountApplied) > 0
+        ) {
+          await this.moneyEngineService.redeemPriceReducer(
+            {
+              code: booking.priceReducerCode,
+              amount: Number(booking.priceReducerAmountApplied),
+              userId: booking.user.id,
+              businessId: booking.service.business.id,
+              referenceId: booking.id,
+              source: 'booking',
+            },
+            manager,
+          );
+        }
+
+        if (
+          booking.moneyVoucherCode &&
+          Number(booking.moneyVoucherAmountApplied) > 0
+        ) {
+          const redemption = await this.moneyEngineService.redeemForBooking(
+            {
+              code: booking.moneyVoucherCode,
+              amount: Number(booking.moneyVoucherAmountApplied),
+              userId: booking.user.id,
+              businessId: booking.service.business.id,
+              bookingId: booking.id,
+            },
+            manager,
+          );
+          booking.moneyVoucherRealAmountApplied = round2(
+            redemption.realDeduction,
+          );
+          booking.moneyVoucherRewardAmountApplied = round2(
+            redemption.rewardDeduction,
           );
         }
 

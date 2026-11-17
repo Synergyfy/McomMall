@@ -119,6 +119,39 @@ export class ServiceBooking extends AbstractBaseEntity {
   @Column({ nullable: true })
   voucherCode: string;
 
+  @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
+  moneyVoucherAmountApplied: number;
+
+  @Column({ nullable: true })
+  moneyVoucherCode: string;
+
+  @Column({
+    name: 'money_voucher_real_amount_applied',
+    type: 'bigint',
+    default: 0,
+    transformer: moneyTransformer,
+  })
+  moneyVoucherRealAmountApplied: number;
+
+  @Column({
+    name: 'money_voucher_reward_amount_applied',
+    type: 'bigint',
+    default: 0,
+    transformer: moneyTransformer,
+  })
+  moneyVoucherRewardAmountApplied: number;
+
+  @Column({ name: 'price_reducer_code', nullable: true })
+  priceReducerCode: string;
+
+  @Column({
+    name: 'price_reducer_amount_applied',
+    type: 'bigint',
+    default: 0,
+    transformer: moneyTransformer,
+  })
+  priceReducerAmountApplied: number;
+
   @Column({ nullable: true })
   paymentIntentId: string; // Stripe PaymentIntent or PayPal Order ID
 

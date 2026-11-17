@@ -14,6 +14,18 @@ export class Wallet extends AbstractBaseEntity {
   @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   earningsBalance: number;
 
+  /**
+   * Cashback that must stay inside the network. It is included in
+   * `earningsBalance` for reporting but is excluded from withdrawable funds.
+   */
+  @Column({
+    name: 'locked_cashback_balance',
+    type: 'bigint',
+    default: 0,
+    transformer: moneyTransformer,
+  })
+  lockedCashbackBalance: number;
+
   @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   spendableBalance: number;
 

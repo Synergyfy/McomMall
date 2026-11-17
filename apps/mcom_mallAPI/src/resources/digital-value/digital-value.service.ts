@@ -74,7 +74,7 @@ export class DigitalValueService {
     }
 
     return this.runInTransaction(async (transactionalManager) => {
-      const code = generateNanoId();
+      const code = createDto.code?.trim() || generateNanoId();
 
       const digitalValue = transactionalManager.create(DigitalValueMaster, {
         code,

@@ -150,6 +150,29 @@ export class CreateCheckoutDto {
   voucherAmount?: number;
 
   @ApiPropertyOptional({
+    description:
+      'Voucher Coupon code to apply as a single-use discount (price reducer).',
+  })
+  @IsString()
+  @IsOptional()
+  priceReducerCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Money-engine wallet code to use for payment.',
+  })
+  @IsString()
+  @IsOptional()
+  moneyVoucherCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Amount to deduct from the money-engine wallet.',
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  moneyVoucherAmount?: number;
+
+  @ApiPropertyOptional({
     type: [RewardApplicationDto],
     description:
       'MCOM Rewards reward issuances to apply, each bound to a cart line.',
