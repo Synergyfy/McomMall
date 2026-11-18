@@ -52,9 +52,15 @@ export const PartnershipsScreen: FC<PartnershipsScreenProps> = ({
     fetchPartnershipsData();
   }, []);
 
+  const pendingRequests = receivedRequests.filter(
+    (req) => req.status === 'pending',
+  );
+
   const handleRespond = async (id: string, response: 'approved' | 'rejected') => {
     try {
-      await api.patch(`partnerships/user-request/${id}/respond`, { response });
+      await api.patch(`partnerships/user-request/${id}/respond`, {
+        status: response === 'approved' ? 'accepted' : 'declined',
+      });
       fetchPartnershipsData();
     } catch (err) {
       console.error('Error responding to request:', err);
@@ -105,12 +111,18 @@ export const PartnershipsScreen: FC<PartnershipsScreenProps> = ({
         <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Incoming Proposals</h3>
         {loading ? (
           <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-        ) : receivedRequests.length > 0 ? (
+        ) : pendingRequests.length > 0 ? (
           <div className="flex flex-col gap-3">
-            {receivedRequests.map((req) => (
+            {pendingRequests.map((req) => (
               <div key={req.id} className="p-3.5 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-gray-900">{req.initiator?.businessName || 'Neighbor Store'}</p>
+                  <p className="text-xs font-bold text-gray-900">
+                    {req.sender?.name ||
+                      [req.sender?.firstName, req.sender?.lastName]
+                        .filter(Boolean)
+                        .join(' ') ||
+                      'Neighbor Store'}
+                  </p>
                   <p className="text-[10px] text-gray-400 mt-0.5">{req.message || 'Proposing joint campaign partnership.'}</p>
                 </div>
                 <div className="flex gap-1.5">
@@ -143,13 +155,13 @@ export const PartnershipsScreen: FC<PartnershipsScreenProps> = ({
         ) : activePartners.length > 0 ? (
           <div className="flex flex-col gap-2.5">
             {activePartners.map((partner, idx) => (
-              <div key={idx} className="p-3.5 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-3">
+              <div key={partner.partnershipId || idx} className="p-3.5 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-sm shrink-0 border border-orange-200">
-                  {partner.businessName?.charAt(0) || 'P'}
+                  {partner.partnerName?.charAt(0) || 'P'}
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-900">{partner.businessName}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{partner.address || partner.postcode || 'High Street Merchant'}</p>
+                  <p className="text-xs font-bold text-gray-900">{partner.partnerName || 'Partner'}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{partner.postcodes?.[0] || 'High Street Merchant'}</p>
                 </div>
               </div>
             ))}
@@ -233,11 +245,13 @@ export const RequestPartnerScreen: FC<RequestPartnerScreenProps> = ({
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(false);
+    setError(null);
 
     try {
       // Find list of owners matching search to resolve targetUserId
@@ -246,8 +260,7 @@ export const RequestPartnerScreen: FC<RequestPartnerScreenProps> = ({
       const targetUserId = matches[0]?.id;
 
       if (!targetUserId) {
-        alert('Could not resolve business owner name. Please enter a valid partner name.');
-        setLoading(false);
+        setError('Could not resolve business owner name. Please enter a valid partner name.');
         return;
       }
 
@@ -260,8 +273,12 @@ export const RequestPartnerScreen: FC<RequestPartnerScreenProps> = ({
       setTimeout(() => {
         onNavigate('partnerships');
       }, 1000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error submitting B2B proposal:', err);
+      setError(
+        err.response?.data?.message ||
+          'Could not send the partnership request. Please try again.',
+      );
     } finally {
       setLoading(false);
     }
@@ -296,6 +313,12 @@ export const RequestPartnerScreen: FC<RequestPartnerScreenProps> = ({
               required
             />
           </div>
+
+          {error && (
+            <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+              {error}
+            </p>
+          )}
 
           <button 
             type="submit"

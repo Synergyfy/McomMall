@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm';
 import { moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
@@ -12,6 +12,7 @@ export enum VoucherState {
 }
 
 @Entity('user_money_vouchers')
+@Index('IDX_user_money_vouchers_state_expires_at', ['state', 'expiresAt'])
 export class UserVoucher extends AbstractBaseEntity {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   owner: User;

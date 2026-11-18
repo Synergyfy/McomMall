@@ -325,29 +325,41 @@ export default function ServicesDashboard() {
                               variant={
                                 service.adminDisabled
                                   ? 'destructive'
-                                  : service.status === 'draft'
-                                    ? 'outline'
-                                    : service.isActive
-                                      ? 'default'
-                                      : 'secondary'
+                                  : service.approvalStatus === 'pending'
+                                    ? 'secondary'
+                                    : service.approvalStatus === 'rejected'
+                                      ? 'destructive'
+                                      : service.status === 'draft'
+                                        ? 'outline'
+                                        : service.isActive
+                                          ? 'default'
+                                          : 'secondary'
                               }
                               className={
                                 service.adminDisabled
                                   ? 'bg-amber-100 text-amber-800 border-none px-3'
-                                  : service.status === 'draft'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-100 px-3'
-                                    : service.isActive
-                                      ? 'bg-green-100 text-green-800 border-none px-3'
-                                      : 'px-3'
+                                  : service.approvalStatus === 'pending'
+                                    ? 'bg-amber-100 text-amber-800 border-none px-3'
+                                    : service.approvalStatus === 'rejected'
+                                      ? 'bg-red-100 text-red-800 border-none px-3'
+                                      : service.status === 'draft'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-100 px-3'
+                                        : service.isActive
+                                          ? 'bg-green-100 text-green-800 border-none px-3'
+                                          : 'px-3'
                               }
                             >
                               {service.adminDisabled
-                                ? 'Disabled by admin'
-                                : service.status === 'draft'
-                                  ? 'Draft'
-                                  : service.isActive
-                                    ? 'Active'
-                                    : 'Inactive'}
+                                ? 'Delisted by admin'
+                                : service.approvalStatus === 'pending'
+                                  ? 'Pending approval'
+                                  : service.approvalStatus === 'rejected'
+                                    ? 'Rejected'
+                                    : service.status === 'draft'
+                                      ? 'Draft'
+                                      : service.isActive
+                                        ? 'Active'
+                                        : 'Inactive'}
                             </Badge>
                           </TableCell>
                           <TableCell

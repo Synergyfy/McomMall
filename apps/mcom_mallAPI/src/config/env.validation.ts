@@ -79,6 +79,14 @@ export const envValidationSchema = Joi.object({
   TOKEN_ENCRYPTION_KEY: Joi.string().allow('').optional(),
   MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY: Joi.string().allow('').optional(),
 
+  // Outbound email is optional; when unset, emails are logged instead of sent.
+  EMAIL_USER: Joi.string().allow('').optional(),
+  EMAIL_PASSWORD: Joi.string().allow('').optional(),
+  EMAIL_FROM: Joi.string().allow('').optional(),
+  EMAIL_HOST: Joi.string().allow('').optional(),
+  EMAIL_PORT: Joi.number().optional(),
+  EMAIL_SECURE: Joi.string().valid('true', 'false').allow('').optional(),
+
   // Royal Mail integration is optional; pricing falls back to DB rates when
   // credentials are not configured.
   ROYAL_MAIL_CLIENT_ID: Joi.string().allow('').optional(),

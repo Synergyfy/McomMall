@@ -29,6 +29,11 @@ import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { UserRole } from '../../common/role.enum';
 import { resolveBusinessTaxonomy } from '../../common/taxonomy/business-taxonomy';
+import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -69,7 +74,7 @@ export class ProductService {
 
     const { serviceProviderId, ...restOfDto } = createProductDto;
     // Admin moderation is not writable by merchants, even if they send it.
-    delete (restOfDto as Record<string, unknown>).adminDisabled;
+    stripModerationFields(restOfDto as Record<string, unknown>);
 
     // Classification is owned by the MCOM Central business profile. Always
     // prefer the synced business taxonomy over whatever the client sent.
@@ -174,6 +179,10 @@ export class ProductService {
       ...restOfDto,
       business,
       serviceProvider,
+      // Every new merchant product waits for admin approval before it can be
+      // seen or bought by anyone other than the owner.
+      approvalStatus: ApprovalStatus.PENDING,
+      adminDisabled: false,
     });
 
     const savedProduct = await this.productRepository.save(product);
@@ -226,6 +235,7 @@ export class ProductService {
     const isOwner = !!user && product.business?.user?.id === user.id;
     const isAdmin = user?.role === UserRole.ADMIN;
     const isPubliclyVisible =
+      product.approvalStatus === ApprovalStatus.APPROVED &&
       product.productStatus === 'published' &&
       product.visibility === 'public' &&
       !product.adminDisabled;
@@ -264,7 +274,7 @@ export class ProductService {
 
     const { serviceProviderId, ...restOfDto } = updateProductDto;
     // Admin moderation is not writable by merchants, even if they send it.
-    delete (restOfDto as Record<string, unknown>).adminDisabled;
+    stripModerationFields(restOfDto as Record<string, unknown>);
 
     // Keep the product aligned with the MCOM Central business classification.
     const taxonomy = resolveBusinessTaxonomy(product.business);
@@ -349,6 +359,12 @@ export class ProductService {
       }
     }
 
+    // A rejected product becomes editable again and automatically goes back
+    // into the review queue when the owner saves changes.
+    if (product.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(product);
+    }
+
     const savedProduct = await this.productRepository.save(product);
     await this.activitiesService.create(
       product.business.user,
@@ -397,6 +413,7 @@ export class ProductService {
 
     const where: Record<string, unknown> = { business: { id: businessId } };
     if (!canSeeAll) {
+      where.approvalStatus = ApprovalStatus.APPROVED;
       where.productStatus = 'published';
       where.visibility = 'public';
       where.adminDisabled = false;
@@ -425,7 +442,10 @@ export class ProductService {
 
     queryBuilder
       .leftJoinAndSelect('product.business', 'business')
-      .where('product.productStatus = :status', { status: 'published' })
+      .where('product.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('product.productStatus = :status', { status: 'published' })
       .andWhere('product.visibility = :visibility', { visibility: 'public' })
       .andWhere('product.adminDisabled = :adminDisabled', {
         adminDisabled: false,

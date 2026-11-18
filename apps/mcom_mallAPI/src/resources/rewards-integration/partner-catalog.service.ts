@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
 import { Product } from '../product/entities/product.entity';
 import { Service } from '../services/entities/service.entity';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 export interface PartnerCatalogQuery {
   query?: string;
@@ -65,7 +66,13 @@ export class PartnerCatalogService {
 
   async listProducts(businessId: string): Promise<any[]> {
     const products = await this.productRepository.find({
-      where: { business: { id: businessId } },
+      where: {
+        business: { id: businessId },
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+        productStatus: 'published',
+        visibility: 'public',
+      },
       order: { created_at: 'DESC' },
     });
     return products.map((p) => ({
@@ -82,7 +89,13 @@ export class PartnerCatalogService {
 
   async listServices(businessId: string): Promise<any[]> {
     const services = await this.serviceRepository.find({
-      where: { businessId },
+      where: {
+        businessId,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+        status: 'published',
+        isActive: true,
+      },
       order: { created_at: 'DESC' },
     });
     return services.map((s) => ({
@@ -116,13 +129,27 @@ export class PartnerCatalogService {
         'business.productCount',
         'business.products',
         'product',
-        (sub) => sub.where('product.productStatus = :published', { published: 'published' }),
+        (sub) =>
+          sub
+            .where('product.productStatus = :published', {
+              published: 'published',
+            })
+            .andWhere('product.approvalStatus = :approvalStatus', {
+              approvalStatus: ApprovalStatus.APPROVED,
+            })
+            .andWhere('product.adminDisabled = false'),
       )
       .loadRelationCountAndMap(
         'business.serviceCount',
         'business.services',
         'service',
-        (sub) => sub.where('service.status = :published', { published: 'published' }),
+        (sub) =>
+          sub
+            .where('service.status = :published', { published: 'published' })
+            .andWhere('service.approvalStatus = :approvalStatus', {
+              approvalStatus: ApprovalStatus.APPROVED,
+            })
+            .andWhere('service.adminDisabled = false'),
       );
 
     if (status !== 'all') {
@@ -199,6 +226,10 @@ export class PartnerCatalogService {
       qb.andWhere('LOWER(product.productStatus) = :status', {
         status: (params.status || 'published').toLowerCase(),
       });
+      qb.andWhere('product.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      });
+      qb.andWhere('product.adminDisabled = false');
     }
     if (params.businessId) {
       qb.andWhere('business.id = :businessId', { businessId: params.businessId });
@@ -252,6 +283,10 @@ export class PartnerCatalogService {
       qb.andWhere('LOWER(service.status) = :status', {
         status: (params.status || 'published').toLowerCase(),
       });
+      qb.andWhere('service.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      });
+      qb.andWhere('service.adminDisabled = false');
     }
     if (params.businessId) {
       qb.andWhere('business.id = :businessId', { businessId: params.businessId });

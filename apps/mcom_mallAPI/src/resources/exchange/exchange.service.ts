@@ -22,6 +22,7 @@ import { EscrowStatus } from './entities/escrow-status.enum';
 import { Product } from '../product/entities/product.entity';
 import { Service } from '../services/entities/service.entity';
 import { ExchangeItemType } from './entities/exchange-item-type.enum';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 @Injectable()
 export class ExchangeService {
@@ -81,6 +82,12 @@ export class ExchangeService {
       if (!product) {
         throw new NotFoundException('Product not found.');
       }
+      if (
+        product.approvalStatus !== ApprovalStatus.APPROVED ||
+        product.adminDisabled
+      ) {
+        throw new BadRequestException('Product is not available.');
+      }
       itemData.product = product;
       itemData.title = product.title;
       itemData.description = product.description;
@@ -93,6 +100,12 @@ export class ExchangeService {
       const service = await this.serviceRepository.findOneBy({ id: serviceId });
       if (!service) {
         throw new NotFoundException('Service not found.');
+      }
+      if (
+        service.approvalStatus !== ApprovalStatus.APPROVED ||
+        service.adminDisabled
+      ) {
+        throw new BadRequestException('Service is not available.');
       }
       itemData.service = service;
       itemData.title = service.name;

@@ -5,7 +5,8 @@ import { useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ChevronRight, Search, MoreHorizontal, Download } from 'lucide-react';
-import { useGetStoreOrders } from '@/service/store/orders/hook';
+import { fetchStoreOrders, useGetStoreOrders } from '@/service/store/orders/hook';
+import Pagination from '@/components/marketplace/Pagination';
 import Papa from 'papaparse';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
@@ -106,10 +107,39 @@ const StatusBadge: React.FC<{ status: BadgeStatus }> = ({ status }) => {
   );
 };
 
+const toUiOrder = (order: ApiOrder): Order => {
+  // Map API status to UI status
+  const rawStatus = (order.status || 'PENDING').toUpperCase();
+  let status: ActualOrderStatus = 'Processing';
+  if (rawStatus === 'SHIPPED') status = 'Shipped';
+  else if (rawStatus === 'DELIVERED') status = 'Delivered';
+  else if (rawStatus === 'CANCELLED') status = 'Cancelled';
+
+  return {
+    id: order.id,
+    userId: order.user?.id || '',
+    customerName: order.user?.name || 'N/A',
+    customerEmail: order.user?.email || 'N/A',
+    status,
+    itemCount:
+      order.items?.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0,
+    total: Number(order.total) || 0,
+    rewardDiscount: Number(order.rewardDiscountApplied) || 0,
+    date: order.createdAt,
+    productName: order.items?.[0]?.product?.title || 'N/A',
+  };
+};
+
+const ORDERS_PER_PAGE = 10;
+
 // --- MAIN DASHBOARD COMPONENT ---
 export default function OrdersDashboard() {
   const { userRole } = useSelector((state: RootState) => state.auth);
-  const { data: apiOrders, isLoading } = useGetStoreOrders();
+  const [page, setPage] = React.useState(1);
+  const { data: ordersPage, isLoading } = useGetStoreOrders({
+    page,
+    limit: ORDERS_PER_PAGE,
+  });
   const router = useRouter();
   const [activeTab, setActiveTab] = React.useState<OrderStatus>('All');
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -126,29 +156,12 @@ export default function OrdersDashboard() {
     }
   }, [newOrdersCount, newOrderIds, markAsSeen, isMerchant]);
 
-  const orders = useMemo(() => {
-    if (!apiOrders) return [];
-    return apiOrders.map((order: ApiOrder) => {
-      // Map API status to UI status
-      const rawStatus = (order.status || 'PENDING').toUpperCase();
-      let status: ActualOrderStatus = 'Processing';
-      if (rawStatus === 'SHIPPED') status = 'Shipped';
-      else if (rawStatus === 'DELIVERED') status = 'Delivered';
-      else if (rawStatus === 'CANCELLED') status = 'Cancelled';
+  const apiOrders = ordersPage?.data;
+  const ordersMeta = ordersPage?.meta;
 
-      return {
-        id: order.id,
-        userId: order.user?.id || '',
-        customerName: order.user?.name || 'N/A',
-        customerEmail: order.user?.email || 'N/A',
-        status,
-        itemCount: order.items?.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0,
-        total: parseFloat(order.total || '0'),
-        rewardDiscount: parseFloat(String(order.rewardDiscountApplied || '0')) || 0,
-        date: order.createdAt,
-        productName: order.items?.[0]?.product?.title || 'N/A',
-      };
-    });
+  const orders = useMemo(() => {
+    if (!Array.isArray(apiOrders)) return [];
+    return apiOrders.map(toUiOrder);
   }, [apiOrders]);
 
   const filteredOrders = React.useMemo(() => {
@@ -184,10 +197,9 @@ export default function OrdersDashboard() {
     toast.info(`'${action}' action is not yet implemented.`);
   };
 
-  const handleExport = () => {
-    if (!orders) return;
-    const csv = Papa.unparse(
-      orders.map(order => ({
+  const buildCsv = (rows: Order[]) =>
+    Papa.unparse(
+      rows.map(order => ({
         ID: order.id,
         [isMerchant ? 'Customer' : 'Store/Merchant']: order.customerName,
         Email: order.customerEmail,
@@ -199,13 +211,39 @@ export default function OrdersDashboard() {
         Date: order.date,
       }))
     );
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-t;' });
+
+  const downloadCsv = (csv: string) => {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.setAttribute('download', `${isMerchant ? 'sales' : 'purchases'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  };
+
+  const handleExport = async () => {
+    // Export every order, not just the current page.
+    const totalItems = ordersMeta?.totalItems ?? orders.length;
+    if (totalItems === 0) return;
+
+    try {
+      const allOrders = await fetchStoreOrders({
+        page: 1,
+        limit: totalItems,
+      });
+      downloadCsv(buildCsv(allOrders.data.map(toUiOrder)));
+    } catch {
+      toast.error('Could not export orders. Please try again.');
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    const totalPages = ordersMeta?.totalPages ?? 1;
+    if (newPage < 1 || newPage > totalPages || newPage === page) return;
+    setPage(newPage);
+    setSelectedRows([]);
   };
 
   const TABS: OrderStatus[] = [
@@ -360,7 +398,7 @@ export default function OrdersDashboard() {
                   >
                     {tab} (
                     {tab === 'All'
-                      ? orders.length
+                      ? ordersMeta?.totalItems ?? orders.length
                       : orders.filter(o => o.status === tab).length}
                     )
                   </button>
@@ -556,6 +594,19 @@ export default function OrdersDashboard() {
                 </TableBody>
               </Table>
             </div>
+
+            {ordersMeta && ordersMeta.totalPages > 1 && (
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <Pagination
+                  currentPage={ordersMeta.currentPage}
+                  totalPages={ordersMeta.totalPages}
+                  onPageChange={handlePageChange}
+                />
+                <p className="text-xs text-gray-500">
+                  Showing {orders.length} of {ordersMeta.totalItems} orders
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

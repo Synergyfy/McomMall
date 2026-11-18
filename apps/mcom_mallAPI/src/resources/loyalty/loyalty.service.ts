@@ -18,6 +18,7 @@ import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { Product } from '../product/entities/product.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 import { LoyaltyRule } from './entities/loyalty-rule.entity';
 import { LoyaltySettings, LoyaltyTier } from './entities/loyalty-settings.entity';
 import { LoyaltyEarningConfig } from './entities/loyalty-earning-config.entity';
@@ -135,7 +136,12 @@ export class LoyaltyService {
     }
 
     return this.offerRepository.find({
-      where: { isActive: true, user: { id: ownerId } },
+      where: {
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+        user: { id: ownerId },
+      },
       order: { created_at: 'DESC' },
     });
   }

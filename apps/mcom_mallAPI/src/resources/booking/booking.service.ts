@@ -78,6 +78,7 @@ import { MoneyEngineService } from '../money-engine/money-engine.service';
 import { FunctionalType } from '../money-engine/entities/reward-definition.entity';
 import { FeatureFlagsService } from '../../common/feature-flags/feature-flags.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 import { randomUUID } from 'crypto';
 
 const DAY_NAMES = [
@@ -160,7 +161,13 @@ export class BookingService {
     const { serviceId, startTime, endTime } = checkAvailabilityDto;
 
     const service = await this.serviceRepository.findOne({
-      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
+      where: {
+        id: serviceId,
+        isActive: true,
+        status: 'published',
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['business', 'business.user', 'business.businessHours'],
     });
 
@@ -319,7 +326,13 @@ export class BookingService {
     dateStr: string,
   ): Promise<string[]> {
     const service = await this.serviceRepository.findOne({
-      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
+      where: {
+        id: serviceId,
+        isActive: true,
+        status: 'published',
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['business', 'business.user', 'business.businessHours'],
     });
 
@@ -524,7 +537,13 @@ export class BookingService {
       createBookingDto;
 
     const service = await transactionalEntityManager.findOne(Service, {
-      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
+      where: {
+        id: serviceId,
+        isActive: true,
+        status: 'published',
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: [
         'business',
         'business.user',
@@ -1357,6 +1376,7 @@ export class BookingService {
     }
 
     if (
+      booking.service.approvalStatus !== ApprovalStatus.APPROVED ||
       booking.service.status !== 'published' ||
       !booking.service.isActive ||
       booking.service.adminDisabled
@@ -1794,6 +1814,7 @@ export class BookingService {
     }
 
     if (
+      booking.service.approvalStatus !== ApprovalStatus.APPROVED ||
       booking.service.status !== 'published' ||
       !booking.service.isActive ||
       booking.service.adminDisabled

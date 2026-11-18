@@ -37,6 +37,7 @@ import {
   ScopeLine,
   ScopeMode,
 } from '../partner-instruments/enums';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 import {
   computeCouponDiscount,
   computeInstrumentApplication,
@@ -120,6 +121,7 @@ export class CheckoutService {
     // if someone has the ID (e.g. an old link or a direct API call).
     const unavailableProduct = products.find(
       (p) =>
+        p.approvalStatus !== ApprovalStatus.APPROVED ||
         p.productStatus !== 'published' ||
         p.visibility !== 'public' ||
         p.adminDisabled,
@@ -908,6 +910,10 @@ export class CheckoutService {
       .leftJoinAndSelect('offer.includedProducts', 'includedProducts')
       .leftJoinAndSelect('offer.excludedProducts', 'excludedProducts')
       .where('offer.isActive = :isActive', { isActive: true })
+      .andWhere('offer.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('offer.adminDisabled = false')
       .andWhere('creator.id IN (:...productOwnerIds)', { productOwnerIds })
       .getMany();
 

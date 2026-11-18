@@ -8,6 +8,7 @@ import { BrandingAssociation } from './branding-association.entity';
 import { RedemptionLog } from './redemption-log.entity';
 import { Order } from '../../order/entities/order.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApprovalStatus } from '../../../common/moderation/catalog-approval';
 
 @Entity('coupons')
 @Index('UQ_coupons_source_issuance', ['sourceApp', 'issuanceId'], {
@@ -67,6 +68,25 @@ export class Coupon extends AbstractBaseEntity {
     default: CouponStatus.DRAFT,
   })
   status: CouponStatus;
+
+  /** Admin moderation. Business coupons start pending; platform coupons are approved. */
+  @Index('IDX_coupons_approval_status')
+  @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
+  approvalStatus: ApprovalStatus;
+
+  @Column({ type: 'text', nullable: true })
+  reviewNote?: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  reviewedBy?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt?: Date | null;
+
+  /** Set by an admin when the coupon is delisted from the public catalog. */
+  @Index('IDX_coupons_admin_disabled')
+  @Column({ default: false })
+  adminDisabled: boolean;
 
   @ApiPropertyOptional()
   @Column({ type: 'timestamp', nullable: true })

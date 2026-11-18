@@ -49,6 +49,7 @@ import { DigitalValueType } from '../digital-value/digital-value.enums';
 import { ScopeMode } from '../partner-instruments/enums';
 import type { NormalisedScope } from '../partner-instruments/instrument-scope.service';
 import { UserRole } from '../../common/role.enum';
+import { expireDueVouchers } from './voucher-expiry.util';
 
 const generateVoucherCode = customAlphabet(
   'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
@@ -166,19 +167,16 @@ export class MoneyEngineService {
   }
 
   /**
-   * Lazily expires wallets. Every read/write path calls this so a stale
-   * `active` row can never be spent just because no cron job ran.
+   * Safety net for the scheduled sweep (`VoucherExpiryService`).
+   *
+   * The cron job is the primary mechanism; this on-access check only keeps
+   * reads/writes correct if the process was down or a row slipped past the
+   * sweep. It reuses the same batched, skip-locked query so both paths can
+   * never disagree about what "expired" means.
    */
   private async expireStaleVouchers(manager?: EntityManager): Promise<void> {
-    const runner = manager ?? this.dataSource.manager;
     try {
-      await runner
-        .createQueryBuilder()
-        .update(UserVoucher)
-        .set({ state: VoucherState.EXPIRED })
-        .where('state = :active', { active: VoucherState.ACTIVE })
-        .andWhere('"expiresAt" IS NOT NULL AND "expiresAt" <= NOW()')
-        .execute();
+      await expireDueVouchers(manager ?? this.dataSource);
     } catch (error: any) {
       this.logger.warn(
         `Could not expire stale wallets: ${error?.message ?? error}`,

@@ -7,6 +7,7 @@ import { CreateWishlistDto } from './dto/create-wishlist.dto';
 import { Wishlist } from './entities/wishlist.entity';
 import { WishlistItem } from './entities/wishlist-item.entity';
 import { User } from '../users/entities/user.entity';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 @Injectable()
 export class WishlistService {
@@ -32,6 +33,21 @@ export class WishlistService {
     }
 
     if (!product && !service) {
+      throw new NotFoundException('Product or Service not found');
+    }
+
+    if (
+      product &&
+      (product.approvalStatus !== ApprovalStatus.APPROVED ||
+        product.adminDisabled)
+    ) {
+      throw new NotFoundException('Product or Service not found');
+    }
+    if (
+      service &&
+      (service.approvalStatus !== ApprovalStatus.APPROVED ||
+        service.adminDisabled)
+    ) {
       throw new NotFoundException('Product or Service not found');
     }
 
@@ -81,6 +97,7 @@ export class WishlistService {
     wishlist.items = (wishlist.items || []).filter((item) => {
       if (item.product) {
         return (
+          item.product.approvalStatus === ApprovalStatus.APPROVED &&
           item.product.productStatus === 'published' &&
           item.product.visibility === 'public' &&
           !item.product.adminDisabled
@@ -88,6 +105,7 @@ export class WishlistService {
       }
       if (item.service) {
         return (
+          item.service.approvalStatus === ApprovalStatus.APPROVED &&
           item.service.status === 'published' &&
           item.service.isActive &&
           !item.service.adminDisabled

@@ -32,6 +32,11 @@ import { BrandingAssociation } from './entities/branding-association.entity';
 import { computeCouponDiscount } from '../partner-instruments/pricing';
 import { User } from '../users/entities/user.entity';
 import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
+import {
   MarketingCampaignStatus,
   MarketingCampaignType,
 } from '../campaign/marketing-campaign.enum';
@@ -113,6 +118,9 @@ export class CouponService {
   }
 
   async create(dto: CreateCouponDto, creator?: User): Promise<Coupon> {
+    const moderationSafeDto = stripModerationFields({
+      ...dto,
+    } as Record<string, any>) as CreateCouponDto;
     const {
       title,
       description,
@@ -133,7 +141,7 @@ export class CouponService {
       minSpend,
       maxSpend,
       allowedEmails,
-    } = dto;
+    } = moderationSafeDto;
 
     if (
       sourceType === CouponSourceType.PLATFORM &&
@@ -205,6 +213,14 @@ export class CouponService {
       allowedEmails: allowedEmails ?? null,
       campaign,
       business,
+      // Platform coupons and admin-authored coupons are immediately usable.
+      // Business-authored coupons need admin approval before shoppers see them.
+      approvalStatus:
+        sourceType === CouponSourceType.PLATFORM ||
+        creator?.role === UserRole.ADMIN
+          ? ApprovalStatus.APPROVED
+          : ApprovalStatus.PENDING,
+      adminDisabled: false,
     });
 
     const savedCoupon = await this.couponRepository.save(coupon);
@@ -230,6 +246,11 @@ export class CouponService {
     const skip = (page - 1) * limit;
 
     const [items, total] = await this.couponRepository.findAndCount({
+      where: {
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+        status: In([CouponStatus.ACTIVE, CouponStatus.SCHEDULED]),
+      },
       skip,
       take: limit,
       relations: ['campaign', 'business', 'branding', 'branding.business'],
@@ -266,6 +287,13 @@ export class CouponService {
     });
 
     if (!coupon) throw new NotFoundException('Coupon not found');
+
+    if (
+      coupon.approvalStatus !== ApprovalStatus.APPROVED ||
+      coupon.adminDisabled
+    ) {
+      throw new BadRequestException('Coupon is not available.');
+    }
 
     if (existingCouponCode && existingCouponCode !== code) {
       throw new BadRequestException('Stacking coupons is not allowed.');
@@ -411,6 +439,13 @@ export class CouponService {
     user: User,
     logRepo: Repository<RedemptionLog>,
   ): Promise<void> {
+    if (
+      coupon.approvalStatus !== ApprovalStatus.APPROVED ||
+      coupon.adminDisabled
+    ) {
+      throw new BadRequestException('Coupon is not available.');
+    }
+
     if (coupon.sourceType === CouponSourceType.BUSINESS && coupon.business) {
       if (coupon.business.status !== BusinessStatus.PUBLISHED) {
         throw new BadRequestException(
@@ -518,7 +553,11 @@ export class CouponService {
 
   async findCouponByCode(code: string): Promise<Coupon> {
     const coupon = await this.couponRepository.findOne({
-      where: { code },
+      where: {
+        code,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['campaign', 'business', 'business.user'],
     });
     if (!coupon) throw new NotFoundException('Coupon not found');
@@ -790,16 +829,29 @@ export class CouponService {
   }
 
   async getSavedCoupons(user: User): Promise<SavedCoupon[]> {
-    return this.savedCouponRepository.find({
+    const savedCoupons = await this.savedCouponRepository.find({
       where: { user: { id: user.id } },
       relations: ['coupon', 'coupon.campaign', 'coupon.business'],
       order: { savedAt: 'DESC' },
     });
+
+    // Delisted or unapproved coupons must disappear from the customer's saved
+    // list as well as from the public catalogue.
+    return savedCoupons.filter(
+      (saved) =>
+        saved.coupon &&
+        saved.coupon.approvalStatus === ApprovalStatus.APPROVED &&
+        !saved.coupon.adminDisabled,
+    );
   }
 
   async findProductById(id: string): Promise<Coupon> {
     const coupon = await this.couponRepository.findOne({
-      where: { id },
+      where: {
+        id,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['business', 'campaign'],
     });
 
@@ -868,7 +920,14 @@ export class CouponService {
       ...rest
     } = dto;
 
-    Object.assign(coupon, rest);
+    Object.assign(coupon, stripModerationFields(rest as Record<string, any>));
+
+    if (
+      user.role !== UserRole.ADMIN &&
+      coupon.approvalStatus === ApprovalStatus.REJECTED
+    ) {
+      resubmitForApproval(coupon);
+    }
 
     if (businessId) {
       const business = await this.businessRepository.findOne({
@@ -906,6 +965,12 @@ export class CouponService {
   ): Promise<Coupon> {
     const coupon = await this.findOneForUser(id, user);
     coupon.status = status;
+    if (
+      user.role !== UserRole.ADMIN &&
+      coupon.approvalStatus === ApprovalStatus.REJECTED
+    ) {
+      resubmitForApproval(coupon);
+    }
     return this.couponRepository.save(coupon);
   }
 
@@ -924,6 +989,13 @@ export class CouponService {
     });
     if (!coupon) {
       throw new NotFoundException(`Coupon with code ${code} not found.`);
+    }
+
+    if (
+      coupon.approvalStatus !== ApprovalStatus.APPROVED ||
+      coupon.adminDisabled
+    ) {
+      throw new BadRequestException('Coupon is not available.');
     }
 
     // Authorization: only the issuing merchant or a platform admin may
@@ -1069,6 +1141,9 @@ export class CouponService {
       startDate: template?.startDate ?? new Date(),
       expiresAt,
       status: template?.status ?? CouponStatus.ACTIVE,
+      // Issued coupons are already-approved entitlements, not templates.
+      approvalStatus: ApprovalStatus.APPROVED,
+      adminDisabled: false,
       business: business ?? undefined,
       issuanceId,
       sourceApp: issuanceId ? sourceApp : null,
@@ -1409,6 +1484,9 @@ export class CouponService {
         usageLimit: 1,
         perUserLimit: 1,
         status: CouponStatus.ACTIVE,
+        // Purchased coupons are customer entitlements, not merchant templates.
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
         startDate: new Date(),
         expiresAt,
         business: business ?? undefined,

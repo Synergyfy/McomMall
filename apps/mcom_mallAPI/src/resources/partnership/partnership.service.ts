@@ -237,11 +237,8 @@ export class PartnershipService {
           message: dto.message,
         });
         await this.userPartnershipRequestRepository.save(userRequest);
-
-        await this.emailService.sendPartnershipRequestEmail(
-          targetUser,
-          currentUser,
-        );
+        // The composite email below covers both the partnership request and the
+        // proposed item pairing, so no separate email is sent here.
       }
     }
 
@@ -336,12 +333,18 @@ export class PartnershipService {
             status: PartnershipStatus.PENDING,
           },
         ],
+        relations: ['sender', 'receiver'],
       },
     );
 
     if (existingRequest) {
+      // Retrying the same request is idempotent: the proposal is already waiting
+      // for the other side to respond, so nothing else needs to happen.
+      if (existingRequest.sender.id === sender.id) {
+        return existingRequest;
+      }
       throw new BadRequestException(
-        'A pending partnership request already exists between these users',
+        'This user has already sent you a partnership request — accept it instead.',
       );
     }
 

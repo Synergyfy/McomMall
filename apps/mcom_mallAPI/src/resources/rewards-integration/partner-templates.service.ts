@@ -18,6 +18,7 @@ import {
 } from '../coupon/coupon.enum';
 import { PartnerFeatureFlagsService } from '../partner-instruments/partner-feature-flags.service';
 import { InstrumentType, ScopeMode } from '../partner-instruments/enums';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 export type TemplateKind = 'gift-cards' | 'vouchers' | 'coupons';
 
@@ -121,6 +122,14 @@ export class PartnerTemplatesService {
       if (template && !includeInactive && !template.isActive) {
         throw new NotFoundException('Template not found.');
       }
+      if (
+        template &&
+        !includeInactive &&
+        (template.approvalStatus !== ApprovalStatus.APPROVED ||
+          template.adminDisabled)
+      ) {
+        throw new NotFoundException('Template not found.');
+      }
       if (template && !includePlatform) {
         this.assertOwned(template.ownerId, business, 'gift-card template');
       }
@@ -133,7 +142,10 @@ export class PartnerTemplatesService {
       if (
         template &&
         !includeInactive &&
-        (!template.isEnabled || template.status === 'inactive')
+        (!template.isEnabled ||
+          template.status === 'inactive' ||
+          template.approvalStatus !== ApprovalStatus.APPROVED ||
+          template.adminDisabled)
       ) {
         throw new NotFoundException('Template not found.');
       }
@@ -150,7 +162,9 @@ export class PartnerTemplatesService {
         template &&
         !includeInactive &&
         (template.status === CouponStatus.ARCHIVED ||
-          template.status === CouponStatus.DISABLED)
+          template.status === CouponStatus.DISABLED ||
+          template.approvalStatus !== ApprovalStatus.APPROVED ||
+          template.adminDisabled)
       ) {
         throw new NotFoundException('Template not found.');
       }
@@ -243,7 +257,13 @@ export class PartnerTemplatesService {
     } else {
       builder.where('template.ownerId = :ownerId', { ownerId });
     }
-    if (!includeInactive) builder.andWhere('template.isActive = true');
+    if (!includeInactive) {
+      builder.andWhere('template.isActive = true');
+      builder.andWhere('template.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      });
+      builder.andWhere('template.adminDisabled = false');
+    }
 
     const rows = await builder
       .orderBy('template.created_at', 'DESC')
@@ -272,6 +292,10 @@ export class PartnerTemplatesService {
     if (!includeInactive) {
       builder.andWhere('product.isEnabled = true');
       builder.andWhere('product.status = :status', { status: 'active' });
+      builder.andWhere('product.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      });
+      builder.andWhere('product.adminDisabled = false');
     }
 
     const rows = await builder
@@ -308,7 +332,11 @@ export class PartnerTemplatesService {
     return rows
       .filter((row) => {
         if (includeInactive) return true;
-        return row.status === CouponStatus.ACTIVE;
+        return (
+          row.status === CouponStatus.ACTIVE &&
+          row.approvalStatus === ApprovalStatus.APPROVED &&
+          !row.adminDisabled
+        );
       })
       .map((row) => this.mapCoupon(row));
   }

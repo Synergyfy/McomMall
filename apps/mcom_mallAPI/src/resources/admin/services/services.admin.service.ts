@@ -18,6 +18,7 @@ import {
   ServiceStatsDto,
   AdminServiceDto,
 } from '../dto/catalog.dto';
+import { ApprovalStatus } from 'src/common/moderation/catalog-approval';
 
 @Injectable()
 export class AdminServicesService {
@@ -29,18 +30,36 @@ export class AdminServicesService {
   ) {}
 
   async getStats(): Promise<ServiceStatsDto> {
-    const [total, active, avgDurationResult] = await Promise.all([
-      this.servicesRepository.count(),
-      this.servicesRepository.count({ where: { status: 'published' } }),
-      this.servicesRepository
-        .createQueryBuilder('service')
-        .select('AVG(service.duration)', 'avg')
-        .getRawOne(),
-    ]);
+    const [total, active, pending, rejected, delisted, avgDurationResult] =
+      await Promise.all([
+        this.servicesRepository.count(),
+        this.servicesRepository.count({
+          where: {
+            status: 'published',
+            isActive: true,
+            approvalStatus: ApprovalStatus.APPROVED,
+            adminDisabled: false,
+          },
+        }),
+        this.servicesRepository.count({
+          where: { approvalStatus: ApprovalStatus.PENDING },
+        }),
+        this.servicesRepository.count({
+          where: { approvalStatus: ApprovalStatus.REJECTED },
+        }),
+        this.servicesRepository.count({ where: { adminDisabled: true } }),
+        this.servicesRepository
+          .createQueryBuilder('service')
+          .select('AVG(service.duration)', 'avg')
+          .getRawOne(),
+      ]);
 
     return {
       total,
       active,
+      pending,
+      rejected,
+      delisted,
       avgDuration: Math.round(Number(avgDurationResult?.avg || 0)),
     };
   }
@@ -66,11 +85,29 @@ export class AdminServicesService {
     if (status && status !== 'all') {
       if (status === 'active') {
         qb.andWhere('service.status = :sStatus', { sStatus: 'published' });
+        qb.andWhere('service.isActive = true');
+        qb.andWhere('service.approvalStatus = :approvalStatus', {
+          approvalStatus: ApprovalStatus.APPROVED,
+        });
+        qb.andWhere('service.adminDisabled = false');
       } else if (status === 'inactive') {
         qb.andWhere(
-          '(service.adminDisabled = true OR service.status = :draftStatus)',
-          { draftStatus: 'draft' },
+          '(service.adminDisabled = true OR service.approvalStatus != :approvedStatus OR service.status = :draftStatus)',
+          {
+            approvedStatus: ApprovalStatus.APPROVED,
+            draftStatus: 'draft',
+          },
         );
+      } else if (status === 'pending') {
+        qb.andWhere('service.approvalStatus = :approvalStatus', {
+          approvalStatus: ApprovalStatus.PENDING,
+        });
+      } else if (status === 'rejected') {
+        qb.andWhere('service.approvalStatus = :approvalStatus', {
+          approvalStatus: ApprovalStatus.REJECTED,
+        });
+      } else if (status === 'delisted') {
+        qb.andWhere('service.adminDisabled = true');
       } else {
         qb.andWhere('service.status = :sStatus', { sStatus: status });
       }
@@ -94,11 +131,17 @@ export class AdminServicesService {
       duration: s.duration,
       status: s.adminDisabled
         ? 'inactive'
-        : s.status === 'published'
-          ? 'active'
-          : 'inactive',
+        : s.approvalStatus !== ApprovalStatus.APPROVED
+          ? 'inactive'
+          : s.status === 'published'
+            ? 'active'
+            : 'inactive',
       description: s.description || '',
       images: s.media || [],
+      approvalStatus: s.approvalStatus,
+      adminDisabled: s.adminDisabled,
+      reviewNote: s.reviewNote ?? null,
+      reviewedAt: s.reviewedAt ?? null,
       createdAt: s.created_at,
     }));
 
@@ -120,7 +163,34 @@ export class AdminServicesService {
   async activate(id: string) {
     const service = await this.servicesRepository.findOne({ where: { id } });
     if (!service) throw new NotFoundException('Service not found');
-    return this.servicesRepository.update(id, { adminDisabled: false });
+    // The legacy admin "Activate" action both republishes a delisted service
+    // and approves it when it is still awaiting review.
+    return this.servicesRepository.update(id, {
+      adminDisabled: false,
+      approvalStatus: ApprovalStatus.APPROVED,
+      reviewedAt: new Date(),
+    });
+  }
+
+  async approve(id: string, reviewerId: string) {
+    const service = await this.servicesRepository.findOne({ where: { id } });
+    if (!service) throw new NotFoundException('Service not found');
+    return this.servicesRepository.update(id, {
+      approvalStatus: ApprovalStatus.APPROVED,
+      reviewedBy: reviewerId,
+      reviewedAt: new Date(),
+    });
+  }
+
+  async reject(id: string, reviewerId: string, reviewNote?: string) {
+    const service = await this.servicesRepository.findOne({ where: { id } });
+    if (!service) throw new NotFoundException('Service not found');
+    return this.servicesRepository.update(id, {
+      approvalStatus: ApprovalStatus.REJECTED,
+      reviewedBy: reviewerId,
+      reviewedAt: new Date(),
+      reviewNote: reviewNote ?? null,
+    });
   }
 
   async remove(id: string) {
@@ -156,6 +226,9 @@ export class AdminServicesService {
       pricingModel: PricingModel.FIXED,
       status:
         dto.status === AdminServiceStatus.INACTIVE ? 'draft' : 'published',
+      // Admin-authored services are approved on creation.
+      approvalStatus: ApprovalStatus.APPROVED,
+      reviewedAt: new Date(),
     });
     return this.servicesRepository.save(service);
   }

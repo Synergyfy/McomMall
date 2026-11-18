@@ -23,6 +23,7 @@ import { Coupon } from '../coupon/entities/coupon.entity';
 import { CouponStatus, CouponSourceType } from '../coupon/coupon.enum';
 import { Service } from '../services/entities/service.entity';
 import { BusinessStatus } from '../listings/listing.enum';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 @Injectable()
 export class MarketplaceService {
@@ -49,6 +50,7 @@ export class MarketplaceService {
     // Filter products within sections: Must be published, public, in stock (if managed), and belong to active business
     sections = sections.map((section) => {
       section.products = (section.products || []).filter((p) => {
+        const isApproved = p.approvalStatus === ApprovalStatus.APPROVED;
         const isPublished = p.productStatus === 'published';
         const isPublic = p.visibility === 'public';
         const hasBaseStock = !p.enableStockManagement || p.stock > 0;
@@ -58,13 +60,24 @@ export class MarketplaceService {
         const inStock = hasBaseStock || hasVariationStock;
         const businessActive = p.business?.status === BusinessStatus.PUBLISHED;
 
-        return isPublished && isPublic && inStock && businessActive;
+        return (
+          isApproved &&
+          !p.adminDisabled &&
+          isPublished &&
+          isPublic &&
+          inStock &&
+          businessActive
+        );
       });
       return section;
     });
 
     let vouchers = await this.dataSource.manager.find(VoucherProduct, {
-      where: { isEnabled: true },
+      where: {
+        isEnabled: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['user', 'user.businesses'],
       order: { createdAt: 'DESC' },
     });
@@ -76,7 +89,11 @@ export class MarketplaceService {
     vouchers = vouchers.slice(0, 5);
 
     let giftCards = await this.dataSource.manager.find(GiftCardTemplate, {
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['owner', 'owner.businesses'],
       order: { created_at: 'DESC' },
     });
@@ -91,6 +108,8 @@ export class MarketplaceService {
       where: {
         status: CouponStatus.ACTIVE,
         sourceType: CouponSourceType.PLATFORM,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
       },
       relations: ['campaign', 'redemptionLogs'],
       order: { created_at: 'DESC' },
@@ -110,6 +129,8 @@ export class MarketplaceService {
       where: {
         isActive: true,
         status: 'published',
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
         business: { status: BusinessStatus.PUBLISHED },
       },
       relations: ['business'],
@@ -121,6 +142,8 @@ export class MarketplaceService {
       where: {
         productStatus: 'published',
         visibility: 'public',
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
         business: { status: BusinessStatus.PUBLISHED },
       },
       relations: ['business'],

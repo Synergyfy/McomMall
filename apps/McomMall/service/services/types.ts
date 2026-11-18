@@ -305,6 +305,9 @@ export interface Service {
 
   status?: string;
   adminDisabled?: boolean;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
   duration?: number;
   isFeatured?: boolean;
   isPromotionEligible?: boolean;

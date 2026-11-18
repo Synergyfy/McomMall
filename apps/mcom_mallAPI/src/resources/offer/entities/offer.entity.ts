@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinTable,
   ManyToMany,
   ManyToOne,
@@ -12,6 +13,7 @@ import { Product } from '../../product/entities/product.entity';
 import { RewardCouponType } from '../offer.enum';
 import { Transaction } from '../../transaction/entities/transaction.entity';
 import { User } from '../../users/entities/user.entity';
+import { ApprovalStatus } from '../../../common/moderation/catalog-approval';
 
 @Entity('offers')
 export class Offer extends AbstractBaseEntity {
@@ -20,6 +22,25 @@ export class Offer extends AbstractBaseEntity {
 
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
+
+  /** Admin moderation. New merchant offers/time bonuses start pending. */
+  @Index('IDX_offers_approval_status')
+  @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
+  approvalStatus: ApprovalStatus;
+
+  @Column({ type: 'text', nullable: true })
+  reviewNote?: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  reviewedBy?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt?: Date | null;
+
+  /** Set by an admin when the offer is delisted from the public catalog. */
+  @Index('IDX_offers_admin_disabled')
+  @Column({ default: false })
+  adminDisabled: boolean;
 
   @Column({ type: 'varchar' })
   name: string;

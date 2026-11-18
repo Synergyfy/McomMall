@@ -25,6 +25,7 @@ import {
 } from '../service.enum';
 import { Length, IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ApprovalStatus } from '../../../common/moderation/catalog-approval';
 
 @Entity('services')
 @Index(['businessId', 'name'], { unique: true })
@@ -225,6 +226,22 @@ export class Service extends AbstractBaseEntity {
   @ApiProperty({ description: 'Status of the service', example: 'published' })
   status: string;
 
+  /** Admin moderation. New merchant services start pending. */
+  @Index('IDX_services_approval_status')
+  @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
+  approvalStatus: ApprovalStatus;
+
+  @Column({ type: 'text', nullable: true })
+  reviewNote?: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  reviewedBy?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt?: Date | null;
+
+  /** Set by an admin when the service is delisted from the public catalog. */
+  @Index('IDX_services_admin_disabled')
   @Column({ default: false })
   adminDisabled: boolean;
 

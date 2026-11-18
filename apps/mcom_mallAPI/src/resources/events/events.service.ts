@@ -13,6 +13,7 @@ import { UserRole } from '../../common/role.enum';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateLiveCommentDto } from './dto/create-live-comment.dto';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 @Injectable()
 export class EventsService {
@@ -91,6 +92,16 @@ export class EventsService {
 
     if (!event) {
       throw new NotFoundException(`Event with ID "${id}" not found`);
+    }
+
+    if (
+      event.voucherProduct &&
+      (event.voucherProduct.approvalStatus !== ApprovalStatus.APPROVED ||
+        event.voucherProduct.adminDisabled)
+    ) {
+      // The event itself remains readable, but an unapproved voucher template
+      // must never leak through the public event payload.
+      event.voucherProduct = null;
     }
 
     return event;

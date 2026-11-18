@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { FlashSaleItem } from './entities/flash-sale-item.entity';
 import { FlashSaleStatus } from './flash-sale.enum';
 import { CreateFlashSaleItemDto } from './dto/create-flash-sale-item.dto';
@@ -13,6 +13,7 @@ import { UpdateFlashSaleItemDto } from './dto/update-flash-sale-item.dto';
 import { Business } from '../listings/entities/listing.entity';
 import { Product } from '../product/entities/product.entity';
 import { UserRole } from '../../common/role.enum';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 @Injectable()
 export class FlashSalesService {
@@ -81,10 +82,35 @@ export class FlashSalesService {
       .orderBy('fsi.endDate', 'ASC')
       .getMany();
 
-    return items.map((item) => ({
-      ...item,
-      status: this.resolveStatus(item),
-    }));
+    // A flash sale snapshot must not outlive the approval/delisting state of
+    // the product it points at.
+    const productIds = items
+      .map((item) => item.productId)
+      .filter((id): id is string => !!id);
+    const allowedProductIds = productIds.length
+      ? new Set(
+          (
+            await this.productRepository.find({
+              where: {
+                id: In(productIds),
+                approvalStatus: ApprovalStatus.APPROVED,
+                adminDisabled: false,
+                productStatus: 'published',
+                visibility: 'public',
+              },
+            })
+          ).map((product) => product.id),
+        )
+      : new Set<string>();
+
+    return items
+      .filter(
+        (item) => !item.productId || allowedProductIds.has(item.productId),
+      )
+      .map((item) => ({
+        ...item,
+        status: this.resolveStatus(item),
+      }));
   }
 
   async findAll(): Promise<FlashSaleItem[]> {
@@ -109,6 +135,23 @@ export class FlashSalesService {
       { businessId: dto.businessId, productId: dto.productId },
       requester,
     );
+
+    if (dto.productId) {
+      const product = await this.productRepository.findOneBy({
+        id: dto.productId,
+      });
+      if (
+        !product ||
+        product.approvalStatus !== ApprovalStatus.APPROVED ||
+        product.adminDisabled ||
+        product.productStatus !== 'published' ||
+        product.visibility !== 'public'
+      ) {
+        throw new BadRequestException(
+          'Only an approved, published product can be promoted in a flash sale.',
+        );
+      }
+    }
 
     const item = this.flashSaleItemRepository.create({
       ...dto,

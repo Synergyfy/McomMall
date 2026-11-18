@@ -26,6 +26,7 @@ import {
 import { UpdateBusinessAdminDto } from './dto/update-business.dto';
 import { HashService } from 'src/common/hash/hash.service';
 import { UserRole } from 'src/common/role.enum';
+import { ApprovalStatus } from 'src/common/moderation/catalog-approval';
 import { BusinessStatus } from '../listings/listing.enum';
 import { ErrorFactory } from 'src/common/errors/error.factory';
 import { AuthService } from '../auth/auth.service';
@@ -135,7 +136,7 @@ export class AdminService {
 
     // Assuming 'pending' status for products/services. If not used, these might return 0.
     const pendingProducts = await this.productRepository.count({
-      where: { productStatus: 'pending' },
+      where: { approvalStatus: ApprovalStatus.PENDING },
     });
     const pendingListings = pendingProducts;
 
@@ -522,10 +523,18 @@ export class AdminService {
     ] = await Promise.all([
       this.productRepository.count(),
       this.serviceRepository.count(),
-      this.productRepository.count({ where: { productStatus: 'pending' } }),
-      this.serviceRepository.count({ where: { status: 'pending' } }),
-      this.productRepository.count({ where: { productStatus: 'published' } }),
-      this.serviceRepository.count({ where: { status: 'published' } }),
+      this.productRepository.count({
+        where: { approvalStatus: ApprovalStatus.PENDING },
+      }),
+      this.serviceRepository.count({
+        where: { approvalStatus: ApprovalStatus.PENDING },
+      }),
+      this.productRepository.count({
+        where: { approvalStatus: ApprovalStatus.APPROVED },
+      }),
+      this.serviceRepository.count({
+        where: { approvalStatus: ApprovalStatus.APPROVED },
+      }),
       this.productRepository.count({ where: { isFeatured: true } }),
       this.serviceRepository.count({ where: { isFeatured: true } }),
     ]);

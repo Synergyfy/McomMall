@@ -29,6 +29,9 @@ import {
   ServiceStatsDto,
 } from '../dto/catalog.dto';
 import { CreateAdminServiceDto } from '../dto/create-admin-service.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { User } from '../../users/entities/user.entity';
+import { ReviewModerationDto } from '../dto/moderation.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -52,14 +55,30 @@ export class AdminServicesController {
     return this.adminServicesService.findAll(query);
   }
 
+  @Patch(':id/approve')
+  @ApiOperation({ summary: 'Approve a pending service' })
+  approve(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.adminServicesService.approve(id, user.id);
+  }
+
+  @Patch(':id/reject')
+  @ApiOperation({ summary: 'Reject a pending service' })
+  reject(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() dto: ReviewModerationDto,
+  ) {
+    return this.adminServicesService.reject(id, user.id, dto.reviewNote);
+  }
+
   @Patch(':id/deactivate')
-  @ApiOperation({ summary: 'Deactivate a service' })
+  @ApiOperation({ summary: 'Delist a service' })
   deactivate(@Param('id') id: string) {
     return this.adminServicesService.deactivate(id);
   }
 
   @Patch(':id/activate')
-  @ApiOperation({ summary: 'Re-activate a service' })
+  @ApiOperation({ summary: 'Republish a delisted service' })
   activate(@Param('id') id: string) {
     return this.adminServicesService.activate(id);
   }

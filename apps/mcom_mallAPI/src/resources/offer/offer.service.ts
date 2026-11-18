@@ -23,6 +23,12 @@ import {
   PointTransactionSource,
   PointTransactionType,
 } from '../transaction/entities/point-transaction.entity';
+import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
+import { UserRole } from '../../common/role.enum';
 @Injectable()
 export class OfferService {
   constructor(
@@ -75,11 +81,17 @@ export class OfferService {
     }
 
     const offer = this.offerRepository.create({
-      ...rest,
+      ...stripModerationFields({ ...rest } as Record<string, any>),
       user,
       includedProducts,
       excludedProducts,
       freeProduct,
+      // New merchant offers and time bonuses wait for admin approval.
+      approvalStatus:
+        user.role === UserRole.ADMIN
+          ? ApprovalStatus.APPROVED
+          : ApprovalStatus.PENDING,
+      adminDisabled: false,
     });
 
     const savedOffer = await this.offerRepository.save(offer);
@@ -120,7 +132,12 @@ export class OfferService {
 
     const now = new Date();
     const offers = await this.offerRepository.find({
-      where: { isActive: true, user: { id: ownerId } },
+      where: {
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+        user: { id: ownerId },
+      },
       relations: ['freeProduct'],
       order: { created_at: 'DESC' },
     });
@@ -169,7 +186,14 @@ export class OfferService {
       throw new NotFoundException(`Offer with ID "${id}" not found`);
     }
 
-    Object.assign(offer, rest);
+    Object.assign(
+      offer,
+      stripModerationFields({ ...rest } as Record<string, any>),
+    );
+
+    if (offer.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(offer);
+    }
 
     if (includedProductIds) {
       if (includedProductIds.length > 0) {
@@ -241,7 +265,13 @@ export class OfferService {
 
     const now = new Date();
     const bonuses = await this.offerRepository.find({
-      where: { isActive: true, isTimeBonus: true, user: { id: ownerId } },
+      where: {
+        isActive: true,
+        isTimeBonus: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+        user: { id: ownerId },
+      },
       order: { created_at: 'DESC' },
     });
 
@@ -298,6 +328,12 @@ export class OfferService {
     }
     if (!offer.isActive) {
       throw new BadRequestException('This time bonus is not active');
+    }
+    if (
+      offer.approvalStatus !== ApprovalStatus.APPROVED ||
+      offer.adminDisabled
+    ) {
+      throw new BadRequestException('This time bonus is no longer available');
     }
     if (offer.beginDate && new Date(offer.beginDate) > new Date()) {
       throw new BadRequestException('This time bonus has not started yet');
@@ -392,6 +428,13 @@ export class OfferService {
 
     if (!offer.isActive) {
       throw new BadRequestException('Offer is not active');
+    }
+
+    if (
+      offer.approvalStatus !== ApprovalStatus.APPROVED ||
+      offer.adminDisabled
+    ) {
+      throw new BadRequestException('Offer is no longer available');
     }
 
     if (offer.beginDate && new Date(offer.beginDate) > new Date()) {

@@ -11,6 +11,15 @@ export class ProductStatsDto {
 
   @ApiProperty({ example: 12 })
   outOfStock: number;
+
+  @ApiProperty({ example: 8 })
+  pending: number;
+
+  @ApiProperty({ example: 3 })
+  rejected: number;
+
+  @ApiProperty({ example: 2 })
+  delisted: number;
 }
 
 export class ProductQueryDto {
@@ -58,6 +67,18 @@ export class AdminProductDto {
   })
   status: string;
 
+  @ApiProperty({ example: 'approved' })
+  approvalStatus: string;
+
+  @ApiProperty({ example: false })
+  adminDisabled: boolean;
+
+  @ApiPropertyOptional({ example: null })
+  reviewNote?: string | null;
+
+  @ApiPropertyOptional({ example: null })
+  reviewedAt?: Date | null;
+
   @ApiProperty({
     example: 'Premium over-ear headphones with superior sound quality',
   })
@@ -98,6 +119,15 @@ export class ServiceStatsDto {
 
   @ApiProperty({ example: 90, description: 'Average duration in minutes' })
   avgDuration: number;
+
+  @ApiProperty({ example: 8 })
+  pending: number;
+
+  @ApiProperty({ example: 3 })
+  rejected: number;
+
+  @ApiProperty({ example: 2 })
+  delisted: number;
 }
 
 export class ServiceQueryDto {
@@ -141,6 +171,18 @@ export class AdminServiceDto {
 
   @ApiProperty({ example: 'active' })
   status: string;
+
+  @ApiProperty({ example: 'approved' })
+  approvalStatus: string;
+
+  @ApiProperty({ example: false })
+  adminDisabled: boolean;
+
+  @ApiPropertyOptional({ example: null })
+  reviewNote?: string | null;
+
+  @ApiPropertyOptional({ example: null })
+  reviewedAt?: Date | null;
 
   @ApiProperty({
     example: 'Tension-relieving deep tissue massage by professionals',

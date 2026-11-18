@@ -48,6 +48,7 @@ import { MoneyEngineService } from '../money-engine/money-engine.service';
 import { FunctionalType } from '../money-engine/entities/reward-definition.entity';
 import { FeatureFlagsService } from '../../common/feature-flags/feature-flags.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 import { DiscountType } from '../coupon/coupon.enum';
 import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
 import { PartnerCallbackService } from '../partner-instruments/partner-callback.service';
@@ -172,6 +173,20 @@ export class OrderService {
     }
   }
 
+  /** Only approved, published and non-delisted products can be purchased. */
+  private validateProductIsPurchasable(product: Product) {
+    if (
+      product.approvalStatus !== ApprovalStatus.APPROVED ||
+      product.productStatus !== 'published' ||
+      product.visibility !== 'public' ||
+      product.adminDisabled
+    ) {
+      throw new BadRequestException(
+        `"${product.title}" is not available for purchase.`,
+      );
+    }
+  }
+
   async checkout(
     userId: string,
     createCheckoutDto: CreateCheckoutDto,
@@ -218,6 +233,7 @@ export class OrderService {
           `Product with ID "${directPurchase.productId}" not found.`,
         );
       }
+      this.validateProductIsPurchasable(product);
       this.validateBusinessAndOwner(product.business);
 
       if (product.enableStockManagement) {
@@ -248,6 +264,7 @@ export class OrderService {
       businessContextId = cart.items[0].product.businessId;
 
       for (const item of cart.items) {
+        this.validateProductIsPurchasable(item.product);
         this.validateBusinessAndOwner(item.product.business);
 
         if (item.product.enableStockManagement) {
@@ -303,6 +320,17 @@ export class OrderService {
 
         // Validate service business status
         const service = servicesMap.get(bookingDetail.serviceId);
+        if (
+          !service ||
+          service.approvalStatus !== ApprovalStatus.APPROVED ||
+          service.status !== 'published' ||
+          !service.isActive ||
+          service.adminDisabled
+        ) {
+          throw new BadRequestException(
+            `Service with ID ${bookingDetail.serviceId} is not available for booking.`,
+          );
+        }
         if (service) {
           this.validateBusinessAndOwner(service.business);
         }
@@ -876,6 +904,13 @@ export class OrderService {
         relations: ['user'],
       });
       if (!offer) throw new NotFoundException('Offer not found');
+      if (
+        offer.approvalStatus !== ApprovalStatus.APPROVED ||
+        offer.adminDisabled ||
+        !offer.isActive
+      ) {
+        throw new BadRequestException('Offer is no longer available.');
+      }
       if (offer.user?.id === userId) {
         throw new BadRequestException(
           'You cannot redeem an offer from your own business.',

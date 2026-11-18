@@ -74,6 +74,11 @@ import { WalletService } from '../wallet/wallet.service';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { GiftCardTemplateSearchDto } from './dto/gift-card-template-search.dto';
 import { DigitalValueService } from '../digital-value/digital-value.service';
+import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
 import { DigitalValueType } from '../digital-value/digital-value.enums';
 import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
 import {
@@ -198,6 +203,12 @@ export class GiftCardService {
       }
       if (!template.isActive) {
         throw new UnprocessableEntityException('TEMPLATE_INACTIVE');
+      }
+      if (
+        template.approvalStatus !== ApprovalStatus.APPROVED ||
+        template.adminDisabled
+      ) {
+        throw new UnprocessableEntityException('TEMPLATE_NOT_AVAILABLE');
       }
     }
 
@@ -410,7 +421,12 @@ export class GiftCardService {
     provider: PaymentMethod;
   }> {
     const template = await this.templateRepository.findOne({
-      where: { id: initiateDto.templateId, isActive: true },
+      where: {
+        id: initiateDto.templateId,
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['owner'],
     });
     if (!template) {
@@ -509,7 +525,12 @@ export class GiftCardService {
     }
 
     const template = await this.templateRepository.findOne({
-      where: { id: templateId, isActive: true },
+      where: {
+        id: templateId,
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['owner'],
     });
     if (!template) {
@@ -860,6 +881,15 @@ export class GiftCardService {
       );
     }
 
+    if (
+      template.approvalStatus !== ApprovalStatus.APPROVED ||
+      template.adminDisabled
+    ) {
+      throw new BadRequestException(
+        'This gift card template is no longer available for reloads.',
+      );
+    }
+
     if (!template.allowReloading) {
       throw new BadRequestException('This gift card cannot be reloaded.');
     }
@@ -941,6 +971,15 @@ export class GiftCardService {
     if (!template.owner || !template.owner.isActive) {
       throw new BadRequestException(
         'The owner of this gift card is no longer active. Reload payment cannot be verified.',
+      );
+    }
+
+    if (
+      template.approvalStatus !== ApprovalStatus.APPROVED ||
+      template.adminDisabled
+    ) {
+      throw new BadRequestException(
+        'This gift card template is no longer available for reloads.',
       );
     }
 
@@ -1152,7 +1191,12 @@ export class GiftCardService {
     const ownerId = business.user.id;
 
     const templates = await this.templateRepository.find({
-      where: { ownerId, isActive: true },
+      where: {
+        ownerId,
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
     });
 
     return templates;
@@ -1167,10 +1211,14 @@ export class GiftCardService {
   ): Promise<GiftCard> {
     const ownerId = business.user.id;
 
-    const template = await this.templateRepository.findOneBy({
-      id: purchaseDto.templateId,
-      ownerId: ownerId,
-      isActive: true,
+    const template = await this.templateRepository.findOne({
+      where: {
+        id: purchaseDto.templateId,
+        ownerId: ownerId,
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
     });
     if (!template) {
       throw new NotFoundException(
@@ -1745,8 +1793,12 @@ export class GiftCardService {
     );
 
     const template = this.templateRepository.create({
-      ...createDto,
+      ...stripModerationFields({ ...createDto } as Record<string, any>),
       owner: { id: ownerId } as User,
+      // New merchant templates must be approved by an admin before shoppers
+      // can see or purchase them.
+      approvalStatus: ApprovalStatus.PENDING,
+      adminDisabled: false,
     });
     return this.templateRepository.save(template);
   }
@@ -1757,7 +1809,13 @@ export class GiftCardService {
     ownerId: string,
   ): Promise<GiftCardTemplate> {
     const template = await this.findTemplateByIdForOwner(templateId, ownerId);
-    Object.assign(template, updateDto);
+    const payload = stripModerationFields({
+      ...updateDto,
+    } as Record<string, any>);
+    Object.assign(template, payload);
+    if (template.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(template);
+    }
     return this.templateRepository.save(template);
   }
 
@@ -2306,7 +2364,11 @@ export class GiftCardService {
     queryBuilder
       .leftJoinAndSelect('template.owner', 'owner')
       .leftJoin('owner.businesses', 'business')
-      .where('template.isActive = :isActive', { isActive: true });
+      .where('template.isActive = :isActive', { isActive: true })
+      .andWhere('template.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('template.adminDisabled = false');
 
     if (search) {
       queryBuilder.andWhere(
@@ -2375,7 +2437,11 @@ export class GiftCardService {
 
   async findTemplateById(id: string): Promise<GiftCardTemplate> {
     const template = await this.templateRepository.findOne({
-      where: { id },
+      where: {
+        id,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['owner'],
     });
 

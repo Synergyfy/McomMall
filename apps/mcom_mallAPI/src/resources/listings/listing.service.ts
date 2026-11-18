@@ -16,6 +16,8 @@ import { User } from '../users/entities/user.entity';
 import { SearchBusinessDto } from './dto/listings.dto';
 import { ActivitiesService } from '../activities/activities.service';
 import { ListingPublicDto } from './dto/listing-public.dto';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
+import { UserRole } from '../../common/role.enum';
 
 @Injectable()
 export class ListingsService {
@@ -133,6 +135,20 @@ export class ListingsService {
       giftCard: business.user.giftCard,
       voucher: business.user.voucher,
     };
+
+    const canSeeUnapproved =
+      !!user &&
+      (user.role === UserRole.ADMIN || business.user?.id === user.id);
+
+    if (!canSeeUnapproved) {
+      response.products = (business.products || []).filter(
+        (product) =>
+          product.approvalStatus === ApprovalStatus.APPROVED &&
+          product.productStatus === 'published' &&
+          product.visibility === 'public' &&
+          !product.adminDisabled,
+      );
+    }
 
     return response;
   }

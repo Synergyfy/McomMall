@@ -14,6 +14,7 @@ import { AdminOrdersController } from './controllers/orders.admin.controller';
 import { AdminBookingsController } from './controllers/bookings.admin.controller';
 import { AdminTransactionsController } from './controllers/transactions.admin.controller';
 import { AdminAnalyticsController } from './controllers/analytics.admin.controller';
+import { AdminModerationController } from './controllers/moderation.admin.controller';
 import { AdminActivitiesService } from './services/activities.admin.service';
 import { AdminListingsService } from './services/listings.admin.service';
 import { AdminProductsService } from './services/products.admin.service';
@@ -22,6 +23,7 @@ import { AdminOrdersService } from './services/orders.admin.service';
 import { AdminBookingsService } from './services/bookings.admin.service';
 import { AdminTransactionsService } from './services/transactions.admin.service';
 import { AdminAnalyticsService } from './services/analytics.admin.service';
+import { CatalogModerationService } from './services/moderation.admin.service';
 import { Activity } from '../activities/entities/activity.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { Product } from '../product/entities/product.entity';
@@ -62,6 +64,7 @@ import { OrderModule } from '../order/order.module';
     AdminBookingsController,
     AdminTransactionsController,
     AdminAnalyticsController,
+    AdminModerationController,
   ],
   providers: [
     AdminService,
@@ -73,6 +76,7 @@ import { OrderModule } from '../order/order.module';
     AdminBookingsService,
     AdminTransactionsService,
     AdminAnalyticsService,
+    CatalogModerationService,
   ],
 })
 export class AdminModule {}

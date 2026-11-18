@@ -83,6 +83,7 @@ import { useCreateRewardDefinition, useIssueVoucher, useGetRewardDefinitions, us
 import { CreateRewardDefinitionDto, RewardDefinition } from '@/service/money-engine/types';
 import { useGetAdminListings } from '@/service/listings/hook';
 import { AdminListing } from '@/service/listings/types';
+import { EntityMultiSelect } from './EntityMultiSelect';
 
 // --- Form Schema ---
 
@@ -98,8 +99,8 @@ const couponVoucherSchema = z.object({
     burnStrategy: z.enum(['reward_first', 'real_first', 'proportional']).default('reward_first'),
     seasonalLabel: z.string(),
     validShopIds: z.array(z.string()).optional().default([]),
-    validProductIds: z.string().optional().default(''),
-    validServiceIds: z.string().optional().default(''),
+    validProductIds: z.array(z.string()).default([]),
+    validServiceIds: z.array(z.string()).default([]),
     expiresAt: z.string().optional(),
     isActive: z.boolean().default(true),
 });
@@ -229,8 +230,8 @@ export default function CouponVoucherControl() {
             burnStrategy: 'reward_first',
             seasonalLabel: 'Spring',
             validShopIds: [],
-            validProductIds: '',
-            validServiceIds: '',
+            validProductIds: [],
+            validServiceIds: [],
             expiresAt: '',
             isActive: true,
         }
@@ -278,17 +279,11 @@ export default function CouponVoucherControl() {
                     values.scopeType !== 'any_shop'
                         ? values.validShopIds
                         : undefined,
-                validProductIds: values.validProductIds
+                validProductIds: values.validProductIds.length
                     ? values.validProductIds
-                          .split(',')
-                          .map((id) => id.trim())
-                          .filter(Boolean)
                     : undefined,
-                validServiceIds: values.validServiceIds
+                validServiceIds: values.validServiceIds.length
                     ? values.validServiceIds
-                          .split(',')
-                          .map((id) => id.trim())
-                          .filter(Boolean)
                     : undefined,
                 seasonalLabels: [values.seasonalLabel, new Date().getFullYear().toString()],
                 expiresAt: values.expiresAt || undefined,
@@ -574,29 +569,49 @@ export default function CouponVoucherControl() {
 
                                             <div className="grid md:grid-cols-2 gap-4">
                                                 <div className="grid gap-2">
-                                                    <Label htmlFor="validProductIds">
+                                                    <Label>
                                                         Product allow-list (optional)
                                                     </Label>
-                                                    <Input
-                                                        id="validProductIds"
-                                                        placeholder="product-uuid-1, product-uuid-2"
-                                                        {...form.register('validProductIds')}
+                                                    <EntityMultiSelect
+                                                        kind="product"
+                                                        value={form.watch('validProductIds') || []}
+                                                        onChange={(ids) =>
+                                                            form.setValue('validProductIds', ids, {
+                                                                shouldDirty: true,
+                                                            })
+                                                        }
+                                                        businessIds={
+                                                            watchScopeType !== 'any_shop' &&
+                                                            selectedShopIds.length > 0
+                                                                ? selectedShopIds
+                                                                : undefined
+                                                        }
                                                     />
                                                     <p className="text-[11px] text-slate-400">
-                                                        Comma-separated product ids. Leave empty for any product.
+                                                        Search and pick the products this deal can buy. Leave empty for any product.
                                                     </p>
                                                 </div>
                                                 <div className="grid gap-2">
-                                                    <Label htmlFor="validServiceIds">
+                                                    <Label>
                                                         Service allow-list (optional)
                                                     </Label>
-                                                    <Input
-                                                        id="validServiceIds"
-                                                        placeholder="service-uuid-1, service-uuid-2"
-                                                        {...form.register('validServiceIds')}
+                                                    <EntityMultiSelect
+                                                        kind="service"
+                                                        value={form.watch('validServiceIds') || []}
+                                                        onChange={(ids) =>
+                                                            form.setValue('validServiceIds', ids, {
+                                                                shouldDirty: true,
+                                                            })
+                                                        }
+                                                        businessIds={
+                                                            watchScopeType !== 'any_shop' &&
+                                                            selectedShopIds.length > 0
+                                                                ? selectedShopIds
+                                                                : undefined
+                                                        }
                                                     />
                                                     <p className="text-[11px] text-slate-400">
-                                                        Comma-separated service ids. Leave empty for any service.
+                                                        Search and pick the services this deal can book. Leave empty for any service.
                                                     </p>
                                                 </div>
                                             </div>

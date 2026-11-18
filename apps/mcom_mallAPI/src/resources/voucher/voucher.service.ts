@@ -43,12 +43,16 @@ import { VerifyReloadDto } from './dto/verify-reload.dto';
 import { VoucherSummaryStatisticsDto } from './dto/voucher-summary-statistics.dto';
 import { VoucherHistoryQueryDto } from './dto/voucher-history-query.dto';
 import { PageDto } from 'src/common/dto/page.dto';
+import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from 'src/common/moderation/catalog-approval';
 import { VoucherTransactionHistoryDto } from './dto/voucher-transaction-history.dto';
 import { PageMetaDto } from 'src/common/dto/page-meta.dto';
 import { WalletService } from '../wallet/wallet.service';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
-import { VoucherProductSearchDto } from './dto/voucher-product-search.dto';
-import { DigitalValueService } from '../digital-value/digital-value.service';
+import { VoucherProductSearchDto } from './dto/voucher-product-search.dto';import { DigitalValueService } from '../digital-value/digital-value.service';
 import { DigitalValueType } from '../digital-value/digital-value.enums';
 import { UserRole } from '../../common/role.enum';
 import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
@@ -103,8 +107,15 @@ export class VoucherService {
     }
 
     const newProduct = this.voucherProductRepository.create({
-      ...createDto,
+      ...stripModerationFields({ ...createDto } as Record<string, any>),
       user,
+      // New merchant voucher products wait for admin approval; admin-authored
+      // products are immediately usable.
+      approvalStatus:
+        user.role === UserRole.ADMIN
+          ? ApprovalStatus.APPROVED
+          : ApprovalStatus.PENDING,
+      adminDisabled: false,
     });
 
     return this.voucherProductRepository.save(newProduct);
@@ -130,7 +141,14 @@ export class VoucherService {
       );
     }
 
-    Object.assign(product, updateDto);
+    Object.assign(
+      product,
+      stripModerationFields({ ...updateDto } as Record<string, any>),
+    );
+
+    if (product.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(product);
+    }
 
     return this.voucherProductRepository.save(product);
   }
@@ -205,6 +223,8 @@ export class VoucherService {
       where: {
         user: { id: business.user.id },
         isEnabled: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
       },
     });
   }
@@ -272,6 +292,9 @@ export class VoucherService {
     }
     product.status = status;
     product.isEnabled = status === 'active';
+    if (product.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(product);
+    }
     return this.voucherProductRepository.save(product);
   }
 
@@ -306,6 +329,8 @@ export class VoucherService {
       where: {
         id: initiateDto.voucherProductId,
         isEnabled: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
       },
       relations: ['user'],
     });
@@ -392,7 +417,12 @@ export class VoucherService {
     const { voucherProductId, amount } = purchaseDetails;
 
     const product = await this.voucherProductRepository.findOne({
-      where: { id: voucherProductId, isEnabled: true },
+      where: {
+        id: voucherProductId,
+        isEnabled: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['user'],
     });
 
@@ -696,6 +726,15 @@ export class VoucherService {
       );
     }
 
+    if (
+      product.approvalStatus !== ApprovalStatus.APPROVED ||
+      product.adminDisabled
+    ) {
+      throw new BadRequestException(
+        'This voucher product is no longer available for reloads.',
+      );
+    }
+
     if (!product.allowReloading) {
       throw new BadRequestException('This voucher cannot be reloaded.');
     }
@@ -781,6 +820,15 @@ export class VoucherService {
     if (!product.user || !product.user.isActive) {
       throw new BadRequestException(
         'The owner of this voucher is no longer active. Reload payment cannot be verified.',
+      );
+    }
+
+    if (
+      product.approvalStatus !== ApprovalStatus.APPROVED ||
+      product.adminDisabled
+    ) {
+      throw new BadRequestException(
+        'This voucher product is no longer available for reloads.',
       );
     }
 
@@ -1783,6 +1831,12 @@ export class VoucherService {
       if (!product.isEnabled || product.status === 'inactive') {
         throw new UnprocessableEntityException('TEMPLATE_INACTIVE');
       }
+      if (
+        product.approvalStatus !== ApprovalStatus.APPROVED ||
+        product.adminDisabled
+      ) {
+        throw new UnprocessableEntityException('TEMPLATE_NOT_AVAILABLE');
+      }
       this.assertVoucherAmount(amount, product);
     }
 
@@ -2089,7 +2143,11 @@ export class VoucherService {
     queryBuilder
       .leftJoinAndSelect('voucherProduct.user', 'user')
       .leftJoin('user.businesses', 'business')
-      .where('voucherProduct.isEnabled = :isEnabled', { isEnabled: true });
+      .where('voucherProduct.isEnabled = :isEnabled', { isEnabled: true })
+      .andWhere('voucherProduct.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('voucherProduct.adminDisabled = false');
 
     if (search) {
       queryBuilder.andWhere(
@@ -2138,7 +2196,11 @@ export class VoucherService {
 
   async findProductById(id: string): Promise<VoucherProduct> {
     const product = await this.voucherProductRepository.findOne({
-      where: { id },
+      where: {
+        id,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['user', 'user.businesses'],
     });
 

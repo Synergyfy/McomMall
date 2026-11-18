@@ -40,6 +40,11 @@ import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { UserRole } from '../../common/role.enum';
 import { resolveBusinessTaxonomy } from '../../common/taxonomy/business-taxonomy';
 import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
+import {
   CustomerAction,
   PricingModel,
   PricingType,
@@ -132,7 +137,7 @@ export class ServicesService {
 
     const { bundledServices, configurableAddons, ...serviceData } =
       createServiceDto;
-    delete (serviceData as Record<string, unknown>).adminDisabled;
+    stripModerationFields(serviceData as Record<string, unknown>);
 
     const isDraft = serviceData.status === 'draft';
 
@@ -192,6 +197,10 @@ export class ServicesService {
     const service = this.serviceRepository.create({
       ...(serviceData as Record<string, unknown>),
       businessId: business.id,
+      // Every new merchant service waits for admin approval before it can be
+      // seen or booked by anyone other than the owner.
+      approvalStatus: ApprovalStatus.PENDING,
+      adminDisabled: false,
     } as Partial<Service>);
 
     const savedService = await this.serviceRepository.save(service);
@@ -253,6 +262,7 @@ export class ServicesService {
 
     const where: Record<string, unknown> = { businessId };
     if (!canSeeAll) {
+      where.approvalStatus = ApprovalStatus.APPROVED;
       where.status = 'published';
       where.isActive = true;
       where.adminDisabled = false;
@@ -319,6 +329,7 @@ export class ServicesService {
     const isOwner = !!user && service.business?.user?.id === user.id;
     const isAdmin = user?.role === UserRole.ADMIN;
     const isPubliclyVisible =
+      service.approvalStatus === ApprovalStatus.APPROVED &&
       service.status === 'published' &&
       service.isActive === true &&
       !service.adminDisabled;
@@ -382,7 +393,7 @@ export class ServicesService {
     const { bundledServices, configurableAddons, ...serviceData } =
       updateServiceDto;
     // Admin moderation is not writable by merchants, even if they send it.
-    delete (serviceData as Record<string, unknown>).adminDisabled;
+    stripModerationFields(serviceData as Record<string, unknown>);
 
     // Keep the service aligned with the MCOM Central business classification.
     const taxonomy = resolveBusinessTaxonomy(service.business);
@@ -497,6 +508,13 @@ export class ServicesService {
     }
 
     Object.assign(service, mergedServiceData);
+
+    // A rejected service becomes editable again and automatically returns to
+    // the review queue when the owner saves changes.
+    if (service.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(service);
+    }
+
     await this.serviceRepository.save(service);
 
     const updatedService = await this.serviceRepository.findOne({
@@ -957,13 +975,17 @@ export class ServicesService {
       where: [
         {
           name: ILike(`%${term}%`),
+          approvalStatus: ApprovalStatus.APPROVED,
           status: 'published',
           isActive: true,
+          adminDisabled: false,
         },
         {
           description: ILike(`%${term}%`),
+          approvalStatus: ApprovalStatus.APPROVED,
           status: 'published',
           isActive: true,
+          adminDisabled: false,
         },
       ],
       relations: ['bundledServices', 'configurableAddons', 'business'],
@@ -977,7 +999,10 @@ export class ServicesService {
 
     queryBuilder
       .leftJoinAndSelect('service.business', 'business')
-      .where('service.isActive = :isActive', { isActive: true })
+      .where('service.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('service.isActive = :isActive', { isActive: true })
       .andWhere('service.status = :status', { status: 'published' })
       .andWhere('service.adminDisabled = :adminDisabled', {
         adminDisabled: false,

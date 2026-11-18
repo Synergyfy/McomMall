@@ -5,11 +5,13 @@ import {
 } from '@nestjs/common';
 import { CheckoutService } from './checkout.service';
 import { OrderStatus } from '../order/enums/order-status.enum';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 const product = {
   id: 'product-b',
   title: 'Product B',
   business: { id: 'business-b' },
+  approvalStatus: ApprovalStatus.APPROVED,
   productStatus: 'published',
   visibility: 'public',
   adminDisabled: false,
