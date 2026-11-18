@@ -20,20 +20,20 @@ export interface IService extends Service {
 
 export interface TimeRange {
   start: string; // "09:00"
-  end: string;   // "13:00"
+  end: string; // "13:00"
 }
 
 export type DaySchedule = {
   day: string; // Can be lowercase or capitalized
   enabled: boolean;
   startTime: string; // Main start time
-  endTime: string;   // Main end time
+  endTime: string; // Main end time
   breaks?: (TimeRange | string)[]; // Can be TimeRange objects or "HH:mm-HH:mm" strings
   maxBookings?: number; // Granular: max concurrent bookings for this day
   staffPerBooking?: number; // Granular: staff required for this day
   slotDuration?: number; // Granular: duration for this day
   bufferTime?: number; // Granular: buffer for this day
-}
+};
 
 export interface AvailabilityProfile {
   schedule: DaySchedule[];
@@ -78,9 +78,40 @@ export interface ServiceVariant {
   duration?: number; // for time variants
 }
 
+export type PricingType =
+  | 'fixed'
+  | 'startingFrom'
+  | 'range'
+  | 'hourly'
+  | 'quote'
+  | 'free';
+
+export type ServiceDeliveryOption = 'atBusiness' | 'atCustomer' | 'online';
+
+export type CustomerAction =
+  | 'bookNow'
+  | 'requestQuote'
+  | 'enquiry'
+  | 'contactBusiness';
+
+export interface ServiceFaq {
+  question: string;
+  answer: string;
+}
+
+export interface ServiceLocationSnapshot {
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
 export interface CreateServiceDto {
   name: string;
-  sector: string; // New Required
+  sector?: string; // New Required
   shortDescription?: string; // New
   description?: string;
   shortDesc?: string; // New
@@ -95,8 +126,20 @@ export interface CreateServiceDto {
   isActive?: boolean;
   businessId: string;
 
-  // Pricing
-  pricingModel: 'fixed' | 'perHour' | 'perUnit' | 'perJob' | 'perDistance' | 'perSession' | 'subscription'; // Expanded
+  // Pricing (Create Service flow)
+  pricingType?: PricingType;
+  price?: number;
+  priceMax?: number;
+
+  // Legacy pricing (derived by the API; still used by bookings/checkout)
+  pricingModel?:
+    | 'fixed'
+    | 'perHour'
+    | 'perUnit'
+    | 'perJob'
+    | 'perDistance'
+    | 'perSession'
+    | 'subscription'; // Expanded
   fixedPrice?: number;
   pricePerHour?: number;
   pricePerUnit?: number;
@@ -129,7 +172,12 @@ export interface CreateServiceDto {
 
   // Tiers (Packages)
   enableTieredPackages?: boolean;
-  tiers?: { name: string; description?: string; price: number | string; features: string[] }[]; // Existing, covers "Package Builder"
+  tiers?: {
+    name: string;
+    description?: string;
+    price: number | string;
+    features: string[];
+  }[]; // Existing, covers "Package Builder"
 
   // New Sections
   deliveryConfig?: ServiceDeliveryConfig;
@@ -138,6 +186,22 @@ export interface CreateServiceDto {
   variants?: ServiceVariant[]; // For Time/Resource variants
 
   availability?: AvailabilityProfile;
+  duration?: number;
+
+  // Booking & availability
+  deliveryOptions?: ServiceDeliveryOption[];
+  customerAction?: CustomerAction;
+  bookingInstructions?: string;
+  appointmentArrangements?: string;
+  availabilityNotes?: string;
+
+  // Additional information
+  serviceConditions?: string;
+  faqs?: ServiceFaq[];
+  serviceLocation?: ServiceLocationSnapshot | null;
+
+  status?: 'draft' | 'published' | string;
+
   isFeatured?: boolean;
   isPromotionEligible?: boolean;
 }
@@ -184,7 +248,18 @@ export interface Service {
   media: string[] | null;
   isActive: boolean;
 
-  pricingModel: 'fixed' | 'perHour' | 'perUnit' | 'perJob' | 'perDistance' | 'perSession' | 'subscription';
+  pricingType?: PricingType;
+  price?: string | number | null;
+  priceMax?: string | number | null;
+
+  pricingModel:
+    | 'fixed'
+    | 'perHour'
+    | 'perUnit'
+    | 'perJob'
+    | 'perDistance'
+    | 'perSession'
+    | 'subscription';
   fixedPrice: string | null;
   pricePerHour: string | null;
   pricePerUnit: string | null;
@@ -214,6 +289,16 @@ export interface Service {
   variants?: ServiceVariant[];
   tiers?: ServiceTier[];
 
+  deliveryOptions?: ServiceDeliveryOption[];
+  customerAction?: CustomerAction;
+  bookingInstructions?: string;
+  appointmentArrangements?: string;
+  availabilityNotes?: string;
+
+  serviceConditions?: string;
+  faqs?: ServiceFaq[];
+  serviceLocation?: ServiceLocationSnapshot | null;
+
   deletedAt: string | null;
   created_at: string;
   updated_at: string;
@@ -227,4 +312,4 @@ export interface Service {
   availability?: AvailabilityProfile;
   averageRating?: number;
   reviewCount?: number;
-  }
+}

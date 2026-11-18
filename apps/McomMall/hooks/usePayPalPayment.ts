@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 
 const createPayPalOrder = async (payload: {
   amount: number;
+  purpose?: string;
   idempotencyKey?: string;
 }) => {
   const { data } = await api.post('/payments/paypal/create-order', payload);

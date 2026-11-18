@@ -40,6 +40,9 @@ export default function BookingPaymentModal({
   );
   const [clientSecret, setClientSecret] = useState<string | undefined>();
   const [orderID, setOrderID] = useState<string | undefined>();
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const [amount, setAmount] = useState<number>(0);
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [rewardDiscount, setRewardDiscount] = useState<number>(0);
@@ -111,6 +114,7 @@ export default function BookingPaymentModal({
         setClientSecret(response.clientSecret);
       } else if (method === PaymentMethod.PAYPAL) {
         setOrderID(response.orderId);
+        setPaypalApprovalUrl((response as any).approvalUrl ?? null);
       }
     } catch (error) {
       console.error('Failed to initiate payment', error);
@@ -419,6 +423,11 @@ export default function BookingPaymentModal({
                                               ? 'Insufficient balance'
                                               : 'Pay with MCOM Wallet'}
                                     </Button>
+                                    <p className="mt-2 text-[11px] text-gray-500">
+                                        Wallet payments are processed by MCOM
+                                        Pay; MCOM&apos;s standard processing
+                                        fee applies.
+                                    </p>
                                 </div>
                             )}
                         </motion.div>
@@ -451,6 +460,7 @@ export default function BookingPaymentModal({
                             <div className="p-4">
                                 <PayPalCheckoutButton
                                     orderID={orderID}
+                                    approvalUrl={paypalApprovalUrl}
                                     onPaymentSuccess={handlePaymentSuccess}
                                 />
                             </div>

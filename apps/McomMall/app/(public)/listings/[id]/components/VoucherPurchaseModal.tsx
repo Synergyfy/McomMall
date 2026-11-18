@@ -38,7 +38,7 @@ interface VoucherPurchaseModalProps {
 }
 
 const stripePromise = loadStripe(
-  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 const StripePaymentForm = ({
@@ -101,6 +101,9 @@ export default function VoucherPurchaseModal({
   >('stripe');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [purchaseDetails, setPurchaseDetails] =
     useState<InitiateVoucherPurchaseDto | null>(null);
@@ -169,6 +172,7 @@ export default function VoucherPurchaseModal({
         setClientSecret(response.clientSecret);
       } else {
         setPaypalOrderId(response.orderId);
+        setPaypalApprovalUrl((response as any).approvalUrl ?? null);
       }
     } catch (error) {
       toast.error('Failed to initiate purchase. Please try again.');
@@ -353,6 +357,7 @@ export default function VoucherPurchaseModal({
             <div className="flex w-full items-center justify-center py-4">
               <PayPalButtonWrapper
                 orderId={paypalOrderId}
+                approvalUrl={paypalApprovalUrl}
                 onApprove={handlePayPalApprove}
               />
             </div>

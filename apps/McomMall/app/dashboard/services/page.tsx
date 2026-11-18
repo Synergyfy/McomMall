@@ -55,13 +55,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Service } from '@/service/services/types';
+import {
+  getPricingTypeLabel,
+  getServicePriceLabel,
+} from '@/lib/service-pricing';
 
 const isImageUrl = (url: string) => {
   if (!url) return false;
   // More permissive: check for common image extensions OR protocol indicating an external image
   // Some CDN URLs might not have clean extensions
-  return /\.(jpeg|jpg|gif|png|webp|svg|bmp)$/i.test(url) || url.startsWith('http') || url.startsWith('data:image');
-}
+  return (
+    /\.(jpeg|jpg|gif|png|webp|svg|bmp)$/i.test(url) ||
+    url.startsWith('http') ||
+    url.startsWith('data:image')
+  );
+};
 
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
@@ -82,12 +90,16 @@ export default function ServicesDashboard() {
   const [showDeleteConfirmation, setShowDeleteConfirmation] =
     React.useState(false);
   const [selectedService, setSelectedService] = React.useState<string | null>(
-    null
+    null,
   );
-  const [promoteService, setPromoteService] = React.useState<Service | null>(null);
+  const [promoteService, setPromoteService] = React.useState<Service | null>(
+    null,
+  );
   const [showPromoteModal, setShowPromoteModal] = React.useState(false);
-  const [spareCapacityService, setSpareCapacityService] = React.useState<Service | null>(null);
-  const [showSpareCapacityModal, setShowSpareCapacityModal] = React.useState(false);
+  const [spareCapacityService, setSpareCapacityService] =
+    React.useState<Service | null>(null);
+  const [showSpareCapacityModal, setShowSpareCapacityModal] =
+    React.useState(false);
 
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -97,7 +109,8 @@ export default function ServicesDashboard() {
 
   const handleDuplicate = async (service: Service) => {
     try {
-      const { id, created_at, updated_at, deletedAt, business, ...rest } = service as any;
+      const { id, created_at, updated_at, deletedAt, business, ...rest } =
+        service as any;
       await addService({
         ...rest,
         name: `${service.name} (Copy)`,
@@ -107,19 +120,29 @@ export default function ServicesDashboard() {
       queryClient.invalidateQueries({ queryKey: ['my-services'] });
       toast.success('Service duplicated as inactive copy!');
     } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || 'Failed to duplicate service.');
+      toast.error(
+        e.response?.data?.message ||
+          e.message ||
+          'Failed to duplicate service.',
+      );
     }
   };
 
   const handleToggleActive = async (service: Service) => {
     try {
+      const nextActive = !service.isActive;
       await updateService({
         id: service.id,
-        isActive: !service.isActive,
+        isActive: nextActive,
+        ...(nextActive && service.status === 'draft'
+          ? { status: 'published' as const }
+          : {}),
       } as any);
-      toast.success(`Service ${!service.isActive ? 'activated' : 'paused'}!`);
+      toast.success(`Service ${nextActive ? 'activated' : 'paused'}!`);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || 'Failed to update service.');
+      toast.error(
+        e.response?.data?.message || e.message || 'Failed to update service.',
+      );
     }
   };
 
@@ -135,17 +158,19 @@ export default function ServicesDashboard() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedRows(checked ? services.map(s => s.id) : []);
+    setSelectedRows(checked ? services.map((s) => s.id) : []);
   };
 
   const handleSelectRow = (serviceId: string, checked: boolean) => {
-    setSelectedRows(prev =>
-      checked ? [...prev, serviceId] : prev.filter(id => id !== serviceId)
+    setSelectedRows((prev) =>
+      checked ? [...prev, serviceId] : prev.filter((id) => id !== serviceId),
     );
   };
 
   const isAllSelected =
-    selectedRows.length > 0 && services && selectedRows.length === services.length;
+    selectedRows.length > 0 &&
+    services &&
+    selectedRows.length === services.length;
 
   return (
     <>
@@ -176,7 +201,8 @@ export default function ServicesDashboard() {
               Services Dashboard
             </h1>
             <p className="text-sm text-gray-600 mt-2">
-              Manage your services, view their status, and perform actions like editing or deleting them.
+              Manage your services, view their status, and perform actions like
+              editing or deleting them.
             </p>
             <div className="flex items-center text-sm text-gray-500">
               <span>Home</span>
@@ -192,9 +218,7 @@ export default function ServicesDashboard() {
               </div>
               <Button
                 className="mt-4 sm:mt-0 w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-                onClick={() =>
-                  router.push('/dashboard/services/add-service')
-                }
+                onClick={() => router.push('/dashboard/services/add-service')}
               >
                 <PlusCircle className="mr-2 h-4 w-4" /> Add new service
               </Button>
@@ -237,12 +261,14 @@ export default function ServicesDashboard() {
                       </TableCell>
                     </TableRow>
                   ) : services.length > 0 ? (
-                    services.map(service => {
-                      const firstImageUrl = (service.media && service.media.length > 0)
-                        ? service.media.find(isImageUrl) || service.media[0]
-                        : (service.images && service.images.length > 0)
-                          ? service.images.find(isImageUrl) || service.images[0]
-                          : null;
+                    services.map((service) => {
+                      const firstImageUrl =
+                        service.media && service.media.length > 0
+                          ? service.media.find(isImageUrl) || service.media[0]
+                          : service.images && service.images.length > 0
+                            ? service.images.find(isImageUrl) ||
+                              service.images[0]
+                            : null;
                       return (
                         <TableRow
                           key={service.id}
@@ -254,7 +280,7 @@ export default function ServicesDashboard() {
                           <TableCell className="mobile-table-cell-checkbox md:table-cell">
                             <Checkbox
                               checked={selectedRows.includes(service.id)}
-                              onCheckedChange={checked =>
+                              onCheckedChange={(checked) =>
                                 handleSelectRow(service.id, !!checked)
                               }
                               aria-label={`Select row for ${service.name}`}
@@ -299,41 +325,42 @@ export default function ServicesDashboard() {
                               variant={
                                 service.adminDisabled
                                   ? 'destructive'
-                                  : service.isActive
-                                    ? 'default'
-                                    : 'secondary'
+                                  : service.status === 'draft'
+                                    ? 'outline'
+                                    : service.isActive
+                                      ? 'default'
+                                      : 'secondary'
                               }
                               className={
                                 service.adminDisabled
                                   ? 'bg-amber-100 text-amber-800 border-none px-3'
-                                  : service.isActive
-                                    ? 'bg-green-100 text-green-800 border-none px-3'
-                                    : 'px-3'
+                                  : service.status === 'draft'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-100 px-3'
+                                    : service.isActive
+                                      ? 'bg-green-100 text-green-800 border-none px-3'
+                                      : 'px-3'
                               }
                             >
                               {service.adminDisabled
                                 ? 'Disabled by admin'
-                                : service.isActive
-                                  ? 'Active'
-                                  : 'Inactive'}
+                                : service.status === 'draft'
+                                  ? 'Draft'
+                                  : service.isActive
+                                    ? 'Active'
+                                    : 'Inactive'}
                             </Badge>
                           </TableCell>
                           <TableCell
                             data-label="Pricing Model"
                             className="mobile-table-cell md:table-cell text-gray-600 capitalize"
                           >
-                            {service.pricingModel?.replace(/([A-Z])/g, ' $1').trim()}
+                            {getPricingTypeLabel(service)}
                           </TableCell>
                           <TableCell
                             data-label="Price"
                             className="mobile-table-cell md:table-cell text-gray-900 font-bold"
                           >
-                            {service.pricingModel === 'fixed' &&
-                              `£${service.fixedPrice}`}
-                            {service.pricingModel === 'perHour' &&
-                              `£${service.pricePerHour}/hr`}
-                            {service.pricingModel === 'perUnit' &&
-                              `£${service.pricePerUnit}/${service.unitName}`}
+                            {getServicePriceLabel(service)}
                           </TableCell>
                           <TableCell
                             data-label="Date"
@@ -341,9 +368,15 @@ export default function ServicesDashboard() {
                           >
                             <div className="flex flex-col text-xs items-end md:items-start">
                               <span className="font-medium text-gray-900">
-                                {formatDate(service.created_at || (service as any).createdAt || '')}
+                                {formatDate(
+                                  service.created_at ||
+                                    (service as any).createdAt ||
+                                    '',
+                                )}
                               </span>
-                              <span className="text-gray-400 text-[10px] uppercase tracking-tighter">Created</span>
+                              <span className="text-gray-400 text-[10px] uppercase tracking-tighter">
+                                Created
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell className="mobile-table-cell md:table-cell">
@@ -359,7 +392,7 @@ export default function ServicesDashboard() {
                                 <DropdownMenuItem
                                   onSelect={() =>
                                     router.push(
-                                      `/dashboard/services/edit/${service.id}`
+                                      `/dashboard/services/edit/${service.id}`,
                                     )
                                   }
                                 >
@@ -422,7 +455,7 @@ export default function ServicesDashboard() {
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
-                      )
+                      );
                     })
                   ) : (
                     <TableRow className="block md:table-row">

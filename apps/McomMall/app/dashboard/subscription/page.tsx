@@ -4,7 +4,11 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import { useGetMyMembership } from '@/service/membership/hooks';
+import {
+  useGetMyMembership,
+  useGetRenewal,
+  useUpdateRenewal,
+} from '@/service/membership/hooks';
 import { useGetPlans } from '@/service/plans/hooks';
 import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
 import {
@@ -65,6 +69,8 @@ export default function MembershipPlansDashboard() {
   useEffect(() => setIsMounted(true), []);
   const { data: membership, isLoading: isMemberLoading } = useGetMyMembership();
   const { data: plans, isLoading: isPlansLoading } = useGetPlans();
+  const { data: renewal } = useGetRenewal();
+  const updateRenewal = useUpdateRenewal();
 
   const [selection, setSelection] = useState<{
     plan: Plan;
@@ -219,9 +225,18 @@ export default function MembershipPlansDashboard() {
                   )}
                   <span className="capitalize">
                     {purchased
-                      ? `${getVariantDurationLabel(purchased.variant)} · One-off billing`
+                      ? getVariantDurationLabel(purchased.variant)
                       : `${activeMembership.planType} Billing Cycle`}
+                    {' · '}
+                    {renewal?.autoRenew
+                      ? `Auto-renewal on${renewal.nextChargeAt ? ` (next ${new Date(renewal.nextChargeAt).toLocaleDateString()})` : ''}`
+                      : 'Auto-renewal off'}
                   </span>
+                  {renewal?.renewalStatus === 'past_due' && (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
+                      Payment past due
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -289,6 +304,28 @@ export default function MembershipPlansDashboard() {
             </div>
             <h5 className="font-bold text-sm text-gray-800 group-hover:text-[#ff6900] transition-colors">Renew Membership</h5>
             <p className="text-xs text-gray-400 mt-1">Extend your current plan variant or manage your active subscription</p>
+          </button>
+
+          <button
+            onClick={() =>
+              updateRenewal.mutate(!(renewal?.autoRenew ?? false))
+            }
+            disabled={updateRenewal.isPending || !activeMembership}
+            className="flex flex-col items-start p-5 rounded-xl border border-gray-150 hover:border-[#ff6900]/40 hover:bg-[#fcf8f6]/30 transition-all text-left group disabled:opacity-60"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-50 text-[#ff6900] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+            <h5 className="font-bold text-sm text-gray-800 group-hover:text-[#ff6900] transition-colors">
+              {renewal?.autoRenew
+                ? 'Cancel auto-renewal'
+                : 'Enable auto-renewal'}
+            </h5>
+            <p className="text-xs text-gray-400 mt-1">
+              {renewal?.autoRenew
+                ? 'Renewals debit your MCOM Wallet at each period end. You can re-enable any time.'
+                : 'Renew automatically from your MCOM Wallet. Charges are one per billing period.'}
+            </p>
           </button>
 
           <Link

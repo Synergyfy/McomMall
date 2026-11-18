@@ -172,15 +172,6 @@ export class OrderService {
     }
   }
 
-  // Method is not used in checkout, but keeping it for other potential uses.
-  async createOrder(
-    _createOrderDto: any, // Keeping 'any' as this method is not the focus
-    _userId: string,
-  ): Promise<Order> {
-    // ... implementation from before
-    return new Order();
-  }
-
   async checkout(
     userId: string,
     createCheckoutDto: CreateCheckoutDto,
@@ -823,6 +814,10 @@ export class OrderService {
     let offer: Offer | null = null;
     let walletRequested = false;
     let walletTransactionId: string | null = null;
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
 
     try {
     // --- Server-side payment verification for card / PayPal ---
@@ -844,17 +839,30 @@ export class OrderService {
                 transactionId,
                 Number(finalAmount.toFixed(2)),
                 'gbp',
+                {
+                  mallUserId: userId,
+                  mcomUserId: user.centralUserId,
+                },
               )
             : await this.paymentProviderService.captureAndVerifyPaypalOrder(
                 transactionId,
                 Number(finalAmount.toFixed(2)),
                 'gbp',
+                {
+                  mallUserId: userId,
+                  mcomUserId: user.centralUserId,
+                },
               );
         if (!verification.ok) {
           throw new BadRequestException(
             `Payment verification failed: ${verification.reason}`,
           );
         }
+        const details: any = verification.details ?? {};
+        paidChargeId = details.id ?? null;
+        paidProviderRef = details.providerRef ?? null;
+        paidFeeMinor = details.feeMinor ?? null;
+        paidNetMinor = details.netMinor ?? null;
       } else if (method !== PaymentMethod.MCOM_WALLET) {
         throw new BadRequestException('Unsupported payment method.');
       }
@@ -890,23 +898,38 @@ export class OrderService {
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      try {
-        const charge = await this.paymentProviderService.createWalletCharge(
-          Number(finalAmount.toFixed(2)),
-          'GBP',
-          {
-            reference: `mall-order-${userId}`,
-            userId,
-            ...(createCheckoutDto.payment.idempotencyKey
-              ? { idempotencyKey: createCheckoutDto.payment.idempotencyKey }
-              : {}),
-            description: 'MCOM Mall order',
-          },
-          centralUserId,
+      if (!createCheckoutDto.payment.idempotencyKey) {
+        throw new BadRequestException(
+          'A checkout idempotency key is required for MCOM Wallet payments.',
         );
-        walletTransactionId = charge.chargeId;
-      } catch (err: any) {
-        throw err;
+      }
+      const charge = await this.paymentProviderService.createWalletCharge(
+        Number(finalAmount.toFixed(2)),
+        'GBP',
+        {
+          reference: `mall-order-${userId}`,
+          userId,
+          idempotencyKey: createCheckoutDto.payment.idempotencyKey,
+          description: 'MCOM Mall order',
+        },
+        centralUserId,
+      );
+      if (charge.status !== 'paid') {
+        throw new BadRequestException(
+          `MCOM Wallet charge status ${charge.status}; payment was not settled.`,
+        );
+      }
+      walletTransactionId = charge.chargeId;
+      paidChargeId = charge.chargeId;
+      try {
+        const details = await this.paymentProviderService.getMcomCharge(
+          charge.chargeId,
+        );
+        paidProviderRef = details.providerRef ?? null;
+        paidFeeMinor = details.feeMinor ?? null;
+        paidNetMinor = details.netMinor ?? null;
+      } catch {
+        // Fee/net are reporting fields; the charge itself is already verified.
       }
     }
     } catch (preOrderErr) {
@@ -922,17 +945,50 @@ export class OrderService {
       throw preOrderErr;
     }
 
+    const existingPaidReference =
+      paidChargeId ||
+      walletTransactionId ||
+      createCheckoutDto.payment.transactionId;
+    if (existingPaidReference) {
+      const existingPayment = await this.orderPaymentRepository.findOne({
+        where: [
+          { transactionId: existingPaidReference },
+          ...(paidChargeId
+            ? [{ mcomChargeId: paidChargeId }]
+            : []),
+        ],
+        relations: ['order'],
+      });
+      if (existingPayment?.order) {
+        // Idempotent replay: the same charge already funded an order.
+        return existingPayment.order;
+      }
+    }
+
     const savedOrder = await this.entityManager
       .transaction(async (manager) => {
+        const paidReference =
+          paidChargeId ||
+          walletTransactionId ||
+          createCheckoutDto.payment.transactionId ||
+          null;
         const orderPayment = manager.create(OrderPayment, {
           paymentMethod: createCheckoutDto.payment.paymentMethod,
           transactionId:
-            walletTransactionId ||
-            createCheckoutDto.payment.transactionId ||
-            randomUUID(),
+            paidReference || randomUUID(),
           user,
           amount: finalAmount,
-          currency: walletRequested ? 'MCOM' : 'gbp',
+          currency: 'gbp',
+          mcomChargeId: paidChargeId || walletTransactionId || null,
+          providerRef:
+            paidProviderRef ||
+            (createCheckoutDto.payment.paymentMethod !==
+            PaymentMethod.MCOM_WALLET
+              ? createCheckoutDto.payment.transactionId ?? null
+              : null),
+          feeMinor: paidFeeMinor,
+          netMinor: paidNetMinor,
+          status: finalAmount <= 0 ? 'free' : 'paid',
         });
         const savedPayment = await manager.save(orderPayment);
 
@@ -941,10 +997,10 @@ export class OrderService {
           items: [],
           total: finalAmount,
           payment: savedPayment,
-          // A fully-discounted order has nothing to charge. There is no
-          // provider webhook to complete it, so settle it immediately.
-          status:
-            finalAmount <= 0 ? OrderStatus.COMPLETED : OrderStatus.PENDING,
+          // Payment has already been verified above (or the order is fully
+          // discounted), so the order is settled. Fulfilment is intentionally
+          // not conflated with payment status.
+          status: OrderStatus.COMPLETED,
           shippingAddress,
           carrierCode,
           estimatedShippingFee,
@@ -977,6 +1033,22 @@ export class OrderService {
           orderData.pointsUsedToRedeem = offer.points;
         }
         const savedOrder = await manager.save(Order, orderData);
+
+        if (finalAmount > 0 && paidReference) {
+          // A charge can fund exactly one order. This is the replay guard.
+          await this.paymentProviderService.allocateCharge(
+            {
+              mcomChargeId: paidChargeId || `wallet:${paidReference}`,
+              purpose: 'ORDER',
+              entityType: 'order',
+              entityId: savedOrder.id,
+              userId,
+              amountMinor: String(Math.round(Number(finalAmount) * 100)),
+              currency: 'GBP',
+            },
+            manager,
+          );
+        }
 
         if (createCheckoutDto.giftCardCode && giftCardAmountToApply > 0) {
           await this.giftCardService.redeem(
@@ -1333,19 +1405,23 @@ export class OrderService {
           );
         }
 
-        // Compensating refund: order records failed AFTER a successful MCOM
-        // Pay wallet charge — refund the charge so the customer is never
+        // Compensating refund: the order failed AFTER money moved (wallet
+        // charge or card/PayPal capture). Refund so the customer is never
         // charged for a failed order. MCOM Pay refunds are idempotent per
         // charge + amount.
-        if (walletTransactionId) {
+        const refundReference =
+          paidChargeId ||
+          walletTransactionId ||
+          createCheckoutDto.payment.transactionId;
+        if (finalAmount > 0 && refundReference) {
           try {
             await this.paymentProviderService.refundStripePayment(
-              walletTransactionId,
+              refundReference,
               Number(finalAmount.toFixed(2)),
             );
           } catch (refundErr) {
             this.logger.error(
-              '[order.checkout] compensating MCOM Pay wallet refund failed — manual reconciliation required',
+              '[order.checkout] compensating MCOM Pay refund failed — manual reconciliation required',
               refundErr,
             );
           }

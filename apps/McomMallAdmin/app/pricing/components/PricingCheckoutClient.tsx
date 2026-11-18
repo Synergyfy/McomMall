@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Loader } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import api from '@/service/api';
 import {
   useRecordPayment,
   useCreateStripeIntent,
@@ -11,17 +12,19 @@ import {
 } from '@/service/payments/hook';
 import {
   PaymentGateway,
+  PaymentPurpose,
   PlanType,
-  PaygOption,
 } from '@/service/payments/types';
 import SubscriptionSummary from './SubscriptionSummary';
 import PaymentForm from '@/app/checkout/components/PaymentForm';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { PaymentMethod } from '@/service/bookings/types';
+import { Button } from '@/components/ui/button';
 
 interface PricingCheckoutClientProps {
   planName: string;
   planPrice: string;
+  planVariantId?: string;
   isTrial: boolean;
   isPayg?: boolean;
   listingId: string | null;
@@ -30,6 +33,7 @@ interface PricingCheckoutClientProps {
 export default function PricingCheckoutClient({
   planName,
   planPrice,
+  planVariantId,
   isTrial,
   isPayg,
   listingId,
@@ -40,8 +44,24 @@ export default function PricingCheckoutClient({
 
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
-    PaymentMethod.STRIPE
+    PaymentMethod.STRIPE,
   );
+  const [publishableKey, setPublishableKey] = useState<string>();
+  const [isStartingTrial, setIsStartingTrial] = useState(false);
+  const [trialError, setTrialError] = useState<string | null>(null);
+
+  const [idempotencyKey] = useState(() =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `admin-plan-${Date.now()}`,
+  );
+
+  useEffect(() => {
+    api
+      .get('/payments/config')
+      .then((res) => setPublishableKey(res.data?.publishableKey ?? undefined))
+      .catch(() => undefined);
+  }, []);
 
   const { mutate: recordPayment, isPending: isRecordingPayment } =
     useRecordPayment();
@@ -58,57 +78,88 @@ export default function PricingCheckoutClient({
 
   const getPriceAsNumber = (price: string) => {
     const numericPart = price.replace(/[^0-9.-]+/g, '');
-    return parseFloat(numericPart);
+    return parseFloat(numericPart) || 0;
   };
 
-  const totalPrice = isTrial ? 1.0 : getPriceAsNumber(planPrice);
+  const totalPrice = isTrial ? 0 : getPriceAsNumber(planPrice);
 
   useEffect(() => {
-    if (!stripeRedirect && totalPrice > 0) {
-      if (paymentMethod === PaymentMethod.STRIPE) {
-        createStripeIntent({ amount: totalPrice });
-      } else {
-        createPayPalOrder({ amount: totalPrice });
-      }
+    if (isTrial || stripeRedirect || totalPrice <= 0) return;
+    const payload = planVariantId
+      ? {
+          planVariantId,
+          purpose: PaymentPurpose.MEMBERSHIP,
+          idempotencyKey,
+        }
+      : {
+          amount: totalPrice,
+          purpose: PaymentPurpose.PAYG_TOPUP,
+          idempotencyKey,
+        };
+    if (paymentMethod === PaymentMethod.STRIPE) {
+      createStripeIntent(payload);
+    } else {
+      createPayPalOrder(payload);
     }
-  }, [
-    totalPrice,
-    paymentMethod,
-    createStripeIntent,
-    createPayPalOrder,
-    stripeRedirect,
-  ]);
-
-  const getPaygOption = (name: string): PaygOption | undefined => {
-    if (name.includes('90')) return PaygOption.NINETY_DAYS;
-    if (name.includes('180')) return PaygOption.ONE_EIGHTY_DAYS;
-    if (name.includes('270')) return PaygOption.TWO_SEVENTY_DAYS;
-    return undefined;
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalPrice, paymentMethod, planVariantId, isTrial, stripeRedirect]);
 
   const handlePaymentSuccess = useCallback(
-    (transactionId: string, paymentMethod: PaymentMethod) => {
+    (transactionId: string, method: PaymentMethod) => {
       recordPayment(
-        {
-          amount: totalPrice,
-          planType: isPayg ? PlanType.PAYG : PlanType.CO_BRANDED,
-          paygOption: isPayg ? getPaygOption(planName) : undefined,
-          isTrial,
-          paymentGateway:
-            paymentMethod === PaymentMethod.STRIPE
-              ? PaymentGateway.STRIPE
-              : PaymentGateway.PAYPAL,
-          transactionId,
-          currency: 'gbp',
-        },
+        planVariantId
+          ? {
+              amount: totalPrice,
+              isTrial: false,
+              paymentGateway:
+                method === PaymentMethod.STRIPE
+                  ? PaymentGateway.STRIPE
+                  : PaymentGateway.PAYPAL,
+              transactionId,
+              currency: 'gbp',
+              purpose: PaymentPurpose.MEMBERSHIP,
+              planVariantId,
+            }
+          : {
+              amount: totalPrice,
+              planType: PlanType.PAYG,
+              isTrial: false,
+              paymentGateway:
+                method === PaymentMethod.STRIPE
+                  ? PaymentGateway.STRIPE
+                  : PaymentGateway.PAYPAL,
+              transactionId,
+              currency: 'gbp',
+              purpose: PaymentPurpose.PAYG_TOPUP,
+            },
         {
           onSuccess: () => setSuccessModalOpen(true),
-        }
+        },
       );
     },
-    [totalPrice, isPayg, planName, isTrial, recordPayment]
+    [totalPrice, planVariantId, recordPayment],
   );
 
+  const handleStartTrial = async () => {
+    if (!planVariantId) {
+      setTrialError('This plan cannot be trialled yet.');
+      return;
+    }
+    setIsStartingTrial(true);
+    setTrialError(null);
+    try {
+      await api.post('/membership/join-trial', { planVariantId });
+      setSuccessModalOpen(true);
+    } catch (e: any) {
+      setTrialError(
+        e?.response?.data?.message ||
+          e?.message ||
+          'Could not start the trial.',
+      );
+    } finally {
+      setIsStartingTrial(false);
+    }
+  };
 
   if (isRecordingPayment || isCreatingStripeIntent || isCreatingPayPalOrder) {
     return (
@@ -127,32 +178,54 @@ export default function PricingCheckoutClient({
         className="container mx-auto px-4 py-12"
       >
         <h1 className="text-4xl font-extrabold text-center mb-12 text-gray-800">
-          Secure Checkout
+          {isTrial ? 'Start your trial' : 'Secure Checkout'}
         </h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           <div className="bg-white rounded-xl shadow-lg p-8">
             <SubscriptionSummary
               planName={planName}
-              planPrice={planPrice}
+              planPrice={isTrial ? 'Free' : planPrice}
               isTrial={isTrial}
-              isPayg={isPayg}
-              paygOption={getPaygOption(planName)}
+              isPayg={isPayg ?? !planVariantId}
               totalPrice={totalPrice}
             />
           </div>
           <div className="bg-white rounded-xl shadow-lg p-8">
-            <PaymentForm
-              totalPrice={totalPrice}
-              onPaymentSuccess={(transactionId) =>
-                handlePaymentSuccess(
-                  transactionId,
-                  paymentMethod
-                )
-              }
-              clientSecret={stripeIntent?.clientSecret}
-              orderID={payPalOrder?.id}
-              setPaymentMethod={setPaymentMethod}
-            />
+            {isTrial ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Activate the free trial for{' '}
+                  <span className="font-semibold">{planName}</span>. No card
+                  details are collected for a trial.
+                </p>
+                {trialError && (
+                  <p className="text-sm text-rose-600">{trialError}</p>
+                )}
+                <Button
+                  onClick={handleStartTrial}
+                  disabled={isStartingTrial}
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  {isStartingTrial ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Activate free trial'
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <PaymentForm
+                totalPrice={totalPrice}
+                onPaymentSuccess={(transactionId) =>
+                  handlePaymentSuccess(transactionId, paymentMethod)
+                }
+                clientSecret={stripeIntent?.clientSecret}
+                orderID={payPalOrder?.orderId ?? payPalOrder?.id}
+                paypalApprovalUrl={payPalOrder?.approvalUrl}
+                publishableKey={publishableKey}
+                setPaymentMethod={setPaymentMethod}
+              />
+            )}
           </div>
         </div>
       </motion.div>

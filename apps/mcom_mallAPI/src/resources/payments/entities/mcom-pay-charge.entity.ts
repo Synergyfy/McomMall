@@ -4,16 +4,21 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 /**
  * Local index of MCOM Pay charges.
  *
- * MCOM Central owns the charge itself; this table exists so the mall can
- * resolve a provider id (Stripe PaymentIntent id / PayPal order id) back to the
- * MCOM charge id when verifying a payment, and so webhook/backstop processing
- * survives an API restart.
+ * MCOM Central owns the charge itself; this table is an audit-friendly mirror
+ * so the mall can resolve provider handles, link a charge to a business event,
+ * report fees/net, and reconcile even after an API restart.
  */
 @Entity('mcom_pay_charges')
 @Index('IDX_mcom_pay_charge_provider_ref', ['providerRef'])
+@Index('IDX_mcom_pay_charge_status', ['status'])
+@Index('IDX_mcom_pay_charge_reference', ['reference'])
+@Index('IDX_mcom_pay_charge_user', ['mcomUserId'])
 export class McomPayCharge extends AbstractBaseEntity {
   @Column({ unique: true })
   chargeId: string;
+
+  @Column({ nullable: true })
+  appClientId?: string | null;
 
   @Column({ nullable: true })
   providerRef?: string | null;
@@ -24,11 +29,38 @@ export class McomPayCharge extends AbstractBaseEntity {
   @Column({ type: 'bigint' })
   amountMinor: string;
 
+  @Column({ type: 'bigint', nullable: true })
+  feeMinor?: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  netMinor?: string | null;
+
+  @Column({ type: 'bigint', default: 0 })
+  refundedMinor: string;
+
   @Column({ length: 3 })
   currency: string;
 
   @Column({ nullable: true })
   reference?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  description?: string | null;
+
+  @Column({ nullable: true })
+  mcomUserId?: string | null;
+
+  @Column({ nullable: true })
+  externalCustomerId?: string | null;
+
+  @Column({ nullable: true })
+  provider?: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  walletDebitAmount?: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  paidAt?: Date | null;
 
   @Column()
   status: string;

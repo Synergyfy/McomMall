@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { User } from '../users/entities/user.entity';
 import { Membership } from './entities/membership.entity';
 import { MembershipTier } from './membership-tier.enum';
@@ -285,6 +286,62 @@ export class MembershipService {
     return membership;
   }
 
+  async getRenewalState(userId: string) {
+    const membership = await this.membershipRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['planVariant', 'planVariant.plan', 'planVariant.tierLevel'],
+      order: { created_at: 'DESC' },
+    });
+    if (!membership) return null;
+    return {
+      membershipId: membership.id,
+      autoRenew: membership.autoRenew,
+      renewalStatus: membership.renewalStatus,
+      nextChargeAt: membership.nextChargeAt,
+      renewalAttempts: membership.renewalAttempts,
+      lastRenewalAt: membership.lastRenewalAt,
+      renewalAmount: membership.renewalAmount,
+      renewalCurrency: membership.renewalCurrency,
+      renewalMethod: membership.renewalMethod,
+      currentPeriodEnd: membership.expiresAt,
+      planName: membership.planVariant?.plan?.name ?? null,
+    };
+  }
+
+  async updateRenewal(userId: string, autoRenew: boolean) {
+    const membership = await this.membershipRepository.findOne({
+      where: { user: { id: userId } },
+      order: { created_at: 'DESC' },
+    });
+    if (!membership) {
+      throw new NotFoundException('Membership not found.');
+    }
+
+    if (autoRenew) {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user?.centralUserId) {
+        throw new BadRequestException(
+          'Link your MCOM Wallet via SSO before enabling auto-renewal.',
+        );
+      }
+      membership.autoRenew = true;
+      membership.renewalStatus = 'active';
+      membership.renewalAttempts = 0;
+      membership.nextChargeAt =
+        membership.expiresAt && membership.expiresAt > new Date()
+          ? membership.expiresAt
+          : new Date();
+    } else {
+      membership.autoRenew = false;
+      membership.renewalStatus = 'canceled';
+      membership.nextChargeAt = null;
+    }
+    await this.membershipRepository.save(membership);
+    return this.getRenewalState(userId);
+  }
+
   getMembershipPrice(tier: MembershipTier): number {
     const price = this.membershipPrices.get(tier);
     if (price === undefined) {
@@ -348,21 +405,31 @@ export class MembershipService {
         initiateDto.tier ||
         'membership';
       const planType = initiateDto.planType || PlanType.MONTHLY;
-      const charge = await this.paymentProviderService.createWalletCharge(
-        Number(price),
-        'GBP',
-        {
-          reference: `membership-${scope}-${user.id}`,
+      // Pre-authorise, don't debit. The hold is captured only when the
+      // membership can actually be granted; abandoned attempts expire safely.
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: centralUserId,
+        amount: Number(price),
+        reference: `membership-${scope}-${user.id}`,
+        idempotencyKey: this.mcomWalletService.buildKey(
+          'membership-hold',
+          scope,
+          user.id,
+          Number(price).toFixed(2),
+          initiateDto.idempotencyKey || randomUUID(),
+        ),
+        metadata: {
+          purpose: 'MEMBERSHIP',
           userId: user.id,
-          ...(initiateDto.idempotencyKey
-            ? { idempotencyKey: initiateDto.idempotencyKey }
-            : {}),
-          description: `MCOM Mall membership (${planType})`,
+          planVariantId: initiateDto.planVariantId,
+          tierId: initiateDto.tierId,
+          planType,
         },
-        centralUserId,
-      );
+      });
       return {
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
@@ -382,9 +449,9 @@ export class MembershipService {
           {
             reference: `membership-${scope}-${user.id}`,
             userId: user.id,
-            ...(initiateDto.idempotencyKey
-              ? { idempotencyKey: initiateDto.idempotencyKey }
-              : {}),
+            idempotencyKey:
+              initiateDto.idempotencyKey ||
+              `membership-${scope}-${user.id}-${Number(price).toFixed(2)}`,
             description: 'MCOM Mall membership',
           },
         );
@@ -399,10 +466,16 @@ export class MembershipService {
         {
           reference: `membership-${scope}-${user.id}`,
           userId: user.id,
-          ...(initiateDto.idempotencyKey
-            ? { idempotencyKey: initiateDto.idempotencyKey }
-            : {}),
+          idempotencyKey:
+            initiateDto.idempotencyKey ||
+            `membership-${scope}-${user.id}-${Number(price).toFixed(2)}`,
           description: 'MCOM Mall membership',
+          returnUrl:
+            initiateDto.returnUrl ||
+            `${(process.env.MALL_FRONTEND_URL || process.env.FRONTEND_URL || '').replace(/\/$/, '')}/pricing?paypal=return`,
+          cancelUrl:
+            initiateDto.cancelUrl ||
+            `${(process.env.MALL_FRONTEND_URL || process.env.FRONTEND_URL || '').replace(/\/$/, '')}/pricing`,
         },
       );
       return {
@@ -445,56 +518,60 @@ export class MembershipService {
       price = this.getMembershipPrice(tierEnum);
     }
 
-    let verificationResult;
+    let centralUserId = user.centralUserId;
+    if (!centralUserId) {
+      const dbUser = await this.userRepository.findOne({
+        where: { id: user.id },
+      });
+      centralUserId = dbUser?.centralUserId;
+    }
+
+    let verificationResult: {
+      ok: boolean;
+      details?: any;
+      reason?: string;
+    };
+    let mcomChargeId: string | null = null;
+    let providerRef: string | null = null;
+    let feeMinor: string | null = null;
+    let netMinor: string | null = null;
 
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
-      // MCOM Pay wallet charges settle at create time; the charge id is the
-      // transaction reference. Legacy hold ids (from older clients) are still
-      // captured for backwards compatibility.
       const walletReference = transactionId || holdId;
       if (!walletReference) {
         throw new BadRequestException(
           'A wallet payment reference is required for MCOM Wallet membership payments.',
         );
       }
-      const localCharge = await this.paymentProviderService.verifyWalletCharge(
-        walletReference,
-        Number(Number(price).toFixed(2)),
-        'GBP',
-      );
-      if (localCharge.ok) {
-        transactionId = walletReference;
+      if (!centralUserId) {
+        throw new BadRequestException(
+          'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
+        );
+      }
+      verificationResult =
+        await this.paymentProviderService.settleWalletReference(
+          walletReference,
+          Number(Number(price).toFixed(2)),
+          'GBP',
+          {
+            mallUserId: user.id,
+            mcomUserId: centralUserId,
+            holdId,
+            reference: `membership-${targetVariantId || tierEnum || 'membership'}-${user.id}`,
+          },
+          this.mcomWalletService.buildKey('sub-capture', walletReference),
+        );
+      if (verificationResult.ok) {
+        const details = verificationResult.details ?? {};
+        transactionId =
+          details.transactionId || details.id || walletReference;
+        const detailId = String(details.id || '');
+        mcomChargeId =
+          detailId && !detailId.startsWith('wallet:') ? detailId : null;
+        providerRef = details.providerRef ?? null;
+        feeMinor = details.feeMinor ?? null;
+        netMinor = details.netMinor ?? null;
         currency = 'GBP';
-        verificationResult = localCharge;
-      } else {
-        let centralUserId = user.centralUserId;
-        if (!centralUserId) {
-          const dbUser = await this.userRepository.findOne({
-            where: { id: user.id },
-          });
-          centralUserId = dbUser?.centralUserId;
-        }
-        if (!centralUserId) {
-          throw new BadRequestException(
-            'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
-          );
-        }
-        try {
-          const captured = await this.mcomWalletService.captureHold({
-            holdId: holdId || walletReference,
-            amount: Number(Number(price).toFixed(2)),
-            reference: `mall-membership-${user.id}`,
-            idempotencyKey: this.mcomWalletService.buildKey(
-              'sub-capture',
-              holdId || walletReference,
-            ),
-          });
-          transactionId = captured.transactionId;
-          currency = 'MCOM';
-          verificationResult = { ok: true as boolean, details: captured };
-        } catch (err: any) {
-          throw this.mcomWalletService.toHttpException(err);
-        }
       }
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       if (!transactionId) {
@@ -507,7 +584,16 @@ export class MembershipService {
           transactionId,
           Number(Number(price).toFixed(2)),
           'GBP',
+          {
+            mallUserId: user.id,
+            mcomUserId: centralUserId,
+          },
         );
+      const details: any = verificationResult.details ?? {};
+      mcomChargeId = details.id ?? null;
+      providerRef = details.providerRef ?? null;
+      feeMinor = details.feeMinor ?? null;
+      netMinor = details.netMinor ?? null;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       if (!transactionId) {
         throw new BadRequestException('A PayPal order ID is required.');
@@ -517,7 +603,16 @@ export class MembershipService {
           transactionId,
           Number(Number(price).toFixed(2)),
           'GBP',
+          {
+            mallUserId: user.id,
+            mcomUserId: centralUserId,
+          },
         );
+      const details: any = verificationResult.details ?? {};
+      mcomChargeId = details.id ?? null;
+      providerRef = details.providerRef ?? null;
+      feeMinor = details.feeMinor ?? null;
+      netMinor = details.netMinor ?? null;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -525,6 +620,11 @@ export class MembershipService {
     if (!verificationResult.ok) {
       throw new BadRequestException(
         `Payment verification failed: ${verificationResult.reason}`,
+      );
+    }
+    if (!transactionId) {
+      throw new BadRequestException(
+        'A payment reference could not be resolved.',
       );
     }
 
@@ -553,6 +653,11 @@ export class MembershipService {
             currency,
             paymentMethod: paymentProvider,
             transactionId,
+            mcomChargeId,
+            providerRef,
+            feeMinor,
+            netMinor,
+            status: 'paid',
           }),
         ));
 
@@ -600,8 +705,32 @@ export class MembershipService {
       membership.isTrial = false;
       membership.planType = planType;
       membership.payment = savedPayment;
+      // Recurring: debit the central MCOM Wallet at each expiry. If the user
+      // has no linked central wallet there is no mandate, so auto-renew is off.
+      membership.autoRenew = Boolean(centralUserId);
+      membership.renewalStatus = centralUserId ? 'active' : 'canceled';
+      membership.nextChargeAt = centralUserId ? expiresAt : null;
+      membership.renewalAttempts = 0;
+      membership.renewalAmount = Number(price);
+      membership.renewalCurrency = 'GBP';
+      membership.renewalMethod = 'mcom_wallet';
 
       const savedMembership = await membershipRepo.save(membership);
+
+      // One charge may fund one membership only. Wallet captures are keyed by
+      // their wallet transaction id so they get the same replay protection.
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: mcomChargeId || `wallet:${transactionId}`,
+          purpose: 'MEMBERSHIP',
+          entityType: 'membership',
+          entityId: savedMembership.id,
+          userId: user.id,
+          amountMinor: String(Math.round(Number(price) * 100)),
+          currency: 'GBP',
+        },
+        manager,
+      );
 
       // Process Cashback
       if (user.email) {

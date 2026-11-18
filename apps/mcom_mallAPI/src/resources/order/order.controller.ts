@@ -19,7 +19,6 @@ import { Public } from '../../common/decorators/public.decorator';
 import { OrderService } from './order.service';
 import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
 import { RewardRedemptionReconcileService } from './reward-redemption-reconcile.service';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
 import {
@@ -57,18 +56,6 @@ export class OrderController {
   checkout(@Body() createCheckoutDto: CreateCheckoutDto, @Req() req) {
     const userId = req.user.id;
     return this.orderService.checkout(userId, createCheckoutDto);
-  }
-
-  @Post()
-  @ApiOperation({
-    summary: 'Create a direct order',
-    description:
-      'Directly creates an order for products. Roles: CUSTOMER, OWNER.',
-  })
-  @ApiResponse({ status: 201, type: Order })
-  createOrder(@Body() createOrderDto: CreateOrderDto, @Req() req) {
-    const userId = req.user.id;
-    return this.orderService.createOrder(createOrderDto, userId);
   }
 
   @Get()

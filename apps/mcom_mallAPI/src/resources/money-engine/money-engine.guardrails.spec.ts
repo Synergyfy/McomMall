@@ -34,6 +34,11 @@ function buildService(manager: any) {
       .mockResolvedValue({ id: 'paypal-1', approvalUrl: null }),
     captureAndVerifyPaypalOrder: jest.fn().mockResolvedValue({ ok: true }),
     verifyWalletCharge: jest.fn().mockResolvedValue({ ok: true }),
+    settleWalletReference: jest.fn().mockResolvedValue({ ok: true }),
+    createWalletHold: jest.fn().mockResolvedValue({ holdId: 'hold-1', amount: 10 }),
+    buildWalletKey: jest.fn(() => 'wallet-key'),
+    allocateCharge: jest.fn().mockResolvedValue({ id: 'allocation-1' }),
+    getMcomCharge: jest.fn().mockResolvedValue({ id: 'charge-1' }),
     refundStripePayment: jest.fn().mockResolvedValue({ id: 'refund-1' }),
     refundPaypalOrder: jest.fn().mockResolvedValue({ id: 'refund-2' }),
   };

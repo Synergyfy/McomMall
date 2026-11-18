@@ -296,7 +296,10 @@ export class VoucherService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
   }> {
     const product = await this.voucherProductRepository.findOne({
@@ -319,6 +322,13 @@ export class VoucherService {
     this.validatePurchaseAmount(initiateDto.amount, product);
 
     const currency = 'GBP'; // Or get from config/product
+    const reference = `voucher-purchase-${product.id}-${userId}`;
+    const metadata = {
+      reference,
+      userId,
+      idempotencyKey: `voucher-${product.id}-${userId}-${crypto.randomUUID()}`,
+      description: 'MCOM Mall voucher purchase',
+    };
 
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
       if (!userId) {
@@ -327,18 +337,22 @@ export class VoucherService {
         );
       }
       const centralUserId = await this.requireCentralUserId(userId);
-      const charge = await this.paymentProviderService.createWalletCharge(
-        initiateDto.amount,
-        currency,
-        {
-          reference: `voucher-purchase-${product.id}`,
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: centralUserId,
+        amount: initiateDto.amount,
+        reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'voucher-hold',
+          product.id,
           userId,
-          description: 'MCOM Mall voucher purchase',
-        },
-        centralUserId,
-      );
+          metadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'VOUCHER', productId: product.id, userId },
+      });
       return {
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
@@ -348,6 +362,7 @@ export class VoucherService {
         await this.paymentProviderService.createStripePaymentIntent(
           initiateDto.amount,
           currency,
+          metadata,
         );
       return {
         clientSecret: paymentIntent.client_secret,
@@ -357,8 +372,13 @@ export class VoucherService {
       const order = await this.paymentProviderService.createPaypalOrder(
         initiateDto.amount,
         currency,
+        metadata,
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      return {
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+        provider: PaymentMethod.PAYPAL,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -387,29 +407,71 @@ export class VoucherService {
     }
 
     const currency = 'GBP'; // Or get from config/product
-    let verificationResult;
+    let verificationResult: { ok: boolean; details?: any; reason?: string };
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference = transactionId;
+    const centralUserId =
+      paymentProvider === PaymentMethod.MCOM_WALLET
+        ? await this.requireCentralUserId(userId)
+        : undefined;
 
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
       verificationResult =
-        await this.paymentProviderService.verifyWalletCharge(
+        await this.paymentProviderService.settleWalletReference(
           transactionId,
           amount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: centralUserId,
+            holdId: transactionId,
+            reference: `voucher-purchase-${product.id}-${userId}`,
+          },
+          this.paymentProviderService.buildWalletKey(
+            'voucher-capture',
+            transactionId,
+          ),
         );
+      const details: any = verificationResult.details ?? {};
+      paymentReference = details.transactionId || details.id || transactionId;
+      paidChargeId =
+        details.id && !String(details.id).startsWith('wallet:')
+          ? details.id
+          : null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       verificationResult =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -427,14 +489,17 @@ export class VoucherService {
         const voucherRepo = manager.getRepository(Voucher);
         const _transactionRepo = manager.getRepository(VoucherTransaction);
 
-        // Idempotency check: if transactionId already processed, return existing voucher
+        // Idempotency check: only return a voucher tied to this exact payment.
         const existingPayment = await paymentRepo.findOne({
-          where: { transactionId },
+          where: [
+            { transactionId: paymentReference },
+            ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+          ],
+          relations: ['order'],
         });
         if (existingPayment) {
           const existingVoucher = await voucherRepo.findOne({
-            where: { buyer: { id: userId } },
-            order: { createdAt: 'DESC' },
+            where: { order: { id: (existingPayment as any).order?.id } },
           });
           if (existingVoucher) return existingVoucher;
         }
@@ -443,8 +508,13 @@ export class VoucherService {
           user: { id: userId } as User,
           amount,
           currency,
-          transactionId,
+          transactionId: paymentReference,
           paymentMethod: paymentProvider,
+          mcomChargeId: paidChargeId,
+          providerRef: paidProviderRef,
+          feeMinor: paidFeeMinor,
+          netMinor: paidNetMinor,
+          status: 'paid',
         });
         const savedPayment = await paymentRepo.save(newPayment);
 
@@ -454,6 +524,19 @@ export class VoucherService {
           payment: savedPayment,
         });
         const savedOrder = await orderRepo.save(newOrder);
+
+        await this.paymentProviderService.allocateCharge(
+          {
+            mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+            purpose: 'VOUCHER',
+            entityType: 'order',
+            entityId: savedOrder.id,
+            userId,
+            amountMinor: String(Math.round(Number(amount) * 100)),
+            currency: 'GBP',
+          },
+          manager,
+        );
 
         const user = await manager.findOne(User, { where: { id: userId } });
 
@@ -595,7 +678,10 @@ export class VoucherService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
   }> {
     const voucher = await this.findActiveVoucherByCode(code);
@@ -615,6 +701,14 @@ export class VoucherService {
     }
 
     const currency = 'GBP';
+    this.validatePurchaseAmount(initiateDto.amount, product);
+    const reference = `voucher-reload-${voucher.id}-${userId}`;
+    const metadata = {
+      reference,
+      userId: userId!,
+      idempotencyKey: `voucher-reload-${voucher.id}-${userId}-${crypto.randomUUID()}`,
+      description: 'MCOM Mall voucher reload',
+    };
 
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
       if (!userId) {
@@ -623,18 +717,22 @@ export class VoucherService {
         );
       }
       const centralUserId = await this.requireCentralUserId(userId);
-      const charge = await this.paymentProviderService.createWalletCharge(
-        initiateDto.amount,
-        currency,
-        {
-          reference: `voucher-reload-${voucher.id}`,
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: centralUserId,
+        amount: initiateDto.amount,
+        reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'voucher-reload-hold',
+          voucher.id,
           userId,
-          description: 'MCOM Mall voucher reload',
-        },
-        centralUserId,
-      );
+          metadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'VOUCHER', voucherId: voucher.id, userId },
+      });
       return {
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
@@ -644,6 +742,7 @@ export class VoucherService {
         await this.paymentProviderService.createStripePaymentIntent(
           initiateDto.amount,
           currency,
+          metadata,
         );
       return {
         clientSecret: paymentIntent.client_secret,
@@ -653,8 +752,13 @@ export class VoucherService {
       const order = await this.paymentProviderService.createPaypalOrder(
         initiateDto.amount,
         currency,
+        metadata,
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      return {
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+        provider: PaymentMethod.PAYPAL,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -685,29 +789,72 @@ export class VoucherService {
     }
 
     const currency = 'GBP';
-    let verificationResult;
+    this.validatePurchaseAmount(amount, product);
+    let verificationResult: { ok: boolean; details?: any; reason?: string };
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference = transactionId;
+    const centralUserId =
+      paymentProvider === PaymentMethod.MCOM_WALLET
+        ? await this.requireCentralUserId(userId)
+        : undefined;
 
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
       verificationResult =
-        await this.paymentProviderService.verifyWalletCharge(
+        await this.paymentProviderService.settleWalletReference(
           transactionId,
           amount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: centralUserId,
+            holdId: transactionId,
+            reference: `voucher-reload-${voucher.id}-${userId}`,
+          },
+          this.paymentProviderService.buildWalletKey(
+            'voucher-reload-capture',
+            transactionId,
+          ),
         );
+      const details: any = verificationResult.details ?? {};
+      paymentReference = details.transactionId || details.id || transactionId;
+      paidChargeId =
+        details.id && !String(details.id).startsWith('wallet:')
+          ? details.id
+          : null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       verificationResult =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -723,9 +870,12 @@ export class VoucherService {
       const paymentRepo = manager.getRepository(OrderPayment);
       const voucherRepo = manager.getRepository(Voucher);
 
-      // Idempotency check: if transactionId already processed, return existing voucher
+      // Idempotency check: only replay when this exact payment was used.
       const existingPayment = await paymentRepo.findOne({
-        where: { transactionId },
+        where: [
+          { transactionId: paymentReference },
+          ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+        ],
       });
       if (existingPayment) {
         return this.findVoucherByCode(code);
@@ -735,8 +885,13 @@ export class VoucherService {
         user: { id: userId } as User,
         amount,
         currency,
-        transactionId,
+        transactionId: paymentReference,
         paymentMethod: paymentProvider,
+        mcomChargeId: paidChargeId,
+        providerRef: paidProviderRef,
+        feeMinor: paidFeeMinor,
+        netMinor: paidNetMinor,
+        status: 'paid',
       });
       const savedPayment = await paymentRepo.save(newPayment);
 
@@ -745,7 +900,20 @@ export class VoucherService {
         total: amount,
         payment: savedPayment,
       });
-      await orderRepo.save(newOrder);
+      const savedOrder = await orderRepo.save(newOrder);
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'VOUCHER',
+          entityType: 'order',
+          entityId: savedOrder.id,
+          userId,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
+      );
 
       try {
         const dv = await this.digitalValueService.getByCode(code);

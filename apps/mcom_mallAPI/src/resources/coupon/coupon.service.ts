@@ -1194,17 +1194,30 @@ export class CouponService {
     const metadata = {
       reference: `coupon-purchase-${product.id}-${userId}`,
       userId,
+      idempotencyKey: `coupon-${product.id}-${userId}-${crypto.randomUUID()}`,
       description: `MCOM Mall coupon purchase — ${product.name}`,
     };
 
     if (method === PaymentMethod.MCOM_WALLET) {
-      const charge = await this.paymentProviderService.createWalletCharge(
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: await this.getCentralUserId(userId),
         amount,
-        'GBP',
-        metadata,
-        await this.getCentralUserId(userId),
-      );
-      return { provider: method, transactionId: charge.chargeId, amount };
+        reference: metadata.reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'coupon-hold',
+          product.id,
+          userId,
+          metadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'COUPON', productId: product.id, userId },
+      });
+      return {
+        provider: method,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
+        amount,
+      };
     }
     if (method === PaymentMethod.STRIPE) {
       const intent =
@@ -1236,33 +1249,52 @@ export class CouponService {
     method: PaymentMethod,
     transactionId: string,
     amount: number,
-  ) {
+    userId?: string,
+    reference?: string,
+  ): Promise<{ ok: boolean; details?: any; reason?: string }> {
     if (!transactionId) {
       throw new BadRequestException('A payment reference is required.');
     }
+    const centralUserId =
+      method === PaymentMethod.MCOM_WALLET && userId
+        ? await this.getCentralUserId(userId)
+        : undefined;
     const result =
       method === PaymentMethod.MCOM_WALLET
-        ? await this.paymentProviderService.verifyWalletCharge(
+        ? await this.paymentProviderService.settleWalletReference(
             transactionId,
             amount,
             'GBP',
+            {
+              mallUserId: userId,
+              mcomUserId: centralUserId,
+              holdId: transactionId,
+              reference,
+            },
+            this.paymentProviderService.buildWalletKey(
+              'coupon-capture',
+              transactionId,
+            ),
           )
         : method === PaymentMethod.PAYPAL
           ? await this.paymentProviderService.captureAndVerifyPaypalOrder(
               transactionId,
               amount,
               'GBP',
+              { mallUserId: userId },
             )
           : await this.paymentProviderService.verifyStripePaymentIntent(
               transactionId,
               amount,
               'GBP',
+              { mallUserId: userId },
             );
     if (!result.ok) {
       throw new BadRequestException(
         `Payment verification failed: ${result.reason}`,
       );
     }
+    return result;
   }
 
   async verifyAndCompleteCouponPurchase(
@@ -1285,10 +1317,29 @@ export class CouponService {
       throw new NotFoundException('Coupon product not found or inactive.');
     }
     this.validateCouponProductAmount(product, amount);
-    await this.verifyCouponPayment(method, dto.transactionId, amount);
+    const verification = await this.verifyCouponPayment(
+      method,
+      dto.transactionId,
+      amount,
+      userId,
+      `coupon-purchase-${product.id}-${userId}`,
+    );
+    const details: any = verification.details ?? {};
+    const paymentReference =
+      details.transactionId || details.id || dto.transactionId;
+    const paidChargeId =
+      details.id && !String(details.id).startsWith('wallet:')
+        ? details.id
+        : null;
+    const paidProviderRef = details.providerRef ?? null;
+    const paidFeeMinor = details.feeMinor ?? null;
+    const paidNetMinor = details.netMinor ?? null;
 
     const existingPayment = await this.orderPaymentRepository.findOne({
-      where: { transactionId: dto.transactionId },
+      where: [
+        { transactionId: paymentReference },
+        ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+      ],
     });
     if (existingPayment) {
       const existing = await this.findPurchasedCouponForBuyer(userId);
@@ -1311,8 +1362,13 @@ export class CouponService {
           user: { id: userId } as User,
           amount,
           currency: 'GBP',
-          transactionId: dto.transactionId,
+          transactionId: paymentReference,
           paymentMethod: method,
+          mcomChargeId: paidChargeId,
+          providerRef: paidProviderRef,
+          feeMinor: paidFeeMinor,
+          netMinor: paidNetMinor,
+          status: 'paid',
         }),
       );
       const order = await orderRepo.save(
@@ -1321,6 +1377,19 @@ export class CouponService {
           total: amount,
           payment,
         }),
+      );
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'COUPON',
+          entityType: 'order',
+          entityId: order.id,
+          userId,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
       );
 
       let code = this.generateCouponCode();
@@ -1391,20 +1460,34 @@ export class CouponService {
       throw new BadRequestException('Enter a valid reload amount.');
     }
     const method = this.normalizeCouponPaymentMethod(dto.paymentMethod);
+    this.validateCouponProductAmount(product, amount);
     const paymentMetadata = {
       reference: `coupon-reload-${coupon.id}-${userId}`,
       userId,
+      idempotencyKey: `coupon-reload-${coupon.id}-${userId}-${crypto.randomUUID()}`,
       description: `MCOM Mall coupon reload — ${product.name}`,
     };
 
     if (method === PaymentMethod.MCOM_WALLET) {
-      const charge = await this.paymentProviderService.createWalletCharge(
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: await this.getCentralUserId(userId),
         amount,
-        'GBP',
-        paymentMetadata,
-        await this.getCentralUserId(userId),
-      );
-      return { provider: method, transactionId: charge.chargeId, amount };
+        reference: paymentMetadata.reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'coupon-reload-hold',
+          coupon.id,
+          userId,
+          paymentMetadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'COUPON', couponId: coupon.id, userId },
+      });
+      return {
+        provider: method,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
+        amount,
+      };
     }
     if (method === PaymentMethod.STRIPE) {
       const intent =
@@ -1458,10 +1541,29 @@ export class CouponService {
       throw new BadRequestException('Enter a valid reload amount.');
     }
     const method = this.normalizeCouponPaymentMethod(dto.paymentProvider);
-    await this.verifyCouponPayment(method, dto.transactionId, amount);
+    const verification = await this.verifyCouponPayment(
+      method,
+      dto.transactionId,
+      amount,
+      userId,
+      `coupon-reload-${coupon.id}-${userId}`,
+    );
+    const details: any = verification.details ?? {};
+    const paymentReference =
+      details.transactionId || details.id || dto.transactionId;
+    const paidChargeId =
+      details.id && !String(details.id).startsWith('wallet:')
+        ? details.id
+        : null;
+    const paidProviderRef = details.providerRef ?? null;
+    const paidFeeMinor = details.feeMinor ?? null;
+    const paidNetMinor = details.netMinor ?? null;
 
     const existingPayment = await this.orderPaymentRepository.findOne({
-      where: { transactionId: dto.transactionId },
+      where: [
+        { transactionId: paymentReference },
+        ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+      ],
     });
     if (existingPayment) return this.toCustomerCoupon(coupon);
 
@@ -1476,16 +1578,34 @@ export class CouponService {
           user: { id: userId } as User,
           amount,
           currency: 'GBP',
-          transactionId: dto.transactionId,
+          transactionId: paymentReference,
           paymentMethod: method,
+          mcomChargeId: paidChargeId,
+          providerRef: paidProviderRef,
+          feeMinor: paidFeeMinor,
+          netMinor: paidNetMinor,
+          status: 'paid',
         }),
       );
-      await orderRepo.save(
+      const order = await orderRepo.save(
         orderRepo.create({
           user: { id: userId } as User,
           total: amount,
           payment,
         }),
+      );
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'COUPON',
+          entityType: 'order',
+          entityId: order.id,
+          userId,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
       );
 
       const currentBalance = Number(

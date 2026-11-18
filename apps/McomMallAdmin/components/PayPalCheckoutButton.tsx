@@ -1,45 +1,53 @@
 'use client';
 
-import {
-  PayPalScriptProvider,
-  PayPalButtons,
-} from '@paypal/react-paypal-js';
+import { PayPalButtons } from '@paypal/react-paypal-js';
 import { toast } from 'sonner';
 
-const PAYPAL_CLIENT_ID =
-  process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'sb';
-
 interface PayPalCheckoutButtonProps {
-  orderID: string;
+  orderID?: string;
+  approvalUrl?: string | null;
   onSuccess: (orderId: string) => void;
 }
 
+/**
+ * Admin PayPal entry point. Prefer MCOM Pay's `approvalUrl` (Central's PayPal
+ * merchant); never capture in the browser.
+ */
 export default function PayPalCheckoutButton({
   orderID,
+  approvalUrl,
   onSuccess,
 }: PayPalCheckoutButtonProps) {
-  const onApprove = async (data: { orderID: string }) => {
-    onSuccess(data.orderID);
-  };
+  if (approvalUrl) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          window.location.href = approvalUrl;
+        }}
+        className="w-full rounded-lg bg-[#0070ba] px-4 py-3 font-semibold text-white transition hover:bg-[#005ea6]"
+      >
+        Continue with PayPal
+      </button>
+    );
+  }
 
   if (!orderID) {
-    return <div>Loading PayPal button...</div>;
+    return (
+      <p className="text-sm text-rose-600">
+        PayPal is not available for this payment.
+      </p>
+    );
   }
 
   return (
-    <PayPalScriptProvider
-      options={{
-        clientId: PAYPAL_CLIENT_ID,
-        currency: 'GBP',
+    <PayPalButtons
+      createOrder={() => Promise.resolve(orderID)}
+      onApprove={async (data) => {
+        if (data.orderID) onSuccess(data.orderID);
+        else toast.error('PayPal order id missing.');
       }}
-    >
-      <PayPalButtons
-        style={{ layout: 'vertical' }}
-        createOrder={(_, actions) => {
-          return Promise.resolve(orderID);
-        }}
-        onApprove={onApprove}
-      />
-    </PayPalScriptProvider>
+      onError={() => toast.error('PayPal could not complete the payment.')}
+    />
   );
 }

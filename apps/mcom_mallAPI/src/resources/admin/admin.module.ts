@@ -30,6 +30,7 @@ import { Order } from '../order/entities/order.entity';
 import { RentalBooking } from '../booking/entities/rental-booking.entity';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { MembershipPayment } from '../membership/entities/membership-payment.entity';
+import { McomPayCharge } from '../payments/entities/mcom-pay-charge.entity';
 import { OrderModule } from '../order/order.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { OrderModule } from '../order/order.module';
       RentalBooking,
       ServiceBooking,
       MembershipPayment,
+      McomPayCharge,
     ]),
     HashModule,
     AuthModule,

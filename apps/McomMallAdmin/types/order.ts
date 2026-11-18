@@ -7,6 +7,7 @@ export interface CreateOrderDto {
         paymentMethod: PaymentMethod;
         amount: number;
         transactionId: string;
+        idempotencyKey?: string;
     };
     couponCode?: string;
     offerId?: string;

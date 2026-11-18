@@ -18,11 +18,9 @@ import { loadStripe } from '@stripe/stripe-js';
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 
-const stripePromise = loadStripe(
-    process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY ||
-        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-        ''
-);
+const mcomStripeKey =
+    process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '';
+const stripePromise = mcomStripeKey ? loadStripe(mcomStripeKey) : null;
 
 interface Props {
     isOpen: boolean;
@@ -39,6 +37,9 @@ export const CampaignUnlockModal: React.FC<Props> = ({ isOpen, onClose, campaign
     const [method, setMethod] = useState<PaymentMethod>('stripe');
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [orderId, setOrderId] = useState<string | null>(null);
+    const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+      null,
+    );
     const initiateMutation = useInitiateCampaignContribution();
     const contributeMutation = useContributeToCampaign();
 
@@ -96,6 +97,7 @@ export const CampaignUnlockModal: React.FC<Props> = ({ isOpen, onClose, campaign
                 setFlowState('idle');
             } else if (paymentMethod === 'paypal' && initiated.orderId) {
                 setOrderId(initiated.orderId);
+                setPaypalApprovalUrl((initiated as any).approvalUrl ?? null);
                 setFlowState('idle');
             } else {
                 throw new Error('The payment provider did not return a payment reference.');
@@ -158,6 +160,7 @@ export const CampaignUnlockModal: React.FC<Props> = ({ isOpen, onClose, campaign
                     {flowState === 'idle' && orderId && (
                         <PayPalCheckoutButton
                             orderID={orderId}
+                            approvalUrl={paypalApprovalUrl}
                             onPaymentSuccess={(transactionId) =>
                                 completeContribution(transactionId, 'paypal')
                             }

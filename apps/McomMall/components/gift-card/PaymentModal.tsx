@@ -24,8 +24,8 @@ interface PaymentModalProps {
 }
 
 // It is strongly recommended to move the key to environment variables
-const stripePromise = (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  ? loadStripe((process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''))
+const stripePromise = (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY)
+  ? loadStripe((process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || ''))
   : null;
 
 const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails: Omit<InitiatePurchaseDto, "paymentProvider">, onSuccess: () => void, onClose: () => void }) => {
@@ -36,6 +36,9 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
   const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>("stripe");
   const [error, setError] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +76,7 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
           throw new Error('PayPal order could not be created.');
         }
         setPaypalOrderId(initiationRes.data.orderId);
+        setPaypalApprovalUrl((initiationRes.data as any).approvalUrl ?? null);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'PayPal payment failed.');
       }
@@ -179,6 +183,7 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
         <div className="mb-4 flex justify-center">
           <PayPalCheckoutButton
             orderID={paypalOrderId}
+            approvalUrl={paypalApprovalUrl}
             onPaymentSuccess={handlePayPalSuccess}
           />
         </div>

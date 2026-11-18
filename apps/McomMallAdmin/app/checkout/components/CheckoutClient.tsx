@@ -14,6 +14,11 @@ import { useCheckout } from '@/hooks/useCheckout';
 import { useRecordOrder } from '@/hooks/useRecordOrder';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import {
+  useCreateStripeIntent,
+  useCreatePayPalOrder,
+} from '@/service/payments/hook';
+import { PaymentPurpose } from '@/service/payments/types';
+import {
   useGetApplicableOffers,
   useApplyOffer,
 } from '@/service/offers/hook';
@@ -21,10 +26,7 @@ import ApplicableOffers from './ApplicableOffers';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
-
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
+import api from '@/service/api';
 
 export default function CheckoutClient() {
   const searchParams = useSearchParams();
@@ -54,6 +56,26 @@ export default function CheckoutClient() {
   const { mutate: recordOrder } = useRecordOrder();
   const validateCoupon = useValidateCoupon();
   const applyOffer = useApplyOffer();
+  const createStripeIntent = useCreateStripeIntent();
+  const createPayPalOrder = useCreatePayPalOrder();
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState<
+    string | undefined
+  >();
+  const [checkoutOrderID, setCheckoutOrderID] = useState<string | undefined>();
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>();
+  const idempotencyKey = useState(() =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `checkout-${Date.now()}`,
+  )[0];
+  const [publishableKey, setPublishableKey] = useState<string>();
+
+  useEffect(() => {
+    api
+      .get('/payments/config')
+      .then((res) => setPublishableKey(res.data?.publishableKey ?? undefined))
+      .catch(() => undefined);
+  }, []);
 
   const productIds = fromCart
     ? cart?.items.map((item) => item.product.id) || []
@@ -74,6 +96,38 @@ export default function CheckoutClient() {
     : 0;
 
   const totalPrice = basePrice - discount - offerDiscount;
+
+  useEffect(() => {
+    if (totalPrice <= 0) return;
+    if (paymentMethod === PaymentMethod.STRIPE) {
+      createStripeIntent.mutate(
+        {
+          amount: totalPrice,
+          purpose: PaymentPurpose.PAYG_TOPUP,
+          idempotencyKey,
+        },
+        {
+          onSuccess: (data: any) =>
+            setCheckoutClientSecret(data?.clientSecret ?? data?.client_secret),
+        },
+      );
+    } else if (paymentMethod === PaymentMethod.PAYPAL) {
+      createPayPalOrder.mutate(
+        {
+          amount: totalPrice,
+          purpose: PaymentPurpose.PAYG_TOPUP,
+          idempotencyKey,
+        },
+        {
+          onSuccess: (data: any) => {
+            setCheckoutOrderID(data?.orderId ?? data?.id);
+            setPaypalApprovalUrl(data?.approvalUrl ?? null);
+          },
+        },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalPrice, paymentMethod]);
 
   const handleApplyCoupon = async (code: string) => {
     setCouponLoading(true);
@@ -120,6 +174,7 @@ export default function CheckoutClient() {
           paymentMethod,
           amount: totalPrice,
           transactionId,
+          idempotencyKey,
         },
         couponCode: couponCode || undefined,
         offerId: selectedOffer || undefined,
@@ -151,13 +206,15 @@ export default function CheckoutClient() {
       recordOrder,
       couponCode,
       selectedOffer,
+      idempotencyKey,
     ]
   );
 
   useEffect(() => {
     if (stripeRedirect && clientSecret) {
       const verifyPayment = async () => {
-        const stripe = await stripePromise;
+        if (!publishableKey) return;
+        const stripe = await loadStripe(publishableKey);
         if (!stripe) return;
         const { paymentIntent } = await stripe.retrievePaymentIntent(
           clientSecret
@@ -168,7 +225,7 @@ export default function CheckoutClient() {
       };
       verifyPayment();
     }
-  }, [stripeRedirect, clientSecret, handlePaymentSuccess]);
+  }, [stripeRedirect, clientSecret, handlePaymentSuccess, publishableKey]);
 
   if (isProductLoading || isCartLoading) {
     return (
@@ -231,6 +288,10 @@ export default function CheckoutClient() {
                 handlePaymentSuccess(transactionId, paymentMethod)
               }
               setPaymentMethod={setPaymentMethod}
+              clientSecret={checkoutClientSecret}
+              orderID={checkoutOrderID}
+              paypalApprovalUrl={paypalApprovalUrl}
+              publishableKey={publishableKey}
             />
           </div>
         </div>

@@ -220,24 +220,12 @@ export const BoostVisibilityScreen: FC<BoostVisibilityScreenProps> = ({
   const [boosting, setBoosting] = useState(false);
 
   const handleBoost = async () => {
-    setBoosting(true);
-    try {
-      const res = await api.post('payments/checkout', {
-        type: 'visibility_boost',
-        days: 30,
-      });
-      // Redirect to Stripe checkout page URL
-      if (res.data?.url) {
-        window.location.href = res.data.url;
-      } else {
-        alert('Could not start the boost checkout. Please try again.');
-      }
-    } catch (err) {
-      console.error('Error initiating stripe payment checkout:', err);
-      alert('Could not start the boost checkout. Please try again.');
-    } finally {
-      setBoosting(false);
-    }
+    // Self-serve visibility boost checkout is not part of the MCOM Pay API yet.
+    // Do not call a non-existent payment route; route the owner to support
+    // until the product is priced and implemented server-side.
+    alert(
+      'Visibility boosts are not yet available for self-serve purchase. Please contact support to arrange a boost.',
+    );
   };
 
   return (

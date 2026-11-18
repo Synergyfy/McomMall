@@ -645,6 +645,8 @@ export class MoneyEngineService {
     orderId?: string;
     approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentGateway;
   }> {
     const amount = Number(dto.paymentAmount);
@@ -689,7 +691,9 @@ export class MoneyEngineService {
     const metadata = {
       reference: `money-voucher-${dto.rewardDefinitionId}-${user.id}`,
       userId: user.id,
-      ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
+      idempotencyKey:
+        dto.idempotencyKey ||
+        `money-voucher-${dto.rewardDefinitionId}-${user.id}-${Date.now()}`,
       description: 'MCOM Mall reward voucher purchase',
     };
 
@@ -699,15 +703,27 @@ export class MoneyEngineService {
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      const charge = await this.paymentProviderService.createWalletCharge(
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: user.centralUserId,
         amount,
-        'GBP',
-        metadata,
-        user.centralUserId,
-      );
+        reference: metadata.reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'money-voucher-hold',
+          dto.rewardDefinitionId,
+          user.id,
+          metadata.idempotencyKey,
+        ),
+        metadata: {
+          purpose: 'PAYG_TOPUP',
+          rewardDefinitionId: dto.rewardDefinitionId,
+          userId: user.id,
+        },
+      });
       return {
         provider: PaymentGateway.MCOM_WALLET,
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
       };
     }
 
@@ -746,7 +762,7 @@ export class MoneyEngineService {
   ): Promise<UserVoucher> {
     // 1. Verify Payment with Provider
     const currency = 'gbp'; // Default currency for now
-    let verification: { ok: boolean; reason?: string };
+    let verification: { ok: boolean; details?: any; reason?: string };
 
     if (dto.paymentGateway === PaymentGateway.STRIPE) {
       verification =
@@ -754,6 +770,7 @@ export class MoneyEngineService {
           dto.transactionId,
           dto.paymentAmount,
           currency,
+          { mallUserId: userId },
         );
     } else if (dto.paymentGateway === PaymentGateway.PAYPAL) {
       verification =
@@ -761,13 +778,28 @@ export class MoneyEngineService {
           dto.transactionId,
           dto.paymentAmount,
           currency,
+          { mallUserId: userId },
         );
     } else if (dto.paymentGateway === PaymentGateway.MCOM_WALLET) {
-      verification = await this.paymentProviderService.verifyWalletCharge(
-        dto.transactionId,
-        dto.paymentAmount,
-        'GBP',
-      );
+      const buyer = await this.dataSource
+        .getRepository(User)
+        .findOne({ where: { id: userId } });
+      verification =
+        await this.paymentProviderService.settleWalletReference(
+          dto.transactionId,
+          dto.paymentAmount,
+          'GBP',
+          {
+            mallUserId: userId,
+            mcomUserId: buyer?.centralUserId,
+            holdId: dto.transactionId,
+            reference: `money-voucher-${dto.rewardDefinitionId}-${userId}`,
+          },
+          this.paymentProviderService.buildWalletKey(
+            'money-voucher-capture',
+            dto.transactionId,
+          ),
+        );
     } else {
       throw new BadRequestException('Unsupported payment gateway');
     }
@@ -778,9 +810,24 @@ export class MoneyEngineService {
       );
     }
 
+    const verificationDetails: any = verification.details ?? {};
+    const paymentReference =
+      verificationDetails.transactionId ||
+      verificationDetails.id ||
+      dto.transactionId;
+    const paidChargeId =
+      verificationDetails.id &&
+      !String(verificationDetails.id).startsWith('wallet:')
+        ? verificationDetails.id
+        : null;
+    const paidProviderRef = verificationDetails.providerRef ?? null;
+    const paidFeeMinor = verificationDetails.feeMinor ?? null;
+    const paidNetMinor = verificationDetails.netMinor ?? null;
+    const paidHistoryReference = paidChargeId || paymentReference;
+
     // 2. Proceed with Voucher Creation. A failure after the provider charge has
     // already been verified is compensated with a refund.
-    const issuanceId = `purchase:${dto.paymentGateway}:${dto.transactionId}`;
+    const issuanceId = `purchase:${dto.paymentGateway}:${paidHistoryReference}`;
     let saved: UserVoucher;
     try {
       saved = await this.dataSource.transaction(async (manager) => {
@@ -792,7 +839,10 @@ export class MoneyEngineService {
         if (existingVoucher) return existingVoucher;
 
         const existingHistory = await manager.findOne(PaymentHistory, {
-          where: { transactionId: dto.transactionId },
+          where: [
+            { transactionId: paidHistoryReference },
+            ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+          ],
         });
         if (existingHistory) {
           const replay = await manager.findOne(UserVoucher, {
@@ -886,11 +936,29 @@ export class MoneyEngineService {
         const paymentHistory = new PaymentHistory();
         paymentHistory.user = { id: userId } as User;
         paymentHistory.amountPaid = paymentAmount;
-        paymentHistory.transactionId = dto.transactionId;
+        paymentHistory.transactionId = paidHistoryReference;
         paymentHistory.paymentGateway = dto.paymentGateway;
         paymentHistory.purpose = PaymentPurpose.VOUCHER_PURCHASE;
         paymentHistory.currency = currency;
-        await manager.save(paymentHistory);
+        paymentHistory.mcomChargeId = paidChargeId;
+        paymentHistory.providerRef = paidProviderRef;
+        paymentHistory.feeMinor = paidFeeMinor;
+        paymentHistory.netMinor = paidNetMinor;
+        paymentHistory.status = 'paid';
+        const savedHistory = await manager.save(paymentHistory);
+
+        await this.paymentProviderService.allocateCharge(
+          {
+            mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+            purpose: 'PAYG_TOPUP',
+            entityType: 'user_voucher',
+            entityId: savedVoucher.id,
+            userId,
+            amountMinor: String(Math.round(Number(paymentAmount) * 100)),
+            currency: 'GBP',
+          },
+          manager,
+        );
 
         // 2. Voucher Internal Transactions (Wallet)
         const txDeposit = new VoucherTransaction();
@@ -953,14 +1021,18 @@ export class MoneyEngineService {
     gateway: PaymentGateway,
     transactionId: string,
     amount: number,
-  ): Promise<void> {
-    let result: { ok: boolean; reason?: string };
+    userId?: string,
+    reference?: string,
+    mcomUserId?: string,
+  ): Promise<{ ok: boolean; details?: any; reason?: string }> {
+    let result: { ok: boolean; details?: any; reason?: string };
 
     if (gateway === PaymentGateway.STRIPE) {
       result = await this.paymentProviderService.verifyStripePaymentIntent(
         transactionId,
         amount,
         'gbp',
+        { mallUserId: userId },
       );
     } else if (gateway === PaymentGateway.PAYPAL) {
       result =
@@ -968,12 +1040,23 @@ export class MoneyEngineService {
           transactionId,
           amount,
           'gbp',
+          { mallUserId: userId },
         );
     } else if (gateway === PaymentGateway.MCOM_WALLET) {
-      result = await this.paymentProviderService.verifyWalletCharge(
+      result = await this.paymentProviderService.settleWalletReference(
         transactionId,
         amount,
         'GBP',
+        {
+          mallUserId: userId,
+          mcomUserId,
+          holdId: transactionId,
+          reference,
+        },
+        this.paymentProviderService.buildWalletKey(
+          'money-contribution-capture',
+          transactionId,
+        ),
       );
     } else {
       throw new BadRequestException('Unsupported payment gateway');
@@ -984,6 +1067,7 @@ export class MoneyEngineService {
         `Payment verification failed: ${result.reason}`,
       );
     }
+    return result;
   }
 
   /**
@@ -1001,13 +1085,34 @@ export class MoneyEngineService {
       throw new BadRequestException('Contribution amount must be positive.');
     }
 
-    await this.verifyPayment(dto.paymentGateway, dto.transactionId, amount);
+    const verification = await this.verifyPayment(
+      dto.paymentGateway,
+      dto.transactionId,
+      amount,
+      contributor.id,
+      `money-voucher-contribution-${code}-${contributor.id}`,
+      contributor.centralUserId,
+    );
+    const details: any = verification.details ?? {};
+    const paymentReference =
+      details.transactionId || details.id || dto.transactionId;
+    const paidChargeId =
+      details.id && !String(details.id).startsWith('wallet:')
+        ? details.id
+        : null;
+    const paidProviderRef = details.providerRef ?? null;
+    const paidFeeMinor = details.feeMinor ?? null;
+    const paidNetMinor = details.netMinor ?? null;
+    const paidHistoryReference = paidChargeId || paymentReference;
 
     let credited: UserVoucher;
     try {
       credited = await this.dataSource.transaction(async (manager) => {
       const existing = await manager.findOne(PaymentHistory, {
-        where: { transactionId: dto.transactionId },
+        where: [
+          { transactionId: paidHistoryReference },
+          ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+        ],
       });
 
       const locked = await manager.findOne(UserVoucher, {
@@ -1094,11 +1199,29 @@ export class MoneyEngineService {
       const paymentHistory = new PaymentHistory();
       paymentHistory.user = { id: contributor.id } as User;
       paymentHistory.amountPaid = amount;
-      paymentHistory.transactionId = dto.transactionId;
+      paymentHistory.transactionId = paidHistoryReference;
       paymentHistory.paymentGateway = dto.paymentGateway;
       paymentHistory.purpose = PaymentPurpose.PAYG_TOPUP;
       paymentHistory.currency = 'GBP';
+      paymentHistory.mcomChargeId = paidChargeId;
+      paymentHistory.providerRef = paidProviderRef;
+      paymentHistory.feeMinor = paidFeeMinor;
+      paymentHistory.netMinor = paidNetMinor;
+      paymentHistory.status = 'paid';
       await manager.save(paymentHistory);
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'PAYG_TOPUP',
+          entityType: 'user_voucher_contribution',
+          entityId: voucher.id,
+          userId: contributor.id,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
+      );
 
       const tx = new VoucherTransaction();
       tx.voucher = voucher;
@@ -1189,6 +1312,8 @@ export class MoneyEngineService {
     orderId?: string;
     approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentGateway;
   }> {
     const amount = round2(Number(dto.amount));
@@ -1263,6 +1388,7 @@ export class MoneyEngineService {
     const metadata = {
       reference: `money-voucher-contribution-${code}-${user.id}`,
       userId: user.id,
+      idempotencyKey: `money-contribution-${code}-${user.id}-${Date.now()}`,
       description: 'MCOM Mall voucher contribution',
     };
 
@@ -1272,15 +1398,23 @@ export class MoneyEngineService {
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      const charge = await this.paymentProviderService.createWalletCharge(
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: user.centralUserId,
         amount,
-        'GBP',
-        metadata,
-        user.centralUserId,
-      );
+        reference: metadata.reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'money-contribution-hold',
+          code,
+          user.id,
+          metadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'PAYG_TOPUP', voucherCode: code, userId: user.id },
+      });
       return {
         provider: PaymentGateway.MCOM_WALLET,
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
       };
     }
 

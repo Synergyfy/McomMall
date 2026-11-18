@@ -12,14 +12,18 @@ import {
   MaxLength,
   IsNotEmpty,
   ValidateNested,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   AddonPricingType,
+  CustomerAction,
   DeliveryMode,
   GuestPricingModel,
   PricingModel,
+  PricingType,
+  ServiceDeliveryOption,
   VariantType,
 } from '../service.enum';
 
@@ -317,6 +321,58 @@ export class BookingRequirementsDto {
   specialInstructions?: string;
 }
 
+export class ServiceFaqDto {
+  @ApiProperty({
+    description: 'Customer question',
+    example: 'Do you supply parts?',
+  })
+  @IsString()
+  @MaxLength(500)
+  question: string;
+
+  @ApiProperty({ description: 'Answer shown to customers' })
+  @IsString()
+  @MaxLength(2000)
+  answer: string;
+}
+
+export class ServiceLocationDto {
+  @ApiPropertyOptional({ description: 'First line of the business address' })
+  @IsString()
+  @IsOptional()
+  addressLine1?: string;
+
+  @ApiPropertyOptional({ description: 'Second line of the business address' })
+  @IsString()
+  @IsOptional()
+  addressLine2?: string;
+
+  @ApiPropertyOptional({ description: 'City or town' })
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @ApiPropertyOptional({ description: 'County or state' })
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @ApiPropertyOptional({ description: 'Postcode' })
+  @IsString()
+  @IsOptional()
+  postcode?: string;
+
+  @ApiPropertyOptional({ description: 'Latitude' })
+  @IsNumber()
+  @IsOptional()
+  latitude?: number;
+
+  @ApiPropertyOptional({ description: 'Longitude' })
+  @IsNumber()
+  @IsOptional()
+  longitude?: number;
+}
+
 export class CreateServiceDto {
   @ApiProperty({
     description: 'Name of the service',
@@ -435,38 +491,74 @@ export class CreateServiceDto {
     example: PricingModel.FIXED,
   })
   @IsEnum(PricingModel)
-  pricingModel: PricingModel;
+  @IsOptional()
+  pricingModel?: PricingModel;
+
+  @ApiPropertyOptional({
+    enum: PricingType,
+    description:
+      'Customer-facing pricing option. pricingModel is derived from this value.',
+    example: PricingType.FIXED,
+  })
+  @IsEnum(PricingType)
+  @IsOptional()
+  pricingType?: PricingType;
+
+  @ApiPropertyOptional({
+    description: 'Price for fixed, starting-from or hourly pricing',
+    example: 100.0,
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  price?: number;
+
+  @ApiPropertyOptional({
+    description: 'Upper bound when pricingType is range',
+    example: 250.0,
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  priceMax?: number;
 
   @ApiPropertyOptional({
     description: 'Fixed price for the service',
     example: 100.0,
   })
-  @ValidateIf((o) => o.pricingModel === PricingModel.FIXED)
+  // Legacy pricing fields are only required for clients that have not adopted
+  // the new pricingType payload. The API validates the new shape itself.
+  @ValidateIf((o) => !o.pricingType && o.pricingModel === PricingModel.FIXED)
   @IsNumber()
   @Min(0)
   fixedPrice?: number;
 
   @ApiPropertyOptional({ description: 'Price per hour', example: 25.0 })
-  @ValidateIf((o) => o.pricingModel === PricingModel.PER_HOUR)
+  @ValidateIf((o) => !o.pricingType && o.pricingModel === PricingModel.PER_HOUR)
   @IsNumber()
   @Min(0)
   pricePerHour?: number;
 
   @ApiPropertyOptional({ description: 'Price per unit', example: 10.0 })
-  @ValidateIf((o) => o.pricingModel === PricingModel.PER_UNIT)
+  @ValidateIf((o) => !o.pricingType && o.pricingModel === PricingModel.PER_UNIT)
   @IsNumber()
   @Min(0)
   pricePerUnit?: number;
 
   @ApiPropertyOptional({ description: 'Name of the unit', example: 'room' })
-  @ValidateIf((o) => o.pricingModel === PricingModel.PER_UNIT)
+  @ValidateIf((o) => !o.pricingType && o.pricingModel === PricingModel.PER_UNIT)
   @IsString()
   @MaxLength(50)
   unitName?: string;
 
-  @ApiProperty({ description: 'Enable guest-based pricing', example: false })
+  @ApiPropertyOptional({
+    description: 'Enable guest-based pricing',
+    example: false,
+    default: false,
+  })
   @IsBoolean()
-  enableGuestPricing: boolean;
+  @IsOptional()
+  enableGuestPricing?: boolean;
 
   @ApiPropertyOptional({
     enum: GuestPricingModel,
@@ -556,7 +648,8 @@ export class CreateServiceDto {
     example: false,
   })
   @IsBoolean()
-  isQuoteModel: boolean;
+  @IsOptional()
+  isQuoteModel?: boolean;
 
   @ApiPropertyOptional({
     description: 'Initial booking fee for quote requests',
@@ -593,6 +686,15 @@ export class CreateServiceDto {
   @ValidateNested()
   @Type(() => AvailabilityDto)
   availability?: AvailabilityDto;
+
+  @ApiPropertyOptional({
+    description: 'Typical service duration in minutes',
+    example: 60,
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  duration?: number;
 
   @ApiPropertyOptional({
     type: [ServiceVariantDto],
@@ -639,6 +741,95 @@ export class CreateServiceDto {
   @ValidateNested()
   @Type(() => BookingRequirementsDto)
   bookingRequirements?: BookingRequirementsDto;
+
+  @ApiPropertyOptional({
+    enum: ServiceDeliveryOption,
+    isArray: true,
+    description: 'Where the service can be delivered',
+    example: [
+      ServiceDeliveryOption.AT_BUSINESS,
+      ServiceDeliveryOption.AT_CUSTOMER,
+    ],
+  })
+  @IsArray()
+  @IsEnum(ServiceDeliveryOption, { each: true })
+  @IsOptional()
+  deliveryOptions?: ServiceDeliveryOption[];
+
+  @ApiPropertyOptional({
+    enum: CustomerAction,
+    description: 'Action customers should take for this service',
+    example: CustomerAction.BOOK_NOW,
+  })
+  @IsEnum(CustomerAction)
+  @IsOptional()
+  customerAction?: CustomerAction;
+
+  @ApiPropertyOptional({
+    description: 'Instructions shown to customers when booking',
+    example: 'Call ahead to arrange access.',
+  })
+  @IsString()
+  @MaxLength(2000)
+  @IsOptional()
+  bookingInstructions?: string;
+
+  @ApiPropertyOptional({
+    description: 'How appointments are arranged',
+    example: 'Appointments are confirmed within 24 hours.',
+  })
+  @IsString()
+  @MaxLength(2000)
+  @IsOptional()
+  appointmentArrangements?: string;
+
+  @ApiPropertyOptional({
+    description: 'Additional availability notes',
+    example: 'Emergency call-outs available at weekends.',
+  })
+  @IsString()
+  @MaxLength(2000)
+  @IsOptional()
+  availabilityNotes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Conditions or requirements for the service',
+    example: 'Parts are charged separately.',
+  })
+  @IsString()
+  @MaxLength(2000)
+  @IsOptional()
+  serviceConditions?: string;
+
+  @ApiPropertyOptional({
+    type: [ServiceFaqDto],
+    description: 'Frequently asked questions',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ServiceFaqDto)
+  @IsOptional()
+  faqs?: ServiceFaqDto[];
+
+  @ApiPropertyOptional({
+    type: ServiceLocationDto,
+    description:
+      'Business location snapshot. Populated from the MCOM Central business profile.',
+  })
+  @ValidateNested()
+  @Type(() => ServiceLocationDto)
+  @IsOptional()
+  serviceLocation?: ServiceLocationDto;
+
+  @ApiPropertyOptional({
+    enum: ['draft', 'published'],
+    description:
+      'draft saves the service without publishing it; published submits it to the live catalogue.',
+    default: 'published',
+  })
+  @IsIn(['draft', 'published'])
+  @IsOptional()
+  status?: 'draft' | 'published';
 
   @ApiPropertyOptional({
     type: [BundledServiceDto],

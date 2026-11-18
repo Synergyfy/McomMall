@@ -42,4 +42,20 @@ export class PaymentHistory extends AbstractBaseEntity {
 
   @Column({ type: 'enum', enum: PaymentGateway })
   paymentGateway: PaymentGateway;
+
+  /** MCOM Pay charge id (Central Hub). */
+  @Column({ nullable: true, unique: true })
+  mcomChargeId?: string | null;
+
+  @Column({ nullable: true })
+  providerRef?: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  feeMinor?: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  netMinor?: string | null;
+
+  @Column({ nullable: true })
+  status?: string | null;
 }

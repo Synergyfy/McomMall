@@ -16,8 +16,8 @@ interface ReloadModalProps {
   onClose: () => void;
 }
 
-const stripePromise = (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  ? loadStripe((process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''))
+const stripePromise = (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY)
+  ? loadStripe((process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || ''))
   : null;
 
 const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {

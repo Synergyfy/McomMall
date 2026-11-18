@@ -62,13 +62,4 @@ export class RecordPaymentDto {
   @IsString()
   @IsOptional()
   planVariantId?: string;
-
-  @ApiPropertyOptional({
-    description:
-      'Set when the Stripe/PayPal payment was processed centrally by MCOM Solutions (their Stripe/PayPal accounts). Skips mall-side provider verification — Solutions already verified the payment in confirm/capture before the membership is recorded.',
-    example: true,
-  })
-  @IsBoolean()
-  @IsOptional()
-  viaSolutions?: boolean;
 }

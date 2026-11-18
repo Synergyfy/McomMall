@@ -1,62 +1,43 @@
 import { z } from 'zod';
+import type {
+  CustomerAction,
+  PricingType,
+  ServiceDeliveryOption,
+  ServiceFaq,
+} from '@/service/services/types';
 
 /**
- * Shape of the Add Service wizard form.
+ * Shape of the Create Service wizard.
  *
- * Kept intentionally permissive (mixed number/string inputs while editing,
- * File objects for media) — the schema below enforces the rules without
- * coercing the stored values, so the user never loses what they typed.
+ * The form intentionally keeps raw input values (numbers may be strings while
+ * typing and media may contain File objects) so users never lose what they
+ * typed. All rules live in the `superRefine` below.
  */
 export interface ServiceFormValues {
+  /* Tab 1 – Basic information */
   name: string;
-  plusItem?: any;
   shortDescription?: string;
   description?: string;
-  sector: string;
+  media?: (File | string)[];
+
+  /* Injected from the CHS business profile (read-only in the UI) */
+  businessId: string;
+  sector?: string;
   category?: string;
   subcategory?: string;
-  targetAudience?: string;
-  tags?: string;
-  isActive?: boolean;
-  businessId: string;
 
-  pricingModel?: string;
-  fixedPrice?: number | string;
-  pricePerHour?: number | string;
-  pricePerUnit?: number | string;
-  unitName?: string;
+  /* Tab 2 – Pricing */
+  pricingType?: PricingType | string;
+  price?: number | string;
+  priceMax?: number | string;
 
-  enableGuestPricing?: boolean;
-  guestPricingModel?: string;
-  minGuests?: number | string;
-  maxGuests?: number | string;
-  pricePerGuest?: number | string;
-  fixedGroupPrice?: number | string;
-  basePrice?: number | string;
-  baseGuests?: number | string;
-  additionalGuestPrice?: number | string;
-
-  isQuoteModel?: boolean;
-  bookingFee?: number | string;
-
-  bundledServices?: any[];
-  configurableAddons?: any[];
-  media?: (File | string)[];
-  variants?: any[];
-
-  enableTieredPackages?: boolean;
-  requireApproval?: boolean;
-  tiers?: any[];
-
-  deliveryConfig?: {
-    mode?: 'onsite' | 'atShop' | 'remote';
-    cities?: string;
-    regions?: string;
-    travelFee?: number | string;
-  };
-  pricingRules?: Record<string, unknown>;
-  bookingRequirements?: Record<string, unknown>;
-
+  /* Tab 3 – Booking & availability */
+  deliverySelection?: ServiceDeliveryOption | 'multiple' | '';
+  deliveryOptions?: ServiceDeliveryOption[];
+  customerAction?: CustomerAction | string;
+  bookingInstructions?: string;
+  appointmentArrangements?: string;
+  availabilityNotes?: string;
   availability?: {
     schedule: Array<Record<string, unknown>>;
     slotDuration?: number | string;
@@ -67,12 +48,15 @@ export interface ServiceFormValues {
     [key: string]: unknown;
   };
 
+  /* Tab 4 – Additional information (optional) */
+  duration?: number | string;
+  serviceConditions?: string;
+  faqs?: ServiceFaq[];
+
+  /* Legacy compatibility fields */
+  isActive?: boolean;
   [key: string]: unknown;
 }
-
-/* ------------------------------------------------------------------ */
-/* helpers                                                             */
-/* ------------------------------------------------------------------ */
 
 const isBlank = (value: unknown): boolean =>
   value === undefined ||
@@ -85,207 +69,169 @@ const toNumber = (value: unknown): number | undefined => {
   return Number.isNaN(parsed) ? undefined : parsed;
 };
 
-const FIXED_PRICE_MODELS = ['fixed', 'perJob', 'perSession', 'subscription'];
-
-/**
- * Permissive base so nested objects/arrays/File values are never stripped or
- * coerced. All real rules live in the `superRefine` below.
- */
 const baseSchema = z.record(z.string(), z.any());
 
 export const serviceFormSchema = baseSchema.superRefine((rawValues, ctx) => {
   const values = rawValues as ServiceFormValues;
+  const issue = (path: string, message: string) =>
+    ctx.addIssue({ code: 'custom', path: [path], message });
 
-  const require = (path: string, value: unknown, message: string) => {
-    if (isBlank(value)) ctx.addIssue({ code: 'custom', path: [path], message });
-  };
+  /* ---------------- Tab 1: Basic Information ---------------- */
+  if (isBlank(values.businessId)) {
+    issue('businessId', 'Your MCOM Central business is required');
+  }
 
-  const requireNumber = (
-    path: string,
-    value: unknown,
-    message: string,
-    { min, integer }: { min?: number; integer?: boolean } = {},
-  ) => {
-    const num = toNumber(value);
-    if (num === undefined) {
-      ctx.addIssue({ code: 'custom', path: [path], message });
-      return;
-    }
-    if (integer && !Number.isInteger(num)) {
-      ctx.addIssue({ code: 'custom', path: [path], message: 'Please use a whole number' });
-      return;
-    }
-    if (min !== undefined && num < min) {
-      ctx.addIssue({
-        code: 'custom',
-        path: [path],
-        message: message.replace(/ is required\.?$/i, '') + ` must be ${min} or more`,
-      });
-    }
-  };
-
-  /* ---------------- Step 1: Basic Info ---------------- */
-  require('businessId', values.businessId, 'Your MCOM Central business is required');
+  if (isBlank(values.sector)) {
+    issue(
+      'sector',
+      'Add a sector to your business profile in MCOM Central before publishing.',
+    );
+  }
 
   if (typeof values.name !== 'string' || values.name.trim().length < 3) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['name'],
-      message: 'Service name must be at least 3 characters',
-    });
+    issue('name', 'Service name must be at least 3 characters');
   }
 
-  require('sector', values.sector, 'Sector is required');
-
-  /* ---------------- Step 2: Service Type & Area ---------------- */
-  require('deliveryConfig.mode', values.deliveryConfig?.mode, 'Delivery mode is required');
-
-  /* ---------------- Step 3: Pricing ---------------- */
-  const model = values.pricingModel;
-  require('pricingModel', model, 'Pricing model is required');
-
-  if (model && FIXED_PRICE_MODELS.includes(model)) {
-    requireNumber('fixedPrice', values.fixedPrice, 'Base price is required', { min: 0 });
-  }
-  if (model === 'perHour') {
-    requireNumber('pricePerHour', values.pricePerHour, 'Hourly rate is required', { min: 0 });
-  }
-  if (model === 'perUnit') {
-    requireNumber('pricePerUnit', values.pricePerUnit, 'Price per unit is required', { min: 0 });
+  if (
+    typeof values.shortDescription !== 'string' ||
+    isBlank(values.shortDescription)
+  ) {
+    issue('shortDescription', 'Short description is required');
   }
 
-  if (values.enableGuestPricing) {
-    const guestModel = values.guestPricingModel;
-    require('guestPricingModel', guestModel, 'Please select a guest pricing model');
+  if (typeof values.description !== 'string' || isBlank(values.description)) {
+    issue('description', 'Full description is required');
+  }
 
-    requireNumber('minGuests', values.minGuests, 'Minimum guests is required', {
-      min: 1,
-      integer: true,
-    });
-    requireNumber('maxGuests', values.maxGuests, 'Maximum guests is required', {
-      min: 1,
-      integer: true,
-    });
-
-    const min = toNumber(values.minGuests);
-    const max = toNumber(values.maxGuests);
-    if (min !== undefined && max !== undefined && max < min) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['maxGuests'],
-        message: 'Maximum guests cannot be less than minimum guests',
-      });
+  const media = Array.isArray(values.media) ? values.media : [];
+  const hasImage = media.some((item) => {
+    if (typeof item === 'string') {
+      return !/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(item);
     }
+    return item?.type?.startsWith('image/');
+  });
+  if (!hasImage) {
+    issue('media', 'Please upload at least one image');
+  }
 
-    if (guestModel === 'perGuest') {
-      requireNumber('pricePerGuest', values.pricePerGuest, 'Price per guest is required', { min: 0 });
-    } else if (guestModel === 'fixedGroup') {
-      requireNumber('fixedGroupPrice', values.fixedGroupPrice, 'Fixed group price is required', { min: 0 });
-    } else if (guestModel === 'baseWithAdditional') {
-      requireNumber('basePrice', values.basePrice, 'Base price is required', { min: 0 });
-      requireNumber('baseGuests', values.baseGuests, 'Base guests is required', {
-        min: 0,
-        integer: true,
-      });
-      requireNumber(
-        'additionalGuestPrice',
-        values.additionalGuestPrice,
-        'Price per additional guest is required',
-        { min: 0 },
+  /* ---------------- Tab 2: Pricing ---------------- */
+  const pricingType = values.pricingType as PricingType | undefined;
+  if (!pricingType) {
+    issue('pricingType', 'Pricing option is required');
+  }
+
+  const price = toNumber(values.price);
+  const priceMax = toNumber(values.priceMax);
+
+  if (
+    pricingType === 'fixed' ||
+    pricingType === 'startingFrom' ||
+    pricingType === 'hourly'
+  ) {
+    if (price === undefined) {
+      issue('price', 'Please enter a price for this pricing option');
+    } else if (price < 0) {
+      issue('price', 'Price cannot be negative');
+    }
+  }
+
+  if (pricingType === 'range') {
+    if (price === undefined) {
+      issue('price', 'Minimum price is required');
+    } else if (price < 0) {
+      issue('price', 'Minimum price cannot be negative');
+    }
+    if (priceMax === undefined) {
+      issue('priceMax', 'Maximum price is required');
+    } else if (priceMax < 0) {
+      issue('priceMax', 'Maximum price cannot be negative');
+    }
+    if (price !== undefined && priceMax !== undefined && priceMax < price) {
+      issue('priceMax', 'Maximum price cannot be less than the minimum price');
+    }
+  }
+
+  /* ---------------- Tab 3: Booking & Availability ---------------- */
+  if (!values.deliverySelection) {
+    issue('deliverySelection', 'Select how the service is delivered');
+  }
+
+  if (values.deliverySelection === 'multiple') {
+    if (
+      !Array.isArray(values.deliveryOptions) ||
+      values.deliveryOptions.length < 2
+    ) {
+      issue(
+        'deliveryOptions',
+        'Select at least two delivery options, or choose a single option',
       );
     }
   }
 
-  if (values.isQuoteModel && !isBlank(values.bookingFee)) {
-    requireNumber('bookingFee', values.bookingFee, 'Booking fee must be a valid amount', { min: 0 });
+  if (!values.customerAction) {
+    issue('customerAction', 'Select the action customers should take');
   }
 
-  /* ---------------- Step 4: Availability ---------------- */
-  requireNumber('availability.slotDuration', values.availability?.slotDuration, 'Service duration is required', {
-    min: 1,
-    integer: true,
+  const schedule = values.availability?.schedule ?? [];
+  schedule.forEach((day: any, index) => {
+    if (
+      day?.enabled &&
+      day.startTime &&
+      day.endTime &&
+      day.endTime <= day.startTime
+    ) {
+      issue(
+        `availability.schedule.${index}.endTime`,
+        'End time must be after the start time',
+      );
+    }
   });
-  if (!isBlank(values.availability?.bufferTime)) {
-    requireNumber('availability.bufferTime', values.availability?.bufferTime, 'Buffer must be 0 or more', {
-      min: 0,
-      integer: true,
-    });
-  }
-  if (!isBlank(values.availability?.maxBookingsPerSlot)) {
-    requireNumber(
-      'availability.maxBookingsPerSlot',
-      values.availability?.maxBookingsPerSlot,
-      'Max bookings must be 1 or more',
-      { min: 1, integer: true },
-    );
-  }
-  if (!isBlank(values.availability?.staffPerBooking)) {
-    requireNumber('availability.staffPerBooking', values.availability?.staffPerBooking, 'Staff per booking must be 1 or more', {
-      min: 1,
-      integer: true,
-    });
-  }
-  if (!isBlank(values.availability?.serviceRadiusKm)) {
-    requireNumber('availability.serviceRadiusKm', values.availability?.serviceRadiusKm, 'Radius must be 0 or more', {
-      min: 0,
-    });
+
+  /* ---------------- Tab 4: Additional Information ---------------- */
+  if (!isBlank(values.duration)) {
+    const duration = toNumber(values.duration);
+    if (duration === undefined || duration < 1) {
+      issue('duration', 'Service duration must be at least 1 minute');
+    }
   }
 
-  /* ---------------- Step 6: Media ---------------- */
-  if (!Array.isArray(values.media) || values.media.length === 0) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['media'],
-      message: 'Please upload at least one image',
-    });
-  }
+  (values.faqs ?? []).forEach((faq, index) => {
+    const hasQuestion = !isBlank(faq?.question);
+    const hasAnswer = !isBlank(faq?.answer);
+    if (hasQuestion !== hasAnswer) {
+      issue(
+        hasQuestion ? `faqs.${index}.answer` : `faqs.${index}.question`,
+        'Add both a question and an answer',
+      );
+    }
+  });
 });
 
 export type ServiceFormSchema = z.infer<typeof serviceFormSchema>;
 
 /** Fields owned by each wizard step — used to gate navigation. */
-export const serviceStepFields: Record<number, Array<keyof ServiceFormValues>> = {
-  1: ['businessId', 'name', 'sector'],
-  2: ['deliveryConfig.mode'],
-  3: [
-    'pricingModel',
-    'fixedPrice',
-    'pricePerHour',
-    'pricePerUnit',
-    'guestPricingModel',
-    'minGuests',
-    'maxGuests',
-    'pricePerGuest',
-    'fixedGroupPrice',
-    'basePrice',
-    'baseGuests',
-    'additionalGuestPrice',
-    'bookingFee',
-    'availability.slotDuration',
+export const serviceStepFields: Record<number, string[]> = {
+  1: [
+    'businessId',
+    'sector',
+    'name',
+    'shortDescription',
+    'description',
+    'media',
   ],
-  4: [
-    'availability.slotDuration',
-    'availability.bufferTime',
-    'availability.maxBookingsPerSlot',
-    'availability.staffPerBooking',
-    'availability.serviceRadiusKm',
-  ],
-  5: ['bookingRequirements', 'requireApproval'],
-  6: ['media'],
-  7: [],
-  8: [],
+  2: ['pricingType', 'price', 'priceMax'],
+  3: ['deliverySelection', 'deliveryOptions', 'customerAction'],
+  4: ['duration', 'faqs'],
+  5: [],
 };
 
 /** Human readable step names, used when jumping to the first invalid step. */
 export const serviceStepNames: Record<number, string> = {
-  1: 'Basic Info',
-  2: 'Type & Area',
-  3: 'Pricing',
-  4: 'Availability',
-  5: 'Workflow',
-  6: 'Media',
-  7: 'Partnership',
-  8: 'Review',
+  1: 'Basic Information',
+  2: 'Pricing',
+  3: 'Booking & Availability',
+  4: 'Additional Information',
+  5: 'Preview',
 };
 
 /**
@@ -296,7 +242,7 @@ export const serviceFieldToStep: Record<string, number> = (() => {
   const map: Record<string, number> = {};
   for (const [step, fields] of Object.entries(serviceStepFields)) {
     for (const field of fields) {
-      map[String(field)] = Number(step);
+      map[field] = Number(step);
     }
   }
   return map;
@@ -305,30 +251,12 @@ export const serviceFieldToStep: Record<string, number> = (() => {
 /** All field paths the schema can report, for mapping backend error messages. */
 export const serviceKnownFields: string[] = Array.from(
   new Set([
+    ...Object.values(serviceStepFields).flat(),
     'businessId',
-    'name',
     'sector',
     'category',
     'subcategory',
-    'deliveryConfig.mode',
-    'pricingModel',
-    'fixedPrice',
-    'pricePerHour',
-    'pricePerUnit',
-    'guestPricingModel',
-    'minGuests',
-    'maxGuests',
-    'pricePerGuest',
-    'fixedGroupPrice',
-    'basePrice',
-    'baseGuests',
-    'additionalGuestPrice',
-    'bookingFee',
     'availability.slotDuration',
-    'availability.bufferTime',
-    'availability.maxBookingsPerSlot',
-    'availability.staffPerBooking',
-    'availability.serviceRadiusKm',
-    'media',
+    'faqs',
   ]),
 );

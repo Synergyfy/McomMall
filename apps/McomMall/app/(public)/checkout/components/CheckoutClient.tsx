@@ -17,6 +17,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
+import { PaymentPurpose } from '@/service/payments/types';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import { useCheckGiftCardBalance } from '@/service/gift-card/hook';
 import { useVoucherBalance } from '@/service/vouchers/hook';
@@ -40,7 +41,7 @@ import {
 import { Product } from '@/service/listings/types';
 
 const stripePromise = loadStripe(
-  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 export default function CheckoutClient() {
@@ -526,12 +527,16 @@ export default function CheckoutClient() {
   );
 
   const [orderID, setOrderID] = useState<string | undefined>();
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<
+    string | null | undefined
+  >();
   const createPaypalOrderAsync = createOrderMutation.mutateAsync;
 
   useEffect(() => {
     if (paymentMethod === PaymentMethod.STRIPE && totalPrice > 0) {
       createPaymentIntent({
         amount: totalPrice,
+        purpose: PaymentPurpose.PAYG_TOPUP,
         idempotencyKey: checkoutIdempotencyKey.current,
       })
         .then((data) => {
@@ -543,10 +548,12 @@ export default function CheckoutClient() {
     } else if (paymentMethod === PaymentMethod.PAYPAL && totalPrice > 0) {
       createPaypalOrderAsync({
         amount: totalPrice,
+        purpose: PaymentPurpose.PAYG_TOPUP,
         idempotencyKey: checkoutIdempotencyKey.current,
       })
         .then((order) => {
           setOrderID(order.id);
+          setPaypalApprovalUrl(order.approvalUrl ?? null);
         })
         .catch((err) => console.error('Failed to create paypal order', err));
     }
@@ -627,6 +634,7 @@ export default function CheckoutClient() {
                     setPaymentMethod={setPaymentMethod}
                     clientSecret={clientSecret}
                     orderID={orderID}
+                    paypalApprovalUrl={paypalApprovalUrl}
                   />
                 )}
               </div>

@@ -257,6 +257,8 @@ export class CampaignCashbackService {
     orderId?: string;
     approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: ContributionPaymentProvider;
     amount: number;
   }> {
@@ -266,6 +268,7 @@ export class CampaignCashbackService {
     }
     const amount = Number(userCampaign.campaign.levelValue);
     const reference = `campaign-contribution-${id}`;
+    const idempotencyKey = `campaign-${id}-${user.id}-${amount.toFixed(2)}`;
 
     if (paymentMethod === ContributionPaymentProvider.WALLET) {
       if (!user.centralUserId) {
@@ -273,14 +276,22 @@ export class CampaignCashbackService {
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      const charge = await this.paymentProviderService.createWalletCharge(
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: user.centralUserId,
         amount,
-        'GBP',
-        { reference, userId: user.id, description: 'Campaign contribution' },
-        user.centralUserId,
-      );
+        reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'campaign-hold',
+          id,
+          user.id,
+          amount.toFixed(2),
+        ),
+        metadata: { purpose: 'CAMPAIGN', campaignId: id, userId: user.id },
+      });
       return {
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: ContributionPaymentProvider.WALLET,
         amount,
       };
@@ -291,7 +302,12 @@ export class CampaignCashbackService {
         await this.paymentProviderService.createStripePaymentIntent(
           amount,
           'GBP',
-          { reference, userId: user.id, description: 'Campaign contribution' },
+          {
+            reference,
+            userId: user.id,
+            idempotencyKey,
+            description: 'Campaign contribution',
+          },
         );
       return {
         clientSecret: intent.client_secret ?? undefined,
@@ -304,7 +320,12 @@ export class CampaignCashbackService {
       const order = await this.paymentProviderService.createPaypalOrder(
         amount,
         'GBP',
-        { reference, userId: user.id, description: 'Campaign contribution' },
+        {
+          reference,
+          userId: user.id,
+          idempotencyKey,
+          description: 'Campaign contribution',
+        },
       );
       return {
         orderId: order.id,
@@ -331,78 +352,99 @@ export class CampaignCashbackService {
     }
 
     const campaign = userCampaignCheck.campaign;
-    if (contributeDto.amount < campaign.levelValue) {
+    if (Math.abs(Number(contributeDto.amount) - Number(campaign.levelValue)) > 0.01) {
       throw new BadRequestException(
-        `Contribution amount must be at least £${campaign.levelValue}`,
+        `Contribution amount must be exactly £${campaign.levelValue}`,
       );
     }
 
-    // 2. EXTERNAL VERIFICATION (Outside DB Transaction to prevent deadlocks and performance degradation)
+    // 2. EXTERNAL VERIFICATION (outside the DB transaction)
+    if (!contributeDto.transactionId) {
+      throw new BadRequestException('A payment reference is required');
+    }
+
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference = contributeDto.transactionId;
+
+    const existingPayment = await this.orderPaymentRepository.findOne({
+      where: { transactionId: contributeDto.transactionId },
+    });
+    if (existingPayment)
+      throw new BadRequestException('Transaction already processed');
+
     if (contributeDto.paymentMethod === ContributionPaymentProvider.STRIPE) {
-      if (!contributeDto.transactionId)
-        throw new BadRequestException('Transaction ID is required');
-
-      // Idempotency check 1
-      const existingPayment = await this.orderPaymentRepository.findOne({
-        where: { transactionId: contributeDto.transactionId },
-      });
-      if (existingPayment)
-        throw new BadRequestException('Transaction already processed');
-
       const result =
         await this.paymentProviderService.verifyStripePaymentIntent(
           contributeDto.transactionId,
           contributeDto.amount,
           currency,
+          { mallUserId: user.id, mcomUserId: user.centralUserId },
         );
       if (!result.ok)
         throw new BadRequestException(
           `Stripe verification failed: ${result.reason}`,
         );
+      const details: any = result.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || contributeDto.transactionId;
     } else if (
       contributeDto.paymentMethod === ContributionPaymentProvider.PAYPAL
     ) {
-      if (!contributeDto.transactionId)
-        throw new BadRequestException('Transaction ID is required');
-
-      // Idempotency check 1
-      const existingPayment = await this.orderPaymentRepository.findOne({
-        where: { transactionId: contributeDto.transactionId },
-      });
-      if (existingPayment)
-        throw new BadRequestException('Transaction already processed');
-
       const result =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           contributeDto.transactionId,
           contributeDto.amount,
           currency,
+          { mallUserId: user.id, mcomUserId: user.centralUserId },
         );
       if (!result.ok)
         throw new BadRequestException(
           `PayPal verification failed: ${result.reason}`,
         );
+      const details: any = result.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || contributeDto.transactionId;
     } else if (
       contributeDto.paymentMethod === ContributionPaymentProvider.WALLET
     ) {
-      if (!contributeDto.transactionId)
-        throw new BadRequestException('Transaction ID is required');
-
-      const existingPayment = await this.orderPaymentRepository.findOne({
-        where: { transactionId: contributeDto.transactionId },
-      });
-      if (existingPayment)
-        throw new BadRequestException('Transaction already processed');
-
-      const result = await this.paymentProviderService.verifyWalletCharge(
+      const result = await this.paymentProviderService.settleWalletReference(
         contributeDto.transactionId,
         contributeDto.amount,
         currency,
+        {
+          mallUserId: user.id,
+          mcomUserId: user.centralUserId,
+          holdId: contributeDto.transactionId,
+          reference: `campaign-contribution-${id}`,
+        },
+        this.paymentProviderService.buildWalletKey(
+          'campaign-capture',
+          contributeDto.transactionId,
+        ),
       );
       if (!result.ok)
         throw new BadRequestException(
           `MCOM Wallet verification failed: ${result.reason}`,
         );
+      const details: any = result.details ?? {};
+      paymentReference =
+        details.transactionId || details.id || contributeDto.transactionId;
+      paidChargeId =
+        details.id && !String(details.id).startsWith('wallet:')
+          ? details.id
+          : null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
     }
 
     // 3. SECURE UPDATE (Inside Transaction with Pessimistic Lock)
@@ -427,47 +469,50 @@ export class CampaignCashbackService {
         throw new NotFoundException('Campaign not found for this user');
       if (userCampaign.contributionPaid) return userCampaign; // Concurrent request already succeeded
 
-      // Final Idempotency Check for external payments inside the lock
-      if (contributeDto.transactionId) {
-        const doubleCheckPayment = await manager.findOne(OrderPayment, {
-          where: { transactionId: contributeDto.transactionId },
-        });
-        if (doubleCheckPayment)
-          throw new BadRequestException(
-            'Transaction was processed by a concurrent request',
-          );
-      }
-
-      if (
-        contributeDto.paymentMethod === ContributionPaymentProvider.WALLET &&
-        !contributeDto.transactionId
-      ) {
-        // Legacy local-wallet contribution (no MCOM Pay charge).
-        await this.walletService.spendBalance(
-          user.id,
-          contributeDto.amount,
-          `Contribution for campaign: ${campaign.name}`,
-          WalletTransactionType.CAMPAIGN_CASHBACK_CONTRIBUTION,
-          manager,
+      // Final idempotency check inside the lock.
+      const doubleCheckPayment = await manager.findOne(OrderPayment, {
+        where: [
+          { transactionId: paymentReference },
+          ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+        ],
+      });
+      if (doubleCheckPayment)
+        throw new BadRequestException(
+          'Transaction was processed by a concurrent request',
         );
-      } else {
-        // Record successful payment in DB.
-        const paymentMethod =
-          contributeDto.paymentMethod === ContributionPaymentProvider.STRIPE
-            ? PaymentMethod.STRIPE
-            : contributeDto.paymentMethod ===
-                ContributionPaymentProvider.PAYPAL
-              ? PaymentMethod.PAYPAL
-              : PaymentMethod.MCOM_WALLET;
-        const payment = manager.create(OrderPayment, {
-          user: { id: user.id } as User,
-          amount: contributeDto.amount,
-          currency,
-          transactionId: contributeDto.transactionId,
-          paymentMethod,
-        });
-        await manager.save(payment);
-      }
+
+      const paymentMethod =
+        contributeDto.paymentMethod === ContributionPaymentProvider.STRIPE
+          ? PaymentMethod.STRIPE
+          : contributeDto.paymentMethod === ContributionPaymentProvider.PAYPAL
+            ? PaymentMethod.PAYPAL
+            : PaymentMethod.MCOM_WALLET;
+      const payment = manager.create(OrderPayment, {
+        user: { id: user.id } as User,
+        amount: contributeDto.amount,
+        currency,
+        transactionId: paymentReference,
+        paymentMethod,
+        mcomChargeId: paidChargeId,
+        providerRef: paidProviderRef,
+        feeMinor: paidFeeMinor,
+        netMinor: paidNetMinor,
+        status: 'paid',
+      });
+      const savedPayment = await manager.save(payment);
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'CAMPAIGN',
+          entityType: 'user_campaign_cashback',
+          entityId: id,
+          userId: user.id,
+          amountMinor: String(Math.round(Number(contributeDto.amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
+      );
 
       userCampaign.contributionPaid = true;
       return manager.save(userCampaign);

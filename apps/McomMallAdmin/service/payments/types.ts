@@ -14,19 +14,30 @@ export enum PaymentGateway {
   PAYPAL = 'PAYPAL',
 }
 
+export enum PaymentPurpose {
+  MEMBERSHIP = 'MEMBERSHIP',
+  VOUCHER_PURCHASE = 'VOUCHER_PURCHASE',
+  PAYG_TOPUP = 'PAYG_TOPUP',
+}
+
 export interface CreatePaymentIntentDto {
   amount: number;
   currency?: string;
+  purpose?: PaymentPurpose;
+  idempotencyKey?: string;
 }
 
 export interface RecordPaymentDto {
   amount: number;
-  planType: PlanType;
+  planType?: PlanType;
+  planVariantId?: string;
   paygOption?: PaygOption;
   isTrial: boolean;
   paymentGateway: PaymentGateway;
   transactionId: string;
   currency?: string;
+  purpose?: PaymentPurpose;
+  tierId?: string;
 }
 
 export enum SubscriptionStatusEnum {

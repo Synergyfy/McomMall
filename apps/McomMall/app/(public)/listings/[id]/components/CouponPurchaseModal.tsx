@@ -40,6 +40,9 @@ export default function CouponPurchaseModal({
   >('stripe');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const [isProcessing, setIsProcessing] = useState(false);
 
   const initiatePurchase = useInitiateCouponPurchase();
@@ -95,6 +98,7 @@ export default function CouponPurchaseModal({
             setClientSecret(data.data.clientSecret);
           } else if (paymentMethod === 'paypal' && data.data.orderId) {
             setPaypalOrderId(data.data.orderId);
+            setPaypalApprovalUrl(data.data.approvalUrl ?? null);
           }
         },
         onError: () => {
@@ -193,6 +197,7 @@ export default function CouponPurchaseModal({
           {paypalOrderId && paymentMethod === 'paypal' && (
             <PayPalCheckoutButton
               orderID={paypalOrderId}
+              approvalUrl={paypalApprovalUrl}
               onPaymentSuccess={(transactionId) => handlePaymentSuccess(transactionId)}
             />
           )}

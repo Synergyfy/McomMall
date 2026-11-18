@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import {
   Injectable,
   Logger,
@@ -403,7 +403,10 @@ export class GiftCardService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
   }> {
     const template = await this.templateRepository.findOne({
@@ -426,20 +429,33 @@ export class GiftCardService {
 
     const currency = 'GBP';
 
+    const reference = `gift-card-purchase-${template.id}-${userId}`;
+    const idempotencyKey = `gift-card-${template.id}-${userId}-${randomUUID()}`;
+    const metadata = {
+      reference,
+      userId,
+      idempotencyKey,
+      description: 'MCOM Mall gift card purchase',
+    };
+
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
       const centralUserId = await this.getCentralUserId(userId);
-      const charge = await this.paymentProviderService.createWalletCharge(
-        initiateDto.amount,
-        currency,
-        {
-          reference: `gift-card-purchase-${template.id}`,
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: centralUserId,
+        amount: initiateDto.amount,
+        reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'gift-card-hold',
+          template.id,
           userId,
-          description: 'MCOM Mall gift card purchase',
-        },
-        centralUserId,
-      );
+          idempotencyKey,
+        ),
+        metadata: { purpose: 'GIFT_CARD', templateId: template.id, userId },
+      });
       return {
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
@@ -449,6 +465,7 @@ export class GiftCardService {
         await this.paymentProviderService.createStripePaymentIntent(
           initiateDto.amount,
           currency,
+          metadata,
         );
       return {
         clientSecret: paymentIntent.client_secret,
@@ -458,8 +475,13 @@ export class GiftCardService {
       const order = await this.paymentProviderService.createPaypalOrder(
         initiateDto.amount,
         currency,
+        metadata,
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      return {
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+        provider: PaymentMethod.PAYPAL,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -522,29 +544,71 @@ export class GiftCardService {
     }
 
     const currency = 'GBP';
-    let verificationResult;
+    let verificationResult: { ok: boolean; details?: any; reason?: string };
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference = transactionId;
+    const centralUserId =
+      paymentProvider === PaymentMethod.MCOM_WALLET
+        ? await this.getCentralUserId(userId)
+        : undefined;
 
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
       verificationResult =
-        await this.paymentProviderService.verifyWalletCharge(
+        await this.paymentProviderService.settleWalletReference(
           transactionId,
           amount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: centralUserId,
+            holdId: transactionId,
+            reference: `gift-card-purchase-${template.id}-${userId}`,
+          },
+          this.paymentProviderService.buildWalletKey(
+            'gift-card-capture',
+            transactionId,
+          ),
         );
+      const details: any = verificationResult.details ?? {};
+      paymentReference = details.transactionId || details.id || transactionId;
+      paidChargeId =
+        details.id && !String(details.id).startsWith('wallet:')
+          ? details.id
+          : null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       verificationResult =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -563,12 +627,38 @@ export class GiftCardService {
           const giftCardRepo = manager.getRepository(GiftCard);
           const transactionRepo = manager.getRepository(GiftCardTransaction);
 
+          const reused = await paymentRepo.findOne({
+            where: [
+              { transactionId: paymentReference },
+              ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+            ],
+          });
+          if (reused) {
+            const existingOrder = await orderRepo.findOne({
+              where: { payment: { id: reused.id } },
+            });
+            const existingCard = existingOrder
+              ? await giftCardRepo.findOne({
+                  where: { purchaseOrderId: existingOrder.id },
+                })
+              : null;
+            if (existingCard) return existingCard;
+            throw new BadRequestException(
+              'This payment has already been used for another purchase.',
+            );
+          }
+
           const newPayment = paymentRepo.create({
             user: { id: userId } as User,
             amount,
             currency,
-            transactionId,
+            transactionId: paymentReference,
             paymentMethod: paymentProvider,
+            mcomChargeId: paidChargeId,
+            providerRef: paidProviderRef,
+            feeMinor: paidFeeMinor,
+            netMinor: paidNetMinor,
+            status: 'paid',
           });
           const savedPayment = await paymentRepo.save(newPayment);
 
@@ -578,6 +668,19 @@ export class GiftCardService {
             payment: savedPayment,
           });
           const savedOrder = await orderRepo.save(newOrder);
+
+          await this.paymentProviderService.allocateCharge(
+            {
+              mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+              purpose: 'GIFT_CARD',
+              entityType: 'order',
+              entityId: savedOrder.id,
+              userId,
+              amountMinor: String(Math.round(Number(amount) * 100)),
+              currency: 'GBP',
+            },
+            manager,
+          );
 
           const user = await manager.findOne(User, { where: { id: userId } });
 
@@ -739,7 +842,10 @@ export class GiftCardService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
   }> {
     const giftCard = await this.findActiveCardByCode(code);
@@ -759,21 +865,34 @@ export class GiftCardService {
     }
 
     const currency = 'GBP';
+    this.validatePurchaseAmount(initiateDto.amount, template);
+
+    const reference = `gift-card-reload-${giftCard.id}-${userId}`;
+    const metadata = {
+      reference,
+      userId,
+      idempotencyKey: `gift-card-reload-${giftCard.id}-${userId}-${randomUUID()}`,
+      description: 'MCOM Mall gift card reload',
+    };
 
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
       const centralUserId = await this.getCentralUserId(userId);
-      const charge = await this.paymentProviderService.createWalletCharge(
-        initiateDto.amount,
-        currency,
-        {
-          reference: `gift-card-reload-${giftCard.id}`,
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: centralUserId,
+        amount: initiateDto.amount,
+        reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'gift-card-reload-hold',
+          giftCard.id,
           userId,
-          description: 'MCOM Mall gift card reload',
-        },
-        centralUserId,
-      );
+          metadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'GIFT_CARD', giftCardId: giftCard.id, userId },
+      });
       return {
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
@@ -783,6 +902,7 @@ export class GiftCardService {
         await this.paymentProviderService.createStripePaymentIntent(
           initiateDto.amount,
           currency,
+          metadata,
         );
       return {
         clientSecret: paymentIntent.client_secret,
@@ -792,8 +912,13 @@ export class GiftCardService {
       const order = await this.paymentProviderService.createPaypalOrder(
         initiateDto.amount,
         currency,
+        metadata,
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      return {
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+        provider: PaymentMethod.PAYPAL,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -826,27 +951,72 @@ export class GiftCardService {
     const currency = 'GBP';
     let verificationResult;
 
+    this.validatePurchaseAmount(amount, template);
+
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference = transactionId;
+    const centralUserId =
+      paymentProvider === PaymentMethod.MCOM_WALLET
+        ? await this.getCentralUserId(userId)
+        : undefined;
+
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
       verificationResult =
-        await this.paymentProviderService.verifyWalletCharge(
+        await this.paymentProviderService.settleWalletReference(
           transactionId,
           amount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: centralUserId,
+            holdId: transactionId,
+            reference: `gift-card-reload-${giftCard.id}-${userId}`,
+          },
+          this.paymentProviderService.buildWalletKey(
+            'gift-card-reload-capture',
+            transactionId,
+          ),
         );
+      const details: any = verificationResult.details ?? {};
+      paymentReference = details.transactionId || details.id || transactionId;
+      paidChargeId =
+        details.id && !String(details.id).startsWith('wallet:')
+          ? details.id
+          : null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       verificationResult =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -863,9 +1033,12 @@ export class GiftCardService {
       const giftCardRepo = manager.getRepository(GiftCard);
       const transactionRepo = manager.getRepository(GiftCardTransaction);
 
-      // Idempotency check: return giftCard if transactionId already processed
+      // Idempotency check: return giftCard if this payment was already used.
       const existingPayment = await paymentRepo.findOne({
-        where: { transactionId },
+        where: [
+          { transactionId: paymentReference },
+          ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+        ],
       });
       if (existingPayment) {
         return giftCard;
@@ -875,8 +1048,13 @@ export class GiftCardService {
         user: { id: userId } as User,
         amount,
         currency,
-        transactionId,
+        transactionId: paymentReference,
         paymentMethod: paymentProvider,
+        mcomChargeId: paidChargeId,
+        providerRef: paidProviderRef,
+        feeMinor: paidFeeMinor,
+        netMinor: paidNetMinor,
+        status: 'paid',
       });
       const savedPayment = await paymentRepo.save(newPayment);
 
@@ -886,6 +1064,19 @@ export class GiftCardService {
         payment: savedPayment,
       });
       const savedOrder = await orderRepo.save(newOrder);
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'GIFT_CARD',
+          entityType: 'order',
+          entityId: savedOrder.id,
+          userId,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
+      );
 
       try {
         const dv = await this.digitalValueService.getByCode(code);

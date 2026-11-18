@@ -6,10 +6,10 @@ export type BookingStatus =
   | 'approved';
 
 export enum PaymentMethod {
-  STRIPE = 'STRIPE',
-  PAYPAL = 'PAYPAL',
-  CASH = 'CASH',
-  WALLET = 'WALLET',
+  STRIPE = 'stripe',
+  PAYPAL = 'paypal',
+  MCOM_WALLET = 'mcom_wallet',
+  CASH = 'cash',
 }
 
 // Represents the structure of the nested User object

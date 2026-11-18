@@ -6,14 +6,23 @@ import {
   Index,
   DeleteDateColumn,
 } from 'typeorm';
-import { moneyJsonTransformer, moneyTransformer } from '../../../common/money/money';
+import {
+  moneyJsonTransformer,
+  moneyTransformer,
+} from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { BundledService } from './bundled-service.entity';
 import { ConfigurableAddon } from './configurable-addon.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { SpareCapacityOffer } from './spare-capacity-offer.entity';
-import { GuestPricingModel, PricingModel } from '../service.enum';
+import {
+  CustomerAction,
+  GuestPricingModel,
+  PricingModel,
+  PricingType,
+  ServiceDeliveryOption,
+} from '../service.enum';
 import { Length, IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -60,6 +69,24 @@ export class Service extends AbstractBaseEntity {
   })
   @ApiProperty({ enum: PricingModel, description: 'Pricing model' })
   pricingModel: PricingModel;
+
+  /** Pricing option selected in the Create Service flow. */
+  @Column({ type: 'varchar', default: PricingType.FIXED })
+  @ApiProperty({
+    enum: PricingType,
+    description: 'Customer-facing pricing type',
+  })
+  pricingType: PricingType;
+
+  /** Single price for fixed / starting-from / hourly pricing. */
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
+  @ApiProperty({ description: 'Display price in pounds', example: 100.0 })
+  price?: number;
+
+  /** Upper bound for price-range pricing. */
+  @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
+  @ApiProperty({ description: 'Maximum price in pounds', example: 250.0 })
+  priceMax?: number;
 
   @Column({ type: 'bigint', nullable: true, transformer: moneyTransformer })
   @ApiProperty({ description: 'Fixed price', example: 100.0 })
@@ -150,6 +177,49 @@ export class Service extends AbstractBaseEntity {
 
   @Column('jsonb', { nullable: true })
   bookingRequirements: any;
+
+  /* ---------------- Booking & availability (Create Service flow) ---------------- */
+
+  @Column('jsonb', { nullable: true })
+  @ApiProperty({
+    description: 'Where the service can be delivered',
+    example: ['atBusiness', 'atCustomer'],
+  })
+  deliveryOptions?: ServiceDeliveryOption[];
+
+  @Column({ type: 'varchar', default: CustomerAction.BOOK_NOW })
+  @ApiProperty({
+    enum: CustomerAction,
+    description: 'Action customers should take for this service',
+  })
+  customerAction: CustomerAction;
+
+  @Column('text', { nullable: true })
+  @ApiProperty({ description: 'Instructions shown to customers when booking' })
+  bookingInstructions?: string;
+
+  @Column('text', { nullable: true })
+  @ApiProperty({ description: 'How appointments are arranged' })
+  appointmentArrangements?: string;
+
+  @Column('text', { nullable: true })
+  @ApiProperty({ description: 'Additional availability notes' })
+  availabilityNotes?: string;
+
+  /* ---------------- Additional information ---------------- */
+
+  @Column('text', { nullable: true })
+  @ApiProperty({ description: 'Conditions or requirements for the service' })
+  serviceConditions?: string;
+
+  @Column('jsonb', { nullable: true })
+  @ApiProperty({ description: 'Frequently asked questions' })
+  faqs?: { question: string; answer: string }[];
+
+  /** Snapshot of the business location mirrored from MCOM Central. */
+  @Column('jsonb', { nullable: true })
+  @ApiProperty({ description: 'Business location used for this service' })
+  serviceLocation?: Record<string, unknown> | null;
 
   @Column({ default: 'published' })
   @ApiProperty({ description: 'Status of the service', example: 'published' })
