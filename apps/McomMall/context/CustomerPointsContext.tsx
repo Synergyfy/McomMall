@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useGetStats } from '@/service/stats';
 import { CustomerStatsDto } from '@/service/stats/types';
 
@@ -15,32 +15,36 @@ const CustomerPointsContext = createContext<CustomerPointsContextType | undefine
 
 export const CustomerPointsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { data: stats, isLoading } = useGetStats<CustomerStatsDto>();
-  const [points, setPoints] = useState<number | null>(null);
+  // The API reports the real spendable balance. Optimistic adjustments are
+  // kept only until /stats refetches, then discarded in favour of the server.
+  const [override, setOverride] = useState<number | null>(null);
 
-  // Derive points cleanly from stats when loaded, falling back to 1240 default
-  const currentPoints = points !== null 
-    ? points 
-    : (stats?.totalNumberOfPointsEarned !== undefined ? stats.totalNumberOfPointsEarned : 1240);
+  const balance = stats?.pointsBalance ?? 0;
+  const currentPoints = override ?? balance;
+
+  useEffect(() => {
+    setOverride(null);
+  }, [balance]);
 
   const addPoints = (amount: number) => {
-    setPoints(() => currentPoints + amount);
+    setOverride(currentPoints + amount);
   };
 
   const redeemPoints = (cost: number): boolean => {
     if (currentPoints >= cost) {
-      setPoints(() => currentPoints - cost);
+      setOverride(currentPoints - cost);
       return true;
     }
     return false;
   };
 
   return (
-    <CustomerPointsContext.Provider 
-      value={{ 
-        points: currentPoints, 
-        addPoints, 
-        redeemPoints, 
-        isLoading 
+    <CustomerPointsContext.Provider
+      value={{
+        points: currentPoints,
+        addPoints,
+        redeemPoints,
+        isLoading,
       }}
     >
       {children}

@@ -17,6 +17,7 @@ export interface User {
   isActive: boolean;
   isEmailVerified: boolean;
   role: string;
+  points?: number;
   socials: Socials;
   profilePictureUrl?: string;
   // Canonical MCOM Central identity mirror (read-only in the mall).

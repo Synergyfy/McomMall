@@ -4,7 +4,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository, Not } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  Not,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { BusinessStatus } from '../listings/listing.enum';
@@ -24,6 +30,8 @@ import { ScratchCardLedger } from './entities/scratch-card-ledger.entity';
 import { Challenge } from './entities/challenge.entity';
 import { ChallengeProgress } from './entities/challenge-progress.entity';
 import { EventRsvp, EventRsvpStatus } from './entities/event-rsvp.entity';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
+import { MarketplaceLocationService } from '../geography/marketplace-location.service';
 import {
   RedeemRewardDto,
   RedeemCodeDto,
@@ -82,6 +90,7 @@ export class CustomerService {
     private readonly challengeProgressRepository: Repository<ChallengeProgress>,
     @InjectRepository(EventRsvp)
     private readonly eventRsvpRepository: Repository<EventRsvp>,
+    private readonly marketplaceLocation: MarketplaceLocationService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -127,10 +136,162 @@ export class CustomerService {
     await this.dataSource.transaction((txManager) => exec(txManager));
   }
 
-  async getHome(userId: string): Promise<CustomerHomeResponseDto> {
+  /**
+   * Customer dashboard feed.
+   *
+   * The shopper's borough comes from their MCOM Central profile via the
+   * marketplace location resolver (Central assignment → profile postcode →
+   * nearest city). When `borough` is supplied explicitly it overrides the
+   * profile so the dashboard can preview another real borough, but every other
+   * value is filtered to the same place.
+   */
+  async getHome(
+    userId: string,
+    borough?: string,
+  ): Promise<CustomerHomeResponseDto> {
     const user = await this.getUserOrThrow(userId);
-
     const now = new Date();
+
+    const resolvedLocation = await this.marketplaceLocation.resolve({ user });
+    const centralProfile = (user.centralProfile || {}) as Record<
+      string,
+      unknown
+    >;
+    const profileBorough =
+      (centralProfile.borough as string | undefined) ||
+      ((centralProfile.localMall as Record<string, unknown> | undefined)
+        ?.borough as string | undefined) ||
+      null;
+    const boroughName =
+      borough?.trim() ||
+      resolvedLocation.hierarchy.borough?.name ||
+      resolvedLocation.hierarchy.city?.name ||
+      profileBorough ||
+      null;
+
+    // Both the customer and every merchant provide a postcode during Central
+    // onboarding. The assigned borough is the primary match; the outward code
+    // catches merchants in the same area whose Central hierarchy has not been
+    // backfilled yet. An explicit borough override disables the postcode match
+    // so the preview only contains that borough.
+    const customerPostcode =
+      user.postcode ||
+      ((user.centralProfile as Record<string, unknown> | null)?.postcode as
+        | string
+        | undefined) ||
+      null;
+    const compactPostcode = (customerPostcode || '')
+      .toUpperCase()
+      .replace(/\s+/g, '');
+    const outcode =
+      !borough && compactPostcode.length > 3
+        ? compactPostcode.slice(0, compactPostcode.length - 3)
+        : null;
+
+    const applyLocationFilter = (
+      qb: SelectQueryBuilder<any>,
+      businessAlias: string,
+      locationAlias: string,
+      extraConditions: string[] = [],
+    ) => {
+      const conditions = [...extraConditions];
+      const params: Record<string, string> = {};
+
+      if (boroughName) {
+        conditions.push(
+          `LOWER(${businessAlias}.geoBoroughName) = LOWER(:boroughName)`,
+          `LOWER(${locationAlias}.city) = LOWER(:boroughName)`,
+          `LOWER(${locationAlias}.resolvedArea) = LOWER(:boroughName)`,
+        );
+        params.boroughName = boroughName;
+      }
+      if (outcode) {
+        conditions.push(
+          `REPLACE(UPPER(${locationAlias}.postcode), ' ', '') LIKE :outcodePrefix`,
+        );
+        params.outcodePrefix = `${outcode}%`;
+      }
+      if (conditions.length > 0) {
+        qb.andWhere(`(${conditions.join(' OR ')})`, params);
+      }
+    };
+
+    // ── Live offers from merchants in the shopper's borough ────────────────
+    const offersQb = this.offerRepository
+      .createQueryBuilder('offer')
+      .leftJoinAndSelect('offer.user', 'offerUser')
+      .leftJoinAndSelect('offerUser.businesses', 'offerBusiness')
+      .leftJoinAndSelect('offerBusiness.location', 'offerLocation')
+      .where('offer.isActive = :isActive', { isActive: true })
+      .andWhere('offer.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('offer.adminDisabled = false')
+      .andWhere('offer.isTimeBonus = false')
+      .andWhere('(offer.beginDate IS NULL OR offer.beginDate <= :now)', {
+        now,
+      })
+      .andWhere('(offer.endDate IS NULL OR offer.endDate >= :now)', { now })
+      .orderBy('offer.created_at', 'DESC')
+      .take(50);
+    applyLocationFilter(offersQb, 'offerBusiness', 'offerLocation');
+
+    // ── Campaigns in the same borough ──────────────────────────────────────
+    const campaignsQb = this.campaignRepository
+      .createQueryBuilder('campaign')
+      .leftJoinAndSelect('campaign.business', 'campaignBusiness')
+      .leftJoinAndSelect('campaignBusiness.location', 'campaignLocation')
+      .where('campaign.startDate <= :now', { now })
+      .andWhere('(campaign.endDate IS NULL OR campaign.endDate >= :now)', {
+        now,
+      })
+      .take(50);
+    applyLocationFilter(campaignsQb, 'campaignBusiness', 'campaignLocation');
+
+    // ── Trending businesses near the shopper ───────────────────────────────
+    const trendingQb = this.businessRepository
+      .createQueryBuilder('business')
+      .leftJoinAndSelect('business.category', 'category')
+      .leftJoinAndSelect('business.location', 'location')
+      .where('business.status = :status', {
+        status: BusinessStatus.PUBLISHED,
+      })
+      .orderBy('business.isVerified', 'DESC')
+      .addOrderBy('business.reviewCount', 'DESC')
+      .take(8);
+    applyLocationFilter(trendingQb, 'business', 'location');
+
+    // ── Upcoming events in the same borough ───────────────────────────────
+    const eventsQb = this.eventRepository
+      .createQueryBuilder('event')
+      .leftJoinAndSelect('event.business', 'eventBusiness')
+      .leftJoinAndSelect('eventBusiness.location', 'eventLocation')
+      .where('event.status != :cancelled', { cancelled: 'cancelled' })
+      .andWhere('event.date >= :today', {
+        today: now.toISOString().split('T')[0],
+      })
+      .orderBy('event.date', 'ASC')
+      .take(6);
+    applyLocationFilter(
+      eventsQb,
+      'eventBusiness',
+      'eventLocation',
+      boroughName ? ['LOWER(event.borough) = LOWER(:eventBorough)'] : [],
+    );
+    if (boroughName) {
+      eventsQb.setParameter('eventBorough', boroughName);
+    }
+
+    // ── Recent reviews from businesses in the borough ─────────────────────
+    const activityQb = this.businessRepository
+      .createQueryBuilder('business')
+      .leftJoinAndSelect('business.reviews', 'review')
+      .leftJoinAndSelect('review.user', 'reviewUser')
+      .leftJoinAndSelect('business.location', 'businessLocation')
+      .where('review.status = :published', { published: 'published' })
+      .orderBy('review.createdAt', 'DESC')
+      .take(6);
+    applyLocationFilter(activityQb, 'business', 'businessLocation');
 
     const [
       activeOffers,
@@ -138,26 +299,14 @@ export class CustomerService {
       trendingBusinesses,
       pointsAggregate,
       recentActivity,
+      upcomingEvents,
     ] = await Promise.all([
-      this.offerRepository.find({
-        where: { isActive: true },
-        relations: ['user', 'user.businesses'],
-        take: 50,
-      }),
-      this.campaignRepository.find({
-        relations: ['business'],
-        take: 50,
-      }),
-      this.businessRepository
-        .createQueryBuilder('business')
-        .leftJoinAndSelect('business.category', 'category')
-        .where('business.isVerified = :verified', { verified: true })
-        .andWhere('business.status != :status', { status: 'draft' })
-        .orderBy('business.reviewCount', 'DESC')
-        .take(8)
-        .getMany(),
+      offersQb.getMany(),
+      campaignsQb.getMany(),
+      trendingQb.getMany(),
       this.pointTransactionRepository
         .createQueryBuilder('pt')
+        .innerJoin('pt.user', 'pointUser')
         .select(
           `COALESCE(SUM(CASE WHEN pt.points > 0 THEN pt.points ELSE 0 END), 0)`,
           'earned',
@@ -166,26 +315,19 @@ export class CustomerService {
           `COALESCE(SUM(CASE WHEN pt.points < 0 THEN ABS(pt.points) ELSE 0 END), 0)`,
           'used',
         )
-        .where('pt.userId = :userId', { userId })
+        .where('pointUser.id = :userId', { userId })
         .getRawOne<{ earned: string; used: string }>(),
-      this.businessRepository
-        .createQueryBuilder('business')
-        .leftJoinAndSelect('business.reviews', 'review')
-        .leftJoinAndSelect('review.user', 'reviewUser')
-        .where('review.status = :published', { published: 'published' })
-        .orderBy('review.created_at', 'DESC')
-        .take(6)
-        .getMany(),
+      activityQb.getMany(),
+      eventsQb.getMany(),
     ]);
 
-    const activeCampaignsCount = activeCampaigns.filter((campaign) => {
-      if (!campaign.startDate) {
-        return false;
-      }
-      const start = new Date(campaign.startDate);
-      const end = campaign.endDate ? new Date(campaign.endDate) : null;
-      return start <= now && (!end || end >= now);
-    }).length;
+    const newOfferCutoff = new Date(
+      now.getTime() - 30 * 24 * 60 * 60 * 1000,
+    );
+    const newOffersCount = activeOffers.filter(
+      (offer) =>
+        offer.created_at && new Date(offer.created_at) >= newOfferCutoff,
+    ).length;
 
     const pointsBreakdown = {
       earned: Number(pointsAggregate?.earned ?? 0),
@@ -199,9 +341,20 @@ export class CustomerService {
         name: user.fullName || `${user.firstName} ${user.lastName}`,
         points: user.points,
       },
+      location: {
+        borough: boroughName,
+        city: resolvedLocation.hierarchy.city?.name ?? null,
+        highStreet: resolvedLocation.hierarchy.highStreet?.name ?? null,
+        localMall: resolvedLocation.hierarchy.localMall?.name ?? null,
+        postcode: customerPostcode,
+        latitude: resolvedLocation.latitude,
+        longitude: resolvedLocation.longitude,
+        source: resolvedLocation.source,
+      },
       pointsBreakdown,
       liveOffersCount: activeOffers.length,
-      activeCampaignsCount,
+      newOffersCount,
+      activeCampaignsCount: activeCampaigns.length,
       trending: trendingBusinesses.map((b) => ({
         id: b.id,
         businessName: b.businessName,
@@ -230,6 +383,22 @@ export class CustomerService {
         description: offer.description ?? '',
         points: offer.points ?? 0,
         businesses: (offer.user?.businesses ?? []).map((b) => b.businessName),
+      })),
+      events: upcomingEvents.map((event) => ({
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        endTime: null,
+        location: event.location,
+        borough: event.borough ?? null,
+        category: event.venueType ?? 'in-person',
+        capacity: event.capacity,
+        attendees: 0,
+        image: event.imageUrl ?? null,
+        businessName: event.business?.businessName ?? null,
+        status: event.status,
       })),
     };
   }
@@ -705,22 +874,41 @@ export class CustomerService {
 
   async getGamifyStatus(userId: string): Promise<GamifyStatusResponseDto> {
     const today = this.todayDate();
-    const [spin, scratch, challenges, progress] = await Promise.all([
-      this.spinLedgerRepository.findOne({
-        where: { userId, spinDate: today },
-      }),
-      this.scratchLedgerRepository.findOne({
-        where: { userId, scratchDate: today },
-      }),
-      this.challengeRepository.find({
-        where: { isActive: true },
-        order: { startDate: 'ASC' },
-      }),
-      this.challengeProgressRepository.find({
-        where: { userId },
-        relations: ['challenge'],
-      }),
-    ]);
+    const [spin, scratch, challenges, progress, recentSpins] =
+      await Promise.all([
+        this.spinLedgerRepository.findOne({
+          where: { userId, spinDate: today },
+        }),
+        this.scratchLedgerRepository.findOne({
+          where: { userId, scratchDate: today },
+        }),
+        this.challengeRepository.find({
+          where: { isActive: true },
+          order: { startDate: 'ASC' },
+        }),
+        this.challengeProgressRepository.find({
+          where: { userId },
+          relations: ['challenge'],
+        }),
+        this.spinLedgerRepository.find({
+          where: { userId },
+          order: { spinDate: 'DESC' },
+          take: 120,
+        }),
+      ]);
+
+    // A streak is the number of consecutive days ending today (or yesterday
+    // while today's spin is still unused), based on the real ledger.
+    const spinDays = new Set(recentSpins.map((entry) => entry.spinDate));
+    const cursor = new Date(`${today}T00:00:00.000Z`);
+    if (!spinDays.has(today)) {
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+    let streak = 0;
+    while (spinDays.has(cursor.toISOString().slice(0, 10))) {
+      streak += 1;
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
 
     return {
       dailySpin: {
@@ -732,7 +920,7 @@ export class CustomerService {
               pointsAwarded: spin.pointsAwarded,
             }
           : null,
-        streak: 0,
+        streak,
       },
       scratchCard: {
         available: !scratch,

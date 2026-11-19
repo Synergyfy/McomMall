@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
 import api from '@/service/api';
+import { RootState } from '@/service/store/store';
 import { pickCentralBusiness } from '@/lib/central-business';
 import { LocalMallShell } from './components/LocalMallShell';
 import { LocalMallTab } from './components/shared/LocalMallBottomNav';
 
 // Import Screen Modules
-import { HomeScreen } from './components/screens/HomeScreen';
+import { HomeScreen, CustomerMallHome } from './components/screens/HomeScreen';
 import { StatusScreen } from './components/screens/StatusScreen';
 import { BoroughScreen, SublocationScreen } from './components/screens/LocationSetupScreens';
 import { 
@@ -57,6 +59,8 @@ import {
 
 export default function LocalMallPage() {
   const router = useRouter();
+  const { userRole, userName } = useSelector((state: RootState) => state.auth);
+  const isCustomer = String(userRole).toLowerCase() === 'customer';
   const [activeTab, setActiveTab] = useState<LocalMallTab>('home');
   const [screenStack, setScreenStack] = useState<string[]>(['home']);
   const [businessName, setBusinessName] = useState('');
@@ -83,11 +87,15 @@ export default function LocalMallPage() {
 
   const fetchEcosystemData = async (resolvedPostcode?: string) => {
     try {
-      const pc = resolvedPostcode || postcode || localStorage.getItem('businessPostcode') || '';
-      const url = pc 
-        ? `localmall/customer/feed?postcode=${encodeURIComponent(pc)}` 
+      // Customers resolve their mall from the Central profile attached to the
+      // JWT. Never reuse the legacy business postcode stored in localStorage.
+      const pc = isCustomer
+        ? ''
+        : resolvedPostcode || postcode || localStorage.getItem('businessPostcode') || '';
+      const url = pc
+        ? `localmall/customer/feed?postcode=${encodeURIComponent(pc)}`
         : 'localmall/customer/feed';
-      
+
       const res = await api.get(url);
       if (res.data) {
         setMallData(res.data);
@@ -107,7 +115,33 @@ export default function LocalMallPage() {
   };
 
   useEffect(() => {
+    if (!userRole) return;
+
     const loadProfile = async () => {
+      if (isCustomer) {
+        // The customer's mall is the Central-assigned one; the feed endpoint
+        // already reads the customer's postcode from the authenticated user.
+        try {
+          const res = await api.get('users/me');
+          const customer = res.data;
+          const name =
+            customer?.fullName ||
+            [customer?.firstName, customer?.lastName]
+              .filter(Boolean)
+              .join(' ') ||
+            userName ||
+            '';
+          setBusinessName(name);
+          if (customer?.postcode) {
+            setPostcode(customer.postcode);
+          }
+        } catch (err) {
+          console.error('Error loading customer profile details:', err);
+        }
+        await fetchEcosystemData();
+        return;
+      }
+
       let resolvedPostcode =
         localStorage.getItem('businessPostcode') || '';
 
@@ -135,7 +169,7 @@ export default function LocalMallPage() {
 
     loadProfile().finally(() => setLoading(false));
     fetchUnreadNotifications();
-  }, []);
+  }, [isCustomer, userName, userRole]);
 
   const handleNavigate = (screen: string) => {
     setScreenStack((prev) => [...prev, screen]);
@@ -158,6 +192,7 @@ export default function LocalMallPage() {
   };
 
   const handlePostcodeResolved = (newPostcode: string, newBorough: string) => {
+    if (isCustomer) return;
     setPostcode(newPostcode);
     setBoroughName(newBorough);
     fetchEcosystemData(newPostcode);
@@ -173,8 +208,62 @@ export default function LocalMallPage() {
           onNavigate={handleNavigate}
           businessId={bizId}
           mallData={mallData}
+          isCustomer={isCustomer}
         />
       );
+    }
+
+    // Customers browse the shops assigned to their local mall. Partnership,
+    // visibility and expo management screens are business-only.
+    if (isCustomer) {
+      switch (currentScreen) {
+        case 'home':
+          return (
+            <CustomerMallHome
+              onNavigate={handleNavigate}
+              mallData={mallData}
+              customerName={businessName || userName || ''}
+            />
+          );
+        case 'discover':
+          return (
+            <DiscoverScreen
+              onNavigate={handleNavigate}
+              mallData={mallData}
+              isCustomer={isCustomer}
+            />
+          );
+        case 'map':
+          return (
+            <MapScreen
+              onNavigate={handleNavigate}
+              mallData={mallData}
+              boroughName={boroughName}
+            />
+          );
+        case 'notifications':
+          return (
+            <NotificationsCenterScreen onNavigate={handleNavigate} />
+          );
+        case 'search':
+          return (
+            <SearchFilterScreen
+              onNavigate={handleNavigate}
+              mallData={mallData}
+              isCustomer={isCustomer}
+            />
+          );
+        case 'notice':
+          return <SystemNoticeScreen onNavigate={handleNavigate} />;
+        default:
+          return (
+            <CustomerMallHome
+              onNavigate={handleNavigate}
+              mallData={mallData}
+              customerName={businessName || userName || ''}
+            />
+          );
+      }
     }
 
     switch (currentScreen) {
@@ -303,6 +392,7 @@ export default function LocalMallPage() {
       onSearchClick={() => handleNavigate('search')}
       onStatusClick={() => handleNavigate('status')}
       unreadNotifications={unreadNotifications}
+      isCustomer={isCustomer}
     >
       {loading ? (
         <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">

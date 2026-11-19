@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useGetConversations } from '@/service/messaging/hook';
 import { Conversation } from '@/service/messaging/types';
 import ConversationSidebar from './components/ConversationSidebar';
@@ -12,10 +12,12 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function MessagesContent() {
+  const router = useRouter();
   const { data: conversations, isLoading } = useGetConversations();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const { user } = useAuth();
+  const isCustomer = String(user?.role).toLowerCase() === 'customer';
   const { senders } = useGetNotifications();
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
   const searchParams = useSearchParams();
@@ -76,6 +78,18 @@ function MessagesContent() {
     setSelectedConversation(null);
     setIsSidebarVisible(true);
   };
+
+  // Messaging is part of the business workspace. Customers no longer see it
+  // in their dashboard, so direct links return them to the home screen.
+  useEffect(() => {
+    if (isCustomer) {
+      router.replace('/dashboard');
+    }
+  }, [isCustomer, router]);
+
+  if (isCustomer) {
+    return null;
+  }
 
   if (isLoading) {
     return (

@@ -16,6 +16,8 @@ interface BusinessCardProps {
   onViewProfile?: (id: string) => void;
   onActionClick?: (id: string) => void;
   actionLabel?: string;
+  /** Copy for the primary navigation button. Customers open a listing page. */
+  viewLabel?: string;
 }
 
 export const BusinessCard: FC<BusinessCardProps> = ({
@@ -30,6 +32,7 @@ export const BusinessCard: FC<BusinessCardProps> = ({
   onViewProfile,
   onActionClick,
   actionLabel = 'Collab',
+  viewLabel = 'View Profile',
 }) => {
   return (
     <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm hover:shadow-[0_8px_24px_rgba(162,63,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 group flex flex-col justify-between">
@@ -72,7 +75,7 @@ export const BusinessCard: FC<BusinessCardProps> = ({
           onClick={() => onViewProfile?.(id)}
           className="flex-1 py-2 text-center text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors active:scale-95 duration-150"
         >
-          View Profile
+          {viewLabel}
         </button>
         {onActionClick && (
           <button

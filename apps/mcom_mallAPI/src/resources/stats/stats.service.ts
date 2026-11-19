@@ -55,7 +55,7 @@ export class StatsService {
     if (user.role === UserRole.OWNER) {
       return this.getOwnerStats(user.id);
     } else {
-      return this.getCustomerStats(user.id);
+      return this.getCustomerStats(user.id, user.points ?? 0);
     }
   }
 
@@ -152,7 +152,10 @@ export class StatsService {
     };
   }
 
-  private async getCustomerStats(userId: string): Promise<CustomerStatsDto> {
+  private async getCustomerStats(
+    userId: string,
+    pointsBalance: number,
+  ): Promise<CustomerStatsDto> {
     const productOrdersQuery = this.orderRepository
       .createQueryBuilder('order')
       .select('SUM(order.total) / 100.0', 'sum')
@@ -216,6 +219,7 @@ export class StatsService {
     ]);
 
     return {
+      pointsBalance,
       totalAmountSpentOnProductOrdered: +productOrders.sum || 0,
       totalNumberOfProductOrdered: orderItemsCount,
       totalNumberOfServiceBooked: serviceBooked,

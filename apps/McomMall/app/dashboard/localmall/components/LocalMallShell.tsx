@@ -18,6 +18,7 @@ interface LocalMallShellProps {
   onSearchClick: () => void;
   onStatusClick: () => void;
   unreadNotifications?: number;
+  isCustomer?: boolean;
   children: ReactNode;
 }
 
@@ -34,6 +35,7 @@ export const LocalMallShell: FC<LocalMallShellProps> = ({
   onSearchClick,
   onStatusClick,
   unreadNotifications = 0,
+  isCustomer = false,
   children,
 }) => {
   const canGoBack = true;
@@ -53,6 +55,7 @@ export const LocalMallShell: FC<LocalMallShellProps> = ({
         onNotificationsClick={onNotificationsClick}
         onSearchClick={onSearchClick}
         onStatusClick={onStatusClick}
+        isCustomer={isCustomer}
       />
 
       {/* Screen Viewport with Slide Transition */}
@@ -75,6 +78,7 @@ export const LocalMallShell: FC<LocalMallShellProps> = ({
       <LocalMallBottomNav
         activeTab={activeTab}
         onTabChange={onTabChange}
+        isCustomer={isCustomer}
       />
     </div>
   );

@@ -96,15 +96,94 @@ export class NearbyDealDto {
   businesses: string[];
 }
 
+export class CustomerLocationDto {
+  @ApiPropertyOptional({ example: 'Camden', nullable: true })
+  borough: string | null;
+
+  @ApiPropertyOptional({ example: 'London', nullable: true })
+  city: string | null;
+
+  @ApiPropertyOptional({ example: 'Camden High Street', nullable: true })
+  highStreet: string | null;
+
+  @ApiPropertyOptional({ example: 'Camden Market', nullable: true })
+  localMall: string | null;
+
+  @ApiPropertyOptional({ example: 'NW1 8AH', nullable: true })
+  postcode: string | null;
+
+  @ApiPropertyOptional({ example: 51.539, nullable: true })
+  latitude: number | null;
+
+  @ApiPropertyOptional({ example: -0.1426, nullable: true })
+  longitude: number | null;
+
+  @ApiProperty({
+    example: 'profile',
+    enum: ['profile', 'postcode', 'geolocation', 'nearest', 'none'],
+  })
+  source: string;
+}
+
+export class CustomerDashboardEventDto {
+  @ApiProperty({ example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
+  id: string;
+
+  @ApiProperty({ example: 'Camden Street Food Market' })
+  title: string;
+
+  @ApiProperty({ example: 'Gourmet dishes from local vendors' })
+  description: string;
+
+  @ApiProperty({ example: '2026-09-12' })
+  date: string;
+
+  @ApiProperty({ example: '12:00 PM' })
+  time: string;
+
+  @ApiPropertyOptional({ example: '8:00 PM', nullable: true })
+  endTime?: string | null;
+
+  @ApiProperty({ example: 'Camden Market Hall' })
+  location: string;
+
+  @ApiPropertyOptional({ example: 'Camden', nullable: true })
+  borough?: string | null;
+
+  @ApiProperty({ example: 'in-person' })
+  category: string;
+
+  @ApiProperty({ example: 100 })
+  capacity: number;
+
+  @ApiProperty({ example: 0 })
+  attendees: number;
+
+  @ApiPropertyOptional({ example: 'https://cdn.example.com/event.png', nullable: true })
+  image?: string | null;
+
+  @ApiPropertyOptional({ example: 'Brew & Co.', nullable: true })
+  businessName?: string | null;
+
+  @ApiProperty({ example: 'upcoming' })
+  status: string;
+}
+
 export class CustomerHomeResponseDto {
   @ApiProperty({ type: CustomerUserDto })
   user: CustomerUserDto;
+
+  @ApiProperty({ type: CustomerLocationDto })
+  location: CustomerLocationDto;
 
   @ApiProperty({ type: PointsBreakdownDto })
   pointsBreakdown: PointsBreakdownDto;
 
   @ApiProperty({ example: 12 })
   liveOffersCount: number;
+
+  @ApiProperty({ example: 3 })
+  newOffersCount: number;
 
   @ApiProperty({ example: 3 })
   activeCampaignsCount: number;
@@ -117,6 +196,9 @@ export class CustomerHomeResponseDto {
 
   @ApiProperty({ type: [NearbyDealDto] })
   nearbyDeals: NearbyDealDto[];
+
+  @ApiProperty({ type: [CustomerDashboardEventDto] })
+  events: CustomerDashboardEventDto[];
 }
 
 export class RewardResponseDto {

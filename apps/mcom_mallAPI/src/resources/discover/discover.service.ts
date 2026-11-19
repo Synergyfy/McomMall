@@ -95,7 +95,13 @@ export class DiscoverService {
     }
 
     if (borough) {
-      qb.andWhere('business.borough = :borough', { borough });
+      // Businesses store their Central hierarchy in `geoBoroughName`. The
+      // legacy `locations.city` / `resolvedArea` fields are still populated
+      // for listings that have not been backfilled yet, so fall back to them.
+      qb.andWhere(
+        '(LOWER(business.geoBoroughName) = LOWER(:borough) OR LOWER(location.city) = LOWER(:borough) OR LOWER(location.resolvedArea) = LOWER(:borough))',
+        { borough },
+      );
     }
 
     const [items, total] = await qb
@@ -206,12 +212,24 @@ export class DiscoverService {
         break;
       case 'borough':
         if (borough && borough !== 'All') {
-          qb.andWhere('business.borough = :borough', { borough });
+          qb.andWhere(
+            '(LOWER(event.borough) = LOWER(:borough) OR LOWER(business.geoBoroughName) = LOWER(:borough))',
+            { borough },
+          );
         }
         qb.orderBy('event.date', 'ASC');
         break;
       default:
         qb.orderBy('event.date', 'ASC');
+    }
+
+    // The dashboard passes the customer's assigned borough regardless of the
+    // active tab, so apply the filter for every tab once it is supplied.
+    if (borough && borough !== 'All' && tab !== 'borough') {
+      qb.andWhere(
+        '(LOWER(event.borough) = LOWER(:borough) OR LOWER(business.geoBoroughName) = LOWER(:borough))',
+        { borough },
+      );
     }
 
     const [items, total] = await qb

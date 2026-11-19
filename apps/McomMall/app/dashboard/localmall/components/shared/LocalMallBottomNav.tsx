@@ -1,24 +1,39 @@
 'use client';
 
 import { FC } from 'react';
-import { 
-  LayoutDashboard, 
-  MapPin, 
-  Users, 
-  Zap, 
-  Globe, 
-  Sparkles 
+import {
+  LayoutDashboard,
+  MapPin,
+  Users,
+  Zap,
+  Globe,
+  Sparkles,
+  Compass,
+  Map,
 } from 'lucide-react';
 
-export type LocalMallTab = 'home' | 'highstreet' | 'partnerships' | 'visibility' | 'community' | 'expo';
+export type LocalMallTab =
+  | 'home'
+  | 'discover'
+  | 'map'
+  | 'highstreet'
+  | 'partnerships'
+  | 'visibility'
+  | 'community'
+  | 'expo';
 
 interface LocalMallBottomNavProps {
   activeTab: LocalMallTab;
   onTabChange: (tab: LocalMallTab) => void;
+  isCustomer?: boolean;
 }
 
-export const LocalMallBottomNav: FC<LocalMallBottomNavProps> = ({ activeTab, onTabChange }) => {
-  const navItems = [
+export const LocalMallBottomNav: FC<LocalMallBottomNavProps> = ({
+  activeTab,
+  onTabChange,
+  isCustomer = false,
+}) => {
+  const businessItems = [
     { id: 'home' as LocalMallTab, label: 'Home', icon: LayoutDashboard },
     { id: 'highstreet' as LocalMallTab, label: 'High Street', icon: MapPin },
     { id: 'partnerships' as LocalMallTab, label: 'Partners', icon: Users },
@@ -26,6 +41,16 @@ export const LocalMallBottomNav: FC<LocalMallBottomNavProps> = ({ activeTab, onT
     { id: 'community' as LocalMallTab, label: 'Community', icon: Globe },
     { id: 'expo' as LocalMallTab, label: 'Expo', icon: Sparkles },
   ];
+
+  // Customers browse merchants; they do not manage partnerships, visibility or
+  // expo booths, so those business-only tabs are intentionally hidden.
+  const customerItems = [
+    { id: 'home' as LocalMallTab, label: 'Mall', icon: LayoutDashboard },
+    { id: 'discover' as LocalMallTab, label: 'Explore', icon: Compass },
+    { id: 'map' as LocalMallTab, label: 'Map', icon: Map },
+  ];
+
+  const navItems = isCustomer ? customerItems : businessItems;
 
   return (
     <nav className="sm:hidden fixed bottom-0 left-0 w-full flex justify-around items-center py-2 px-1 bg-white border-t border-gray-100 shadow-[0_-4px_12px_rgba(162,63,0,0.05)] z-50 rounded-t-2xl pb-safe">
@@ -41,8 +66,8 @@ export const LocalMallBottomNav: FC<LocalMallBottomNavProps> = ({ activeTab, onT
               <span className="absolute top-0 w-8 h-0.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500" />
             )}
             <div className={`p-1.5 rounded-xl transition-all duration-200 ${
-              isActive 
-                ? 'bg-orange-50 text-orange-600' 
+              isActive
+                ? 'bg-orange-50 text-orange-600'
                 : 'text-gray-400 group-hover:text-gray-600'
             }`}>
               <Icon className="w-5 h-5" />

@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Search, 
   MapPin, 
@@ -25,12 +26,15 @@ import api from '@/service/api';
 interface DiscoverScreenProps {
   onNavigate: (screen: string) => void;
   mallData: any;
+  isCustomer?: boolean;
 }
 
 export const DiscoverScreen: FC<DiscoverScreenProps> = ({
   onNavigate,
   mallData,
+  isCustomer = false,
 }) => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const businesses = mallData?.businesses || [];
 
@@ -69,7 +73,12 @@ export const DiscoverScreen: FC<DiscoverScreenProps> = ({
             isClaimed={b.isClaimed}
             isVerified={b.isVerified}
             logoUrl={b.logoUrl}
-            onViewProfile={(id) => onNavigate(`profile:${id}`)}
+            viewLabel={isCustomer ? 'View Listing' : 'View Profile'}
+            onViewProfile={(id) =>
+              isCustomer
+                ? router.push(`/listings/${id}?source=in-house`)
+                : onNavigate(`profile:${id}`)
+            }
           />
         ))}
 
@@ -88,12 +97,14 @@ interface BusinessProfileScreenProps {
   onNavigate: (screen: string) => void;
   businessId: string;
   mallData?: any;
+  isCustomer?: boolean;
 }
 
 export const BusinessProfileScreen: FC<BusinessProfileScreenProps> = ({
   onNavigate,
   businessId,
   mallData,
+  isCustomer = false,
 }) => {
   const fromMall = mallData?.businesses?.find(
     (b: any) => b.id === businessId,
@@ -197,13 +208,15 @@ export const BusinessProfileScreen: FC<BusinessProfileScreenProps> = ({
         </div>
       </div>
 
-      {/* B2B Collab Action */}
-      <button 
-        onClick={() => onNavigate('partnerships')}
-        className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-150"
-      >
-        <UserPlus className="w-4 h-4" /> Propose Collaboration Request
-      </button>
+      {/* B2B Collab Action — business owners only */}
+      {!isCustomer && (
+        <button
+          onClick={() => onNavigate('partnerships')}
+          className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-150"
+        >
+          <UserPlus className="w-4 h-4" /> Propose Collaboration Request
+        </button>
+      )}
     </div>
   );
 };

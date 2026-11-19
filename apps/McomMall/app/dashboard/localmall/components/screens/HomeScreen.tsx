@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   BadgeCheck,
   Building2,
@@ -14,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import api from '@/service/api';
+import { BusinessCard } from '../shared/BusinessCard';
 
 interface PartnerCandidate {
   businessId: string;
@@ -451,6 +453,196 @@ export const HomeScreen: FC<HomeScreenProps> = ({
           </p>
         </div>
       )}
+    </div>
+  );
+};
+
+// ─── CUSTOMER LOCAL MALL HOME ────────────────────────────────────────────────
+interface CustomerMallHomeProps {
+  onNavigate: (screen: string) => void;
+  mallData: any;
+  customerName: string;
+}
+
+/**
+ * Customer-facing local mall landing page.
+ *
+ * Customers browse the published businesses assigned to their Central local
+ * mall and open a merchant's listing/profile. Partnership actions are reserved
+ * for business owners and deliberately absent here.
+ */
+export const CustomerMallHome: FC<CustomerMallHomeProps> = ({
+  onNavigate,
+  mallData,
+  customerName,
+}) => {
+  const router = useRouter();
+  const mallName = mallData?.mallName || 'Your local mall';
+  const businesses: any[] = useMemo(
+    () => mallData?.businesses || [],
+    [mallData],
+  );
+  const nearbyDeals: any[] = mallData?.nearbyDeals || [];
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return businesses;
+    return businesses.filter(
+      (business) =>
+        String(business.businessName || '')
+          .toLowerCase()
+          .includes(term) ||
+        String(business.category || '')
+          .toLowerCase()
+          .includes(term) ||
+        String(business.shortDescription || '')
+          .toLowerCase()
+          .includes(term),
+    );
+  }, [businesses, query]);
+
+  const hierarchy = [
+    { label: 'Local mall', value: mallData?.mallName, icon: Store },
+    { label: 'City', value: mallData?.city, icon: Building2 },
+    { label: 'Borough', value: mallData?.borough, icon: MapPin },
+    { label: 'High street', value: mallData?.highStreet, icon: MapPin },
+    { label: 'Postcode', value: mallData?.postcode, icon: MapPin },
+  ].filter((item) => Boolean(item.value));
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 p-5 md:p-6 text-white shadow-md">
+        <div className="absolute -right-12 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-black/10 blur-2xl" />
+
+        <div className="relative">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/80">
+            <Store className="h-3.5 w-3.5" /> Local Mall
+          </div>
+          <h1 className="mt-1 text-xl md:text-2xl font-black tracking-tight">
+            {mallName}
+          </h1>
+          <p className="mt-1 text-[11px] text-white/80">
+            {customerName ? `Hi ${customerName}, ` : ''}
+            explore the businesses in your local mall.
+          </p>
+
+          {hierarchy.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {hierarchy.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl bg-white/10 px-3 py-2 backdrop-blur-sm border border-white/15"
+                >
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
+                    <item.icon className="h-3 w-3" /> {item.label}
+                  </div>
+                  <p className="mt-0.5 truncate text-xs font-bold">
+                    {item.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {nearbyDeals.length > 0 && (
+        <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <BadgeCheck className="w-4 h-4 text-orange-500" />
+            <h2 className="text-sm font-black text-gray-900">
+              Offers near you
+            </h2>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {nearbyDeals.slice(0, 5).map((deal: any, index: number) => (
+              <div
+                key={`${deal.business}-${deal.deal}-${index}`}
+                className="flex items-center justify-between gap-3 rounded-2xl bg-orange-50/60 border border-orange-100 px-3.5 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-gray-900 truncate">
+                    {deal.deal}
+                  </p>
+                  <p className="text-[10px] font-semibold text-gray-400 truncate">
+                    {deal.business}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs font-black text-orange-600">
+                    +{deal.points} pts
+                  </p>
+                  <p className="text-[9px] font-semibold text-gray-400">
+                    {deal.expires} left
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">
+            Businesses in your mall
+          </h2>
+          <p className="text-xs text-gray-400 mt-1">
+            Open a storefront to see its listing, offers and contact details.
+          </p>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search businesses or categories..."
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-150 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 text-gray-800"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {filtered.map((business) => (
+            <BusinessCard
+              key={business.id}
+              id={business.id}
+              name={business.businessName}
+              category={business.category || 'Store'}
+              description={
+                business.shortDescription || 'No description provided.'
+              }
+              address={business.address || ''}
+              isClaimed={business.isClaimed}
+              isVerified={business.isVerified}
+              logoUrl={business.logoUrl}
+              viewLabel="View Listing"
+              onViewProfile={(id) =>
+                router.push(`/listings/${id}?source=in-house`)
+              }
+            />
+          ))}
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-10 text-center">
+            <Store className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+            <p className="text-sm font-bold text-gray-700">
+              {businesses.length === 0
+                ? `No businesses listed in ${mallName} yet`
+                : 'No businesses match your search'}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {businesses.length === 0
+                ? 'Published merchants assigned to your local mall will appear here.'
+                : 'Try a different name or category.'}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
