@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   Param,
   Query,
   UnauthorizedException,
@@ -139,6 +140,15 @@ export class GiftCardConsumerController {
   }
 
   @Public()
+  @Get('templates/:id/assets')
+  @ApiOperation({
+    summary: 'Get the public design assets for an approved gift card template',
+  })
+  async getPublicTemplateAssets(@Param('id') id: string) {
+    return this.giftCardService.findPublicAssetsByTemplateId(id);
+  }
+
+  @Public()
   @Get('templates/business/:businessId')
   @ApiOperation({
     summary: 'Get available gift card templates for a business',
@@ -154,6 +164,7 @@ export class GiftCardConsumerController {
 
   @Get('templates/public')
   @Public()
+  @Header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120')
   @ApiOperation({
     summary: 'Get all public gift card templates with pagination and search',
   })

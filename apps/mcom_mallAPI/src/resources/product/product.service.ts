@@ -25,6 +25,10 @@ import {
   ActionType,
 } from '../capability/capability.service';
 import { ProductSearchDto } from './dto/product-search.dto';
+import {
+  applyBusinessLocationFilter,
+  applyBusinessNearOrder,
+} from '../geography/location-filter.util';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { UserRole } from '../../common/role.enum';
@@ -442,6 +446,7 @@ export class ProductService {
 
     queryBuilder
       .leftJoinAndSelect('product.business', 'business')
+      .leftJoin('business.location', 'businessLocation')
       .where('product.approvalStatus = :approvalStatus', {
         approvalStatus: ApprovalStatus.APPROVED,
       })
@@ -478,8 +483,17 @@ export class ProductService {
       queryBuilder.andWhere('product.category = :category', { category });
     }
 
+    applyBusinessLocationFilter(
+      queryBuilder,
+      'business',
+      searchDto,
+      'loc',
+      'businessLocation',
+    );
+    applyBusinessNearOrder(queryBuilder, 'business', searchDto);
+
     queryBuilder
-      .orderBy('product.created_at', 'DESC')
+      .addOrderBy('product.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

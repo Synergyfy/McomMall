@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   Post,
   Body,
   Param,
@@ -37,6 +38,7 @@ export class VoucherConsumerController {
 
   @Public()
   @Get('products/public')
+  @Header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120')
   findAllPublicVoucherProducts(
     @Query() searchDto: VoucherProductSearchDto,
   ): Promise<PageDto<VoucherProduct>> {

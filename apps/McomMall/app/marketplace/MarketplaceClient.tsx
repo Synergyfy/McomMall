@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import {
   LayoutGrid,
   List as ListIcon,
@@ -27,6 +28,9 @@ import GiftCardCard from '@/components/marketplace/GiftCardCard';
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import Pagination from '@/components/marketplace/Pagination';
 import MarketplaceSection from '@/components/marketplace/MarketplaceSection';
+import MarketplaceLocationPicker, {
+  MarketplaceLocationSelection,
+} from '@/components/marketplace/MarketplaceLocationPicker';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -38,17 +42,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { useGetMarketplacePublic } from '@/service/marketplace/hook';
 import {
+  ResolveLocationParams,
   useGetPublicProducts,
   useGetPublicServices,
   useGetPublicVouchers,
   useGetPublicGiftCards,
   useGetPublicCoupons,
+  useResolveMarketplaceLocation,
 } from '@/service/marketplace/discovery';
 import {
   SidebarBanner,
   PageMetaDto,
   MarketplacePublicData,
   PageDto,
+  ResolvedMarketplaceLocation,
 } from '@/service/marketplace/types';
 import { PromotionalItem } from '@/lib/listing-data';
 import { Product } from '@/service/listings/types';
@@ -82,19 +89,23 @@ type MarketItem = {
 interface MarketplaceClientProps {
   initialPublicData?: MarketplacePublicData;
   initialNewProducts?: PageDto<Product>;
+  initialSearch?: string;
 }
 
 export default function MarketplaceClient({
   initialPublicData,
   initialNewProducts,
+  initialSearch = '',
 }: MarketplaceClientProps) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeSidebarSlide, setActiveSidebarSlide] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [listingType, setListingType] = useState<ListingType>('all');
+  const [listingType, setListingType] = useState<ListingType>(
+    initialSearch.trim() ? 'products' : 'all',
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('newest');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [filters, setFilters] = useState<MarketplaceFiltersState>({
     categories: [],
     priceRange: [0, 5000],
@@ -102,9 +113,193 @@ export default function MarketplaceClient({
     minRating: null,
   });
 
+  // ── Location ────────────────────────────────────────────────────────────
+  const [locationSelection, setLocationSelection] =
+    useState<MarketplaceLocationSelection>({
+      level: 'all',
+      name: 'All locations',
+    });
+  const [resolveParams, setResolveParams] =
+    useState<ResolveLocationParams | null>(null);
+  const [cachedResolved, setCachedResolved] =
+    useState<ResolvedMarketplaceLocation | null>(null);
+  const hasUserSelectedLocation = useRef(false);
+  const locationRestored = useRef(false);
+
+  const { data: resolvedQueryData, isFetching: isResolvingLocation } =
+    useResolveMarketplaceLocation(resolveParams);
+
+  const resolvedLocation = resolvedQueryData ?? cachedResolved ?? undefined;
+
+  useEffect(() => {
+    let hasFreshResolved = false;
+
+    try {
+      const stored = localStorage.getItem('mcom_marketplace_location');
+      if (stored) {
+        const parsed = JSON.parse(stored) as MarketplaceLocationSelection;
+        const validLevels = [
+          'all',
+          'near',
+          'city',
+          'borough',
+          'high-street',
+          'local-mall',
+          'area',
+          'postcode',
+        ];
+        const validExplicit =
+          parsed?.level === 'all' ||
+          parsed?.level === 'near' ||
+          (validLevels.includes(parsed?.level) &&
+            Boolean((parsed as { id?: string }).id));
+        if (parsed?.level && validExplicit) {
+          setLocationSelection(parsed);
+          // "Near me" should keep tracking the shopper; an explicit
+          // city/borough/high street/mall choice should not be overwritten.
+          hasUserSelectedLocation.current = parsed.level !== 'near';
+        }
+      }
+
+      // Resolving a signed-in shopper costs one Central call. Cache the
+      // result for a day so navigating back to the marketplace does not
+      // repeat it; "My location" deliberately bypasses this cache.
+      const storedResolved = localStorage.getItem(
+        'mcom_marketplace_resolved_location',
+      );
+      if (storedResolved) {
+        const parsed = JSON.parse(storedResolved) as {
+          value: ResolvedMarketplaceLocation;
+          savedAt: number;
+        };
+        if (
+          parsed?.value?.scope &&
+          parsed?.savedAt &&
+          Date.now() - parsed.savedAt < 24 * 60 * 60 * 1000
+        ) {
+          setCachedResolved(parsed.value);
+          hasFreshResolved = true;
+        }
+      }
+    } catch {
+      // Ignore malformed storage.
+    }
+
+    locationRestored.current = true;
+    if (!hasFreshResolved) setResolveParams({});
+  }, []);
+
+  useEffect(() => {
+    if (!resolvedQueryData?.scope) return;
+    setCachedResolved(resolvedQueryData);
+    try {
+      localStorage.setItem(
+        'mcom_marketplace_resolved_location',
+        JSON.stringify({
+          value: resolvedQueryData,
+          savedAt: Date.now(),
+        }),
+      );
+    } catch {
+      // Storage may be unavailable (private mode).
+    }
+  }, [resolvedQueryData]);
+
+  useEffect(() => {
+    if (!locationRestored.current) return;
+    try {
+      localStorage.setItem(
+        'mcom_marketplace_location',
+        JSON.stringify(locationSelection),
+      );
+    } catch {
+      // Storage may be unavailable (private mode).
+    }
+    setCurrentPage(1);
+  }, [locationSelection]);
+
+  useEffect(() => {
+    if (!resolvedLocation?.scope) return;
+    if (hasUserSelectedLocation.current) return;
+    setLocationSelection({
+      level: 'near',
+      name: resolvedLocation.scope.name,
+    });
+  }, [resolvedLocation]);
+
+  // Deep-link support: /marketplace?search=shoes lands on the products grid
+  // with the query already applied. Switching tabs keeps the query.
+  useEffect(() => {
+    setSearchQuery(initialSearch);
+    if (initialSearch.trim()) {
+      setListingType('products');
+      setCurrentPage(1);
+    }
+  }, [initialSearch]);
+
+  const handleLocationSelect = (selection: MarketplaceLocationSelection) => {
+    hasUserSelectedLocation.current = true;
+    setLocationSelection(selection);
+  };
+
+  const handleUseMyLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      toast.error('Location is not supported on this device.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        hasUserSelectedLocation.current = false;
+        setResolveParams({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      () => {
+        toast.error(
+          'We could not access your location. Pick a city or area instead.',
+        );
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 10 * 60 * 1000 },
+    );
+  };
+
+  const activeScope = useMemo(() => {
+    if (locationSelection.level === 'near') {
+      return resolvedLocation?.scope
+        ? {
+            type: resolvedLocation.scope.type,
+            id: resolvedLocation.scope.id,
+            name: resolvedLocation.scope.name,
+          }
+        : null;
+    }
+    if (locationSelection.level === 'all') return null;
+    return {
+      type: locationSelection.level,
+      id: locationSelection.id,
+      name: locationSelection.name,
+    };
+  }, [locationSelection, resolvedLocation]);
+
+  const locationParams = useMemo(() => {
+    if (!activeScope) return {};
+    return {
+      locationType: activeScope.type,
+      locationId: activeScope.id,
+      locationName: activeScope.name,
+      nearLocalMallId: resolvedLocation?.hierarchy.localMall?.id,
+      nearHighStreetId: resolvedLocation?.hierarchy.highStreet?.id,
+      nearBoroughId: resolvedLocation?.hierarchy.borough?.id,
+    };
+  }, [activeScope, resolvedLocation]);
+
   // Data Fetching: Landing Page
   const { data: publicData, isLoading: isPublicDataLoading } =
-    useGetMarketplacePublic({ initialData: initialPublicData });
+    useGetMarketplacePublic(locationParams, {
+      initialData: activeScope ? undefined : initialPublicData,
+    });
 
   const heroSlides = useMemo(() => publicData?.heroSlides || [], [publicData]);
   const sidebarBanners = useMemo(
@@ -136,6 +331,7 @@ export default function MarketplaceClient({
     category: selectedCategoryId || undefined,
     minPrice: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
     maxPrice: filters.priceRange[1] < 5000 ? filters.priceRange[1] : undefined,
+    ...locationParams,
   };
 
   // Fetch "New Products" specifically for the "All" view
@@ -145,6 +341,7 @@ export default function MarketplaceClient({
     !searchQuery &&
     !selectedCategoryId &&
     !filters.minRating &&
+    !activeScope &&
     filters.priceRange[0] === 0 &&
     filters.priceRange[1] === 5000;
 
@@ -386,6 +583,16 @@ export default function MarketplaceClient({
     setCurrentPage(1);
   };
 
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    // The "All" dashboard has no result grid, so start with products as soon
+    // as the shopper searches. They can switch to the other tabs afterwards.
+    if (value.trim() && listingType === 'all') {
+      setListingType('products');
+      setCurrentPage(1);
+    }
+  };
+
   const renderBanner = (banner: SidebarBanner, index: number) => {
     const isFlash = banner.type === 'flash_sale';
 
@@ -474,40 +681,50 @@ export default function MarketplaceClient({
     );
   };
 
-  // Helper to render the appropriate card based on item type
+  // Helper to render the appropriate card based on the listing type.
+  // The explicit type is important: a product can legitimately be in a
+  // category like "Financial Services", which must not turn it into a service
+  // card. Category/link inference is only a fallback for legacy callers.
   const renderItemCard = (
     item: PromotionalItem,
     mode: 'grid' | 'list' = 'grid',
+    listingTypeHint?: ListingType,
   ) => {
     const category = item.category?.toLowerCase() || '';
     const link = item.link || '';
 
-    // Detect item type and render appropriate card
-    if (
-      category.includes('voucher') ||
-      link.includes('/vouchers/') ||
-      category.includes('coupon') ||
-      link.includes('/coupons/')
-    ) {
-      const type =
-        category.includes('coupon') || link.includes('/coupons/')
-          ? 'coupons'
-          : 'vouchers';
-      return (
-        <VoucherCard key={item.id} voucher={item} viewMode={mode} type={type} />
-      );
-    }
+    const resolvedType: ListingType | null =
+      listingTypeHint && listingTypeHint !== 'all'
+        ? listingTypeHint
+        : category.includes('voucher') || link.includes('/vouchers/')
+          ? 'vouchers'
+          : category.includes('coupon') || link.includes('/coupons/')
+            ? 'coupons'
+            : category.includes('gift') || link.includes('/gift-cards/')
+              ? 'gift-cards'
+              : category.includes('service') || link.includes('/services/')
+                ? 'services'
+                : 'products';
 
-    if (category.includes('gift') || link.includes('/gift-cards/')) {
-      return <GiftCardCard key={item.id} giftCard={item} viewMode={mode} />;
+    switch (resolvedType) {
+      case 'vouchers':
+      case 'coupons':
+        return (
+          <VoucherCard
+            key={item.id}
+            voucher={item}
+            viewMode={mode}
+            type={resolvedType}
+          />
+        );
+      case 'gift-cards':
+        return <GiftCardCard key={item.id} giftCard={item} viewMode={mode} />;
+      case 'services':
+        return <ServiceCard key={item.id} service={item} viewMode={mode} />;
+      case 'products':
+      default:
+        return <ProductCard key={item.id} product={item} viewMode={mode} />;
     }
-
-    if (category.includes('service') || link.includes('/services/')) {
-      return <ServiceCard key={item.id} service={item} viewMode={mode} />;
-    }
-
-    // Default to ProductCard
-    return <ProductCard key={item.id} product={item} viewMode={mode} />;
   };
 
   // Reusable Component for "All" View Sections
@@ -552,7 +769,7 @@ export default function MarketplaceClient({
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
             {displayItems
               .slice(0, 5)
-              .map((item) => renderItemCard(item, 'grid'))}
+              .map((item) => renderItemCard(item, 'grid', type))}
           </div>
         </div>
       </div>
@@ -682,7 +899,7 @@ export default function MarketplaceClient({
               placeholder="Search products, services, vouchers..."
               className="pl-12 h-12 bg-white border-gray-200 rounded-full text-base focus-visible:ring-orange-500 shadow-sm"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
             />
           </div>
 
@@ -708,6 +925,31 @@ export default function MarketplaceClient({
                 {label}
               </button>
             ))}
+          </div>
+
+          {/* Location filter — sits with the type filters, like Amazon/Jumia */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <MarketplaceLocationPicker
+              selection={locationSelection}
+              resolved={resolvedLocation}
+              isResolving={isResolvingLocation}
+              onSelect={handleLocationSelect}
+              onUseMyLocation={handleUseMyLocation}
+            />
+            {activeScope && (
+              <button
+                type="button"
+                onClick={() =>
+                  handleLocationSelect({
+                    level: 'all',
+                    name: 'All locations',
+                  })
+                }
+                className="rounded-full px-3 py-2 text-xs font-semibold text-gray-500 hover:bg-white hover:text-orange-600"
+              >
+                Clear location
+              </button>
+            )}
           </div>
         </div>
 
@@ -861,7 +1103,7 @@ export default function MarketplaceClient({
                       placeholder={`Search ${listingType.replace('-', ' ')}...`}
                       className="pl-9 bg-gray-50 border-gray-200 focus-visible:ring-primary"
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => handleSearchChange(e.target.value)}
                     />
                   </div>
 
@@ -928,6 +1170,14 @@ export default function MarketplaceClient({
                     <span className="font-semibold text-primary capitalize">
                       {listingType.replace('-', ' ')}
                     </span>
+                    {activeScope && (
+                      <>
+                        {' '}in{' '}
+                        <span className="font-semibold text-gray-900">
+                          {activeScope.name}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -997,18 +1247,26 @@ export default function MarketplaceClient({
                         No items found
                       </h3>
                       <p className="text-gray-500">
-                        {filters.categories.length > 0
-                          ? 'No items found in this category.'
-                          : 'No featured items available right now.'}
+                        {activeScope
+                          ? `No featured items in ${activeScope.name}.`
+                          : filters.categories.length > 0
+                            ? 'No items found in this category.'
+                            : 'No featured items available right now.'}
                       </p>
                       <Button
                         variant="link"
                         className="mt-2 text-primary"
-                        onClick={() =>
-                          handleFilterChange({ ...filters, categories: [] })
-                        }
+                        onClick={() => {
+                          handleFilterChange({ ...filters, categories: [] });
+                          if (activeScope) {
+                            handleLocationSelect({
+                              level: 'all',
+                              name: 'All locations',
+                            });
+                          }
+                        }}
                       >
-                        Clear filters
+                        {activeScope ? 'Show all locations' : 'Clear filters'}
                       </Button>
                     </div>
                   )}
@@ -1033,7 +1291,9 @@ export default function MarketplaceClient({
                         : 'flex flex-col gap-4'
                     }
                   >
-                    {displayItems.map((item) => renderItemCard(item, viewMode))}
+                    {displayItems.map((item) =>
+                      renderItemCard(item, viewMode, listingType),
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
@@ -1044,9 +1304,11 @@ export default function MarketplaceClient({
                       No {listingType.replace('-', ' ')} found
                     </h3>
                     <p className="text-gray-500">
-                      {filters.categories.length > 0
-                        ? 'No results in this category.'
-                        : 'Try adjusting your search or filters.'}
+                      {activeScope
+                        ? `No ${listingType.replace('-', ' ')} found in ${activeScope.name}.`
+                        : filters.categories.length > 0
+                          ? 'No results in this category.'
+                          : 'Try adjusting your search or filters.'}
                     </p>
                     <Button
                       variant="link"
@@ -1054,9 +1316,15 @@ export default function MarketplaceClient({
                       onClick={() => {
                         setSearchQuery('');
                         handleFilterChange({ ...filters, categories: [] });
+                        if (activeScope) {
+                          handleLocationSelect({
+                            level: 'all',
+                            name: 'All locations',
+                          });
+                        }
                       }}
                     >
-                      Clear all filters
+                      {activeScope ? 'Show all locations' : 'Clear all filters'}
                     </Button>
                   </div>
                 )}

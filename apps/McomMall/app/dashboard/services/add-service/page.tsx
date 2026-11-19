@@ -543,7 +543,7 @@ function AddServicePageContent() {
   }, []);
 
   return (
-    <div className="font-sans min-h-screen bg-gray-50/50 pb-24 sm:pb-32">
+    <div className="font-sans min-h-screen bg-gray-50/50 pb-48 md:pb-32">
       <ProductStatusModal
         isOpen={showSuccessDialog}
         onClose={() => {
@@ -576,7 +576,7 @@ function AddServicePageContent() {
         }}
       />
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-3 py-6 sm:px-4 sm:py-8">
         <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 sm:mb-8 gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-[#f48c25]">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -618,21 +618,25 @@ function AddServicePageContent() {
 
           <div className="flex justify-between items-center relative z-10 mb-2">
             {STEPS.map((step) => (
-              <div
+              <button
                 key={step.id}
-                className="flex flex-col items-center cursor-pointer group"
+                type="button"
+                aria-label={`Go to step ${step.id}: ${step.name}`}
+                aria-current={currentStep === step.id ? 'step' : undefined}
+                title={step.name}
+                className="group flex flex-col items-center cursor-pointer focus-visible:outline-none"
                 onClick={() => goToStep(step.id)}
               >
                 <div
-                  className={`w-7 h-7 sm:w-12 sm:h-12 text-[10px] sm:text-base rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all duration-300 ${
+                  className={`w-10 h-10 sm:w-12 sm:h-12 text-xs sm:text-base rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-[#f48c25] group-focus-visible:ring-offset-2 ${
                     currentStep >= step.id
-                      ? 'bg-[#f48c25] text-white scale-110 shadow-lg shadow-[#f48c25]/30'
+                      ? 'bg-[#f48c25] text-white sm:scale-110 shadow-lg shadow-[#f48c25]/30'
                       : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
                   }`}
                 >
                   {step.label}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -683,14 +687,14 @@ function AddServicePageContent() {
               </div>
 
               <footer className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 md:p-6 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
-                <div className="max-w-5xl mx-auto flex flex-row gap-2 md:gap-4 justify-between items-center w-full">
+                <div className="max-w-5xl mx-auto grid grid-cols-2 gap-2 w-full md:flex md:flex-row md:items-center md:gap-4">
                   <button
                     type="button"
                     onClick={prevStep}
                     disabled={currentStep === 1 || isBusy || isNavigating}
-                    className="flex-1 md:flex-none px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-200 text-gray-700 font-semibold flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                    className="order-3 md:order-1 md:flex-none px-3 sm:px-6 py-3 rounded-lg border border-gray-200 text-gray-700 font-semibold flex justify-center items-center gap-1 sm:gap-2 text-sm sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-gray-50 transition-colors"
                   >
-                    <ArrowLeft size={16} className="hidden sm:block" />
+                    <ArrowLeft size={16} />
                     Back
                   </button>
 
@@ -698,7 +702,9 @@ function AddServicePageContent() {
                     type="button"
                     onClick={handleSaveDraft}
                     disabled={isBusy || isNavigating}
-                    className="flex-1 md:flex-none md:ml-auto px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-200 bg-white text-[#f48c25] font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap hover:bg-orange-50 transition-colors disabled:opacity-50"
+                    className={`order-1 md:order-2 md:ml-auto md:flex-none px-3 sm:px-6 py-3 rounded-lg border border-gray-200 bg-white text-[#f48c25] font-semibold flex justify-center items-center text-sm sm:text-base whitespace-nowrap hover:bg-orange-50 transition-colors disabled:opacity-50 ${
+                      isHybridFlow ? '' : 'col-span-2 md:col-span-1'
+                    }`}
                   >
                     {isSavingDraft ? 'Saving...' : 'Save Draft'}
                   </button>
@@ -719,7 +725,7 @@ function AddServicePageContent() {
                         localStorage.setItem('hybridSkippedServices', 'true');
                         router.push('/dashboard');
                       }}
-                      className="flex-1 md:flex-none px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-200 bg-white text-gray-500 font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap hover:bg-gray-50 transition-colors"
+                      className="order-2 md:order-3 md:flex-none px-3 sm:px-6 py-3 rounded-lg border border-gray-200 bg-white text-gray-500 font-semibold flex justify-center items-center text-sm sm:text-base whitespace-nowrap hover:bg-gray-50 transition-colors"
                     >
                       Skip
                     </button>
@@ -730,16 +736,16 @@ function AddServicePageContent() {
                       type="button"
                       onClick={nextStep}
                       disabled={isBusy || isNavigating}
-                      className="flex-1 md:flex-none px-1 sm:px-8 py-2.5 sm:py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-[#d4791c] transition-colors"
+                      className="order-4 md:order-4 md:flex-none px-3 sm:px-8 py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-sm sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-[#d4791c] transition-colors"
                     >
-                      Continue{' '}
-                      <ArrowRight size={16} className="hidden sm:block" />
+                      Continue
+                      <ArrowRight size={16} />
                     </button>
                   ) : (
                     <button
                       type="submit"
                       disabled={isBusy || isNavigating}
-                      className="flex-1 md:flex-none px-1 sm:px-8 py-2.5 sm:py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-[#d4791c] transition-colors"
+                      className="order-4 md:order-4 md:flex-none px-3 sm:px-8 py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-sm sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-[#d4791c] transition-colors"
                     >
                       {isUploading ? (
                         'Uploading...'

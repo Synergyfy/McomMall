@@ -29,6 +29,10 @@ import { PublishSpareCapacityDto } from './dto/publish-spare-capacity.dto';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { ActivitiesService } from '../activities/activities.service';
 import { SearchServiceDto } from './dto/search-service.dto';
+import {
+  applyBusinessLocationFilter,
+  applyBusinessNearOrder,
+} from '../geography/location-filter.util';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import {
   ActionType,
@@ -999,6 +1003,7 @@ export class ServicesService {
 
     queryBuilder
       .leftJoinAndSelect('service.business', 'business')
+      .leftJoin('business.location', 'businessLocation')
       .where('service.approvalStatus = :approvalStatus', {
         approvalStatus: ApprovalStatus.APPROVED,
       })
@@ -1029,8 +1034,17 @@ export class ServicesService {
       );
     }
 
+    applyBusinessLocationFilter(
+      queryBuilder,
+      'business',
+      searchDto,
+      'loc',
+      'businessLocation',
+    );
+    applyBusinessNearOrder(queryBuilder, 'business', searchDto);
+
     queryBuilder
-      .orderBy('service.created_at', 'DESC')
+      .addOrderBy('service.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

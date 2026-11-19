@@ -28,6 +28,10 @@ import { UpdateVoucherProductDto } from './dto/update-voucher-product.dto';
 import { RedeemVoucherDto } from './dto/redeem-voucher.dto';
 import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
+import {
+  applySellerLocationFilter,
+  applySellerNearOrder,
+} from '../geography/location-filter.util';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
@@ -36,6 +40,7 @@ import {
   PaymentMethod,
 } from '../order/entities/order-payment.entity';
 import { Order } from '../order/entities/order.entity';
+import { OrderStatus } from '../order/enums/order-status.enum';
 import { InitiateVoucherPurchaseDto } from './dto/initiate-voucher-purchase.dto';
 import { VerifyVoucherPurchaseDto } from './dto/verify-voucher-purchase.dto';
 import { InitiateReloadDto } from './dto/initiate-reload.dto';
@@ -106,8 +111,33 @@ export class VoucherService {
       throw new NotFoundException(`User with ID "${userId}" not found.`);
     }
 
+    const fixedAmounts = Array.isArray(createDto.fixedAmounts)
+      ? createDto.fixedAmounts.filter((amount) => Number(amount) > 0)
+      : [];
+    const allowCustomAmount = createDto.allowCustomAmount === true;
+    if (fixedAmounts.length === 0 && !allowCustomAmount) {
+      throw new BadRequestException(
+        'Add at least one fixed amount or allow a custom amount so customers can buy this voucher.',
+      );
+    }
+    if (
+      allowCustomAmount &&
+      (Number(createDto.minCustomAmount) <= 0 ||
+        Number(createDto.maxCustomAmount) <= 0)
+    ) {
+      throw new BadRequestException(
+        'Custom amount vouchers need a positive minimum and maximum.',
+      );
+    }
+
     const newProduct = this.voucherProductRepository.create({
       ...stripModerationFields({ ...createDto } as Record<string, any>),
+      fixedAmounts,
+      allowCustomAmount,
+      // Merchant vouchers are stored-value products. Percentage/currency
+      // discount products belong to the coupon/discount engine instead.
+      valueType: createDto.valueType || 'fixed',
+      value: createDto.value ?? 0,
       user,
       // New merchant voucher products wait for admin approval; admin-authored
       // products are immediately usable.
@@ -353,6 +383,8 @@ export class VoucherService {
       userId,
       idempotencyKey: `voucher-${product.id}-${userId}-${crypto.randomUUID()}`,
       description: 'MCOM Mall voucher purchase',
+      returnUrl: initiateDto.returnUrl,
+      cancelUrl: initiateDto.cancelUrl,
     };
 
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
@@ -552,6 +584,7 @@ export class VoucherService {
           user: { id: userId } as User,
           total: amount,
           payment: savedPayment,
+          status: OrderStatus.COMPLETED,
         });
         const savedOrder = await orderRepo.save(newOrder);
 
@@ -947,6 +980,7 @@ export class VoucherService {
         user: { id: userId } as User,
         total: amount,
         payment: savedPayment,
+        status: OrderStatus.COMPLETED,
       });
       const savedOrder = await orderRepo.save(newOrder);
 
@@ -2178,8 +2212,21 @@ export class VoucherService {
       });
     }
 
+    applySellerLocationFilter(
+      queryBuilder,
+      'voucherProduct',
+      'userId',
+      searchDto,
+    );
+    applySellerNearOrder(
+      queryBuilder,
+      'voucherProduct',
+      'userId',
+      searchDto,
+    );
+
     queryBuilder
-      .orderBy('voucherProduct.createdAt', 'DESC')
+      .addOrderBy('voucherProduct.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { redirectToMcomSolutionsLogin } from '@/service/auth/hook';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import UserNav from '@/components/UserNav';
 
 const SLIDES = [
   {
@@ -28,9 +27,14 @@ const SLIDES = [
 export default function RootLandingPage() {
   const router = useRouter();
   const { accessToken } = useSelector((state: RootState) => state.auth);
+  const [mounted, setMounted] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -41,9 +45,12 @@ export default function RootLandingPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
+    const query = searchQuery.trim();
+    router.push(
+      query
+        ? `/marketplace?search=${encodeURIComponent(query)}`
+        : '/marketplace',
+    );
   };
 
   // Smooth scroll to selection section
@@ -56,17 +63,6 @@ export default function RootLandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans flex flex-col selection:bg-orange-500 selection:text-white">
-      {/* Minimal Header */}
-      <header className="w-full flex items-center justify-between px-6 py-4 md:px-12 md:py-6 relative z-10 bg-white shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center shadow-md">
-            <span className="text-white font-bold text-sm">M</span>
-          </div>
-          <span className="text-xl md:text-2xl font-black tracking-tight text-slate-800">MCOM</span>
-        </div>
-        {accessToken ? <UserNav /> : null}
-      </header>
-
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center pb-12 w-full max-w-7xl mx-auto px-0 sm:px-6 md:px-8">
         
@@ -192,20 +188,22 @@ export default function RootLandingPage() {
               Search
             </button>
           </form>
-          <div className="flex gap-4">
-            <button
-              onClick={() => router.push('/getstarted')}
-              className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/10 transition-all active:scale-95"
-            >
-              Get Started
-            </button>
-            <button
-              onClick={() => redirectToMcomSolutionsLogin()}
-              className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-slate-900/10 transition-all active:scale-95"
-            >
-              Login
-            </button>
-          </div>
+          {mounted && !accessToken && (
+            <div className="flex gap-4">
+              <button
+                onClick={() => router.push('/getstarted')}
+                className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/10 transition-all active:scale-95"
+              >
+                Get Started
+              </button>
+              <button
+                onClick={() => redirectToMcomSolutionsLogin()}
+                className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-slate-900/10 transition-all active:scale-95"
+              >
+                Login
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Explain MCOM Section */}

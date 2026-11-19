@@ -53,15 +53,27 @@ export default function VoucherTabContent({
     setIsPurchaseModalOpen(true);
   };
 
+  const isPurchasable = (product: VoucherProduct) =>
+    (product.fixedAmounts?.length ?? 0) > 0 || product.allowCustomAmount === true;
+
+  const priceLabel = (product: VoucherProduct) => {
+    if (product.fixedAmounts?.length) {
+      return `${CURRENCY}${Math.min(...product.fixedAmounts)}`;
+    }
+    if (product.allowCustomAmount && product.minCustomAmount) {
+      return `From ${CURRENCY}${product.minCustomAmount}`;
+    }
+    return 'Not available';
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {voucherProducts.map((product, index) => (
+        {voucherProducts.map((product) => (
           <motion.div
             key={product.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
             className="group relative aspect-[1.58/1]"
           >
              <div className="absolute inset-0 bg-[#F5F5F5] rounded-[2.5rem] p-8 flex flex-col justify-between border-2 border-dashed border-gray-200 group-hover:border-[#f58220] transition-all overflow-hidden">
@@ -82,13 +94,14 @@ export default function VoucherTabContent({
                 <div className="flex items-center justify-between mt-auto">
                    <div className="flex flex-col">
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Starting From</span>
-                      <p className="text-3xl font-black text-gray-900">{CURRENCY}{product.fixedAmounts?.[0] || '10'}</p>
+                      <p className="text-3xl font-black text-gray-900">{priceLabel(product)}</p>
                    </div>
-                   <Button 
+                   <Button
                     onClick={() => handleBuyNow(product)}
-                    className="h-14 px-10 bg-black text-white hover:bg-[#f58220] font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-black/10"
+                    disabled={!isPurchasable(product)}
+                    className="h-14 px-10 bg-black text-white hover:bg-[#f58220] font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-black/10 disabled:cursor-not-allowed disabled:opacity-50"
                    >
-                     Buy Now
+                     {isPurchasable(product) ? 'Buy Now' : 'Unavailable'}
                    </Button>
                 </div>
 

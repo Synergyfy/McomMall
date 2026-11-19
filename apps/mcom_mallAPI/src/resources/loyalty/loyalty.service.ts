@@ -17,10 +17,14 @@ import {
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { Product } from '../product/entities/product.entity';
+import { Service } from '../services/entities/service.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
 import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 import { LoyaltyRule } from './entities/loyalty-rule.entity';
-import { LoyaltySettings, LoyaltyTier } from './entities/loyalty-settings.entity';
+import {
+  LoyaltySettings,
+  LoyaltyTier,
+} from './entities/loyalty-settings.entity';
 import { LoyaltyEarningConfig } from './entities/loyalty-earning-config.entity';
 import { LoyaltyMembership } from './entities/loyalty-membership.entity';
 import {
@@ -59,6 +63,10 @@ export class LoyaltyService {
     private readonly earningConfigRepository: Repository<LoyaltyEarningConfig>,
     @InjectRepository(LoyaltyMembership)
     private readonly membershipRepository: Repository<LoyaltyMembership>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
+    @InjectRepository(Service)
+    private readonly serviceRepository: Repository<Service>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -312,6 +320,71 @@ export class LoyaltyService {
 
     const isConfigured = config?.isConfigured === true;
 
+    // Only published, customer-visible items can ever earn points, so those
+    // are the only ones worth listing on the public programme summary.
+    const [products, services] = await Promise.all([
+      config?.earnOnProducts
+        ? this.productRepository.find({
+            where: {
+              business: { id: businessId },
+              approvalStatus: ApprovalStatus.APPROVED,
+              productStatus: 'published',
+              visibility: 'public',
+              adminDisabled: false,
+            },
+            select: ['id', 'title'],
+            order: { title: 'ASC' },
+          })
+        : Promise.resolve([]),
+      config?.earnOnServices
+        ? this.serviceRepository.find({
+            where: {
+              businessId,
+              approvalStatus: ApprovalStatus.APPROVED,
+              status: 'published',
+              isActive: true,
+              adminDisabled: false,
+            },
+            select: ['id', 'name'],
+            order: { name: 'ASC' },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const eligibleProducts = products
+      .filter((product) =>
+        this.isItemEligibleForPoints(
+          product.id,
+          config?.includedProductIds,
+          config?.excludedProductIds,
+          config?.productPointOverrides,
+        ),
+      )
+      .map((product) => ({
+        id: product.id,
+        name: product.title,
+        customPoints:
+          this.findPointOverride(config?.productPointOverrides, product.id) ??
+          null,
+      }));
+
+    const eligibleServices = services
+      .filter((service) =>
+        this.isItemEligibleForPoints(
+          service.id,
+          config?.includedServiceIds,
+          config?.excludedServiceIds,
+          config?.servicePointOverrides,
+        ),
+      )
+      .map((service) => ({
+        id: service.id,
+        name: service.name,
+        customPoints:
+          this.findPointOverride(config?.servicePointOverrides, service.id) ??
+          null,
+      }));
+
     return {
       businessId,
       programName: settings?.programName || 'Loyalty & Rewards',
@@ -328,6 +401,8 @@ export class LoyaltyService {
       minSpend: config?.minSpend ?? null,
       isJoined: !!membership,
       memberCount,
+      eligibleProducts,
+      eligibleServices,
     };
   }
 
@@ -396,6 +471,40 @@ export class LoyaltyService {
       return false;
     }
     return !(excluded ?? []).includes(itemId);
+  }
+
+  /**
+   * Custom points take precedence over the include/exclude lists, matching
+   * how points are awarded after an order or booking completes.
+   */
+  private isItemEligibleForPoints(
+    itemId: string,
+    included: string[] | null | undefined,
+    excluded: string[] | null | undefined,
+    overrides: Record<string, number> | null | undefined,
+  ): boolean {
+    if (this.findPointOverride(overrides, itemId) !== undefined) {
+      return true;
+    }
+    return this.itemEarnsPoints(itemId, included, excluded);
+  }
+
+  /**
+   * Looks up a custom point override for an item. Legacy config rows stored
+   * item ids without dashes and in upper case, so compare on a normalised key.
+   */
+  private findPointOverride(
+    overrides: Record<string, number> | null | undefined,
+    itemId: string,
+  ): number | undefined {
+    if (!overrides) return undefined;
+    const target = itemId.replace(/-/g, '').toLowerCase();
+    for (const [key, value] of Object.entries(overrides)) {
+      if (key.replace(/-/g, '').toLowerCase() !== target) continue;
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : undefined;
+    }
+    return undefined;
   }
 
   /**
@@ -472,7 +581,13 @@ export class LoyaltyService {
       for (const item of businessItems) {
         const productId = item.product?.id;
         if (!productId) continue;
+        const override = this.findPointOverride(
+          config.productPointOverrides,
+          productId,
+        );
+        // Custom points take precedence over the include/exclude lists.
         if (
+          override === undefined &&
           !this.itemEarnsPoints(
             productId,
             config.includedProductIds,
@@ -481,10 +596,9 @@ export class LoyaltyService {
         ) {
           continue;
         }
-        const override = config.productPointOverrides?.[productId];
         points +=
-          override !== undefined && override !== null
-            ? Number(override)
+          override !== undefined
+            ? override
             : Math.round(
                 Number(item.price) *
                   Number(item.quantity) *
@@ -572,7 +686,14 @@ export class LoyaltyService {
       return;
     }
 
+    const override = this.findPointOverride(
+      config.servicePointOverrides,
+      booking.service.id,
+    );
+
+    // Custom points take precedence over the include/exclude lists.
     if (
+      override === undefined &&
       !this.itemEarnsPoints(
         booking.service.id,
         config.includedServiceIds,
@@ -589,10 +710,9 @@ export class LoyaltyService {
       return;
     }
 
-    const override = config.servicePointOverrides?.[booking.service.id];
     let points =
-      override !== undefined && override !== null
-        ? Number(override)
+      override !== undefined
+        ? override
         : Math.round(
             Number(booking.totalAmount ?? 0) * (config.pointsPerCurrency ?? 0),
           );

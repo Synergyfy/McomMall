@@ -39,7 +39,13 @@ export const useCreateCouponProduct = () => {
 
 export const useInitiateCouponPurchase = () => {
   return useMutation({
-    mutationFn: (data: { couponProductId: string; amount: number; paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet' }) => {
+    mutationFn: (data: {
+      couponProductId: string;
+      amount: number;
+      paymentMethod: 'stripe' | 'paypal' | 'mcom_wallet';
+      returnUrl?: string;
+      cancelUrl?: string;
+    }) => {
       return api.post('/coupons/initiate-purchase', data);
     },
   });

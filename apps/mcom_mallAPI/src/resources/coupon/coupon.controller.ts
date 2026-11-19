@@ -151,7 +151,13 @@ export class CouponController {
   initiatePurchase(
     @Req() req: AuthenticatedRequest,
     @Body()
-    dto: { couponProductId: string; amount: number; paymentMethod: string },
+    dto: {
+      couponProductId: string;
+      amount: number;
+      paymentMethod: string;
+      returnUrl?: string;
+      cancelUrl?: string;
+    },
   ) {
     return this.couponService.initiateCouponPurchase(dto, req.user.id);
   }

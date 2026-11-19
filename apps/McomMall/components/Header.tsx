@@ -13,7 +13,7 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import { Suspense, useState } from 'react';
-import { NavMenu, menuItems, ListItem } from './NavMenu';
+import { NavMenu, menuItems } from './NavMenu';
 import { usePathname, useRouter } from 'next/navigation';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useSelector } from 'react-redux';
@@ -120,8 +120,7 @@ export default function Header() {
   if (
     pathname?.startsWith('/dashboard') ||
     pathname?.startsWith('/getstarted') ||
-    pathname?.startsWith('/auth/') ||
-    pathname === '/'
+    pathname?.startsWith('/auth/')
   ) {
     return null;
   }

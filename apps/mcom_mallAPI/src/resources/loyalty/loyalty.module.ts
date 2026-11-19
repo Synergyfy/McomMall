@@ -5,6 +5,8 @@ import { Business } from '../listings/entities/listing.entity';
 import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Offer } from '../offer/entities/offer.entity';
+import { Product } from '../product/entities/product.entity';
+import { Service } from '../services/entities/service.entity';
 import { LoyaltyRule } from './entities/loyalty-rule.entity';
 import { LoyaltySettings } from './entities/loyalty-settings.entity';
 import { LoyaltyEarningConfig } from './entities/loyalty-earning-config.entity';
@@ -21,6 +23,8 @@ import { LoyaltyPublicController } from './loyalty-public.controller';
       PointTransaction,
       ServiceBooking,
       Offer,
+      Product,
+      Service,
       LoyaltyRule,
       LoyaltySettings,
       LoyaltyEarningConfig,

@@ -1,9 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { LocationFilterDto } from '../../geography/dto/location-filter.dto';
 
-export class CouponProductSearchDto extends PaginationQueryDto {
+export class CouponProductSearchDto extends LocationFilterDto {
   @ApiPropertyOptional({ description: 'Search by name or description' })
   @IsOptional()
   @IsString()

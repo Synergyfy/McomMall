@@ -455,11 +455,20 @@ export class WalletService {
       ],
     });
 
-    if (!booking || !booking.payment) {
-      throw new NotFoundException('Booking or payment not found.');
+    if (!booking) {
+      throw new NotFoundException('Booking not found.');
     }
 
-    const { amount } = booking.payment;
+    // Bundled service bookings are paid through the parent order and do not
+    // have their own ServicePayment row. Release the amount that was credited
+    // to pending at payment time (providerAmount), falling back to the legacy
+    // payment amount for older rows.
+    const amount = Number(booking.providerAmount || booking.payment?.amount || 0);
+    if (!amount) {
+      throw new BadRequestException(
+        'This booking has no provider amount to release.',
+      );
+    }
     const userId = booking.service.business.user.id;
 
     return this.dataSource.transaction(async (manager) => {

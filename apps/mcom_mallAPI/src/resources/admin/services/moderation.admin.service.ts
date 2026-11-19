@@ -40,6 +40,8 @@ interface ResourceConfig {
   businessPath?: string;
   businessNamePath?: string;
   itemStatus: (entity: any) => string | null;
+  /** Property name for ordering. Most entities use the base `created_at`. */
+  createdAtPath?: string;
   extraWhere?: {
     sql: string;
     params?: Record<string, unknown>;
@@ -121,6 +123,7 @@ export class CatalogModerationService {
       searchColumns: ['voucherProduct.name', 'voucherProduct.description'],
       joins: [{ path: 'voucherProduct.user', alias: 'owner' }],
       ownerPath: 'owner',
+      createdAtPath: 'createdAt',
       itemStatus: (p) =>
         p.isEnabled === false ? 'disabled' : (p.status ?? null),
     },
@@ -131,6 +134,7 @@ export class CatalogModerationService {
       searchColumns: ['couponProduct.name', 'couponProduct.description'],
       joins: [{ path: 'couponProduct.user', alias: 'owner' }],
       ownerPath: 'owner',
+      createdAtPath: 'createdAt',
       itemStatus: (p) => (p.isEnabled ? 'active' : 'inactive'),
     },
     [ModeratedResource.COUPONS]: {
@@ -240,7 +244,7 @@ export class CatalogModerationService {
     }
 
     const [items, total] = await qb
-      .orderBy(`${config.alias}.created_at`, 'DESC')
+      .orderBy(`${config.alias}.${config.createdAtPath ?? 'created_at'}`, 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();

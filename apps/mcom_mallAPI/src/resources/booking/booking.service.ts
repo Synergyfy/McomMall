@@ -969,6 +969,71 @@ export class BookingService {
   }
 
   /**
+   * Price a service that is being booked as part of a product checkout.
+   *
+   * Uses the exact same authoritative calculation as a standalone booking so a
+   * bundled service can never be silently under-charged or drift from the
+   * amount shown to the shopper.
+   */
+  quoteForService(
+    service: Service,
+    startTime: Date | string,
+    endTime: Date | string,
+    options?: {
+      tierId?: string;
+      variantId?: string;
+      quantity?: number;
+      numberOfGuests?: number;
+      addonIds?: string[];
+    },
+  ): {
+    totalAmount: number;
+    commissionAmount: number;
+    providerAmount: number;
+  } {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      end <= start
+    ) {
+      throw new BadRequestException(
+        'A valid start time and a later end time are required for a service booking.',
+      );
+    }
+
+    const addonDetails =
+      options?.addonIds && options.addonIds.length > 0
+        ? options.addonIds
+            .map((id) =>
+              service.configurableAddons?.find((addon) => addon.id === id),
+            )
+            .filter((addon): addon is NonNullable<typeof addon> =>
+              Boolean(addon),
+            )
+            .map((addon) => ({
+              id: addon.id,
+              name: addon.name,
+              price: Number(addon.price),
+            }))
+        : null;
+
+    const draft = {
+      service,
+      startTime: start,
+      endTime: end,
+      tierId: options?.tierId,
+      variantId: options?.variantId,
+      quantity: options?.quantity ?? 1,
+      numberOfGuests: options?.numberOfGuests ?? 1,
+      addonDetails,
+    } as unknown as ServiceBooking;
+
+    return this.calculateBookingPricing(draft);
+  }
+
+  /**
    * Authoritative booking price from the service configuration. Used by both
    * payment initiation and reward eligibility so both agree on the base.
    */
@@ -1728,10 +1793,12 @@ export class BookingService {
               payableAmount,
               currency,
             );
-          // If it's already succeeded or still processing, we can return it (though succeeded should be handled by verify)
+          // If the existing intent is already settled we cannot re-supply a
+          // client secret. Fall through to the idempotent create below, which
+          // replays the same MCOM Pay charge and returns its client secret.
           if (
-            existingIntent.ok ||
-            existingIntent.reason?.includes('status succeeded')
+            existingIntent.ok &&
+            (existingIntent.details as any)?.client_secret
           ) {
             return {
               clientSecret: (existingIntent.details as any).client_secret,
@@ -1751,10 +1818,16 @@ export class BookingService {
           {
             bookingId: booking.id,
             userId,
+            // Verification binds the charge to this booking by reference.
+            // Keep it identical to the reference passed to verify-payment.
+            reference: `booking-${booking.id}`,
             idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
           },
         );
-      booking.paymentIntentId = paymentIntent.id;
+      // `id` is the MCOM Pay charge id. Persist the provider handle (the Stripe
+      // PaymentIntent id) so verify-payment can compare like-for-like.
+      booking.paymentIntentId =
+        (paymentIntent as any).providerRef ?? paymentIntent.id;
       await this.bookingRepository.save(booking);
 
       return {
@@ -1772,6 +1845,7 @@ export class BookingService {
         {
           bookingId: booking.id,
           userId,
+          reference: `booking-${booking.id}`,
           idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
         },
       );
@@ -1859,9 +1933,28 @@ export class BookingService {
       transactionId &&
       booking.paymentIntentId !== transactionId
     ) {
-      throw new BadRequestException(
-        'This payment reference does not belong to this booking.',
-      );
+      // Legacy rows stored the MCOM Pay charge id in `paymentIntentId`, while
+      // the browser sends the Stripe PaymentIntent / PayPal order handle. Allow
+      // that mapping once, then normalise the row to the provider handle.
+      let matchedLegacyCharge = false;
+      if (paymentProvider === PaymentMethod.STRIPE) {
+        try {
+          const charge = await this.paymentProviderService.getMcomCharge(
+            booking.paymentIntentId,
+          );
+          matchedLegacyCharge = charge.providerRef === transactionId;
+        } catch {
+          matchedLegacyCharge = false;
+        }
+      }
+      if (matchedLegacyCharge) {
+        booking.paymentIntentId = transactionId;
+        await this.bookingRepository.save(booking);
+      } else {
+        throw new BadRequestException(
+          'This payment reference does not belong to this booking.',
+        );
+      }
     }
 
     let paidChargeId: string | null = null;
@@ -1874,7 +1967,7 @@ export class BookingService {
       verificationResult =
         await this.paymentProviderService.settleWalletReference(
           transactionId,
-          amount,
+          expectedAmount,
           currency,
           {
             mallUserId: userId,
@@ -1901,9 +1994,13 @@ export class BookingService {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
-          amount,
+          expectedAmount,
           currency,
-          { mallUserId: userId, mcomUserId: booking.user?.centralUserId },
+          {
+            mallUserId: userId,
+            mcomUserId: booking.user?.centralUserId,
+            reference: `booking-${booking.id}`,
+          },
         );
       const details: any = verificationResult.details ?? {};
       paidChargeId = details.id ?? null;
@@ -1915,9 +2012,13 @@ export class BookingService {
       verificationResult =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           transactionId,
-          amount,
+          expectedAmount,
           currency,
-          { mallUserId: userId, mcomUserId: booking.user?.centralUserId },
+          {
+            mallUserId: userId,
+            mcomUserId: booking.user?.centralUserId,
+            reference: `booking-${booking.id}`,
+          },
         );
       const details: any = verificationResult.details ?? {};
       paidChargeId = details.id ?? null;
@@ -2291,7 +2392,17 @@ export class BookingService {
           }
         }
 
-        await this.walletService.releaseBookingPayment(booking.id);
+        // Bundled service bookings do not have their own ServicePayment and
+        // therefore no external transfer. Their pending provider earning was
+        // credited by the parent order; release it once.
+        if (!booking.payment) {
+          if (!booking.payoutProcessed) {
+            await this.walletService.releaseBookingPayment(booking.id);
+            booking.payoutProcessed = true;
+          }
+        } else {
+          await this.walletService.releaseBookingPayment(booking.id);
+        }
       }
 
       return manager.save(booking);

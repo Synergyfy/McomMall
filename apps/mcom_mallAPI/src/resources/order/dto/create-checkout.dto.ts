@@ -73,6 +73,13 @@ class DirectPurchaseDto {
   })
   @IsOptional()
   variant?: Record<string, string>;
+
+  /** Alias used by the storefront and cart payloads. */
+  @ApiPropertyOptional({
+    description: 'Selected variants for the product (alias of `variant`).',
+  })
+  @IsOptional()
+  selectedVariants?: Record<string, string>;
 }
 
 class RewardApplicationDto {

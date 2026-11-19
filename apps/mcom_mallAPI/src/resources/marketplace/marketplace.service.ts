@@ -24,30 +24,73 @@ import { CouponStatus, CouponSourceType } from '../coupon/coupon.enum';
 import { Service } from '../services/entities/service.entity';
 import { BusinessStatus } from '../listings/listing.enum';
 import { ApprovalStatus } from '../../common/moderation/catalog-approval';
+import { LocationFilterDto } from '../geography/dto/location-filter.dto';
+import {
+  applyBusinessLocationFilter,
+  applyBusinessNearOrder,
+  applySellerLocationFilter,
+  applySellerNearOrder,
+  hasLocationFilter,
+} from '../geography/location-filter.util';
 
 @Injectable()
 export class MarketplaceService {
+  /**
+   * Landing-page aggregates are identical for every shopper in the same
+   * location. A 60-second in-process cache turns a high-traffic marketplace
+   * page into one DB round-trip per location per minute instead of five
+   * queries per visit.
+   */
+  private readonly publicViewCache = new Map<
+    string,
+    { expiresAt: number; value: unknown }
+  >();
+
   constructor(private readonly dataSource: DataSource) {}
 
   // --- PUBLIC AGGREGATION ---
 
-  async getPublicView() {
-    const banners = await this.dataSource.manager.find(MarketplaceBanner, {
-      where: { isActive: true },
-      order: { displayOrder: 'ASC' },
+  async getPublicView(location?: LocationFilterDto) {
+    const key = JSON.stringify({
+      type: location?.locationType || null,
+      id: location?.locationId || null,
+      name: location?.locationName || null,
+      mall: location?.nearLocalMallId || null,
+      highStreet: location?.nearHighStreetId || null,
+      borough: location?.nearBoroughId || null,
     });
 
-    const categories = await this.dataSource.manager.find(MarketplaceCategory, {
-      where: { isVisible: true },
-      order: { displayOrder: 'ASC' },
+    const cached = this.publicViewCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+    const value = await this.buildPublicView(location);
+    if (this.publicViewCache.size > 200) this.publicViewCache.clear();
+    this.publicViewCache.set(key, {
+      expiresAt: Date.now() + 60 * 1000,
+      value,
     });
+    return value;
+  }
+
+  private async buildPublicView(location?: LocationFilterDto) {
+    const [banners, categories] = await Promise.all([
+      this.dataSource.manager.find(MarketplaceBanner, {
+        where: { isActive: true },
+        order: { displayOrder: 'ASC' },
+      }),
+      this.dataSource.manager.find(MarketplaceCategory, {
+        where: { isVisible: true },
+        order: { displayOrder: 'ASC' },
+      }),
+    ]);
 
     let sections = await this.dataSource.manager.find(MarketplaceSection, {
       where: { isVisible: true },
-      relations: ['products', 'products.business'],
+      relations: ['products', 'products.business', 'products.business.location'],
     });
 
-    // Filter products within sections: Must be published, public, in stock (if managed), and belong to active business
+    // Filter products within sections: Must be published, public, in stock (if
+    // managed), belong to an active business and match the location filter.
     sections = sections.map((section) => {
       section.products = (section.products || []).filter((p) => {
         const isApproved = p.approvalStatus === ApprovalStatus.APPROVED;
@@ -66,99 +109,21 @@ export class MarketplaceService {
           isPublished &&
           isPublic &&
           inStock &&
-          businessActive
+          businessActive &&
+          this.businessMatchesLocation(p.business, location)
         );
       });
       return section;
     });
 
-    let vouchers = await this.dataSource.manager.find(VoucherProduct, {
-      where: {
-        isEnabled: true,
-        approvalStatus: ApprovalStatus.APPROVED,
-        adminDisabled: false,
-      },
-      relations: ['user', 'user.businesses'],
-      order: { createdAt: 'DESC' },
-    });
-
-    // Filter vouchers: Owner must have at least one published business
-    vouchers = vouchers.filter((v) =>
-      v.user?.businesses?.some((b) => b.status === BusinessStatus.PUBLISHED),
-    );
-    vouchers = vouchers.slice(0, 5);
-
-    let giftCards = await this.dataSource.manager.find(GiftCardTemplate, {
-      where: {
-        isActive: true,
-        approvalStatus: ApprovalStatus.APPROVED,
-        adminDisabled: false,
-      },
-      relations: ['owner', 'owner.businesses'],
-      order: { created_at: 'DESC' },
-    });
-
-    // Filter gift cards: Owner must have at least one published business
-    giftCards = giftCards.filter((gc) =>
-      gc.owner?.businesses?.some((b) => b.status === BusinessStatus.PUBLISHED),
-    );
-    giftCards = giftCards.slice(0, 5);
-
-    let coupons = await this.dataSource.manager.find(Coupon, {
-      where: {
-        status: CouponStatus.ACTIVE,
-        sourceType: CouponSourceType.PLATFORM,
-        approvalStatus: ApprovalStatus.APPROVED,
-        adminDisabled: false,
-      },
-      relations: ['campaign', 'redemptionLogs'],
-      order: { created_at: 'DESC' },
-    });
-
-    // Filter coupons: Must not have reached usage limit
-    coupons = coupons.filter((c) => {
-      if (c.usageLimit <= 0) return true;
-      const redeemedCount = (c.redemptionLogs || []).filter(
-        (log) => log.status === 'redeemed',
-      ).length;
-      return redeemedCount < c.usageLimit;
-    });
-    coupons = coupons.slice(0, 5);
-
-    const services = await this.dataSource.manager.find(Service, {
-      where: {
-        isActive: true,
-        status: 'published',
-        approvalStatus: ApprovalStatus.APPROVED,
-        adminDisabled: false,
-        business: { status: BusinessStatus.PUBLISHED },
-      },
-      relations: ['business'],
-      order: { created_at: 'DESC' },
-      take: 5,
-    });
-
-    let products = await this.dataSource.manager.find(Product, {
-      where: {
-        productStatus: 'published',
-        visibility: 'public',
-        approvalStatus: ApprovalStatus.APPROVED,
-        adminDisabled: false,
-        business: { status: BusinessStatus.PUBLISHED },
-      },
-      relations: ['business'],
-      order: { created_at: 'DESC' },
-    });
-
-    products = products
-      .filter((p) => {
-        const hasBaseStock = !p.enableStockManagement || p.stock > 0;
-        const hasVariationStock =
-          p.variations &&
-          p.variations.some((v) => v.stock > 0 && v.available !== false);
-        return hasBaseStock || hasVariationStock;
-      })
-      .slice(0, 5);
+    const [vouchers, giftCards, coupons, services, products] =
+      await Promise.all([
+        this.findPublicVouchers(location, 5),
+        this.findPublicGiftCards(location, 5),
+        this.findPublicPlatformCoupons(5),
+        this.findPublicServices(location, 5),
+        this.findPublicProducts(location, 5),
+      ]);
 
     return {
       heroSlides: banners.filter((b) => b.type === BannerType.HERO_SLIDE),
@@ -176,6 +141,237 @@ export class MarketplaceService {
       services,
       products,
     };
+  }
+
+  private businessMatchesLocation(
+    business: Record<string, any> | null | undefined,
+    location?: LocationFilterDto,
+  ): boolean {
+    if (!business || !hasLocationFilter(location)) return true;
+
+    const level = location?.locationType;
+    if (!level) return true;
+
+    if (level === 'area') {
+      const areaName = (
+        location?.locationName ||
+        location?.locationId ||
+        ''
+      ).toLowerCase();
+      if (!areaName) return true;
+      return [
+        business.geoCityName,
+        business.geoBoroughName,
+        business.geoHighStreetName,
+        business.geoLocalMallName,
+        business.location?.city,
+        business.location?.resolvedArea,
+      ].some(
+        (value) => String(value || '').toLowerCase() === areaName,
+      );
+    }
+
+    if (level === 'postcode') {
+      const prefix = (
+        location?.locationId ||
+        location?.locationName ||
+        ''
+      )
+        .toUpperCase()
+        .replace(/\s+/g, '');
+      if (!prefix) return true;
+      return String(business.location?.postcode || '')
+        .toUpperCase()
+        .replace(/\s+/g, '')
+        .startsWith(prefix);
+    }
+
+    const columns: Record<string, { id: string; name: string }> = {
+      city: { id: 'geoCityId', name: 'geoCityName' },
+      borough: { id: 'geoBoroughId', name: 'geoBoroughName' },
+      'high-street': { id: 'geoHighStreetId', name: 'geoHighStreetName' },
+      'local-mall': { id: 'geoLocalMallId', name: 'geoLocalMallName' },
+    };
+    const column = columns[level];
+    if (!column) return true;
+
+    if (location?.locationId && business[column.id] === location.locationId) {
+      return true;
+    }
+    if (
+      location?.locationName &&
+      String(business[column.name] || '').toLowerCase() ===
+        location.locationName.toLowerCase()
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  private async findPublicVouchers(
+    location: LocationFilterDto | undefined,
+    limit: number,
+  ) {
+    const query = this.dataSource.manager
+      .createQueryBuilder(VoucherProduct, 'voucherProduct')
+      .leftJoinAndSelect('voucherProduct.user', 'user')
+      .where('voucherProduct.isEnabled = :isEnabled', { isEnabled: true })
+      .andWhere('voucherProduct.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('voucherProduct.adminDisabled = false')
+      .andWhere(
+        `EXISTS (
+          SELECT 1 FROM "businesses" voucher_owner
+          WHERE voucher_owner."userId" = "voucherProduct"."userId"
+            AND voucher_owner."status" = :voucherOwnerStatus
+            AND voucher_owner."deleted_at" IS NULL
+        )`,
+        { voucherOwnerStatus: BusinessStatus.PUBLISHED },
+      );
+
+    applySellerLocationFilter(
+      query,
+      'voucherProduct',
+      'userId',
+      location,
+    );
+    applySellerNearOrder(query, 'voucherProduct', 'userId', location);
+
+    return query
+      .orderBy('voucherProduct.createdAt', 'DESC')
+      .take(limit)
+      .getMany();
+  }
+
+  private async findPublicGiftCards(
+    location: LocationFilterDto | undefined,
+    limit: number,
+  ) {
+    const query = this.dataSource.manager
+      .createQueryBuilder(GiftCardTemplate, 'template')
+      .leftJoinAndSelect('template.owner', 'owner')
+      .where('template.isActive = :isActive', { isActive: true })
+      .andWhere('template.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('template.adminDisabled = false')
+      .andWhere(
+        `EXISTS (
+          SELECT 1 FROM "businesses" gift_owner
+          WHERE gift_owner."userId" = "template"."ownerId"
+            AND gift_owner."status" = :giftOwnerStatus
+            AND gift_owner."deleted_at" IS NULL
+        )`,
+        { giftOwnerStatus: BusinessStatus.PUBLISHED },
+      );
+
+    applySellerLocationFilter(query, 'template', 'ownerId', location);
+    applySellerNearOrder(query, 'template', 'ownerId', location);
+
+    return query
+      .orderBy('template.created_at', 'DESC')
+      .take(limit)
+      .getMany();
+  }
+
+  private async findPublicPlatformCoupons(limit: number) {
+    const coupons = await this.dataSource.manager.find(Coupon, {
+      where: {
+        status: CouponStatus.ACTIVE,
+        sourceType: CouponSourceType.PLATFORM,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
+      relations: ['campaign', 'redemptionLogs'],
+      order: { created_at: 'DESC' },
+      // Only the newest handful are shown; cap the read so a large coupon
+      // catalogue cannot turn the landing page into a full-table scan.
+      take: Math.max(limit * 10, 50),
+    });
+
+    // Platform coupons are platform-wide, so they are not narrowed by
+    // location. Merchant coupons are served by the coupon-products endpoint
+    // and are location-filtered there.
+    return coupons
+      .filter((coupon) => {
+        if (coupon.usageLimit <= 0) return true;
+        const redeemedCount = (coupon.redemptionLogs || []).filter(
+          (log) => log.status === 'redeemed',
+        ).length;
+        return redeemedCount < coupon.usageLimit;
+      })
+      .slice(0, limit);
+  }
+
+  private async findPublicServices(
+    location: LocationFilterDto | undefined,
+    limit: number,
+  ) {
+    const query = this.dataSource.manager
+      .createQueryBuilder(Service, 'service')
+      .leftJoinAndSelect('service.business', 'business')
+      .leftJoin('business.location', 'businessLocation')
+      .where('service.isActive = :isActive', { isActive: true })
+      .andWhere('service.status = :status', { status: 'published' })
+      .andWhere('service.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('service.adminDisabled = false')
+      .andWhere('business.status = :businessStatus', {
+        businessStatus: BusinessStatus.PUBLISHED,
+      });
+
+    applyBusinessLocationFilter(
+      query,
+      'business',
+      location,
+      'loc',
+      'businessLocation',
+    );
+    applyBusinessNearOrder(query, 'business', location);
+
+    return query
+      .orderBy('service.created_at', 'DESC')
+      .take(limit)
+      .getMany();
+  }
+
+  private async findPublicProducts(
+    location: LocationFilterDto | undefined,
+    limit: number,
+  ) {
+    const query = this.dataSource.manager
+      .createQueryBuilder(Product, 'product')
+      .leftJoinAndSelect('product.business', 'business')
+      .leftJoin('business.location', 'businessLocation')
+      .where('product.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('product.productStatus = :status', { status: 'published' })
+      .andWhere('product.visibility = :visibility', { visibility: 'public' })
+      .andWhere('product.adminDisabled = false')
+      .andWhere('business.status = :businessStatus', {
+        businessStatus: BusinessStatus.PUBLISHED,
+      })
+      .andWhere(
+        '(product.enableStockManagement = false OR product.stock > 0 OR (product.variations IS NOT NULL AND jsonb_path_exists(product.variations, :jsonPath)))',
+        { jsonPath: '$[*] ? (@.stock > 0)' },
+      );
+
+    applyBusinessLocationFilter(
+      query,
+      'business',
+      location,
+      'loc',
+      'businessLocation',
+    );
+    applyBusinessNearOrder(query, 'business', location);
+
+    return query
+      .orderBy('product.created_at', 'DESC')
+      .take(limit)
+      .getMany();
   }
 
   // --- BANNERS ---

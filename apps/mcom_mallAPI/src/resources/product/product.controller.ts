@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   Post,
   Body,
   Patch,
@@ -113,6 +114,7 @@ export class ProductController {
 
   @Public()
   @Get('public')
+  @Header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120')
   findAllPublic(
     @Query() searchDto: ProductSearchDto,
   ): Promise<PageDto<Product>> {

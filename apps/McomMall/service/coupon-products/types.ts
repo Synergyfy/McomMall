@@ -17,6 +17,9 @@ export interface CouponProduct {
   createdAt: Date;
   updatedAt: Date;
   user: any; // The business owner
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  adminDisabled?: boolean;
+  reviewNote?: string | null;
 }
 
 export interface CreateCouponProductDto {

@@ -125,10 +125,10 @@ export function Step5Preview({ onEditStep }: Step5PreviewProps) {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <CheckCircle2 className="w-6 h-6 text-primary" />
+      <Card className="gap-4 border-primary/20 bg-primary/5 py-5 sm:gap-6 sm:py-6">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <CheckCircle2 className="w-6 h-6 shrink-0 text-primary" />
             Preview your service
           </CardTitle>
           <CardDescription>
@@ -136,7 +136,7 @@ export function Step5Preview({ onEditStep }: Step5PreviewProps) {
             each section, make any changes, then submit when you are happy.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <div className="flex flex-wrap gap-2">
             <EditButton
               label="Edit Basic Information"
@@ -176,7 +176,7 @@ export function Step5Preview({ onEditStep }: Step5PreviewProps) {
             </span>
           </div>
 
-          <div className="space-y-5 p-6 md:p-8">
+          <div className="space-y-5 p-4 sm:p-6 md:p-8">
             <div className="space-y-2">
               <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 md:text-3xl">
                 {values.name || 'Your service name'}
@@ -267,7 +267,7 @@ export function Step5Preview({ onEditStep }: Step5PreviewProps) {
           </div>
         )}
 
-        <div className="space-y-8 border-t p-6 md:p-8">
+        <div className="space-y-8 border-t p-4 sm:p-6 md:p-8">
           <section className="space-y-3">
             <h3 className="text-lg font-bold text-gray-900">Description</h3>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">

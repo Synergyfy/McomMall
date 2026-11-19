@@ -36,6 +36,7 @@ import { SalesStatsDto } from './dto/sales-stats.dto';
 import { PointsService } from '../transaction/points.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { Offer } from '../offer/entities/offer.entity';
+import { RewardCouponType } from '../offer/offer.enum';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import {
   GiftCard,
@@ -80,6 +81,7 @@ import { McomWalletService } from '../payments/services/mcom-wallet.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
 import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
+import { QuoteCheckoutDto } from './dto/quote-checkout.dto';
 import { UserRole } from '../../common/role.enum';
 import { randomUUID } from 'crypto';
 
@@ -92,6 +94,107 @@ interface AppliedReward {
   rewardType?: string;
   issuerClientId?: string;
   code?: string | null;
+}
+
+export interface CheckoutQuoteItem {
+  productId: string;
+  title: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface CheckoutQuoteServiceBooking {
+  serviceId: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  amount: number;
+}
+
+export interface CheckoutQuote {
+  currency: string;
+  items: CheckoutQuoteItem[];
+  serviceBookings: CheckoutQuoteServiceBooking[];
+  giftCardPurchases: Array<{ businessId: string; amount: number }>;
+  subtotal: number;
+  rewardDiscount: number;
+  offerDiscount: number;
+  couponDiscount: number;
+  priceReducerDiscount: number;
+  shippingFee: number;
+  giftCardApplied: number;
+  voucherApplied: number;
+  moneyVoucherApplied: number;
+  totalBeforeRedemption: number;
+  totalAfterDiscounts: number;
+  totalWithShipping: number;
+  finalAmount: number;
+  applied: {
+    offer: { id: string; name: string } | null;
+    coupon: { code: string } | null;
+    giftCard: { code: string; requested: number; applied: number } | null;
+    voucher: { code: string; requested: number; applied: number } | null;
+    moneyVoucher: {
+      code: string;
+      requested: number;
+      applied: number;
+    } | null;
+    rewards: Array<{
+      issuanceId: string;
+      lineKey: string;
+      discountAmount: number;
+    }>;
+  };
+}
+
+
+interface QuoteResponseInput {
+  isDirectPurchase: boolean;
+  directPurchaseProduct: Product | null;
+  directPurchase?: {
+    productId: string;
+    quantity: number;
+    variant?: Record<string, string>;
+    selectedVariants?: Record<string, string>;
+  };
+  isCartCheckout: boolean;
+  cart: any;
+  productTotal: number;
+  serviceBookingTotal: number;
+  giftCardPurchaseTotal: number;
+  totalBeforeRedemption: number;
+  totalAfterDiscounts: number;
+  rewardDiscountTotal: number;
+  offer: Offer | null;
+  offerDiscount: number;
+  couponAmountToApply: number;
+  appliedCoupon: {
+    id: string;
+    code: string;
+    issuanceId: string | null;
+  } | null;
+  priceReducerAmountToApply: number;
+  estimatedShippingFee: number;
+  totalWithShipping: number;
+  giftCardAmountToApply: number;
+  appliedGiftCard: {
+    id: string;
+    code: string;
+    issuanceId: string | null;
+  } | null;
+  voucherAmountToApply: number;
+  appliedVoucher: {
+    id: string;
+    code: string;
+    issuanceId: string | null;
+  } | null;
+  moneyVoucherAmountToApply: number;
+  finalAmount: number;
+  serviceBookingLines: CheckoutQuoteServiceBooking[];
+  giftCardPurchases?: Array<{ businessId: string; amount: number }>;
+  rewardResolution: { applications: AppliedReward[]; total: number };
+  dto: CreateCheckoutDto;
 }
 
 @Injectable()
@@ -191,6 +294,153 @@ export class OrderService {
     userId: string,
     createCheckoutDto: CreateCheckoutDto,
   ): Promise<Order> {
+    return (await this.resolveCheckout(userId, createCheckoutDto, {
+      dryRun: false,
+    })) as Order;
+  }
+
+  /**
+   * Server-authoritative pricing for the storefront.
+   *
+   * Runs the exact same resolution as checkout but stops before any payment or
+   * order write. The client must use this quote (including scoped-instrument
+   * caps) for the amount it asks the payment provider to charge.
+   */
+  async quote(
+    userId: string,
+    quoteDto: QuoteCheckoutDto,
+  ): Promise<CheckoutQuote> {
+    return (await this.resolveCheckout(
+      userId,
+      {
+        ...quoteDto,
+        payment: {
+          paymentMethod: PaymentMethod.STRIPE,
+          amount: 0,
+        },
+      },
+      { dryRun: true },
+    )) as CheckoutQuote;
+  }
+
+  private buildQuoteResponse(input: QuoteResponseInput): CheckoutQuote {
+    const items: CheckoutQuoteItem[] = [];
+
+    if (
+      input.isDirectPurchase &&
+      input.directPurchaseProduct &&
+      input.directPurchase
+    ) {
+      const unitPrice = this.productService.calculatePrice(
+        input.directPurchaseProduct,
+        input.directPurchase.variant || input.directPurchase.selectedVariants || {},
+      );
+      items.push({
+        productId: input.directPurchaseProduct.id,
+        title: input.directPurchaseProduct.title,
+        quantity: input.directPurchase.quantity,
+        unitPrice,
+        lineTotal: round2(unitPrice * input.directPurchase.quantity),
+      });
+    } else if (input.isCartCheckout) {
+      for (const item of input.cart?.items ?? []) {
+        const unitPrice = this.productService.calculatePrice(
+          item.product,
+          item.selectedVariants || {},
+        );
+        items.push({
+          productId: item.product.id,
+          title: item.product.title,
+          quantity: item.quantity,
+          unitPrice,
+          lineTotal: round2(unitPrice * item.quantity),
+        });
+      }
+    }
+
+    const giftCardRequested = Number(
+      input.dto.giftCardAmount ?? input.giftCardAmountToApply,
+    );
+    const voucherRequested = Number(
+      input.dto.voucherAmount ?? input.voucherAmountToApply,
+    );
+    const moneyVoucherRequested = Number(
+      input.dto.moneyVoucherAmount ?? input.moneyVoucherAmountToApply,
+    );
+
+    return {
+      currency: 'GBP',
+      items,
+      serviceBookings: input.serviceBookingLines,
+      giftCardPurchases: (input.giftCardPurchases ?? []).map((purchase) => ({
+        businessId: purchase.businessId,
+        amount: Number(purchase.amount),
+      })),
+      subtotal: round2(
+        input.productTotal +
+          input.serviceBookingTotal +
+          input.giftCardPurchaseTotal,
+      ),
+      rewardDiscount: round2(input.rewardDiscountTotal),
+      offerDiscount: round2(input.offerDiscount),
+      couponDiscount: round2(input.couponAmountToApply),
+      priceReducerDiscount: round2(input.priceReducerAmountToApply),
+      shippingFee: round2(input.estimatedShippingFee),
+      giftCardApplied: round2(input.giftCardAmountToApply),
+      voucherApplied: round2(input.voucherAmountToApply),
+      moneyVoucherApplied: round2(input.moneyVoucherAmountToApply),
+      totalBeforeRedemption: round2(input.totalBeforeRedemption),
+      totalAfterDiscounts: round2(input.totalAfterDiscounts),
+      totalWithShipping: round2(input.totalWithShipping),
+      finalAmount: round2(input.finalAmount),
+      applied: {
+        offer: input.offer
+          ? { id: input.offer.id, name: input.offer.name }
+          : null,
+        coupon: input.appliedCoupon
+          ? { code: input.appliedCoupon.code }
+          : null,
+        giftCard:
+          input.appliedGiftCard && input.giftCardAmountToApply > 0
+            ? {
+                code: input.appliedGiftCard.code,
+                requested: round2(giftCardRequested),
+                applied: round2(input.giftCardAmountToApply),
+              }
+            : null,
+        voucher:
+          input.appliedVoucher && input.voucherAmountToApply > 0
+            ? {
+                code: input.appliedVoucher.code,
+                requested: round2(voucherRequested),
+                applied: round2(input.voucherAmountToApply),
+              }
+            : null,
+        moneyVoucher:
+          input.dto.moneyVoucherCode &&
+          input.moneyVoucherAmountToApply > 0
+            ? {
+                code: input.dto.moneyVoucherCode,
+                requested: round2(moneyVoucherRequested),
+                applied: round2(input.moneyVoucherAmountToApply),
+              }
+            : null,
+        rewards: (input.rewardResolution?.applications ?? []).map(
+          (application) => ({
+            issuanceId: application.issuanceId,
+            lineKey: application.lineKey,
+            discountAmount: round2(application.discountAmount),
+          }),
+        ),
+      },
+    };
+  }
+
+  private async resolveCheckout(
+    userId: string,
+    createCheckoutDto: CreateCheckoutDto,
+    options: { dryRun: boolean },
+  ): Promise<Order | CheckoutQuote> {
     const {
       directPurchase,
       giftCardPurchases,
@@ -219,6 +469,7 @@ export class OrderService {
 
     let productTotal = 0;
     const productIds: string[] = [];
+    const productOwnerById = new Map<string, string>();
     const earningsPerOwner: Map<string, number> = new Map();
     let businessContextId: string | null = null;
     let directPurchaseProduct: Product | null = null;
@@ -250,11 +501,12 @@ export class OrderService {
 
       const price = this.productService.calculatePrice(
         product,
-        directPurchase.variant || {},
+        directPurchase.variant || directPurchase.selectedVariants || {},
       );
       productTotal = price * directPurchase.quantity;
 
       productIds.push(product.id);
+      productOwnerById.set(product.id, ownerId);
       earningsPerOwner.set(
         ownerId,
         (earningsPerOwner.get(ownerId) || 0) + productTotal,
@@ -284,6 +536,7 @@ export class OrderService {
 
         productTotal += itemTotal;
         productIds.push(item.product.id);
+        productOwnerById.set(item.product.id, ownerId);
         earningsPerOwner.set(
           ownerId,
           (earningsPerOwner.get(ownerId) || 0) + itemTotal,
@@ -291,6 +544,9 @@ export class OrderService {
       }
     }
 
+    let serviceBookingTotal = 0;
+    const serviceBookingLines: CheckoutQuoteServiceBooking[] = [];
+    const serviceById = new Map<string, Service>();
     if (serviceBookings && serviceBookings.length > 0) {
       if (!isDirectPurchase) {
         throw new BadRequestException(
@@ -307,9 +563,15 @@ export class OrderService {
       const serviceIds = serviceBookings.map((b) => b.serviceId);
       const services = await this.entityManager.getRepository(Service).find({
         where: { id: In(serviceIds) },
-        relations: ['business', 'business.user'],
+        relations: [
+          'business',
+          'business.user',
+          'configurableAddons',
+        ],
       });
-      const servicesMap = new Map(services.map((s) => [s.id, s]));
+      for (const service of services) {
+        serviceById.set(service.id, service);
+      }
 
       for (const bookingDetail of serviceBookings) {
         if (!partneredServiceIds.includes(bookingDetail.serviceId)) {
@@ -319,7 +581,7 @@ export class OrderService {
         }
 
         // Validate service business status
-        const service = servicesMap.get(bookingDetail.serviceId);
+        const service = serviceById.get(bookingDetail.serviceId);
         if (
           !service ||
           service.approvalStatus !== ApprovalStatus.APPROVED ||
@@ -331,10 +593,25 @@ export class OrderService {
             `Service with ID ${bookingDetail.serviceId} is not available for booking.`,
           );
         }
-        if (service) {
-          this.validateBusinessAndOwner(service.business);
-        }
+        this.validateBusinessAndOwner(service.business);
+
+        // Bundled service bookings are charged with the product. Use the same
+        // authoritative pricing as standalone bookings so they cannot be free.
+        const pricing = this.bookingService.quoteForService(
+          service,
+          bookingDetail.startTime,
+          bookingDetail.endTime,
+        );
+        serviceBookingTotal += pricing.totalAmount;
+        serviceBookingLines.push({
+          serviceId: service.id,
+          name: service.name,
+          startTime: new Date(bookingDetail.startTime).toISOString(),
+          endTime: new Date(bookingDetail.endTime).toISOString(),
+          amount: pricing.totalAmount,
+        });
       }
+      serviceBookingTotal = round2(serviceBookingTotal);
     }
 
     let giftCardPurchaseTotal = 0;
@@ -371,7 +648,9 @@ export class OrderService {
       }
     }
 
-    const totalBeforeRedemption = productTotal + giftCardPurchaseTotal;
+    const totalBeforeRedemption = round2(
+      productTotal + serviceBookingTotal + giftCardPurchaseTotal,
+    );
 
     // --- MCOM Rewards discount application (per line item) ---
     const rewardLinesBuilt: EligibilityLine[] =
@@ -381,7 +660,7 @@ export class OrderService {
               {
                 productId: directPurchase.productId,
                 quantity: directPurchase.quantity,
-                selectedVariants: directPurchase.variant,
+                selectedVariants: directPurchase.variant || directPurchase.selectedVariants,
               },
             ]
           : isCartCheckout
@@ -410,6 +689,142 @@ export class OrderService {
       cart,
       rewardApplications: rewardResolution.applications,
     });
+    for (const bookingLine of serviceBookingLines) {
+      const service = serviceById.get(bookingLine.serviceId);
+      scopeLines.push({
+        lineKey: `service:${bookingLine.serviceId}`,
+        kind: 'service',
+        id: bookingLine.serviceId,
+        businessId:
+          (service as any)?.businessId ?? service?.business?.id ?? null,
+        unitPrice: bookingLine.amount,
+        quantity: 1,
+        lineTotal: bookingLine.amount,
+        discount: 0,
+      });
+    }
+
+    // --- Loyalty offers (points redemption) -------------------------------
+    // Offers are a discount, not a payment instrument. They must be resolved
+    // before the final amount is calculated, otherwise the storefront can show
+    // a reduced total while the order is created at full price.
+    let offer: Offer | null = null;
+    let offerDiscount = 0;
+    if (createCheckoutDto.offerId) {
+      if (createCheckoutDto.couponCode) {
+        throw new BadRequestException(
+          'A coupon and an offer cannot be combined on the same order.',
+        );
+      }
+
+      offer = await this.offerRepository.findOne({
+        where: { id: createCheckoutDto.offerId },
+        relations: [
+          'user',
+          'includedProducts',
+          'excludedProducts',
+          'freeProduct',
+        ],
+      });
+      if (!offer) throw new NotFoundException('Offer not found');
+      if (
+        offer.approvalStatus !== ApprovalStatus.APPROVED ||
+        offer.adminDisabled ||
+        !offer.isActive
+      ) {
+        throw new BadRequestException('Offer is no longer available.');
+      }
+      if (offer.beginDate && new Date(offer.beginDate) > new Date()) {
+        throw new BadRequestException('Offer has not started yet.');
+      }
+      if (offer.endDate && new Date(offer.endDate) < new Date()) {
+        throw new BadRequestException('Offer has expired.');
+      }
+      if (!offer.user) {
+        throw new NotFoundException('Offer creator not found.');
+      }
+      if (offer.user.id === userId) {
+        throw new BadRequestException(
+          'You cannot redeem an offer from your own business.',
+        );
+      }
+
+      const customer = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if ((customer?.points ?? 0) < offer.points) {
+        throw new BadRequestException(
+          'Insufficient points to redeem this offer.',
+        );
+      }
+
+      const includedIds = new Set(
+        (offer.includedProducts ?? []).map((product) => product.id),
+      );
+      const excludedIds = new Set(
+        (offer.excludedProducts ?? []).map((product) => product.id),
+      );
+      const eligibleLines = scopeLines.filter((line) => {
+        if (line.kind !== 'product') return false;
+        if (productOwnerById.get(line.id) !== offer.user.id) return false;
+        if (excludedIds.has(line.id)) return false;
+        if (includedIds.size > 0 && !includedIds.has(line.id)) return false;
+        return true;
+      });
+      const eligibleSubtotal = round2(
+        eligibleLines.reduce(
+          (sum, line) =>
+            sum + Math.max(0, line.lineTotal - (line.discount ?? 0)),
+          0,
+        ),
+      );
+      if (eligibleSubtotal <= 0) {
+        throw new BadRequestException(
+          'This offer does not apply to any item in the cart.',
+        );
+      }
+
+      switch (offer.rewardCouponType) {
+        case RewardCouponType.FIXED_CART_DISCOUNT:
+          offerDiscount = Math.min(
+            eligibleSubtotal,
+            Number(offer.discountAmount) || 0,
+          );
+          break;
+        case RewardCouponType.PERCENTAGE_DISCOUNT:
+          offerDiscount =
+            (eligibleSubtotal * (Number(offer.discountPercentage) || 0)) / 100;
+          break;
+        case RewardCouponType.FREE_PRODUCTS: {
+          const freeProductId = offer.freeProduct?.id;
+          const freeLine = freeProductId
+            ? eligibleLines.find((line) => line.id === freeProductId)
+            : undefined;
+          if (!freeLine) {
+            throw new BadRequestException(
+              'The free product from this offer is not in the cart.',
+            );
+          }
+          offerDiscount = Math.min(
+            freeLine.unitPrice,
+            Math.max(0, freeLine.lineTotal - (freeLine.discount ?? 0)),
+          );
+          break;
+        }
+        case RewardCouponType.BONUS_POINTS:
+          offerDiscount = 0;
+          break;
+        default:
+          throw new BadRequestException('Invalid offer type.');
+      }
+
+      offerDiscount = round2(
+        Math.min(
+          Math.max(0, offerDiscount),
+          Math.max(0, totalBeforeRedemption - rewardDiscountTotal),
+        ),
+      );
+    }
 
     let couponAmountToApply = 0;
     let couponEligibleSubtotal: number | null = null;
@@ -535,6 +950,7 @@ export class OrderService {
 
     const totalAfterDiscounts = round2(
       totalBeforeRedemption -
+        offerDiscount -
         couponAmountToApply -
         rewardDiscountTotal -
         priceReducerAmountToApply,
@@ -803,6 +1219,41 @@ export class OrderService {
 
     const finalAmount = round2(totalAfterVoucher - moneyVoucherAmountToApply);
 
+    const quoteInput: QuoteResponseInput = {
+      isDirectPurchase,
+      directPurchaseProduct,
+      directPurchase,
+      isCartCheckout,
+      cart,
+      productTotal,
+      serviceBookingTotal,
+      giftCardPurchaseTotal,
+      totalBeforeRedemption,
+      totalAfterDiscounts,
+      rewardDiscountTotal,
+      offer,
+      offerDiscount,
+      couponAmountToApply,
+      appliedCoupon,
+      priceReducerAmountToApply,
+      estimatedShippingFee,
+      totalWithShipping,
+      giftCardAmountToApply,
+      appliedGiftCard,
+      voucherAmountToApply,
+      appliedVoucher,
+      moneyVoucherAmountToApply,
+      finalAmount,
+      serviceBookingLines,
+      giftCardPurchases,
+      rewardResolution,
+      dto: createCheckoutDto,
+    };
+
+    if (options.dryRun) {
+      return this.buildQuoteResponse(quoteInput);
+    }
+
     this.logger.log(
       `[checkout] instruments ${JSON.stringify({
         couponIssuanceId,
@@ -818,11 +1269,20 @@ export class OrderService {
     );
 
     if (
-      createCheckoutDto.payment.amount.toFixed(2) !== finalAmount.toFixed(2)
+      Number(createCheckoutDto.payment.amount).toFixed(2) !==
+      finalAmount.toFixed(2)
     ) {
-      throw new BadRequestException(
-        `The provided payment amount (${createCheckoutDto.payment.amount}) does not match the final total (${finalAmount}).`,
-      );
+      // The quote is authoritative. Returning the refreshed quote lets the
+      // storefront recreate the payment intent for the correct amount instead
+      // of failing with an opaque "prices do not tally" error.
+      throw new ConflictException({
+        error: 'QUOTE_CHANGED',
+        message: `The order total changed from ${Number(
+          createCheckoutDto.payment.amount,
+        ).toFixed(2)} to ${finalAmount.toFixed(2)}. Please review the refreshed total and try again.`,
+        finalAmount,
+        quote: this.buildQuoteResponse(quoteInput),
+      });
     }
 
     const user = await this.userRepository.findOneBy({ id: userId });
@@ -839,7 +1299,6 @@ export class OrderService {
       );
     }
 
-    let offer: Offer | null = null;
     let walletRequested = false;
     let walletTransactionId: string | null = null;
     let paidChargeId: string | null = null;
@@ -893,28 +1352,6 @@ export class OrderService {
         paidNetMinor = details.netMinor ?? null;
       } else if (method !== PaymentMethod.MCOM_WALLET) {
         throw new BadRequestException('Unsupported payment method.');
-      }
-    }
-
-    // Validate offer BEFORE any central debit so a bad offerId can never
-    // strand a successful debit outside the compensating-refund window.
-    if (createCheckoutDto.offerId) {
-      offer = await this.offerRepository.findOne({
-        where: { id: createCheckoutDto.offerId },
-        relations: ['user'],
-      });
-      if (!offer) throw new NotFoundException('Offer not found');
-      if (
-        offer.approvalStatus !== ApprovalStatus.APPROVED ||
-        offer.adminDisabled ||
-        !offer.isActive
-      ) {
-        throw new BadRequestException('Offer is no longer available.');
-      }
-      if (offer.user?.id === userId) {
-        throw new BadRequestException(
-          'You cannot redeem an offer from your own business.',
-        );
       }
     }
 
@@ -1040,6 +1477,7 @@ export class OrderService {
           carrierCode,
           estimatedShippingFee,
           rewardDiscountApplied: rewardDiscountTotal,
+          offerDiscountApplied: offerDiscount,
           couponCode:
             couponAmountToApply > 0
               ? (appliedCoupon?.code ?? createCheckoutDto.couponCode ?? null)
@@ -1200,7 +1638,10 @@ export class OrderService {
             order: savedOrder,
             product: directPurchaseProduct,
             quantity: directPurchase.quantity,
-            price: directPurchaseProduct.price,
+            price: this.productService.calculatePrice(
+              directPurchaseProduct,
+              directPurchase.variant || directPurchase.selectedVariants || {},
+            ),
           });
           await manager.save(orderItem);
           savedOrder.items.push(orderItem);
@@ -1233,7 +1674,10 @@ export class OrderService {
               order: savedOrder,
               product: cartItem.product,
               quantity: cartItem.quantity,
-              price: cartItem.product.price,
+              price: this.productService.calculatePrice(
+                cartItem.product,
+                cartItem.selectedVariants || {},
+              ),
             }),
           );
           if (orderItems.length > 0) {
@@ -1311,6 +1755,35 @@ export class OrderService {
                 manager,
                 { skipNotifications: true },
               );
+
+            // Persist the authoritative service price on the booking so the
+            // provider/commission ledgers are not left at zero.
+            const bookedService = serviceById.get(bookingDetail.serviceId);
+            if (bookedService) {
+              const pricing = this.bookingService.quoteForService(
+                bookedService,
+                bookingDetail.startTime,
+                bookingDetail.endTime,
+              );
+              serviceBooking.totalAmount = pricing.totalAmount;
+              serviceBooking.commissionAmount = pricing.commissionAmount;
+              serviceBooking.providerAmount = pricing.providerAmount;
+              await manager.save(serviceBooking);
+
+              const providerId = bookedService.business?.user?.id;
+              if (providerId && pricing.providerAmount > 0) {
+                await this.walletService.creditEarning(
+                  {
+                    userId: providerId,
+                    amount: pricing.providerAmount,
+                    type: WalletTransactionType.EARNING_BOOKING,
+                    description: `Pending payment in escrow for booking #${serviceBooking.id}`,
+                  },
+                  manager,
+                );
+              }
+            }
+
             createdBookingIds.push(serviceBooking.id);
 
             const partnership = partnershipMap.get(bookingDetail.serviceId);
@@ -1547,7 +2020,7 @@ export class OrderService {
   private buildCheckoutScopeLines(params: {
     isDirectPurchase: boolean;
     directPurchaseProduct: Product | null;
-    directPurchase?: { productId: string; quantity: number; variant?: Record<string, string> };
+    directPurchase?: { productId: string; quantity: number; variant?: Record<string, string>; selectedVariants?: Record<string, string> };
     isCartCheckout: boolean;
     cart: any;
     rewardApplications: AppliedReward[];
@@ -1564,7 +2037,9 @@ export class OrderService {
       const product = params.directPurchaseProduct;
       const price = this.productService.calculatePrice(
         product,
-        params.directPurchase.variant || {},
+        params.directPurchase.variant ||
+          params.directPurchase.selectedVariants ||
+          {},
       );
       const quantity = params.directPurchase.quantity;
       scopeLines.push({

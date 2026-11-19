@@ -24,6 +24,9 @@ export interface VoucherProduct {
   expiryDate?: string | null;
   distributionChannels?: string[];
   status?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  adminDisabled?: boolean;
+  reviewNote?: string | null;
 }
 
 export interface InitiateVoucherPurchaseDto {
@@ -34,6 +37,8 @@ export interface InitiateVoucherPurchaseDto {
   recipientEmail?: string;
   personalMessage?: string;
   deliveryDate?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
 }
 
 
@@ -89,6 +94,9 @@ export interface CreateVoucherProductDto {
   expiryDate?: string | null;
   distributionChannels?: string[];
   status?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  adminDisabled?: boolean;
+  reviewNote?: string | null;
 }
 
 export type UpdateVoucherProductDto = Partial<CreateVoucherProductDto>;

@@ -3,9 +3,11 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -39,11 +41,21 @@ import {
   SectionType,
 } from './entities/marketplace-section.entity';
 import { Public } from 'src/common/decorators/public.decorator';
+import { MarketplaceLocationService } from '../geography/marketplace-location.service';
+import { BusinessGeographyService } from '../geography/business-geography.service';
+import { LocationFilterDto, ResolveLocationQueryDto } from '../geography/dto/location-filter.dto';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 @ApiTags('Marketplace Page CMS')
 @Controller('marketplace')
 export class MarketplaceController {
-  constructor(private readonly marketplaceService: MarketplaceService) {}
+  constructor(
+    private readonly marketplaceService: MarketplaceService,
+    private readonly locationService: MarketplaceLocationService,
+    private readonly businessGeography: BusinessGeographyService,
+  ) {}
 
   // ===========================================================================
   // PUBLIC ENDPOINTS
@@ -51,18 +63,79 @@ export class MarketplaceController {
 
   @Public()
   @Get('public')
+  @Header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120')
   @ApiOperation({
     summary: 'Get Marketplace Page Data',
     description:
-      'Returns the fully aggregated configuration for the Marketplace page, including sidebar categories, active hero slides, flash sale settings, and promotional sections. Open to everyone.',
+      'Returns the fully aggregated configuration for the Marketplace page, including sidebar categories, active hero slides, flash sale settings, and promotional sections. Open to everyone. Optional location params filter the featured listings by seller location.',
   })
   @ApiResponse({
     status: 200,
     type: MarketplacePublicViewDto,
     description: 'Aggregated view returned.',
   })
-  async getPublicView() {
-    return this.marketplaceService.getPublicView();
+  async getPublicView(@Query() location: LocationFilterDto) {
+    return this.marketplaceService.getPublicView(location);
+  }
+
+  @Public()
+  @Get('locations')
+  @Header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+  @ApiOperation({
+    summary: 'List marketplace location facets',
+    description:
+      'Returns the City → Borough → High Street → Local Mall tree with a live business count for every node. Cached in-process and safe to call on every marketplace visit.',
+  })
+  async getLocations() {
+    return this.locationService.getFacets();
+  }
+
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('location/resolve')
+  @ApiOperation({
+    summary: 'Resolve the shopper\'s marketplace location',
+    description:
+      'Prefers the Central hierarchy assigned to the signed-in user, then a supplied postcode, then browser coordinates. Coordinates outside the UK resolve to the closest city that has businesses.',
+  })
+  async resolveLocation(
+    @Query() query: ResolveLocationQueryDto,
+    @CurrentUser() user?: User,
+  ) {
+    return this.locationService.resolve({
+      user: user ?? null,
+      postcode: query.postcode ?? null,
+      lat: query.lat ?? null,
+      lng: query.lng ?? null,
+    });
+  }
+
+  @Public()
+  @Get('location/search')
+  @Header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120')
+  @ApiOperation({
+    summary: 'Search marketplace locations by postcode or place name',
+    description:
+      'Accepts a UK postcode, outward code or place name. Postcodes always return an outward-code result backed by local business postcodes, even before the Central hierarchy backfill has run.',
+  })
+  async searchLocation(@Query('q') q?: string) {
+    return this.locationService.search(q || '');
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Post('locations/backfill')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Backfill business geographic hierarchy (Admin)',
+    description:
+      'Resolves Central hierarchy for a batch of UK outcodes and writes it to every business in that outcode. Intended for the initial migration; the scheduled worker does the same automatically.',
+  })
+  async backfillLocations(@Query('batch') batch?: string) {
+    const parsed = Number(batch);
+    return this.businessGeography.backfill(
+      Number.isFinite(parsed) && parsed > 0 ? parsed : 20,
+    );
   }
 
   // ===========================================================================

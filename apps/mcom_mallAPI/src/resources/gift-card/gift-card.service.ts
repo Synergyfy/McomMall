@@ -29,12 +29,17 @@ import {
 } from './entities/gift-card-transaction.entity';
 import { GiftCardTemplate } from './entities/gift-card-template.entity';
 import { GiftCardTheme } from './entities/gift-card-theme.entity';
+import {
+  applySellerLocationFilter,
+  applySellerNearOrder,
+} from '../geography/location-filter.util';
 import { CreateGiftCardThemeDto } from './dto/create-gift-card-theme.dto';
 import { PurchaseGiftCardDto } from './dto/purchase-gift-card.dto';
 import { CheckBalanceResponseDto } from './dto/check-balance-response.dto';
 import { RedeemGiftCardDto } from './dto/redeem-gift-card.dto';
 import { Business } from '../listings/entities/listing.entity';
 import { Order } from '../order/entities/order.entity';
+import { OrderStatus } from '../order/enums/order-status.enum';
 import { GiftCardSettings } from './entities/gift-card-settings.entity';
 import { MailerService } from '@nestjs-modules/mailer';
 import { CreateGiftCardTemplateDto } from './dto/create-gift-card-template.dto';
@@ -452,6 +457,8 @@ export class GiftCardService {
       userId,
       idempotencyKey,
       description: 'MCOM Mall gift card purchase',
+      returnUrl: initiateDto.returnUrl,
+      cancelUrl: initiateDto.cancelUrl,
     };
 
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
@@ -687,6 +694,7 @@ export class GiftCardService {
             user: { id: userId } as User,
             total: amount,
             payment: savedPayment,
+            status: OrderStatus.COMPLETED,
           });
           const savedOrder = await orderRepo.save(newOrder);
 
@@ -1101,6 +1109,7 @@ export class GiftCardService {
         user: { id: userId } as User,
         total: amount,
         payment: savedPayment,
+        status: OrderStatus.COMPLETED,
       });
       const savedOrder = await orderRepo.save(newOrder);
 
@@ -2000,6 +2009,21 @@ export class GiftCardService {
     return this.giftCardAssetService.findAssetsByOwner(template.ownerId);
   }
 
+  /**
+   * Public design assets for an approved template.
+   *
+   * Shoppers must not call the merchant-only endpoint, but they still need the
+   * owner's published designs when personalising a card. Only approved
+   * templates are resolved here, so unapproved/delisted catalog items cannot
+   * leak their assets.
+   */
+  async findPublicAssetsByTemplateId(
+    templateId: string,
+  ): Promise<GiftCardAsset[]> {
+    const template = await this.findTemplateById(templateId);
+    return this.giftCardAssetService.findAssetsByOwner(template.ownerId);
+  }
+
   async findAllGiftCardsForOwner(
     ownerId: string,
     paginationQueryDto: PaginationQueryDto,
@@ -2399,8 +2423,11 @@ export class GiftCardService {
       });
     }
 
+    applySellerLocationFilter(queryBuilder, 'template', 'ownerId', searchDto);
+    applySellerNearOrder(queryBuilder, 'template', 'ownerId', searchDto);
+
     queryBuilder
-      .orderBy('template.created_at', 'DESC')
+      .addOrderBy('template.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

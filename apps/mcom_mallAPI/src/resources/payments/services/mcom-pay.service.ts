@@ -46,6 +46,9 @@ export interface CreateMcomPayChargeInput {
   mcomUserId?: string;
   externalCustomerId?: string;
   metadata?: Record<string, any>;
+  /** PayPal return/cancel URLs supplied by the mall purchase page. */
+  returnUrl?: string;
+  cancelUrl?: string;
   idempotencyKey: string;
 }
 
@@ -286,6 +289,8 @@ export class McomPayService {
       mcomUserId: input.mcomUserId,
       externalCustomerId: input.externalCustomerId,
       metadata: input.metadata,
+      returnUrl: input.returnUrl,
+      cancelUrl: input.cancelUrl,
     };
 
     const result = await this.request<CreateMcomPayChargeResult>(
@@ -485,16 +490,22 @@ export class McomPayService {
         reason: 'Charge belongs to a different MCOM wallet',
       };
     }
-    if (
-      context.reference &&
-      charge.reference &&
-      !charge.reference.startsWith(context.reference)
-    ) {
-      return {
-        ok: false,
-        details: charge,
-        reason: 'Charge does not match this business reference',
-      };
+    if (context.reference && charge.reference) {
+      // Legacy booking charges were created before the `booking-` prefix was
+      // added to the charge metadata, so they start with the raw booking id.
+      const expectedReference = String(context.reference);
+      const legacyReference = expectedReference.replace(/^booking-/, '');
+      const matches =
+        charge.reference.startsWith(expectedReference) ||
+        (legacyReference !== expectedReference &&
+          charge.reference.startsWith(legacyReference));
+      if (!matches) {
+        return {
+          ok: false,
+          details: charge,
+          reason: 'Charge does not match this business reference',
+        };
+      }
     }
 
     return { ok: true, details: charge };

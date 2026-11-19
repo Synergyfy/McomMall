@@ -36,17 +36,17 @@ export function Step4AdditionalInfo() {
         make an informed decision.
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Clock className="w-5 h-5 text-primary" />
+      <Card className="gap-4 overflow-hidden py-5 shadow-sm sm:gap-6 sm:py-6">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Clock className="w-5 h-5 shrink-0 text-primary" />
             Service Duration
           </CardTitle>
           <CardDescription>
             Let customers know how long the service usually takes.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <FormField
             control={control}
             name="duration"
@@ -66,7 +66,7 @@ export function Step4AdditionalInfo() {
                     placeholder="e.g. 60"
                     {...field}
                     value={field.value ?? ''}
-                    className="max-w-xs"
+                    className="w-full sm:max-w-xs"
                   />
                 </FormControl>
                 <FormDescription>
@@ -79,10 +79,10 @@ export function Step4AdditionalInfo() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <HelpCircle className="w-5 h-5 text-primary" />
+      <Card className="gap-4 overflow-hidden py-5 shadow-sm sm:gap-6 sm:py-6">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <HelpCircle className="w-5 h-5 shrink-0 text-primary" />
             Service Conditions
           </CardTitle>
           <CardDescription>
@@ -90,7 +90,7 @@ export function Step4AdditionalInfo() {
             know about.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <FormField
             control={control}
             name="serviceConditions"
@@ -117,17 +117,17 @@ export function Step4AdditionalInfo() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <HelpCircle className="w-5 h-5 text-primary" />
+      <Card className="gap-4 overflow-hidden py-5 shadow-sm sm:gap-6 sm:py-6">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <HelpCircle className="w-5 h-5 shrink-0 text-primary" />
             Frequently Asked Questions
           </CardTitle>
           <CardDescription>
             Answer common questions to reduce back-and-forth before a booking.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-4 sm:px-6">
           {fields.length === 0 && (
             <p className="text-sm text-muted-foreground">
               No questions added yet.

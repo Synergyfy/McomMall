@@ -59,12 +59,11 @@ export default function CouponTabContent({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {couponProducts.map((product, index) => (
+        {couponProducts.map((product) => (
           <motion.div
             key={product.id}
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={false}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1 }}
           >
             <CouponTicketFull
               title={product.name}

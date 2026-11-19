@@ -101,8 +101,26 @@ export function CouponProductCard({ product, onDelete }: CouponProductCardProps)
                     <Clock size={8} /> {product.expiryDays} Days Validity
                   </span>
                 )}
-                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-md">
-                  {product.isEnabled ? 'ACTIVE PRODUCT' : 'INACTIVE'}
+                <span
+                  className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${
+                    product.adminDisabled
+                      ? 'bg-slate-700 text-white'
+                      : product.approvalStatus === 'pending'
+                        ? 'bg-amber-500 text-white'
+                        : product.approvalStatus === 'rejected'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-gray-50 text-gray-400'
+                  }`}
+                >
+                  {product.adminDisabled
+                    ? 'DELISTED'
+                    : product.approvalStatus === 'pending'
+                      ? 'PENDING APPROVAL'
+                      : product.approvalStatus === 'rejected'
+                        ? 'REJECTED'
+                        : product.isEnabled
+                          ? 'ACTIVE PRODUCT'
+                          : 'INACTIVE'}
                 </span>
               </div>
             </div>

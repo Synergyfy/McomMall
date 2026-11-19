@@ -4,8 +4,7 @@ import { useGetBusinessGiftCards } from '@/service/gift-card/hook';
 import { GiftCardTemplate } from '@/service/gift-card/types';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Gift, Zap, ShieldCheck } from 'lucide-react';
+import { Gift, ShieldCheck } from 'lucide-react';
 
 interface GiftCardTabContentProps {
   businessId: string;
@@ -41,13 +40,10 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-      {templates.map((template, index) => (
-        <motion.div
+      {templates.map((template) => (
+        <div
           key={template.id}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: index * 0.1 }}
-          className="group relative aspect-[1.58/1] w-full"
+          className="group relative aspect-[1.58/1] w-full transition-transform duration-300 hover:scale-[1.02]"
         >
           {/* The "Card" Body */}
           <div className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-500 group-hover:scale-[1.02] group-hover:shadow-orange-500/10 border border-white/20">
@@ -106,7 +102,7 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       ))}
     </div>
   );

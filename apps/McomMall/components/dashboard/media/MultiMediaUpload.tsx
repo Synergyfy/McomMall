@@ -156,18 +156,27 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaFiles]);
 
-  const mediaFilesRef = useRef(mediaFiles);
+  // Reconcile files handed back by the parent (e.g. after a form reset or a
+  // restored draft). Previews are owned by this component, so only rebuild
+  // them when the incoming list genuinely differs.
   useEffect(() => {
-    mediaFilesRef.current = mediaFiles;
-  }, [mediaFiles]);
+    const incoming = initialFiles ?? [];
+    setMediaFiles((prev) => {
+      const current = prev.map((mf) => mf.file);
+      const isSame =
+        incoming.length === current.length &&
+        incoming.every((file, index) => file === current[index]);
+      if (isSame) return prev;
 
-  useEffect(() => {
-    // Cleanup object URLs only when the uploader is unmounted. Revoking on
-    // every change broke the previews of files that were still selected.
-    return () => {
-      mediaFilesRef.current.forEach((mf) => URL.revokeObjectURL(mf.previewUrl));
-    };
-  }, []);
+      prev.forEach((mf) => {
+        if (!incoming.includes(mf.file)) {
+          URL.revokeObjectURL(mf.previewUrl);
+        }
+      });
+      return incoming.map(toMediaFile);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFiles]);
 
   return (
     <div className="space-y-4">

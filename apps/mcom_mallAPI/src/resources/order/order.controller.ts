@@ -20,6 +20,7 @@ import { OrderService } from './order.service';
 import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
 import { RewardRedemptionReconcileService } from './reward-redemption-reconcile.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { QuoteCheckoutDto } from './dto/quote-checkout.dto';
 import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
 import {
   ApiBearerAuth,
@@ -41,6 +42,16 @@ export class OrderController {
     private readonly walletRefundReconcileService: WalletRefundReconcileService,
     private readonly rewardRedemptionReconcileService: RewardRedemptionReconcileService,
   ) {}
+
+  @Post('quote')
+  @ApiOperation({
+    summary: 'Quote a checkout',
+    description:
+      'Returns the server-authoritative totals and applied-instrument caps for a cart or direct purchase. No payment is created and no order is written.',
+  })
+  quote(@Body() quoteCheckoutDto: QuoteCheckoutDto, @Req() req) {
+    return this.orderService.quote(req.user.id, quoteCheckoutDto);
+  }
 
   @Post('checkout')
   @ApiOperation({

@@ -669,6 +669,14 @@ async function syncLocation(
     updates.city = geo.borough;
     updates.latitude = geo.latitude;
     updates.longitude = geo.longitude;
+
+    // A moved storefront must be re-assigned to its new Central hierarchy.
+    // Clearing the marker lets the login sync (or the backfill worker) pick
+    // it up immediately instead of waiting for the next refresh window.
+    await dataSource
+      .getRepository(Business)
+      .update(business.id, { geoResolvedAt: null });
+    business.geoResolvedAt = null;
   }
   if (countryCode && location.countryCode !== countryCode) {
     updates.countryCode = countryCode;

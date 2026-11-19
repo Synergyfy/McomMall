@@ -179,3 +179,40 @@ describe('GiftCardService redemption', () => {
     });
   });
 });
+
+describe('GiftCardService public template assets', () => {
+  it('returns the owner assets for an approved template', async () => {
+    const service = Object.create(GiftCardService.prototype) as any;
+    service.findTemplateById = jest
+      .fn()
+      .mockResolvedValue({ id: 'template-1', ownerId: 'owner-1' });
+    service.giftCardAssetService = {
+      findAssetsByOwner: jest
+        .fn()
+        .mockResolvedValue([{ id: 'asset-1', url: '/asset.png' }]),
+    };
+
+    const assets = await service.findPublicAssetsByTemplateId('template-1');
+
+    expect(service.findTemplateById).toHaveBeenCalledWith('template-1');
+    expect(service.giftCardAssetService.findAssetsByOwner).toHaveBeenCalledWith(
+      'owner-1',
+    );
+    expect(assets).toEqual([{ id: 'asset-1', url: '/asset.png' }]);
+  });
+
+  it('does not leak assets for a template that is not public', async () => {
+    const service = Object.create(GiftCardService.prototype) as any;
+    service.findTemplateById = jest
+      .fn()
+      .mockRejectedValue(new NotFoundException('not found'));
+    service.giftCardAssetService = {
+      findAssetsByOwner: jest.fn(),
+    };
+
+    await expect(
+      service.findPublicAssetsByTemplateId('template-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(service.giftCardAssetService.findAssetsByOwner).not.toHaveBeenCalled();
+  });
+});

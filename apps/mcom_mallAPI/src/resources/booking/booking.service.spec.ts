@@ -32,3 +32,38 @@ describe('BookingService day matching', () => {
     expect(isDayMatch(undefined, friday)).toBe(false);
   });
 });
+
+describe('BookingService bundled service pricing', () => {
+  const service = Object.create(BookingService.prototype) as BookingService;
+  const start = new Date('2026-11-19T10:00:00.000Z');
+  const end = new Date('2026-11-19T12:00:00.000Z');
+
+  const fixedService = {
+    pricingModel: 'fixed',
+    fixedPrice: 75,
+    bookingFee: 5,
+    deliveryConfig: { mode: 'onsite', travelFee: 8.5 },
+  } as any;
+
+  it('prices a fixed service with fee and travel using the booking engine', () => {
+    const pricing = service.quoteForService(fixedService, start, end);
+    expect(pricing.totalAmount).toBe(88.5);
+    expect(pricing.commissionAmount).toBe(8.85);
+    expect(pricing.providerAmount).toBe(79.65);
+  });
+
+  it('prices hourly services by the selected duration', () => {
+    const pricing = service.quoteForService(
+      { pricingModel: 'perHour', pricePerHour: 35 } as any,
+      start,
+      end,
+    );
+    expect(pricing.totalAmount).toBe(70);
+  });
+
+  it('rejects an end time that is not after the start time', () => {
+    expect(() =>
+      service.quoteForService(fixedService, end, start),
+    ).toThrow(/later end time/i);
+  });
+});

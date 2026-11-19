@@ -43,6 +43,8 @@ export interface InitiatePurchaseDto {
   personalMessage?: string;
   assetId?: string;
   htmlBody?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface VerifyPurchaseDto {

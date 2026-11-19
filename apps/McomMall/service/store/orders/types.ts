@@ -35,6 +35,7 @@ export interface Order {
   giftCardCode: string | null;
   couponDiscountApplied?: number | null;
   couponCode?: string | null;
+  offerDiscountApplied?: number | null;
   rewardDiscountApplied?: number | string | null;
   rewardRedemptions?: OrderRewardRedemption[];
   shippingStatus: string;

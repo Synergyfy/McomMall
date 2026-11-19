@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -123,6 +123,48 @@ interface PickerItem {
   name: string;
 }
 
+/**
+ * Older versions of the earning config stored item ids with the dashes removed
+ * and upper-cased. Comparing on a normalised key keeps those existing entries
+ * matched to the current product/service ids.
+ */
+const normalizeItemKey = (value: string) =>
+  value.replace(/-/g, '').toLowerCase();
+
+function canonicalItemId(value: string, items: PickerItem[]): string | null {
+  const key = normalizeItemKey(value);
+  return items.find((item) => normalizeItemKey(item.id) === key)?.id ?? null;
+}
+
+function normalizeIdList(
+  ids: string[] | null | undefined,
+  items: PickerItem[]
+): string[] {
+  const result: string[] = [];
+  for (const id of ids ?? []) {
+    const canonical = canonicalItemId(id, items);
+    if (canonical && !result.includes(canonical)) {
+      result.push(canonical);
+    }
+  }
+  return result;
+}
+
+function normalizeOverrides(
+  overrides: Record<string, number> | null | undefined,
+  items: PickerItem[]
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const [id, value] of Object.entries(overrides ?? {})) {
+    const canonical = canonicalItemId(id, items);
+    const numeric = Number(value);
+    // Drop overrides for items that no longer exist; they can never be used.
+    if (!canonical || !Number.isFinite(numeric)) continue;
+    result[canonical] = numeric;
+  }
+  return result;
+}
+
 function MultiSelect({
   items,
   selected,
@@ -211,7 +253,7 @@ function OverrideEditor({
   const usedIds = Object.keys(overrides);
   const available = items.filter((item) => !usedIds.includes(item.id));
   const nameFor = (id: string) =>
-    items.find((item) => item.id === id)?.name ?? 'Unknown item';
+    items.find((item) => item.id === id)?.name ?? 'Unavailable item';
 
   return (
     <div className="space-y-3">
@@ -299,8 +341,8 @@ function OverrideEditor({
 export default function LoyaltyEarningPage() {
   const router = useRouter();
   const { businessId, isLoading: businessLoading } = useBusinessId();
-  const { data: products = [] } = useGetMyProducts();
-  const { data: services = [] } = useGetMyServices();
+  const { data: products = [], isLoading: productsLoading } = useGetMyProducts();
+  const { data: services = [], isLoading: servicesLoading } = useGetMyServices();
   const { data: config, isLoading } = useLoyaltyEarningConfig(businessId);
   const updateConfig = useUpdateLoyaltyEarningConfig();
   const [showSuccess, setShowSuccess] = useState(false);
@@ -320,9 +362,57 @@ export default function LoyaltyEarningPage() {
   const [servicePointOverrides, setServicePointOverrides] = useState<
     Record<string, number>
   >({});
+  const hydratedRef = useRef(false);
+
+  const productItems: PickerItem[] = useMemo(
+    () => products.map((product) => ({ id: product.id, name: product.title })),
+    [products]
+  );
+  const serviceItems: PickerItem[] = useMemo(
+    () => services.map((service) => ({ id: service.id, name: service.name })),
+    [services]
+  );
 
   useEffect(() => {
-    if (!config) return;
+    if (!config || productsLoading || servicesLoading || hydratedRef.current) {
+      return;
+    }
+    hydratedRef.current = true;
+
+    const normalizedProductOverrides = normalizeOverrides(
+      config.productPointOverrides,
+      productItems
+    );
+    const normalizedServiceOverrides = normalizeOverrides(
+      config.servicePointOverrides,
+      serviceItems
+    );
+    const productOverrideIds = new Set(Object.keys(normalizedProductOverrides));
+    const serviceOverrideIds = new Set(Object.keys(normalizedServiceOverrides));
+
+    // Items with custom points (or already on the other list) can't be on both
+    // the included and excluded lists.
+    const includedProducts = normalizeIdList(
+      config.includedProductIds,
+      productItems
+    ).filter((id) => !productOverrideIds.has(id));
+    const excludedProducts = normalizeIdList(
+      config.excludedProductIds,
+      productItems
+    ).filter(
+      (id) => !productOverrideIds.has(id) && !includedProducts.includes(id)
+    );
+    const includedServices = normalizeIdList(
+      config.includedServiceIds,
+      serviceItems
+    ).filter((id) => !serviceOverrideIds.has(id));
+    const excludedServices = normalizeIdList(
+      config.excludedServiceIds,
+      serviceItems
+    ).filter(
+      (id) => !serviceOverrideIds.has(id) && !includedServices.includes(id)
+    );
+
     setIsActive(config.isActive ?? true);
     setScope(
       config.earnOnProducts && config.earnOnServices
@@ -338,22 +428,104 @@ export default function LoyaltyEarningPage() {
         ? ''
         : String(config.minSpend)
     );
-    setIncludedProductIds(config.includedProductIds ?? []);
-    setExcludedProductIds(config.excludedProductIds ?? []);
-    setIncludedServiceIds(config.includedServiceIds ?? []);
-    setExcludedServiceIds(config.excludedServiceIds ?? []);
-    setProductPointOverrides(config.productPointOverrides ?? {});
-    setServicePointOverrides(config.servicePointOverrides ?? {});
-  }, [config]);
+    setIncludedProductIds(includedProducts);
+    setExcludedProductIds(excludedProducts);
+    setIncludedServiceIds(includedServices);
+    setExcludedServiceIds(excludedServices);
+    setProductPointOverrides(normalizedProductOverrides);
+    setServicePointOverrides(normalizedServiceOverrides);
+  }, [config, productItems, productsLoading, serviceItems, servicesLoading]);
 
-  const productItems: PickerItem[] = useMemo(
-    () => products.map((product) => ({ id: product.id, name: product.title })),
-    [products]
+  const productOverrideIds = useMemo(
+    () => new Set(Object.keys(productPointOverrides)),
+    [productPointOverrides]
   );
-  const serviceItems: PickerItem[] = useMemo(
-    () => services.map((service) => ({ id: service.id, name: service.name })),
-    [services]
+  const serviceOverrideIds = useMemo(
+    () => new Set(Object.keys(servicePointOverrides)),
+    [servicePointOverrides]
   );
+
+  const includedProductOptions = useMemo(
+    () =>
+      productItems.filter(
+        (item) =>
+          !excludedProductIds.includes(item.id) &&
+          !productOverrideIds.has(item.id)
+      ),
+    [productItems, excludedProductIds, productOverrideIds]
+  );
+  const excludedProductOptions = useMemo(
+    () =>
+      productItems.filter(
+        (item) =>
+          !includedProductIds.includes(item.id) &&
+          !productOverrideIds.has(item.id)
+      ),
+    [productItems, includedProductIds, productOverrideIds]
+  );
+  const includedServiceOptions = useMemo(
+    () =>
+      serviceItems.filter(
+        (item) =>
+          !excludedServiceIds.includes(item.id) &&
+          !serviceOverrideIds.has(item.id)
+      ),
+    [serviceItems, excludedServiceIds, serviceOverrideIds]
+  );
+  const excludedServiceOptions = useMemo(
+    () =>
+      serviceItems.filter(
+        (item) =>
+          !includedServiceIds.includes(item.id) &&
+          !serviceOverrideIds.has(item.id)
+      ),
+    [serviceItems, includedServiceIds, serviceOverrideIds]
+  );
+
+  const handleIncludedProductsChange = (ids: string[]) => {
+    setIncludedProductIds(ids);
+    setExcludedProductIds((current) =>
+      current.filter((id) => !ids.includes(id))
+    );
+  };
+  const handleExcludedProductsChange = (ids: string[]) => {
+    setExcludedProductIds(ids);
+    setIncludedProductIds((current) =>
+      current.filter((id) => !ids.includes(id))
+    );
+  };
+  const handleIncludedServicesChange = (ids: string[]) => {
+    setIncludedServiceIds(ids);
+    setExcludedServiceIds((current) =>
+      current.filter((id) => !ids.includes(id))
+    );
+  };
+  const handleExcludedServicesChange = (ids: string[]) => {
+    setExcludedServiceIds(ids);
+    setIncludedServiceIds((current) =>
+      current.filter((id) => !ids.includes(id))
+    );
+  };
+  const handleProductOverridesChange = (next: Record<string, number>) => {
+    setProductPointOverrides(next);
+    const ids = new Set(Object.keys(next));
+    setIncludedProductIds((current) =>
+      current.filter((id) => !ids.has(id))
+    );
+    setExcludedProductIds((current) =>
+      current.filter((id) => !ids.has(id))
+    );
+  };
+  const handleServiceOverridesChange = (next: Record<string, number>) => {
+    setServicePointOverrides(next);
+    const ids = new Set(Object.keys(next));
+    setIncludedServiceIds((current) =>
+      current.filter((id) => !ids.has(id))
+    );
+    setExcludedServiceIds((current) =>
+      current.filter((id) => !ids.has(id))
+    );
+  };
 
   const productsEnabled = scope === 'both' || scope === 'products';
   const servicesEnabled = scope === 'both' || scope === 'services';
@@ -396,7 +568,7 @@ export default function LoyaltyEarningPage() {
     }
   };
 
-  if (businessLoading || isLoading) {
+  if (businessLoading || isLoading || productsLoading || servicesLoading) {
     return (
       <div className="min-h-full bg-[#faf7f5] p-6 text-sm text-gray-500">
         Loading earning rules…
@@ -554,7 +726,7 @@ export default function LoyaltyEarningPage() {
                 <SectionHeader
                   icon={<Package className="h-5 w-5" />}
                   title="Include & Exclude Items"
-                  description="Fine-tune which products and services are eligible. Empty include lists mean everything."
+                  description="Fine-tune which products and services are eligible. Empty include lists mean everything. Items with custom points are handled separately."
                 />
               </CardHeader>
               <CardContent className="space-y-5 px-5 py-6 sm:px-6">
@@ -564,22 +736,22 @@ export default function LoyaltyEarningPage() {
                       Included products
                     </FieldLabel>
                     <MultiSelect
-                      items={productItems}
+                      items={includedProductOptions}
                       selected={includedProductIds}
-                      onChange={setIncludedProductIds}
+                      onChange={handleIncludedProductsChange}
                       placeholder="Search products…"
                       emptyLabel="All products"
                       disabled={!productsEnabled}
                     />
                   </div>
                   <div className="grid gap-2.5">
-                    <FieldLabel hint="Products on this list never earn points, even if they are in the included list.">
+                    <FieldLabel hint="Products on this list never earn points. Items already included or given custom points won't appear here.">
                       Excluded products
                     </FieldLabel>
                     <MultiSelect
-                      items={productItems}
+                      items={excludedProductOptions}
                       selected={excludedProductIds}
-                      onChange={setExcludedProductIds}
+                      onChange={handleExcludedProductsChange}
                       placeholder="Search products…"
                       emptyLabel="No products excluded"
                       disabled={!productsEnabled}
@@ -590,22 +762,22 @@ export default function LoyaltyEarningPage() {
                       Included services
                     </FieldLabel>
                     <MultiSelect
-                      items={serviceItems}
+                      items={includedServiceOptions}
                       selected={includedServiceIds}
-                      onChange={setIncludedServiceIds}
+                      onChange={handleIncludedServicesChange}
                       placeholder="Search services…"
                       emptyLabel="All services"
                       disabled={!servicesEnabled}
                     />
                   </div>
                   <div className="grid gap-2.5">
-                    <FieldLabel hint="Services on this list never earn points on bookings.">
+                    <FieldLabel hint="Services on this list never earn points on bookings. Items already included or given custom points won't appear here.">
                       Excluded services
                     </FieldLabel>
                     <MultiSelect
-                      items={serviceItems}
+                      items={excludedServiceOptions}
                       selected={excludedServiceIds}
-                      onChange={setExcludedServiceIds}
+                      onChange={handleExcludedServicesChange}
                       placeholder="Search services…"
                       emptyLabel="No services excluded"
                       disabled={!servicesEnabled}
@@ -626,18 +798,18 @@ export default function LoyaltyEarningPage() {
               <CardContent className="space-y-6 px-5 py-6 sm:px-6">
                 <OverrideEditor
                   title="Product points"
-                  hint="When set, this fixed amount replaces the points-per-£1 calculation for that product."
+                  hint="When set, this fixed amount replaces the points-per-£1 calculation for that product. Products with custom points are removed from the include/exclude lists."
                   items={productItems}
                   overrides={productPointOverrides}
-                  onChange={setProductPointOverrides}
+                  onChange={handleProductOverridesChange}
                   disabled={!productsEnabled}
                 />
                 <OverrideEditor
                   title="Service points"
-                  hint="When set, this fixed amount replaces the spend-based points for a completed booking of that service."
+                  hint="When set, this fixed amount replaces the spend-based points for a completed booking of that service. Services with custom points are removed from the include/exclude lists."
                   items={serviceItems}
                   overrides={servicePointOverrides}
-                  onChange={setServicePointOverrides}
+                  onChange={handleServiceOverridesChange}
                   disabled={!servicesEnabled}
                 />
               </CardContent>

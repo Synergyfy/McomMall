@@ -8,6 +8,25 @@ import { Badge } from '@/components/ui/badge';
 import { CURRENCY, stripHtmlText } from '@/lib/utils';
 import { DiscountType } from '@/service/coupons/types';
 
+type ApprovalFields = {
+    approvalStatus?: 'pending' | 'approved' | 'rejected';
+    adminDisabled?: boolean;
+    reviewNote?: string | null;
+};
+
+function approvalBadge(item: ApprovalFields) {
+    if (item.adminDisabled) {
+        return { label: 'Delisted', className: 'bg-slate-700 text-white' };
+    }
+    if (item.approvalStatus === 'pending') {
+        return { label: 'Pending approval', className: 'bg-amber-500 text-white' };
+    }
+    if (item.approvalStatus === 'rejected') {
+        return { label: 'Rejected', className: 'bg-red-600 text-white' };
+    }
+    return null;
+}
+
 // --- Gift Card Dashboard Component ---
 interface GiftCardProps {
     template: {
@@ -18,7 +37,7 @@ interface GiftCardProps {
         isActive: boolean;
         fixedAmounts?: number[];
         bonusAmount?: number;
-    };
+    } & ApprovalFields;
     onEdit: (id: string) => void;
     onDelete: (id: string) => void;
 }
@@ -127,6 +146,11 @@ export const DashboardGiftCard: React.FC<GiftCardProps> = ({ template, onEdit, o
                 <Badge className={`absolute top-4 right-14 ${template.isActive ? 'bg-green-500' : 'bg-red-500'} group-hover:opacity-0 transition-opacity`}>
                     {template.isActive ? 'Active' : 'Inactive'}
                 </Badge>
+                {approvalBadge(template) && (
+                    <Badge className={`absolute top-14 right-14 text-[9px] font-black ${approvalBadge(template)!.className} group-hover:opacity-0 transition-opacity`}>
+                        {approvalBadge(template)!.label}
+                    </Badge>
+                )}
             </div>
         </motion.div>
     );
@@ -170,7 +194,7 @@ interface VoucherProps {
         bonusAmount?: number | string | null;
         isEnabled?: boolean;
         expiryDays?: number | null;
-    };
+    } & ApprovalFields;
     onEdit: (id: string) => void;
     onDelete: (id: string) => void;
 }
@@ -286,6 +310,11 @@ export const DashboardVoucher: React.FC<VoucherProps> = ({ product, onEdit, onDe
                                 {product.expiryDays} Days
                             </span>
                         </div>
+                    )}
+                    {approvalBadge(product) && (
+                        <span className={`rounded-md px-2 py-0.5 text-[8px] font-black uppercase tracking-wider ${approvalBadge(product)!.className}`}>
+                            {approvalBadge(product)!.label}
+                        </span>
                     )}
                     <div className={`w-2 h-2 rounded-full ${product.isEnabled ? 'bg-green-500' : 'bg-red-500'} shadow-[0_0_8px_rgba(34,197,94,0.5)]`} />
                 </div>

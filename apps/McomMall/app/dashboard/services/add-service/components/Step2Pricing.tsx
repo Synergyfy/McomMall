@@ -45,10 +45,10 @@ export function Step2Pricing() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <PoundSterling className="w-5 h-5 text-primary" />
+      <Card className="gap-4 overflow-hidden py-5 shadow-sm sm:gap-6 sm:py-6">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <PoundSterling className="w-5 h-5 shrink-0 text-primary" />
             Pricing
           </CardTitle>
           <CardDescription>
@@ -56,7 +56,7 @@ export function Step2Pricing() {
             option you select.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 px-4 sm:px-6">
           <FormField
             control={control}
             name="pricingType"
@@ -65,7 +65,7 @@ export function Step2Pricing() {
                 <FormLabel className="text-base font-semibold">
                   Pricing Option <span className="text-red-500">*</span>
                 </FormLabel>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
                   {PRICING_TYPE_OPTIONS.map((option) => {
                     const selected = field.value === option.value;
                     return (
@@ -74,7 +74,7 @@ export function Step2Pricing() {
                         type="button"
                         onClick={() => selectPricingType(option.value)}
                         className={cn(
-                          'flex flex-col gap-1 rounded-xl border-2 p-4 text-left transition-all',
+                          'flex flex-col gap-1 rounded-xl border-2 p-3 text-left transition-all sm:p-4',
                           selected
                             ? 'border-primary bg-primary/5 shadow-sm'
                             : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50',

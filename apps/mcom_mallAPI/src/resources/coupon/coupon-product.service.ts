@@ -3,6 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CouponProduct } from './entities/coupon-product.entity';
 import { CouponProductSearchDto } from './dto/coupon-product-search.dto';
+import {
+  applySellerLocationFilter,
+  applySellerNearOrder,
+} from '../geography/location-filter.util';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { Business } from '../listings/entities/listing.entity';
@@ -161,8 +165,21 @@ export class CouponProductService {
       });
     }
 
+    applySellerLocationFilter(
+      queryBuilder,
+      'couponProduct',
+      'userId',
+      searchDto,
+    );
+    applySellerNearOrder(
+      queryBuilder,
+      'couponProduct',
+      'userId',
+      searchDto,
+    );
+
     queryBuilder
-      .orderBy('couponProduct.createdAt', 'DESC')
+      .addOrderBy('couponProduct.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

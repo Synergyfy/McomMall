@@ -108,6 +108,11 @@ export class PaymentProviderService {
       // Shape-compatible with Stripe.PaymentIntent for existing callers.
       return {
         id: charge.id,
+        // The provider handle (Stripe PaymentIntent id) is what the browser
+        // sees. Business code that needs a stable MCOM ledger reference should
+        // use `chargeId`, not `id`.
+        chargeId: charge.id,
+        providerRef: charge.providerRef ?? null,
         client_secret: result.clientSecret ?? null,
         // Normalised alias used by the mall's own clients.
         clientSecret: result.clientSecret ?? null,
@@ -140,6 +145,8 @@ export class PaymentProviderService {
           ? String(metadata.userId)
           : undefined,
         metadata,
+        returnUrl: metadata?.returnUrl,
+        cancelUrl: metadata?.cancelUrl,
         idempotencyKey: this.paymentIdempotencyKey(metadata, 'paypal', amount),
       });
       const charge = result.charge;

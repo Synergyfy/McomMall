@@ -3,7 +3,14 @@
 import { useCart, CartItem } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2, Plus, Minus } from 'lucide-react';
+import {
+  ArrowRight,
+  Heart,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useCallback } from 'react';
 
@@ -44,11 +51,85 @@ export default function CartPage() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="container mx-auto px-4 pt-28 pb-12 text-center">
-        <h1 className="text-3xl font-bold mb-4">Your cart is empty</h1>
-        <Button asChild>
-          <Link href="/listings">Start Shopping</Link>
-        </Button>
+      <div className="container mx-auto px-4 pt-28 pb-16">
+        <div className="mx-auto max-w-3xl">
+          <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white px-6 py-14 text-center shadow-sm sm:px-12">
+            {/* Soft decorative background shapes */}
+            <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-orange-50" />
+            <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-slate-50" />
+
+            <div className="relative">
+              <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-orange-50 ring-8 ring-orange-50/60">
+                <ShoppingCart className="h-11 w-11 text-orange-500" />
+              </div>
+
+              <p className="mt-6 text-xs font-bold uppercase tracking-[0.22em] text-orange-500">
+                Your cart
+              </p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+                Your cart is feeling light
+              </h1>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-500 sm:text-base">
+                You haven&apos;t added anything yet. Discover local products,
+                services, vouchers and gift cards from businesses near you.
+              </p>
+
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Button
+                  asChild
+                  size="lg"
+                  className="w-full bg-orange-500 hover:bg-orange-600 sm:w-auto"
+                >
+                  <Link href="/marketplace">
+                    Start shopping
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  <Link href="/dashboard/wishlist">
+                    <Heart className="mr-2 h-4 w-4" />
+                    View your wishlist
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="mt-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
+                <span className="font-medium text-slate-500">
+                  Popular right now:
+                </span>
+                <Link
+                  href="/products"
+                  className="font-semibold text-slate-600 transition-colors hover:text-orange-600"
+                >
+                  Products
+                </Link>
+                <Link
+                  href="/services"
+                  className="font-semibold text-slate-600 transition-colors hover:text-orange-600"
+                >
+                  Services
+                </Link>
+                <Link
+                  href="/vouchers"
+                  className="font-semibold text-slate-600 transition-colors hover:text-orange-600"
+                >
+                  Vouchers
+                </Link>
+                <Link
+                  href="/gift-cards"
+                  className="font-semibold text-slate-600 transition-colors hover:text-orange-600"
+                >
+                  Gift Cards
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

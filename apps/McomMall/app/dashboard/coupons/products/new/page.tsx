@@ -40,7 +40,7 @@ export default function NewCouponProductPage() {
         textColor,
         isEnabled: true,
       } as any);
-      toast.success('Coupon product created.');
+      toast.success('Coupon product submitted for admin approval.');
       router.push('/dashboard/coupons/products');
     } catch {
       toast.error('Could not create the coupon product.');

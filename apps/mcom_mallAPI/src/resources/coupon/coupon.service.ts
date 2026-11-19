@@ -41,6 +41,7 @@ import {
   MarketingCampaignType,
 } from '../campaign/marketing-campaign.enum';
 import { Order } from '../order/entities/order.entity';
+import { OrderStatus } from '../order/enums/order-status.enum';
 import {
   CapabilityService,
   ActionType,
@@ -1247,7 +1248,13 @@ export class CouponService {
   }
 
   async initiateCouponPurchase(
-    dto: { couponProductId: string; amount: number; paymentMethod: string },
+    dto: {
+      couponProductId: string;
+      amount: number;
+      paymentMethod: string;
+      returnUrl?: string;
+      cancelUrl?: string;
+    },
     userId: string,
   ) {
     this.assertLegacyCouponProductsDisabled();
@@ -1271,6 +1278,8 @@ export class CouponService {
       userId,
       idempotencyKey: `coupon-${product.id}-${userId}-${crypto.randomUUID()}`,
       description: `MCOM Mall coupon purchase — ${product.name}`,
+      returnUrl: dto.returnUrl,
+      cancelUrl: dto.cancelUrl,
     };
 
     if (method === PaymentMethod.MCOM_WALLET) {
@@ -1451,6 +1460,7 @@ export class CouponService {
           user: { id: userId } as User,
           total: amount,
           payment,
+          status: OrderStatus.COMPLETED,
         }),
       );
 
@@ -1670,6 +1680,7 @@ export class CouponService {
           user: { id: userId } as User,
           total: amount,
           payment,
+          status: OrderStatus.COMPLETED,
         }),
       );
 

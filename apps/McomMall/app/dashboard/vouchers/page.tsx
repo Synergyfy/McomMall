@@ -62,7 +62,12 @@ export default function VoucherDashboard() {
 
   const activeCount = useMemo(() => {
     const list = voucherProducts ?? [];
-    return list.filter(p => (p.status || (p.isEnabled ? 'active' : 'draft')) === 'active').length;
+    return list.filter(
+      (p) =>
+        (p.status || (p.isEnabled ? 'active' : 'draft')) === 'active' &&
+        !p.adminDisabled &&
+        (!p.approvalStatus || p.approvalStatus === 'approved'),
+    ).length;
   }, [voucherProducts]);
 
   // Handle Pause/Resume Toggle
@@ -224,11 +229,29 @@ export default function VoucherDashboard() {
                           <h3 className="font-extrabold text-[#0b1c30] text-sm group-hover:text-primary transition-colors">
                             {p.name}
                           </h3>
-                          {p.isEnabled && (
-                            <span className="bg-green-100 text-green-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-wide">
-                              Live
-                            </span>
-                          )}
+                          <span
+                            className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-wide ${
+                              p.adminDisabled
+                                ? 'bg-slate-200 text-slate-700'
+                                : p.approvalStatus === 'pending'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : p.approvalStatus === 'rejected'
+                                    ? 'bg-red-100 text-red-700'
+                                    : p.isEnabled
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {p.adminDisabled
+                              ? 'Delisted'
+                              : p.approvalStatus === 'pending'
+                                ? 'Pending approval'
+                                : p.approvalStatus === 'rejected'
+                                  ? 'Rejected'
+                                  : p.isEnabled
+                                    ? 'Live'
+                                    : 'Draft'}
+                          </span>
                         </div>
                         <p className="text-xs text-[#5a4136] mt-1 line-clamp-2">{p.description || 'No description provided.'}</p>
                         

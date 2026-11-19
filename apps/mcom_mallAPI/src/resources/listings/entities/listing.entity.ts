@@ -254,6 +254,47 @@ export class Business extends AbstractBaseEntity {
   @Column({ nullable: true })
   localMallId?: string;
 
+  // -------------------------------------------------------------------------
+  // Marketplace geographic hierarchy (mirrored from MCOM Central)
+  // -------------------------------------------------------------------------
+  // Central assigns every business a City → Borough → High Street → Local Mall
+  // from its signup postcode. These denormalised columns let marketplace
+  // discovery filter every listing type by seller location without a Central
+  // round-trip or a deep join chain at request time.
+  @Column({ nullable: true })
+  geoCityId?: string | null;
+
+  @Column({ nullable: true })
+  geoCityName?: string | null;
+
+  @Column({ nullable: true })
+  geoBoroughId?: string | null;
+
+  @Column({ nullable: true })
+  geoBoroughName?: string | null;
+
+  @Column({ nullable: true })
+  geoHighStreetId?: string | null;
+
+  @Column({ nullable: true })
+  geoHighStreetName?: string | null;
+
+  @Column({ nullable: true })
+  geoLocalMallId?: string | null;
+
+  @Column({ nullable: true })
+  geoLocalMallName?: string | null;
+
+  /** Coordinates of the business's resolved high street / postcode. */
+  @Column('double precision', { nullable: true })
+  geoLatitude?: number | null;
+
+  @Column('double precision', { nullable: true })
+  geoLongitude?: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  geoResolvedAt?: Date | null;
+
   @OneToMany(() => Event, (event) => event.business)
   events: Event[];
 

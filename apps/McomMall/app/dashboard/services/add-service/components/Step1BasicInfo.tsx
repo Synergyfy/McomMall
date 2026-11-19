@@ -117,10 +117,10 @@ export function Step1BasicInfo() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Store className="w-5 h-5 text-primary" />
+      <Card className="gap-4 overflow-hidden py-5 shadow-sm sm:gap-6 sm:py-6">
+        <CardHeader className="px-4 pb-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Store className="w-5 h-5 shrink-0 text-primary" />
             Basic Information
           </CardTitle>
           <CardDescription>
@@ -128,7 +128,7 @@ export function Step1BasicInfo() {
             business automatically.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 px-4 sm:px-6">
           {/* Attached business (owned by MCOM Central Hub) */}
           <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -292,7 +292,7 @@ export function Step1BasicInfo() {
                   Service Images <span className="text-red-500">*</span>
                 </FormLabel>
                 {existingImages.length > 0 && (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-5">
                     {existingImages.map((url) => (
                       <div
                         key={url}
@@ -310,7 +310,7 @@ export function Step1BasicInfo() {
                           onClick={() =>
                             field.onChange(media.filter((item) => item !== url))
                           }
-                          className="absolute right-1 top-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white"
+                          className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-base font-bold leading-none text-white shadow-sm"
                         >
                           ×
                         </button>
@@ -320,7 +320,6 @@ export function Step1BasicInfo() {
                 )}
                 <FormControl>
                   <MultiMediaUpload
-                    key={existingFiles.length > 0 ? 'with-files' : 'empty'}
                     initialFiles={existingFiles}
                     onMediaChange={(files) =>
                       field.onChange([...existingImages, ...files])
