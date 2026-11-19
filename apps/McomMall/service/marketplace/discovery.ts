@@ -9,6 +9,7 @@ import {
   MarketplaceLocationLevel,
   MarketplaceLocationSearchResponse,
   PageDto,
+  PublicBusiness,
   ResolvedMarketplaceLocation,
 } from './types';
 import { Product } from '../listings/types';
@@ -84,6 +85,16 @@ export const useGetPublicCoupons = (params: DiscoveryQueryParams = {}, options?:
   return useQuery({
     queryKey: ['discovery', 'coupons', params],
     queryFn: () => fetchDiscovery<CouponProduct>('/coupons/products/public', params),
+    staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
+    ...options
+  });
+};
+
+export const useGetPublicBusinesses = (params: DiscoveryQueryParams = {}, options?: Partial<UseQueryOptions<PageDto<PublicBusiness>>>) => {
+  return useQuery({
+    queryKey: ['discovery', 'businesses', params],
+    queryFn: () => fetchDiscovery<PublicBusiness>('/marketplace/businesses', params),
     staleTime: 60 * 1000,
     placeholderData: keepPreviousData,
     ...options

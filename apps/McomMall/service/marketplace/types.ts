@@ -142,6 +142,35 @@ export interface ResolvedMarketplaceLocation {
   longitude?: number | null;
 }
 
+export interface PublicBusiness {
+  id: string;
+  businessName: string;
+  shortDescription?: string;
+  about?: string;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+  logoAltText?: string | null;
+  bannerAltText?: string | null;
+  media?: string[] | null;
+  isVerified?: boolean;
+  isGoogleVerified?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
+  listingType?: string[];
+  category?: { id?: string; name: string } | null;
+  sector?: { id?: string; name: string } | null;
+  location?: {
+    id?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    postcode?: string;
+    countryCode?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null;
+}
+
 export interface MarketplacePublicData {
   heroSlides: HeroSlide[];
   sidebarBanners: SidebarBanner[];
@@ -152,4 +181,5 @@ export interface MarketplacePublicData {
   coupons: CouponProduct[];
   services: Service[];
   products: Product[];
+  businesses?: PublicBusiness[];
 }
