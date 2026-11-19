@@ -1,9 +1,10 @@
 import { Business } from '../../listings/entities/listing.entity';
 import { moneyJsonTransformer, moneyTransformer } from '../../../common/money/money';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Review } from '../../reviews/entities/review.entity';
+import { ApprovalStatus } from '../../../common/moderation/catalog-approval';
 
 import {
   ProductVariantConfig,
@@ -130,6 +131,22 @@ export class Product extends AbstractBaseEntity {
   @Column('varchar', { default: 'draft' })
   productStatus: string;
 
+  /** Admin moderation. New merchant products start pending. */
+  @Index('IDX_Products_approval_status')
+  @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
+  approvalStatus: ApprovalStatus;
+
+  @Column({ type: 'text', nullable: true })
+  reviewNote?: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  reviewedBy?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt?: Date | null;
+
+  /** Set by an admin when the product is delisted from the public catalog. */
+  @Index('IDX_Products_admin_disabled')
   @Column({ default: false })
   adminDisabled: boolean;
 

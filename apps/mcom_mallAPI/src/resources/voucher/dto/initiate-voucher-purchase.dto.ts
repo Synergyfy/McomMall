@@ -9,6 +9,7 @@ import {
   IsUUID,
   IsIn,
   IsDateString,
+  Matches,
 } from 'class-validator';
 import { PaymentMethod } from '../../order/entities/order-payment.entity';
 
@@ -62,4 +63,22 @@ export class InitiateVoucherPurchaseDto {
   @IsDateString()
   @IsOptional()
   deliveryDate?: string;
+
+  @ApiProperty({
+    description: 'Where PayPal should return the payer after approval.',
+    required: false,
+  })
+  @IsString()
+  @Matches(/^https?:\/\/[^\s]+$/i)
+  @IsOptional()
+  returnUrl?: string;
+
+  @ApiProperty({
+    description: 'Where PayPal should return the payer after cancelling.',
+    required: false,
+  })
+  @IsString()
+  @Matches(/^https?:\/\/[^\s]+$/i)
+  @IsOptional()
+  cancelUrl?: string;
 }

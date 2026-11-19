@@ -8,6 +8,8 @@ import { PaymentsModule } from '../payments/payments.module';
 import { MembershipPayment } from './entities/membership-payment.entity';
 import { SsoModule } from '../sso/sso.module';
 import { MembershipCredit } from './entities/membership-credit.entity';
+import { MembershipRenewal } from './entities/membership-renewal.entity';
+import { MembershipRenewalService } from './services/membership-renewal.service';
 import { PlansModule } from '../plans/plans.module';
 
 @Module({
@@ -17,13 +19,14 @@ import { PlansModule } from '../plans/plans.module';
       User,
       MembershipPayment,
       MembershipCredit,
+      MembershipRenewal,
     ]),
     forwardRef(() => PaymentsModule),
     forwardRef(() => SsoModule),
     PlansModule,
   ],
   controllers: [MembershipController],
-  providers: [MembershipService],
-  exports: [MembershipService],
+  providers: [MembershipService, MembershipRenewalService],
+  exports: [MembershipService, MembershipRenewalService],
 })
 export class MembershipModule {}

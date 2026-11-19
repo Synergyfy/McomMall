@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Elements,
   PaymentElement,
@@ -11,10 +11,6 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Loader } from 'lucide-react';
-
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
 
 function CheckoutForm({
   onPaymentSuccess,
@@ -43,34 +39,30 @@ function CheckoutForm({
     });
 
     if (error) {
-      toast.error(error.message);
-      setMessage(error.message || 'An unexpected error occurred.');
+      setMessage(error.message || 'Payment failed. Please try again.');
+      toast.error(error.message || 'Payment failed.');
       setIsLoading(false);
-    } else if (paymentIntent?.status === 'succeeded') {
-      setMessage('Payment successful!');
+      return;
+    }
+
+    if (paymentIntent?.status === 'succeeded') {
       onPaymentSuccess(paymentIntent.id);
-      setIsLoading(false);
     } else {
-      setMessage('Payment not successful. Please try again.');
+      setMessage('Payment did not complete. Please try again.');
       setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      {isLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-75 flex flex-col items-center justify-center z-10">
-          <Loader className="animate-spin text-orange-600" size={48} />
-          <p className="mt-4 text-lg font-semibold text-gray-700">{message}</p>
-        </div>
-      )}
+    <form onSubmit={handleSubmit} className="space-y-4">
       <PaymentElement />
+      {message && <p className="text-sm text-gray-600">{message}</p>}
       <Button
         type="submit"
         disabled={!stripe || isLoading}
-        className="w-full mt-6 bg-orange-600 hover:bg-orange-700 text-white"
+        className="w-full bg-orange-600 hover:bg-orange-700"
       >
-        Pay Now
+        {isLoading ? <Loader className="h-4 w-4 animate-spin" /> : 'Pay Now'}
       </Button>
     </form>
   );
@@ -78,13 +70,31 @@ function CheckoutForm({
 
 export default function StripeCheckoutForm({
   clientSecret,
+  publishableKey,
   onPaymentSuccess,
 }: {
-  clientSecret: string;
+  clientSecret?: string;
+  /** Supplied by `GET /payments/config`; never hardcode or require a build-time key. */
+  publishableKey?: string;
   onPaymentSuccess: (paymentIntentId: string) => void;
 }) {
-  if (!clientSecret) {
-    return <div>Could not initialize payment.</div>;
+  const key =
+    publishableKey ||
+    process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+    '';
+
+  const stripePromise = useMemo(
+    () => (key ? loadStripe(key) : null),
+    [key],
+  );
+
+  if (!clientSecret || !stripePromise) {
+    return (
+      <p className="text-sm text-rose-600">
+        Card payments are not configured. Please use MCOM Wallet or PayPal.
+      </p>
+    );
   }
 
   return (

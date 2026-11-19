@@ -154,11 +154,20 @@ export default function StoreDashboard() {
   const matchesTab = React.useCallback((product: Product, tab: string) => {
     if (tab === 'All') return true;
     if (tab === 'published')
-      return product.productStatus === 'published' && !product.adminDisabled;
+      return (
+        product.approvalStatus === 'approved' &&
+        product.productStatus === 'published' &&
+        !product.adminDisabled
+      );
     if (tab === 'draft')
-      return product.productStatus === 'draft' && !product.adminDisabled;
+      return (
+        product.approvalStatus !== 'pending' &&
+        product.productStatus === 'draft' &&
+        !product.adminDisabled
+      );
     if (tab === 'pending')
       return (
+        product.approvalStatus === 'pending' ||
         product.productStatus === 'pending' ||
         product.productStatus === 'Pending Review'
       );
@@ -494,11 +503,14 @@ export default function StoreDashboard() {
                       return (
                         <TableRow
                           key={product.id}
-                          className={`mobile-table-card md:table-row ${product.productStatus === 'pending' ||
+                          className={`mobile-table-card md:table-row ${
+                            product.approvalStatus === 'pending' ||
+                            product.approvalStatus === 'rejected' ||
+                            product.productStatus === 'pending' ||
                             product.productStatus === 'Pending Review'
-                            ? 'bg-red-50'
-                            : ''
-                            }`}
+                              ? 'bg-red-50'
+                              : ''
+                          }`}
                           data-state={
                             selectedRows.includes(product.id) ? 'selected' : ''
                           }
@@ -552,33 +564,44 @@ export default function StoreDashboard() {
                               variant={
                                 product.adminDisabled
                                   ? 'destructive'
-                                  : product.productStatus === 'pending' ||
-                                      product.productStatus === 'Pending Review'
-                                    ? 'destructive'
-                                    : product.productStatus === 'published'
-                                      ? 'default'
-                                      : 'secondary'
+                                  : product.approvalStatus === 'pending'
+                                    ? 'secondary'
+                                    : product.approvalStatus === 'rejected' ||
+                                        product.productStatus === 'pending' ||
+                                        product.productStatus === 'Pending Review'
+                                      ? 'destructive'
+                                      : product.productStatus === 'published'
+                                        ? 'default'
+                                        : 'secondary'
                               }
                               className={
                                 product.adminDisabled
                                   ? 'bg-amber-100 text-amber-800'
-                                  : product.productStatus === 'published'
-                                    ? 'bg-green-100 text-green-800'
-                                    : ''
+                                  : product.approvalStatus === 'pending'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : product.approvalStatus === 'rejected'
+                                      ? 'bg-red-100 text-red-800'
+                                      : product.productStatus === 'published'
+                                        ? 'bg-green-100 text-green-800'
+                                        : ''
                               }
                             >
                               {product.adminDisabled
-                                ? 'Disabled'
-                                : product.productStatus === 'published'
-                                  ? 'Online'
-                                  : product.productStatus === 'pending' ||
-                                      product.productStatus === 'Pending Review'
-                                    ? 'Pending Review'
-                                    : product.productStatus === 'draft'
-                                      ? 'Draft'
-                                      : product.productStatus === 'archived'
-                                        ? 'Archived'
-                                        : product.productStatus}
+                                ? 'Delisted by admin'
+                                : product.approvalStatus === 'pending'
+                                  ? 'Pending approval'
+                                  : product.approvalStatus === 'rejected'
+                                    ? 'Rejected'
+                                    : product.productStatus === 'published'
+                                      ? 'Online'
+                                      : product.productStatus === 'pending' ||
+                                          product.productStatus === 'Pending Review'
+                                        ? 'Pending Review'
+                                        : product.productStatus === 'draft'
+                                          ? 'Draft'
+                                          : product.productStatus === 'archived'
+                                            ? 'Archived'
+                                            : product.productStatus}
                             </Badge>
                           </TableCell>
                           <TableCell

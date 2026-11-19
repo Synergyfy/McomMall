@@ -26,7 +26,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { InProgressDialog } from '@/components/InProgressDialog';
 
 const stripePromise = loadStripe(
-  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 interface ReloadVoucherModalProps {
@@ -46,6 +46,9 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const [reloadAmount, setReloadAmount] = useState<number>(0);
   const [paymentProvider, setPaymentProvider] = useState<
     'stripe' | 'paypal' | 'mcom_wallet' | null
@@ -91,6 +94,7 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
         setClientSecret(initiationResponse.clientSecret);
       } else {
         setOrderId(initiationResponse.orderId);
+        setPaypalApprovalUrl((initiationResponse as any).approvalUrl ?? null);
       }
     } catch (error) {
       toast.error('Failed to initiate reload.');
@@ -186,7 +190,11 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
             <StripeCheckoutForm clientSecret={clientSecret} onPaymentSuccess={onPaymentSuccess} />
           </Elements>
         ) : orderId ? (
-          <PayPalCheckoutButton orderID={orderId} onPaymentSuccess={onPaymentSuccess} />
+          <PayPalCheckoutButton
+            orderID={orderId}
+            approvalUrl={paypalApprovalUrl}
+            onPaymentSuccess={onPaymentSuccess}
+          />
         ) : null}
       </DialogContent>
     </Dialog>

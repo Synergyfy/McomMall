@@ -56,7 +56,17 @@ async function getNewProducts() {
   }
 }
 
-export default async function MarketplacePage() {
+export default async function MarketplacePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const rawSearch =
+    resolvedSearchParams?.search ?? resolvedSearchParams?.q ?? '';
+  const initialSearch =
+    typeof rawSearch === 'string' ? rawSearch : rawSearch[0] ?? '';
+
   // Fetch data in parallel
   const [publicData, newProducts] = await Promise.allSettled([
     getMarketplacePublic(),
@@ -70,6 +80,7 @@ export default async function MarketplacePage() {
     <MarketplaceClient
         initialPublicData={initialPublicData}
         initialNewProducts={initialNewProducts}
+        initialSearch={initialSearch}
     />
   );
 }

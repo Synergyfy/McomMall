@@ -32,10 +32,16 @@ import { BrandingAssociation } from './entities/branding-association.entity';
 import { computeCouponDiscount } from '../partner-instruments/pricing';
 import { User } from '../users/entities/user.entity';
 import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
+import {
   MarketingCampaignStatus,
   MarketingCampaignType,
 } from '../campaign/marketing-campaign.enum';
 import { Order } from '../order/entities/order.entity';
+import { OrderStatus } from '../order/enums/order-status.enum';
 import {
   CapabilityService,
   ActionType,
@@ -113,6 +119,9 @@ export class CouponService {
   }
 
   async create(dto: CreateCouponDto, creator?: User): Promise<Coupon> {
+    const moderationSafeDto = stripModerationFields({
+      ...dto,
+    } as Record<string, any>) as CreateCouponDto;
     const {
       title,
       description,
@@ -133,7 +142,7 @@ export class CouponService {
       minSpend,
       maxSpend,
       allowedEmails,
-    } = dto;
+    } = moderationSafeDto;
 
     if (
       sourceType === CouponSourceType.PLATFORM &&
@@ -205,6 +214,14 @@ export class CouponService {
       allowedEmails: allowedEmails ?? null,
       campaign,
       business,
+      // Platform coupons and admin-authored coupons are immediately usable.
+      // Business-authored coupons need admin approval before shoppers see them.
+      approvalStatus:
+        sourceType === CouponSourceType.PLATFORM ||
+        creator?.role === UserRole.ADMIN
+          ? ApprovalStatus.APPROVED
+          : ApprovalStatus.PENDING,
+      adminDisabled: false,
     });
 
     const savedCoupon = await this.couponRepository.save(coupon);
@@ -230,6 +247,11 @@ export class CouponService {
     const skip = (page - 1) * limit;
 
     const [items, total] = await this.couponRepository.findAndCount({
+      where: {
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+        status: In([CouponStatus.ACTIVE, CouponStatus.SCHEDULED]),
+      },
       skip,
       take: limit,
       relations: ['campaign', 'business', 'branding', 'branding.business'],
@@ -266,6 +288,13 @@ export class CouponService {
     });
 
     if (!coupon) throw new NotFoundException('Coupon not found');
+
+    if (
+      coupon.approvalStatus !== ApprovalStatus.APPROVED ||
+      coupon.adminDisabled
+    ) {
+      throw new BadRequestException('Coupon is not available.');
+    }
 
     if (existingCouponCode && existingCouponCode !== code) {
       throw new BadRequestException('Stacking coupons is not allowed.');
@@ -411,6 +440,13 @@ export class CouponService {
     user: User,
     logRepo: Repository<RedemptionLog>,
   ): Promise<void> {
+    if (
+      coupon.approvalStatus !== ApprovalStatus.APPROVED ||
+      coupon.adminDisabled
+    ) {
+      throw new BadRequestException('Coupon is not available.');
+    }
+
     if (coupon.sourceType === CouponSourceType.BUSINESS && coupon.business) {
       if (coupon.business.status !== BusinessStatus.PUBLISHED) {
         throw new BadRequestException(
@@ -518,7 +554,11 @@ export class CouponService {
 
   async findCouponByCode(code: string): Promise<Coupon> {
     const coupon = await this.couponRepository.findOne({
-      where: { code },
+      where: {
+        code,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['campaign', 'business', 'business.user'],
     });
     if (!coupon) throw new NotFoundException('Coupon not found');
@@ -790,16 +830,29 @@ export class CouponService {
   }
 
   async getSavedCoupons(user: User): Promise<SavedCoupon[]> {
-    return this.savedCouponRepository.find({
+    const savedCoupons = await this.savedCouponRepository.find({
       where: { user: { id: user.id } },
       relations: ['coupon', 'coupon.campaign', 'coupon.business'],
       order: { savedAt: 'DESC' },
     });
+
+    // Delisted or unapproved coupons must disappear from the customer's saved
+    // list as well as from the public catalogue.
+    return savedCoupons.filter(
+      (saved) =>
+        saved.coupon &&
+        saved.coupon.approvalStatus === ApprovalStatus.APPROVED &&
+        !saved.coupon.adminDisabled,
+    );
   }
 
   async findProductById(id: string): Promise<Coupon> {
     const coupon = await this.couponRepository.findOne({
-      where: { id },
+      where: {
+        id,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['business', 'campaign'],
     });
 
@@ -868,7 +921,14 @@ export class CouponService {
       ...rest
     } = dto;
 
-    Object.assign(coupon, rest);
+    Object.assign(coupon, stripModerationFields(rest as Record<string, any>));
+
+    if (
+      user.role !== UserRole.ADMIN &&
+      coupon.approvalStatus === ApprovalStatus.REJECTED
+    ) {
+      resubmitForApproval(coupon);
+    }
 
     if (businessId) {
       const business = await this.businessRepository.findOne({
@@ -906,6 +966,12 @@ export class CouponService {
   ): Promise<Coupon> {
     const coupon = await this.findOneForUser(id, user);
     coupon.status = status;
+    if (
+      user.role !== UserRole.ADMIN &&
+      coupon.approvalStatus === ApprovalStatus.REJECTED
+    ) {
+      resubmitForApproval(coupon);
+    }
     return this.couponRepository.save(coupon);
   }
 
@@ -924,6 +990,13 @@ export class CouponService {
     });
     if (!coupon) {
       throw new NotFoundException(`Coupon with code ${code} not found.`);
+    }
+
+    if (
+      coupon.approvalStatus !== ApprovalStatus.APPROVED ||
+      coupon.adminDisabled
+    ) {
+      throw new BadRequestException('Coupon is not available.');
     }
 
     // Authorization: only the issuing merchant or a platform admin may
@@ -1069,6 +1142,9 @@ export class CouponService {
       startDate: template?.startDate ?? new Date(),
       expiresAt,
       status: template?.status ?? CouponStatus.ACTIVE,
+      // Issued coupons are already-approved entitlements, not templates.
+      approvalStatus: ApprovalStatus.APPROVED,
+      adminDisabled: false,
       business: business ?? undefined,
       issuanceId,
       sourceApp: issuanceId ? sourceApp : null,
@@ -1172,7 +1248,13 @@ export class CouponService {
   }
 
   async initiateCouponPurchase(
-    dto: { couponProductId: string; amount: number; paymentMethod: string },
+    dto: {
+      couponProductId: string;
+      amount: number;
+      paymentMethod: string;
+      returnUrl?: string;
+      cancelUrl?: string;
+    },
     userId: string,
   ) {
     this.assertLegacyCouponProductsDisabled();
@@ -1194,17 +1276,32 @@ export class CouponService {
     const metadata = {
       reference: `coupon-purchase-${product.id}-${userId}`,
       userId,
+      idempotencyKey: `coupon-${product.id}-${userId}-${crypto.randomUUID()}`,
       description: `MCOM Mall coupon purchase — ${product.name}`,
+      returnUrl: dto.returnUrl,
+      cancelUrl: dto.cancelUrl,
     };
 
     if (method === PaymentMethod.MCOM_WALLET) {
-      const charge = await this.paymentProviderService.createWalletCharge(
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: await this.getCentralUserId(userId),
         amount,
-        'GBP',
-        metadata,
-        await this.getCentralUserId(userId),
-      );
-      return { provider: method, transactionId: charge.chargeId, amount };
+        reference: metadata.reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'coupon-hold',
+          product.id,
+          userId,
+          metadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'COUPON', productId: product.id, userId },
+      });
+      return {
+        provider: method,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
+        amount,
+      };
     }
     if (method === PaymentMethod.STRIPE) {
       const intent =
@@ -1236,33 +1333,52 @@ export class CouponService {
     method: PaymentMethod,
     transactionId: string,
     amount: number,
-  ) {
+    userId?: string,
+    reference?: string,
+  ): Promise<{ ok: boolean; details?: any; reason?: string }> {
     if (!transactionId) {
       throw new BadRequestException('A payment reference is required.');
     }
+    const centralUserId =
+      method === PaymentMethod.MCOM_WALLET && userId
+        ? await this.getCentralUserId(userId)
+        : undefined;
     const result =
       method === PaymentMethod.MCOM_WALLET
-        ? await this.paymentProviderService.verifyWalletCharge(
+        ? await this.paymentProviderService.settleWalletReference(
             transactionId,
             amount,
             'GBP',
+            {
+              mallUserId: userId,
+              mcomUserId: centralUserId,
+              holdId: transactionId,
+              reference,
+            },
+            this.paymentProviderService.buildWalletKey(
+              'coupon-capture',
+              transactionId,
+            ),
           )
         : method === PaymentMethod.PAYPAL
           ? await this.paymentProviderService.captureAndVerifyPaypalOrder(
               transactionId,
               amount,
               'GBP',
+              { mallUserId: userId },
             )
           : await this.paymentProviderService.verifyStripePaymentIntent(
               transactionId,
               amount,
               'GBP',
+              { mallUserId: userId },
             );
     if (!result.ok) {
       throw new BadRequestException(
         `Payment verification failed: ${result.reason}`,
       );
     }
+    return result;
   }
 
   async verifyAndCompleteCouponPurchase(
@@ -1285,10 +1401,29 @@ export class CouponService {
       throw new NotFoundException('Coupon product not found or inactive.');
     }
     this.validateCouponProductAmount(product, amount);
-    await this.verifyCouponPayment(method, dto.transactionId, amount);
+    const verification = await this.verifyCouponPayment(
+      method,
+      dto.transactionId,
+      amount,
+      userId,
+      `coupon-purchase-${product.id}-${userId}`,
+    );
+    const details: any = verification.details ?? {};
+    const paymentReference =
+      details.transactionId || details.id || dto.transactionId;
+    const paidChargeId =
+      details.id && !String(details.id).startsWith('wallet:')
+        ? details.id
+        : null;
+    const paidProviderRef = details.providerRef ?? null;
+    const paidFeeMinor = details.feeMinor ?? null;
+    const paidNetMinor = details.netMinor ?? null;
 
     const existingPayment = await this.orderPaymentRepository.findOne({
-      where: { transactionId: dto.transactionId },
+      where: [
+        { transactionId: paymentReference },
+        ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+      ],
     });
     if (existingPayment) {
       const existing = await this.findPurchasedCouponForBuyer(userId);
@@ -1311,8 +1446,13 @@ export class CouponService {
           user: { id: userId } as User,
           amount,
           currency: 'GBP',
-          transactionId: dto.transactionId,
+          transactionId: paymentReference,
           paymentMethod: method,
+          mcomChargeId: paidChargeId,
+          providerRef: paidProviderRef,
+          feeMinor: paidFeeMinor,
+          netMinor: paidNetMinor,
+          status: 'paid',
         }),
       );
       const order = await orderRepo.save(
@@ -1320,7 +1460,21 @@ export class CouponService {
           user: { id: userId } as User,
           total: amount,
           payment,
+          status: OrderStatus.COMPLETED,
         }),
+      );
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'COUPON',
+          entityType: 'order',
+          entityId: order.id,
+          userId,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
       );
 
       let code = this.generateCouponCode();
@@ -1340,6 +1494,9 @@ export class CouponService {
         usageLimit: 1,
         perUserLimit: 1,
         status: CouponStatus.ACTIVE,
+        // Purchased coupons are customer entitlements, not merchant templates.
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
         startDate: new Date(),
         expiresAt,
         business: business ?? undefined,
@@ -1391,20 +1548,34 @@ export class CouponService {
       throw new BadRequestException('Enter a valid reload amount.');
     }
     const method = this.normalizeCouponPaymentMethod(dto.paymentMethod);
+    this.validateCouponProductAmount(product, amount);
     const paymentMetadata = {
       reference: `coupon-reload-${coupon.id}-${userId}`,
       userId,
+      idempotencyKey: `coupon-reload-${coupon.id}-${userId}-${crypto.randomUUID()}`,
       description: `MCOM Mall coupon reload — ${product.name}`,
     };
 
     if (method === PaymentMethod.MCOM_WALLET) {
-      const charge = await this.paymentProviderService.createWalletCharge(
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: await this.getCentralUserId(userId),
         amount,
-        'GBP',
-        paymentMetadata,
-        await this.getCentralUserId(userId),
-      );
-      return { provider: method, transactionId: charge.chargeId, amount };
+        reference: paymentMetadata.reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'coupon-reload-hold',
+          coupon.id,
+          userId,
+          paymentMetadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'COUPON', couponId: coupon.id, userId },
+      });
+      return {
+        provider: method,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
+        amount,
+      };
     }
     if (method === PaymentMethod.STRIPE) {
       const intent =
@@ -1458,10 +1629,29 @@ export class CouponService {
       throw new BadRequestException('Enter a valid reload amount.');
     }
     const method = this.normalizeCouponPaymentMethod(dto.paymentProvider);
-    await this.verifyCouponPayment(method, dto.transactionId, amount);
+    const verification = await this.verifyCouponPayment(
+      method,
+      dto.transactionId,
+      amount,
+      userId,
+      `coupon-reload-${coupon.id}-${userId}`,
+    );
+    const details: any = verification.details ?? {};
+    const paymentReference =
+      details.transactionId || details.id || dto.transactionId;
+    const paidChargeId =
+      details.id && !String(details.id).startsWith('wallet:')
+        ? details.id
+        : null;
+    const paidProviderRef = details.providerRef ?? null;
+    const paidFeeMinor = details.feeMinor ?? null;
+    const paidNetMinor = details.netMinor ?? null;
 
     const existingPayment = await this.orderPaymentRepository.findOne({
-      where: { transactionId: dto.transactionId },
+      where: [
+        { transactionId: paymentReference },
+        ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+      ],
     });
     if (existingPayment) return this.toCustomerCoupon(coupon);
 
@@ -1476,16 +1666,35 @@ export class CouponService {
           user: { id: userId } as User,
           amount,
           currency: 'GBP',
-          transactionId: dto.transactionId,
+          transactionId: paymentReference,
           paymentMethod: method,
+          mcomChargeId: paidChargeId,
+          providerRef: paidProviderRef,
+          feeMinor: paidFeeMinor,
+          netMinor: paidNetMinor,
+          status: 'paid',
         }),
       );
-      await orderRepo.save(
+      const order = await orderRepo.save(
         orderRepo.create({
           user: { id: userId } as User,
           total: amount,
           payment,
+          status: OrderStatus.COMPLETED,
         }),
+      );
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'COUPON',
+          entityType: 'order',
+          entityId: order.id,
+          userId,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
       );
 
       const currentBalance = Number(

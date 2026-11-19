@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { Cart } from './entities/cart.entity';
@@ -7,6 +11,7 @@ import { Product } from '../product/entities/product.entity';
 import { User } from '../users/entities/user.entity';
 import { AddItemToCartDto } from './dto/add-item-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 @Injectable()
 export class CartService {
@@ -35,6 +40,17 @@ export class CartService {
       return { items: [], total: 0 };
     }
 
+    // Products can be delisted or rejected after they were added to a cart.
+    // Never surface an unavailable product back to the shopper.
+    cart.items = (cart.items || []).filter(
+      (item) =>
+        item.product &&
+        item.product.approvalStatus === ApprovalStatus.APPROVED &&
+        item.product.productStatus === 'published' &&
+        item.product.visibility === 'public' &&
+        !item.product.adminDisabled,
+    );
+
     const total = cart.items.reduce(
       (sum: number, item) => sum + item.product.price * item.quantity,
       0,
@@ -49,6 +65,15 @@ export class CartService {
     const product = await this.productRepository.findOneBy({ id: productId });
     if (!product) {
       throw new NotFoundException('Product not found');
+    }
+
+    if (
+      product.approvalStatus !== ApprovalStatus.APPROVED ||
+      product.productStatus !== 'published' ||
+      product.visibility !== 'public' ||
+      product.adminDisabled
+    ) {
+      throw new BadRequestException('This product is not available.');
     }
 
     await this.entityManager.transaction(async (manager) => {

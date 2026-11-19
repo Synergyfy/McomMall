@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from 'src/resources/order/entities/order.entity';
 import { ServiceBooking } from 'src/resources/booking/entities/service-booking.entity';
 import { MembershipPayment } from 'src/resources/membership/entities/membership-payment.entity';
+import { McomPayCharge } from 'src/resources/payments/entities/mcom-pay-charge.entity';
 import { Repository } from 'typeorm';
 import {
   TransactionQueryDto,
@@ -21,11 +22,20 @@ export class AdminTransactionsService {
     private bookingsRepository: Repository<ServiceBooking>,
     @InjectRepository(MembershipPayment)
     private membershipPaymentsRepository: Repository<MembershipPayment>,
+    @InjectRepository(McomPayCharge)
+    private mcomChargesRepository: Repository<McomPayCharge>,
   ) {}
 
   async getStats(): Promise<TransactionStatsDto> {
-    const [orderSum, bookingSum, membershipSum, orderPending, bookingPending] =
-      await Promise.all([
+    const [
+      orderSum,
+      bookingSum,
+      membershipSum,
+      orderPending,
+      bookingPending,
+      feeSum,
+      refundedCount,
+    ] = await Promise.all([
         this.ordersRepository
           .createQueryBuilder('o')
           .select('SUM(o.total) / 100.0', 'sum')
@@ -41,6 +51,17 @@ export class AdminTransactionsService {
           .getRawOne(),
         this.ordersRepository.count({ where: { status: OrderStatus.PENDING } }),
         this.bookingsRepository.count({ where: { status: 'pending' as any } }),
+        this.mcomChargesRepository
+          .createQueryBuilder('c')
+          .select('SUM(c."feeMinor") / 100.0', 'sum')
+          .where('c.status = :status', { status: 'paid' })
+          .getRawOne(),
+        this.mcomChargesRepository
+          .createQueryBuilder('c')
+          .where('c."refundedMinor" > 0 OR c.status = :refunded', {
+            refunded: 'refunded',
+          })
+          .getCount(),
       ]);
 
     const totalVolume =
@@ -50,14 +71,14 @@ export class AdminTransactionsService {
 
     return {
       totalVolume,
-      totalFees: 0,
+      totalFees: Number(feeSum?.sum || 0),
       pendingCount: orderPending + bookingPending,
-      refundCount: 0,
+      refundCount: refundedCount,
     };
   }
 
   async findAll(query: TransactionQueryDto): Promise<PaginatedTransactionsDto> {
-    const { search, status, page = 1, limit = 10 } = query;
+    const { search, status, type, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
     // Fetch limited set from sources. Combined pagination is tricky without a unified table.
@@ -97,7 +118,7 @@ export class AdminTransactionsService {
           o.items?.[0]?.product?.business?.businessName || 'Multiple/Unknown',
         type: 'payment' as const,
         amount: Number(o.total),
-        fees: 0,
+        fees: Number(o.payment?.feeMinor ?? 0) / 100,
         paymentMethod: o.payment?.paymentMethod || 'Unknown',
         status: o.status,
         date: o.created_at,
@@ -109,7 +130,7 @@ export class AdminTransactionsService {
         payeeName: b.service?.business?.businessName || 'Service Provider',
         type: 'payment' as const,
         amount: Number(b.payment?.amount || 0),
-        fees: 0,
+        fees: Number(b.payment?.feeMinor ?? 0) / 100,
         paymentMethod: b.payment?.paymentMethod || 'Booking',
         status: b.status,
         date: b.created_at,
@@ -120,16 +141,31 @@ export class AdminTransactionsService {
         payeeName: 'Mcom Mall',
         type: 'payment' as const,
         amount: Number(m.amount),
-        fees: 0,
+        fees: Number(m.feeMinor ?? 0) / 100,
         paymentMethod: m.paymentMethod,
         status: 'completed',
         date: m.created_at,
       })),
     ];
 
+    const searchTerm = search?.trim().toLowerCase();
+    const filtered = allTransactions.filter((txn) => {
+      const matchesSearch =
+        !searchTerm ||
+        [txn.id, txn.payerName, txn.payeeName, txn.paymentMethod, txn.status]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(searchTerm));
+      const matchesStatus =
+        !status ||
+        status === 'all' ||
+        String(txn.status).toLowerCase() === status.toLowerCase();
+      const matchesType = !type || type === 'all' || txn.type === type;
+      return matchesSearch && matchesStatus && matchesType;
+    });
+
     // Sort by date descending
-    allTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
-    const paginatedData = allTransactions.slice(0, limit);
+    filtered.sort((a, b) => b.date.getTime() - a.date.getTime());
+    const paginatedData = filtered.slice(0, limit);
 
     const [oTotal, bTotal, mTotal] = await Promise.all([
       this.ordersRepository.count(),

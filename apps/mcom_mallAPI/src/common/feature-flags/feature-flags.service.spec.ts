@@ -7,13 +7,22 @@ function build(config: Record<string, string | undefined>): FeatureFlagsService 
 }
 
 describe('FeatureFlagsService', () => {
-  it('defaults every money-engine flag to enabled when unset', () => {
+  it('defaults the money-engine flags to enabled and coupons to purchasable', () => {
     const flags = build({});
 
     expect(flags.isFunctionalTypeEnforcementEnabled()).toBe(true);
     expect(flags.isMoneyVoucherCheckoutEnabled()).toBe(true);
     expect(flags.isDealsHubEnabled()).toBe(true);
     expect(flags.isCashbackCapEnabled()).toBe(true);
+    // Coupons stay purchasable unless the retirement flag is explicitly on.
+    expect(flags.isLedgerConsolidationEnabled()).toBe(false);
+  });
+
+  it('retires coupon products only when the ledger flag is explicitly true', () => {
+    const flags = build({
+      [FEATURE_FLAG_KEYS.LEDGER_CONSOLIDATION]: 'true',
+    });
+
     expect(flags.isLedgerConsolidationEnabled()).toBe(true);
   });
 
@@ -45,7 +54,7 @@ describe('FeatureFlagsService', () => {
       [FEATURE_FLAG_KEYS.MONEY_VOUCHER_CHECKOUT]: true,
       [FEATURE_FLAG_KEYS.DEALS_HUB]: true,
       [FEATURE_FLAG_KEYS.CASHBACK_CAP]: true,
-      [FEATURE_FLAG_KEYS.LEDGER_CONSOLIDATION]: true,
+      [FEATURE_FLAG_KEYS.LEDGER_CONSOLIDATION]: false,
     });
   });
 });

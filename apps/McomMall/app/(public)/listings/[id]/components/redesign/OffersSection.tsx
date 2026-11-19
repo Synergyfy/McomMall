@@ -7,9 +7,11 @@ import { InHouseBusiness } from '@/service/listings/types';
 import LoyaltyContent from '@/components/LoyaltyContent';
 import GiftCardTabContent from '@/app/(public)/listings/[id]/components/GiftCardTabContent';
 import CouponTabContent from '@/app/(public)/listings/[id]/components/CouponTabContent';
-import { useState } from 'react';
 import { usePublicLoyaltyProgram } from '@/service/loyalty/hook';
 import { useGetPublicTimeBonuses } from '@/service/offers/hook';
+import { useGetBusinessGiftCards } from '@/service/gift-card/hook';
+import { useGetBusinessVoucherProducts } from '@/service/hooks/useVoucherService';
+import { useGetPublicCouponProductsByBusiness } from '@/service/coupon-products/hooks';
 import { Ticket, Gift, Sparkles, Award } from 'lucide-react';
 
 interface OffersSectionProps {
@@ -18,15 +20,27 @@ interface OffersSectionProps {
 
 export default function OffersSection({ listing }: OffersSectionProps) {
   const { giftCard, voucher } = listing;
-  const [activeTab, setActiveTab] = useState('');
   const { data: loyaltyProgram } = usePublicLoyaltyProgram(listing.id);
   const { data: timeBonuses } = useGetPublicTimeBonuses(listing.id);
+  const { data: giftCardTemplates, isPending: giftCardsLoading } =
+    useGetBusinessGiftCards(listing.id);
+  const { voucherProducts, isLoading: vouchersLoading } =
+    useGetBusinessVoucherProducts(listing.id);
+  const { data: couponProducts, isLoading: couponsLoading } =
+    useGetPublicCouponProductsByBusiness(listing.id);
+
   const showLoyaltyTab =
     loyaltyProgram?.isEnabled === true || (timeBonuses?.length ?? 0) > 0;
+  const showGiftCardTab =
+    giftCard && (giftCardsLoading || (giftCardTemplates?.length ?? 0) > 0);
+  const showVoucherTab =
+    voucher && (vouchersLoading || (voucherProducts?.length ?? 0) > 0);
+  const showCouponTab =
+    couponsLoading || (couponProducts?.length ?? 0) > 0;
 
     const availableTabs = [
 
-      { value: 'gift-card', label: 'Gift Cards', icon: Gift, enabled: giftCard },
+      { value: 'gift-card', label: 'Gift Cards', icon: Gift, enabled: showGiftCardTab },
 
       {
 
@@ -40,9 +54,9 @@ export default function OffersSection({ listing }: OffersSectionProps) {
 
       },
 
-      { value: 'voucher', label: 'Vouchers', icon: Ticket, enabled: voucher },
+      { value: 'voucher', label: 'Vouchers', icon: Ticket, enabled: showVoucherTab },
 
-      { value: 'coupon', label: 'Coupons', icon: Sparkles, enabled: true },
+      { value: 'coupon', label: 'Coupons', icon: Sparkles, enabled: showCouponTab },
 
     ].filter((tab) => tab.enabled);
 

@@ -24,4 +24,20 @@ export class ServicePayment extends AbstractBaseEntity {
 
   @Column()
   transactionId: string;
+
+  /** MCOM Pay charge id (Central Hub). Unique: one charge funds one booking. */
+  @Column({ nullable: true, unique: true })
+  mcomChargeId?: string | null;
+
+  @Column({ nullable: true })
+  providerRef?: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  feeMinor?: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  netMinor?: string | null;
+
+  @Column({ nullable: true })
+  status?: string | null;
 }

@@ -29,48 +29,10 @@ type InfoCardProps = {
   children: React.ReactNode;
 };
 
-// --- Mock Data ---
-
-const paymentMethods: PaymentMethod[] = [
-  {
-    id: 'pm_1',
-    type: 'Bank Transfer',
-    details: 'nequijj - asfsdfds - ****3432',
-    isDefault: true,
-  },
-  { id: 'pm_2', type: 'PayPal', details: 'user@example.com', isDefault: false },
-];
-
-const withdrawalHistory: Withdrawal[] = [
-  {
-    id: '#WTH-001',
-    date: new Date(2025, 7, 5),
-    amount: 150.0,
-    method: 'Bank Transfer',
-    status: 'Approved',
-  },
-  {
-    id: '#WTH-002',
-    date: new Date(2025, 6, 20),
-    amount: 75.5,
-    method: 'PayPal',
-    status: 'Approved',
-  },
-  {
-    id: '#WTH-003',
-    date: new Date(2025, 6, 1),
-    amount: 250.0,
-    method: 'Bank Transfer',
-    status: 'Cancelled',
-  },
-  {
-    id: '#WTH-004',
-    date: new Date(),
-    amount: 100.0,
-    method: 'PayPal',
-    status: 'Pending',
-  },
-];
+// Payout methods and withdrawal history are owned by MCOM Central. The mall
+// deliberately renders a clear empty state instead of fabricated data.
+const paymentMethods: PaymentMethod[] = [];
+const withdrawalHistory: Withdrawal[] = [];
 
 // --- Reusable UI Components ---
 

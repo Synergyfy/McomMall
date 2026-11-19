@@ -4,6 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PartnerTemplatesService } from './partner-templates.service';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 function makeService() {
   const business = {
@@ -80,6 +81,7 @@ describe('PartnerTemplatesService', () => {
       name: 'Other',
       ownerId: 'someone-else',
       isActive: true,
+      approvalStatus: ApprovalStatus.APPROVED,
     });
 
     await expect(
@@ -105,6 +107,7 @@ describe('PartnerTemplatesService', () => {
       backgroundColor: '#fff',
       textColor: '#000',
       isActive: true,
+      approvalStatus: ApprovalStatus.APPROVED,
       ownerId: 'u1',
       scopeConfig: null,
     });

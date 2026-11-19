@@ -20,6 +20,11 @@ import { toast } from 'sonner';
 import { CURRENCY, stripHtmlText } from '@/lib/utils';
 import { InProgressDialog } from '@/components/InProgressDialog';
 import { Coupon } from '@/service/my-coupons/types';
+import { getPaymentErrorInfo, showPaymentError } from '@/lib/payment-errors';
+import {
+  buildPayPalReturnUrls,
+  storePendingPayPalPurchase,
+} from '@/lib/paypal-return';
 
 interface CouponPurchaseModalProps {
   product: CouponProduct;
@@ -40,10 +45,15 @@ export default function CouponPurchaseModal({
   >('stripe');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const initiatePurchase = useInitiateCouponPurchase();
   const verifyPurchase = useVerifyCouponPurchase();
+  const fixedAmounts = product.fixedAmounts ?? [];
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -52,16 +62,20 @@ export default function CouponPurchaseModal({
 
   const handleInitiatePayment = () => {
     if (!amount) {
-      toast.error('Please enter an amount.');
+      toast.error('Please choose an amount.');
       return;
     }
 
+    setError(null);
     setIsProcessing(true);
+    const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
     initiatePurchase.mutate(
       {
         couponProductId: product.id,
         amount: Number(amount),
         paymentMethod,
+        returnUrl,
+        cancelUrl,
       },
       {
         onSuccess: (data) => {
@@ -79,10 +93,9 @@ export default function CouponPurchaseModal({
                 onSuccess: (verified) => {
                   onPurchaseSuccess(verified.data);
                 },
-                onError: () => {
-                  toast.error(
-                    'Wallet payment succeeded but the coupon could not be issued. Please contact support.'
-                  );
+                onError: (err) => {
+                  setError(getPaymentErrorInfo(err).message);
+                  showPaymentError(err);
                 },
                 onSettled: () => {
                   setIsProcessing(false);
@@ -95,10 +108,16 @@ export default function CouponPurchaseModal({
             setClientSecret(data.data.clientSecret);
           } else if (paymentMethod === 'paypal' && data.data.orderId) {
             setPaypalOrderId(data.data.orderId);
+            setPaypalApprovalUrl(data.data.approvalUrl ?? null);
+            storePendingPayPalPurchase('coupon', {
+              couponProductId: product.id,
+              amount: Number(amount),
+            });
           }
         },
-        onError: () => {
-          toast.error('Failed to initiate payment. Please try again.');
+        onError: (err) => {
+          setError(getPaymentErrorInfo(err).message);
+          showPaymentError(err);
         },
         onSettled: () => {
           setIsProcessing(false);
@@ -108,6 +127,7 @@ export default function CouponPurchaseModal({
   };
 
   const handlePaymentSuccess = (transactionId: string) => {
+    setError(null);
     setIsProcessing(true);
     verifyPurchase.mutate(
       {
@@ -122,8 +142,9 @@ export default function CouponPurchaseModal({
         onSuccess: (data) => {
           onPurchaseSuccess(data.data);
         },
-        onError: () => {
-          toast.error('Failed to verify payment. Please contact support.');
+        onError: (err) => {
+          setError(getPaymentErrorInfo(err).message);
+          showPaymentError(err);
         },
         onSettled: () => {
           setIsProcessing(false);
@@ -144,23 +165,55 @@ export default function CouponPurchaseModal({
           </DialogHeader>
           {!clientSecret && !paypalOrderId && (
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="amount">Amount ({CURRENCY})</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={amount}
-                  onChange={handleAmountChange}
-                  placeholder="Enter amount"
-                />
+              <div className="space-y-2">
+                <Label>Amount ({CURRENCY})</Label>
+                {fixedAmounts.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {fixedAmounts.map((fixedAmount) => (
+                      <Button
+                        key={fixedAmount}
+                        type="button"
+                        variant={amount === fixedAmount ? 'default' : 'outline'}
+                        onClick={() => setAmount(fixedAmount)}
+                      >
+                        {CURRENCY}
+                        {fixedAmount}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                {product.allowCustomAmount && (
+                  <div>
+                    <Label htmlFor="amount" className="text-xs text-gray-500">
+                      Or enter a custom amount
+                    </Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      value={amount}
+                      onChange={handleAmountChange}
+                      placeholder={`Between ${CURRENCY}${product.minCustomAmount ?? 0} and ${CURRENCY}${product.maxCustomAmount ?? 'any'}`}
+                      min={product.minCustomAmount ?? undefined}
+                      max={product.maxCustomAmount ?? undefined}
+                    />
+                  </div>
+                )}
+                {fixedAmounts.length === 0 && !product.allowCustomAmount && (
+                  <p className="text-sm text-rose-600">
+                    This coupon is not currently purchasable online.
+                  </p>
+                )}
               </div>
               <div>
                 <Label>Payment Method</Label>
                 <RadioGroup
                   value={paymentMethod}
-                  onValueChange={(value: 'stripe' | 'paypal' | 'mcom_wallet') =>
-                    setPaymentMethod(value)
-                  }
+                  onValueChange={(value: 'stripe' | 'paypal' | 'mcom_wallet') => {
+                    setPaymentMethod(value);
+                    setClientSecret(null);
+                    setPaypalOrderId(null);
+                    setError(null);
+                  }}
                   className="flex flex-wrap gap-4"
                 >
                   <div className="flex items-center space-x-2">
@@ -177,7 +230,11 @@ export default function CouponPurchaseModal({
                   </div>
                 </RadioGroup>
               </div>
-              <Button onClick={handleInitiatePayment} disabled={isProcessing}>
+              {error && <p className="text-sm text-rose-600">{error}</p>}
+              <Button
+                onClick={handleInitiatePayment}
+                disabled={isProcessing || !amount}
+              >
                 {isProcessing ? 'Processing...' : 'Proceed to Payment'}
               </Button>
             </div>
@@ -193,6 +250,7 @@ export default function CouponPurchaseModal({
           {paypalOrderId && paymentMethod === 'paypal' && (
             <PayPalCheckoutButton
               orderID={paypalOrderId}
+              approvalUrl={paypalApprovalUrl}
               onPaymentSuccess={(transactionId) => handlePaymentSuccess(transactionId)}
             />
           )}

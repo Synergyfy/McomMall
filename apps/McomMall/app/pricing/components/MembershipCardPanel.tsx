@@ -174,6 +174,9 @@ export default function MembershipCardPanel({
   const [session, setSession] = useState<{ clientSecret: string } | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const { mutateAsync: recordPaypalPayment, isPending: isRecordingPaypal } =
     useRecordPayment();
   const attemptKey = useRef<string>(
@@ -209,6 +212,7 @@ export default function MembershipCardPanel({
           throw new Error('PayPal did not return an order.');
         }
         setPaypalOrderId(res.orderId);
+        setPaypalApprovalUrl((res as any).approvalUrl ?? null);
       } catch (e: any) {
         setInitError(e?.message || 'Could not start PayPal payment.');
       }
@@ -249,6 +253,7 @@ export default function MembershipCardPanel({
           <div className="mt-4">
             <PayPalCheckoutButton
               orderID={paypalOrderId}
+              approvalUrl={paypalApprovalUrl}
               onPaymentSuccess={handlePayPalApproved}
             />
           </div>

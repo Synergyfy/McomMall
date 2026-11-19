@@ -24,15 +24,8 @@ export default function BillingOverviewPage() {
   const { data: membership, isLoading: isMembershipLoading } = useGetMyMembership();
   const isLoading = isInvoicesLoading || isMembershipLoading;
 
-  // Load custom card details from localStorage to align with update method preview
-  const cardNum = typeof window !== 'undefined' ? localStorage.getItem('billing_card_num') || '4242' : '4242';
-  const cardName = typeof window !== 'undefined' ? localStorage.getItem('billing_card_name') || 'John Doe' : 'John Doe';
-  const cardExpiry = typeof window !== 'undefined' ? localStorage.getItem('billing_card_expiry') || '12/28' : '12/28';
-
-  const last4 = cardNum.slice(-4);
-
   const handleDownloadInvoice = (invoiceId: string) => {
-    toast.success(`Downloading invoice receipt #${invoiceId.slice(0, 8)}...`);
+    toast.success(`Preparing receipt #${invoiceId.slice(0, 8)}…`);
   };
 
   // Get first 3 invoices for the snapshot
@@ -53,10 +46,10 @@ export default function BillingOverviewPage() {
       }
     }
   }
-  const priceFormatted = `$${priceValue.toFixed(2)}`;
+  const priceFormatted = `£${priceValue.toFixed(2)}`;
   const billingCycle = membership?.planType === 'annual' ? '/ year' : membership?.planType === 'quarterly' ? '/ quarter' : '/ month';
   const billingCycleLabel = membership?.planType === 'annual' ? 'year' : membership?.planType === 'quarterly' ? 'quarter' : 'month';
-  const autoRenewalLabel = membership?.isActive ? 'Auto-renewal: Active' : 'Auto-renewal: Off';
+  const autoRenewalLabel = 'One-off payment · no auto-renewal';
   const nextBillingDate = membership?.expiresAt 
     ? new Date(membership.expiresAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
     : 'Oct 1, 2026';
@@ -123,24 +116,21 @@ export default function BillingOverviewPage() {
         <Card className="bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 shadow-sm rounded-3xl p-6 flex flex-col justify-between h-52">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Active Payment Card</h4>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                Payment Security
+              </h4>
               <CreditCard className="h-5 w-5 text-gray-400" />
             </div>
 
             <div className="bg-gray-50 dark:bg-gray-950 p-4 rounded-2xl border border-gray-100/50">
-              <div className="flex items-center gap-3">
-                <div className="bg-white dark:bg-gray-900 p-1.5 rounded-lg border shadow-sm">
-                  <span className="text-[10px] font-bold text-blue-600 tracking-wider">VISA</span>
-                </div>
-                <div>
-                  <span className="text-sm font-bold text-gray-800 dark:text-gray-200 block">
-                    •••• •••• •••• {last4}
-                  </span>
-                  <span className="text-[10px] text-gray-450 dark:text-gray-450 block mt-0.5">
-                    Exp: {cardExpiry} · {cardName}
-                  </span>
-                </div>
-              </div>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                Cards are managed securely by MCOM Central.
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                MCOM Mall never stores your card number, expiry or CVV.
+                Payments are processed by MCOM Pay (Stripe / PayPal / MCOM
+                Wallet).
+              </p>
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ForbiddenException,
@@ -12,6 +13,7 @@ import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { Product } from '../product/entities/product.entity';
 import { Service } from '../services/entities/service.entity';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 @Injectable()
 export class ReviewsService {
@@ -50,6 +52,12 @@ export class ReviewsService {
         relations: ['business', 'business.user', 'serviceProvider'],
       });
       if (!product) throw new NotFoundException('Product not found');
+      if (
+        product.approvalStatus !== ApprovalStatus.APPROVED ||
+        product.adminDisabled
+      ) {
+        throw new BadRequestException('Product is not available for review');
+      }
 
       const isOwner =
         product.business?.user?.id === user.id ||
@@ -65,6 +73,12 @@ export class ReviewsService {
         relations: ['business', 'business.user'],
       });
       if (!service) throw new NotFoundException('Service not found');
+      if (
+        service.approvalStatus !== ApprovalStatus.APPROVED ||
+        service.adminDisabled
+      ) {
+        throw new BadRequestException('Service is not available for review');
+      }
       if (service.business?.user?.id === user.id) {
         throw new ForbiddenException('You cannot review your own service');
       }

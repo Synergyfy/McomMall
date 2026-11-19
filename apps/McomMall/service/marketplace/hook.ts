@@ -1,6 +1,11 @@
-import { useQuery, UseQueryOptions } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  UseQueryOptions,
+} from '@tanstack/react-query';
 import api from '../api';
 import { MarketplacePublicData } from './types';
+import type { DiscoveryQueryParams } from './discovery';
 
 export interface ErrorResponse {
   response?: {
@@ -12,12 +17,18 @@ export interface ErrorResponse {
   message?: string;
 }
 
-export const useGetMarketplacePublic = (options?: Partial<UseQueryOptions<MarketplacePublicData>>) => {
+export const useGetMarketplacePublic = (
+  params: DiscoveryQueryParams = {},
+  options?: Partial<UseQueryOptions<MarketplacePublicData>>,
+) => {
   return useQuery({
-    queryKey: ['marketplace', 'public'],
+    queryKey: ['marketplace', 'public', params],
     queryFn: async () => {
       try {
-        const { data } = await api.get<MarketplacePublicData>('marketplace/public');
+        const { data } = await api.get<MarketplacePublicData>(
+          'marketplace/public',
+          { params },
+        );
         return data;
       } catch (error: unknown) {
         const err = error as ErrorResponse;
@@ -26,6 +37,8 @@ export const useGetMarketplacePublic = (options?: Partial<UseQueryOptions<Market
         );
       }
     },
+    staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
     ...options
   });
 };

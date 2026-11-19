@@ -215,6 +215,9 @@ export default function CouponsVouchersPage() {
     const [purchaseStep, setPurchaseStep] = useState<'select' | 'payment'>('select');
     const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
     const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+    const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+      null,
+    );
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [shopIdInput, setShopIdInput] = useState('');
 
@@ -429,6 +432,7 @@ export default function CouponsVouchersPage() {
                     throw new Error('PayPal order could not be created.');
                 }
                 setPaypalOrderId(initiated.orderId);
+                setPaypalApprovalUrl((initiated as any).approvalUrl ?? null);
                 setPurchaseStep('payment');
             }
         } catch (error: unknown) {
@@ -827,7 +831,13 @@ export default function CouponsVouchersPage() {
                             <div className="space-y-4 py-4">
                                 <div className="p-4 bg-gray-50 rounded-xl flex justify-between"><span>Due:</span><span className="font-bold">£{topUpAmount}</span></div>
                                 {paymentMethod === 'STRIPE' && stripeClientSecret && <StripeCheckoutForm clientSecret={stripeClientSecret} onPaymentSuccess={handlePaymentSuccess} />}
-                                {paymentMethod === 'PAYPAL' && paypalOrderId && <PayPalCheckoutButton orderID={paypalOrderId} onPaymentSuccess={handlePaymentSuccess} />}
+                                {paymentMethod === 'PAYPAL' && paypalOrderId && (
+                                  <PayPalCheckoutButton
+                                    orderID={paypalOrderId}
+                                    approvalUrl={paypalApprovalUrl}
+                                    onPaymentSuccess={handlePaymentSuccess}
+                                  />
+                                )}
                             </div>
                         )}
                     </DialogContent>

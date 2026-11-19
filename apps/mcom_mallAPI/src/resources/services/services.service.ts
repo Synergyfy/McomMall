@@ -29,6 +29,10 @@ import { PublishSpareCapacityDto } from './dto/publish-spare-capacity.dto';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { ActivitiesService } from '../activities/activities.service';
 import { SearchServiceDto } from './dto/search-service.dto';
+import {
+  applyBusinessLocationFilter,
+  applyBusinessNearOrder,
+} from '../geography/location-filter.util';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import {
   ActionType,
@@ -39,6 +43,17 @@ import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { UserRole } from '../../common/role.enum';
 import { resolveBusinessTaxonomy } from '../../common/taxonomy/business-taxonomy';
+import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
+import {
+  CustomerAction,
+  PricingModel,
+  PricingType,
+  ServiceDeliveryOption,
+} from './service.enum';
 
 @Injectable()
 export class ServicesService {
@@ -91,7 +106,7 @@ export class ServicesService {
 
     const business = await this.businessRepository.findOne({
       where: { id: createServiceDto.businessId },
-      relations: ['user', 'sector', 'category', 'subCategory'],
+      relations: ['user', 'sector', 'category', 'subCategory', 'location'],
     });
 
     if (!business) {
@@ -126,7 +141,9 @@ export class ServicesService {
 
     const { bundledServices, configurableAddons, ...serviceData } =
       createServiceDto;
-    delete (serviceData as Record<string, unknown>).adminDisabled;
+    stripModerationFields(serviceData as Record<string, unknown>);
+
+    const isDraft = serviceData.status === 'draft';
 
     // Classification is owned by the MCOM Central business profile. Always
     // prefer the synced business taxonomy over whatever the client sent.
@@ -135,7 +152,7 @@ export class ServicesService {
     if (taxonomy.category) serviceData.category = taxonomy.category;
     if (taxonomy.subCategory) serviceData.subcategory = taxonomy.subCategory;
 
-    if (!serviceData.sector) {
+    if (!isDraft && !serviceData.sector) {
       throw new BadRequestException(
         'Your MCOM Central business profile needs a sector before you can add a service.',
       );
@@ -149,7 +166,9 @@ export class ServicesService {
           !/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(url),
       );
 
-    if (!hasServiceImage) {
+    // Draft saves are intentionally allowed to be incomplete. Publishing
+    // still requires at least one service image.
+    if (!isDraft && !hasServiceImage) {
       throw new BadRequestException(
         'At least one service image is required to create a service.',
       );
@@ -168,10 +187,25 @@ export class ServicesService {
       serviceData.description = serviceData.fullDesc;
     }
 
+    this.applyServiceCreationRules(
+      serviceData,
+      business,
+      isDraft,
+      !isDraft,
+      !isDraft,
+    );
+
+    serviceData.status = isDraft ? 'draft' : 'published';
+    serviceData.isActive = isDraft ? false : (serviceData.isActive ?? true);
+
     const service = this.serviceRepository.create({
-      ...serviceData,
+      ...(serviceData as Record<string, unknown>),
       businessId: business.id,
-    });
+      // Every new merchant service waits for admin approval before it can be
+      // seen or booked by anyone other than the owner.
+      approvalStatus: ApprovalStatus.PENDING,
+      adminDisabled: false,
+    } as Partial<Service>);
 
     const savedService = await this.serviceRepository.save(service);
 
@@ -232,6 +266,7 @@ export class ServicesService {
 
     const where: Record<string, unknown> = { businessId };
     if (!canSeeAll) {
+      where.approvalStatus = ApprovalStatus.APPROVED;
       where.status = 'published';
       where.isActive = true;
       where.adminDisabled = false;
@@ -298,6 +333,7 @@ export class ServicesService {
     const isOwner = !!user && service.business?.user?.id === user.id;
     const isAdmin = user?.role === UserRole.ADMIN;
     const isPubliclyVisible =
+      service.approvalStatus === ApprovalStatus.APPROVED &&
       service.status === 'published' &&
       service.isActive === true &&
       !service.adminDisabled;
@@ -337,6 +373,7 @@ export class ServicesService {
         'business.sector',
         'business.category',
         'business.subCategory',
+        'business.location',
       ],
     });
 
@@ -360,7 +397,7 @@ export class ServicesService {
     const { bundledServices, configurableAddons, ...serviceData } =
       updateServiceDto;
     // Admin moderation is not writable by merchants, even if they send it.
-    delete (serviceData as Record<string, unknown>).adminDisabled;
+    stripModerationFields(serviceData as Record<string, unknown>);
 
     // Keep the service aligned with the MCOM Central business classification.
     const taxonomy = resolveBusinessTaxonomy(service.business);
@@ -381,7 +418,107 @@ export class ServicesService {
       serviceData.description = serviceData.fullDesc;
     }
 
-    Object.assign(service, serviceData);
+    // Publishing a draft uses the same minimum content rules as creating a
+    // published service, even when the merchant activates it from the table.
+    if (serviceData.status === 'published' && service.status === 'draft') {
+      const media = serviceData.media ?? service.media ?? [];
+      const hasImage = media.some(
+        (url) =>
+          typeof url === 'string' &&
+          !/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(url),
+      );
+      if (!hasImage) {
+        throw new BadRequestException(
+          'Add at least one service image before publishing this draft.',
+        );
+      }
+
+      const pricingType = service.pricingType;
+      if (
+        ['fixed', 'startingFrom', 'hourly'].includes(pricingType) &&
+        service.price == null &&
+        service.fixedPrice == null &&
+        service.pricePerHour == null
+      ) {
+        throw new BadRequestException(
+          'Add a price before publishing this draft.',
+        );
+      }
+
+      if (
+        Array.isArray(service.deliveryOptions) &&
+        service.deliveryOptions.length === 0
+      ) {
+        throw new BadRequestException(
+          'Select at least one service delivery option before publishing this draft.',
+        );
+      }
+    }
+
+    // A draft may be published later, so re-run the same rules whenever the
+    // pricing / booking payload is written (e.g. flipping draft -> published).
+    // Merge the existing row first so partial updates (e.g. the dashboard's
+    // active/inactive toggle) never wipe unrelated service fields.
+    const isDraft = serviceData.status === 'draft';
+    const hasPricingInput = [
+      'pricingType',
+      'price',
+      'priceMax',
+      'pricingModel',
+      'fixedPrice',
+      'pricePerHour',
+      'pricePerUnit',
+      'basePrice',
+      'isQuoteModel',
+    ].some(
+      (key) => (serviceData as Record<string, unknown>)[key] !== undefined,
+    );
+
+    const mergedServiceData: Record<string, any> = {
+      pricingType: service.pricingType,
+      pricingModel: service.pricingModel,
+      price: service.price,
+      priceMax: service.priceMax,
+      fixedPrice: service.fixedPrice,
+      pricePerHour: service.pricePerHour,
+      pricePerUnit: service.pricePerUnit,
+      basePrice: service.basePrice,
+      isQuoteModel: service.isQuoteModel,
+      deliveryOptions: service.deliveryOptions,
+      deliveryConfig: service.deliveryConfig,
+      customerAction: service.customerAction,
+      availability: service.availability,
+      duration: service.duration,
+      faqs: service.faqs,
+      serviceLocation: service.serviceLocation,
+      ...serviceData,
+    };
+
+    this.applyServiceCreationRules(
+      mergedServiceData,
+      service.business,
+      isDraft,
+      !isDraft && hasPricingInput,
+      !isDraft && serviceData.deliveryOptions !== undefined,
+    );
+
+    if (serviceData.status === 'draft') {
+      mergedServiceData.isActive = false;
+    } else if (
+      serviceData.status === 'published' &&
+      mergedServiceData.isActive === undefined
+    ) {
+      mergedServiceData.isActive = true;
+    }
+
+    Object.assign(service, mergedServiceData);
+
+    // A rejected service becomes editable again and automatically returns to
+    // the review queue when the owner saves changes.
+    if (service.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(service);
+    }
+
     await this.serviceRepository.save(service);
 
     const updatedService = await this.serviceRepository.findOne({
@@ -509,6 +646,270 @@ export class ServicesService {
     }
   }
 
+  /* ------------------------------------------------------------------ */
+  /* Create Service flow                                                */
+  /* ------------------------------------------------------------------ */
+
+  private toNumber(value: unknown): number | undefined {
+    if (value === null || value === undefined || value === '') {
+      return undefined;
+    }
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  private derivePricingType(data: Record<string, any>): PricingType {
+    if (data.pricingType) {
+      return data.pricingType as PricingType;
+    }
+    if (data.isQuoteModel) {
+      return PricingType.QUOTE;
+    }
+    if (data.pricingModel === PricingModel.PER_HOUR) {
+      return PricingType.HOURLY;
+    }
+    return PricingType.FIXED;
+  }
+
+  private defaultAvailability() {
+    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const weekend = ['Saturday', 'Sunday'];
+    return {
+      schedule: [
+        ...weekdays.map((day) => ({
+          day,
+          enabled: true,
+          startTime: '09:00',
+          endTime: '17:00',
+          breaks: [],
+        })),
+        ...weekend.map((day) => ({
+          day,
+          enabled: false,
+          startTime: '09:00',
+          endTime: '17:00',
+          breaks: [],
+        })),
+      ],
+      slotDuration: 60,
+      bufferTime: 0,
+      maxBookingsPerSlot: 1,
+      staffPerBooking: 1,
+      serviceRadiusKm: 0,
+    };
+  }
+
+  private buildServiceLocation(
+    business: Business,
+    supplied?: Record<string, unknown> | null,
+  ): Record<string, unknown> | null {
+    const location = (business as any).location;
+    if (!location) {
+      return supplied ?? null;
+    }
+    return {
+      addressLine1: location.addressLine1 ?? null,
+      addressLine2: location.addressLine2 ?? null,
+      city: location.city ?? null,
+      state: location.state ?? null,
+      postcode: location.postcode ?? null,
+      latitude: location.latitude ?? null,
+      longitude: location.longitude ?? null,
+    };
+  }
+
+  /**
+   * Keeps the new service profile fields and the legacy booking fields in
+   * sync. The storefront, bookings and checkout still read `pricingModel`,
+   * `fixedPrice` and `pricePerHour`, so those are derived here.
+   */
+  private applyServiceCreationRules(
+    serviceData: Record<string, any>,
+    business: Business,
+    isDraft: boolean,
+    enforcePricing = !isDraft,
+    enforceDelivery = !isDraft,
+  ): void {
+    if (!serviceData.pricingModel) {
+      serviceData.pricingModel = PricingModel.FIXED;
+    }
+
+    const pricingType = this.derivePricingType(serviceData);
+    const hasNewPricing =
+      serviceData.pricingType !== undefined ||
+      serviceData.price !== undefined ||
+      serviceData.priceMax !== undefined;
+
+    const price =
+      this.toNumber(serviceData.price) ??
+      this.toNumber(serviceData.fixedPrice) ??
+      this.toNumber(serviceData.pricePerHour) ??
+      this.toNumber(serviceData.pricePerUnit) ??
+      this.toNumber(serviceData.basePrice);
+    const priceMax = this.toNumber(serviceData.priceMax);
+
+    if (!hasNewPricing) {
+      // Legacy client: keep the old pricing shape, but record the equivalent
+      // new pricing type so both reads stay consistent.
+      serviceData.pricingType = pricingType;
+      if (serviceData.price === undefined) {
+        serviceData.price = price ?? null;
+      }
+    } else {
+      if (
+        enforcePricing &&
+        (pricingType === PricingType.FIXED ||
+          pricingType === PricingType.STARTING_FROM ||
+          pricingType === PricingType.HOURLY) &&
+        price === undefined
+      ) {
+        throw new BadRequestException(
+          'A price is required for the selected pricing option.',
+        );
+      }
+
+      if (pricingType === PricingType.RANGE) {
+        if (enforcePricing && (price === undefined || priceMax === undefined)) {
+          throw new BadRequestException(
+            'Both a minimum and maximum price are required for price-range pricing.',
+          );
+        }
+        if (price !== undefined && priceMax !== undefined && priceMax < price) {
+          throw new BadRequestException(
+            'The maximum price cannot be less than the minimum price.',
+          );
+        }
+      }
+
+      serviceData.pricingType = pricingType;
+
+      switch (pricingType) {
+        case PricingType.QUOTE:
+          serviceData.price = null;
+          serviceData.priceMax = null;
+          serviceData.fixedPrice = null;
+          serviceData.pricePerHour = null;
+          serviceData.pricingModel = PricingModel.FIXED;
+          serviceData.isQuoteModel = true;
+          break;
+        case PricingType.FREE:
+          serviceData.price = 0;
+          serviceData.priceMax = null;
+          serviceData.fixedPrice = 0;
+          serviceData.pricePerHour = null;
+          serviceData.pricingModel = PricingModel.FIXED;
+          serviceData.isQuoteModel = false;
+          break;
+        case PricingType.RANGE:
+          serviceData.price = price ?? null;
+          serviceData.priceMax = priceMax ?? null;
+          serviceData.fixedPrice = price ?? null;
+          serviceData.pricePerHour = null;
+          serviceData.pricingModel = PricingModel.FIXED;
+          serviceData.isQuoteModel = false;
+          break;
+        case PricingType.HOURLY:
+          serviceData.price = price ?? null;
+          serviceData.priceMax = null;
+          serviceData.fixedPrice = null;
+          serviceData.pricePerHour = price ?? null;
+          serviceData.pricingModel = PricingModel.PER_HOUR;
+          serviceData.isQuoteModel = false;
+          break;
+        case PricingType.STARTING_FROM:
+        case PricingType.FIXED:
+        default:
+          serviceData.price = price ?? null;
+          serviceData.priceMax = null;
+          serviceData.fixedPrice = price ?? null;
+          serviceData.pricePerHour = null;
+          serviceData.pricingModel = PricingModel.FIXED;
+          serviceData.isQuoteModel = false;
+          break;
+      }
+    }
+
+    // Delivery options drive the legacy deliveryConfig used by bookings.
+    if (Array.isArray(serviceData.deliveryOptions)) {
+      const allowed = new Set(Object.values(ServiceDeliveryOption));
+      const options = Array.from(
+        new Set(
+          serviceData.deliveryOptions.filter((option: string) =>
+            allowed.has(option as ServiceDeliveryOption),
+          ),
+        ),
+      ) as ServiceDeliveryOption[];
+
+      if (enforceDelivery && options.length === 0) {
+        throw new BadRequestException(
+          'Select at least one service delivery option.',
+        );
+      }
+
+      serviceData.deliveryOptions = options;
+
+      if (options.length > 0) {
+        const mode = options.includes(ServiceDeliveryOption.AT_CUSTOMER)
+          ? 'onsite'
+          : options.includes(ServiceDeliveryOption.AT_BUSINESS)
+            ? 'atShop'
+            : 'remote';
+        serviceData.deliveryConfig = {
+          ...(serviceData.deliveryConfig ?? {}),
+          mode,
+        };
+      }
+    } else if (serviceData.deliveryConfig?.mode) {
+      const mode = serviceData.deliveryConfig.mode;
+      serviceData.deliveryOptions = [
+        mode === 'atShop'
+          ? ServiceDeliveryOption.AT_BUSINESS
+          : mode === 'remote'
+            ? ServiceDeliveryOption.ONLINE
+            : ServiceDeliveryOption.AT_CUSTOMER,
+      ];
+    }
+
+    // Customer action is the source of truth for quote/enquiry flows.
+    if (!serviceData.customerAction) {
+      serviceData.customerAction = serviceData.isQuoteModel
+        ? CustomerAction.REQUEST_QUOTE
+        : CustomerAction.BOOK_NOW;
+    }
+    if (serviceData.customerAction === CustomerAction.REQUEST_QUOTE) {
+      serviceData.isQuoteModel = true;
+    }
+
+    if (Array.isArray(serviceData.faqs)) {
+      serviceData.faqs = serviceData.faqs
+        .filter(
+          (faq: any) =>
+            typeof faq?.question === 'string' &&
+            faq.question.trim().length > 0 &&
+            typeof faq?.answer === 'string' &&
+            faq.answer.trim().length > 0,
+        )
+        .map((faq: any) => ({
+          question: faq.question.trim(),
+          answer: faq.answer.trim(),
+        }));
+    }
+
+    const duration = this.toNumber(serviceData.duration);
+    if (duration !== undefined && duration > 0) {
+      const availability =
+        serviceData.availability && typeof serviceData.availability === 'object'
+          ? serviceData.availability
+          : this.defaultAvailability();
+      serviceData.availability = { ...availability, slotDuration: duration };
+    }
+
+    serviceData.serviceLocation = this.buildServiceLocation(
+      business,
+      serviceData.serviceLocation,
+    );
+  }
+
   private async updateBundledServices(
     service: Service,
     dtos: BundledServiceDto[],
@@ -578,13 +979,17 @@ export class ServicesService {
       where: [
         {
           name: ILike(`%${term}%`),
+          approvalStatus: ApprovalStatus.APPROVED,
           status: 'published',
           isActive: true,
+          adminDisabled: false,
         },
         {
           description: ILike(`%${term}%`),
+          approvalStatus: ApprovalStatus.APPROVED,
           status: 'published',
           isActive: true,
+          adminDisabled: false,
         },
       ],
       relations: ['bundledServices', 'configurableAddons', 'business'],
@@ -598,7 +1003,11 @@ export class ServicesService {
 
     queryBuilder
       .leftJoinAndSelect('service.business', 'business')
-      .where('service.isActive = :isActive', { isActive: true })
+      .leftJoin('business.location', 'businessLocation')
+      .where('service.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('service.isActive = :isActive', { isActive: true })
       .andWhere('service.status = :status', { status: 'published' })
       .andWhere('service.adminDisabled = :adminDisabled', {
         adminDisabled: false,
@@ -625,8 +1034,17 @@ export class ServicesService {
       );
     }
 
+    applyBusinessLocationFilter(
+      queryBuilder,
+      'business',
+      searchDto,
+      'loc',
+      'businessLocation',
+    );
+    applyBusinessNearOrder(queryBuilder, 'business', searchDto);
+
     queryBuilder
-      .orderBy('service.created_at', 'DESC')
+      .addOrderBy('service.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

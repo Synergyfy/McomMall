@@ -154,6 +154,18 @@ export class Order extends AbstractBaseEntity {
   @Column({ type: 'bigint', default: 0, transformer: moneyTransformer })
   rewardDiscountApplied: number;
 
+  @ApiPropertyOptional({
+    description:
+      'Discount applied by redeeming a loyalty offer with points. Stored as pence.',
+  })
+  @Column({
+    name: 'offer_discount_applied',
+    type: 'bigint',
+    default: 0,
+    transformer: moneyTransformer,
+  })
+  offerDiscountApplied: number;
+
   @ApiProperty({ type: () => [OrderItemReward] })
   @OneToMany(() => OrderItemReward, (reward) => reward.order)
   rewardRedemptions: OrderItemReward[];

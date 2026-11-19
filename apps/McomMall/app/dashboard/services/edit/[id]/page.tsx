@@ -1,8 +1,21 @@
 'use client';
 
 import * as React from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  ChevronRight,
+  ImagePlus,
+  PlusCircle,
+  Save,
+  Trash2,
+} from 'lucide-react';
+import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -10,772 +23,850 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { useGetUserListings } from '@/service/listings/hook';
-import { pickCentralBusiness } from '@/lib/central-business';
-import { ChevronRight, PlusCircle, Trash2 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
-import { CreateServiceDto, UpdateServiceDto } from '@/service/services/types';
-import { useAddService } from '@/service/services/hook';
-import Link from 'next/link';
-
-interface ServiceError {
-  name?: string;
-  sector?: string;
-  businessId?: string;
-  pricingModel?: string;
-  fixedPrice?: string;
-  pricePerHour?: string;
-  pricePerUnit?: string;
-  unitName?: string;
-  minGuests?: string;
-  maxGuests?:string;
-  pricePerGuest?: string;
-  fixedGroupPrice?: string;
-  basePrice?: string;
-  baseGuests?: string;
-  additionalGuestPrice?: string;
-  bookingFee?: string;
-}
-
-import { useParams } from 'next/navigation';
+import MultiMediaUpload from '@/components/dashboard/media/MultiMediaUpload';
+import { useGetUserListings } from '@/service/listings/hook';
+import {
+  getBusinessTaxonomy,
+  pickCentralBusiness,
+} from '@/lib/central-business';
 import { useGetServiceById, useUpdateService } from '@/service/services/hook';
+import {
+  CreateServiceDto,
+  CustomerAction,
+  PricingType,
+  ServiceDeliveryOption,
+  ServiceFaq,
+} from '@/service/services/types';
+import { uploadFile } from '@/lib/upload';
+import {
+  CUSTOMER_ACTION_LABELS,
+  DELIVERY_OPTION_LABELS,
+  PRICING_TYPE_OPTIONS,
+  resolvePricingType,
+} from '@/lib/service-pricing';
+import { cn } from '@/lib/utils';
 
-const EditServicePage = () => {
+const DAYS = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+];
+
+const DEFAULT_SCHEDULE = DAYS.map((day) => ({
+  day,
+  enabled: day !== 'saturday' && day !== 'sunday',
+  startTime: '09:00',
+  endTime: '17:00',
+  breaks: [] as unknown[],
+}));
+
+const parseNum = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const isImage = (url: string) =>
+  !/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(url);
+
+const DELIVERY_VALUES: ServiceDeliveryOption[] = [
+  'atBusiness',
+  'atCustomer',
+  'online',
+];
+
+export default function EditServicePage() {
   const router = useRouter();
   const params = useParams();
   const serviceId = params.id as string;
-  const queryClient = useQueryClient();
-  const { data: listings } = useGetUserListings();
-  const { data: serviceData, isLoading: isLoadingService } =
-    useGetServiceById(serviceId);
+  const { data: listings } = useGetUserListings(1, 100);
+  const { data: serviceData, isLoading } = useGetServiceById(serviceId);
+  const { mutateAsync: updateService, isPending } = useUpdateService();
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
 
-  const [formData, setFormData] = React.useState<UpdateServiceDto>({
-    id: serviceId,
-    name: '',
-    sector: '',
-    description: '',
-    images: [],
-    isActive: true,
-    businessId: '',
-    pricingModel: 'fixed',
-    fixedPrice: undefined,
-    pricePerHour: undefined,
-    pricePerUnit: undefined,
-    unitName: '',
-    enableGuestPricing: false,
-    guestPricingModel: 'perGuest',
-    minGuests: undefined,
-    maxGuests: undefined,
-    pricePerGuest: undefined,
-    fixedGroupPrice: undefined,
-    basePrice: undefined,
-    baseGuests: undefined,
-    additionalGuestPrice: undefined,
-    isQuoteModel: false,
-    bookingFee: undefined,
-    bundledServices: [],
-    configurableAddons: [],
-  });
+  const [name, setName] = React.useState('');
+  const [shortDescription, setShortDescription] = React.useState('');
+  const [description, setDescription] = React.useState('');
+  const [existingImages, setExistingImages] = React.useState<string[]>([]);
+  const [existingVideos, setExistingVideos] = React.useState<string[]>([]);
+  const [newFiles, setNewFiles] = React.useState<File[]>([]);
+
+  const [pricingType, setPricingType] = React.useState<
+    PricingType | undefined
+  >();
+  const [price, setPrice] = React.useState<number | string>('');
+  const [priceMax, setPriceMax] = React.useState<number | string>('');
+
+  const [deliverySelection, setDeliverySelection] = React.useState<
+    ServiceDeliveryOption | 'multiple' | ''
+  >('');
+  const [deliveryOptions, setDeliveryOptions] = React.useState<
+    ServiceDeliveryOption[]
+  >([]);
+  const [customerAction, setCustomerAction] =
+    React.useState<CustomerAction>('bookNow');
+  const [bookingInstructions, setBookingInstructions] = React.useState('');
+  const [appointmentArrangements, setAppointmentArrangements] =
+    React.useState('');
+  const [availabilityNotes, setAvailabilityNotes] = React.useState('');
+  const [schedule, setSchedule] = React.useState<any[]>(DEFAULT_SCHEDULE);
+
+  const [duration, setDuration] = React.useState<number | string>('');
+  const [serviceConditions, setServiceConditions] = React.useState('');
+  const [faqs, setFaqs] = React.useState<ServiceFaq[]>([]);
+  const [publish, setPublish] = React.useState(true);
+
+  const business = pickCentralBusiness(
+    (listings?.data ?? []) as Array<any>,
+  ) as any;
+  const taxonomy = getBusinessTaxonomy(business);
 
   React.useEffect(() => {
-    if (serviceData) {
-      setFormData({
-        ...serviceData,
-        id: serviceId,
-        unitName: serviceData.unitName ?? undefined,
-        guestPricingModel: (serviceData.guestPricingModel as 'perGuest' | 'fixedGroup' | 'baseWithAdditional') ?? undefined,
-        fixedPrice: parseFloat(serviceData.fixedPrice || '0'),
-        pricePerHour: parseFloat(serviceData.pricePerHour || '0'),
-        pricePerUnit: parseFloat(serviceData.pricePerUnit || '0'),
-        pricePerGuest: parseFloat(serviceData.pricePerGuest || '0'),
-        fixedGroupPrice: parseFloat(serviceData.fixedGroupPrice || '0'),
-        basePrice: parseFloat(serviceData.basePrice || '0'),
-        baseGuests: parseInt(serviceData.baseGuests || '0', 10),
-        additionalGuestPrice: parseFloat(
-          serviceData.additionalGuestPrice || '0'
-        ),
-        bookingFee: parseFloat(serviceData.bookingFee || '0'),
-        bundledServices: serviceData.bundledServices.map(bs => ({
-          ...bs,
-          price: parseFloat(bs.price),
+    if (!serviceData) return;
+
+    setName(serviceData.name ?? '');
+    setShortDescription(
+      serviceData.shortDescription ?? serviceData.shortDesc ?? '',
+    );
+    setDescription(serviceData.description ?? serviceData.fullDesc ?? '');
+
+    const media = serviceData.media ?? [];
+    const images = (serviceData as any).images as string[] | undefined;
+    setExistingImages(
+      (images && images.length > 0 ? images : media.filter(isImage)) ?? [],
+    );
+    setExistingVideos(media.filter((url) => !isImage(url)));
+
+    const resolvedPricingType = resolvePricingType(serviceData as any);
+    setPricingType(resolvedPricingType);
+    setPrice(
+      parseNum(
+        (serviceData as any).price ??
+          serviceData.fixedPrice ??
+          serviceData.pricePerHour ??
+          serviceData.pricePerUnit ??
+          serviceData.basePrice,
+      ) ?? '',
+    );
+    setPriceMax(parseNum((serviceData as any).priceMax) ?? '');
+
+    const options: ServiceDeliveryOption[] =
+      serviceData.deliveryOptions && serviceData.deliveryOptions.length > 0
+        ? serviceData.deliveryOptions
+        : serviceData.deliveryConfig?.mode === 'atShop'
+          ? ['atBusiness']
+          : serviceData.deliveryConfig?.mode === 'remote'
+            ? ['online']
+            : ['atCustomer'];
+    setDeliveryOptions(options);
+    setDeliverySelection(options.length > 1 ? 'multiple' : (options[0] ?? ''));
+
+    setCustomerAction(
+      (serviceData.customerAction as CustomerAction) ??
+        (serviceData.isQuoteModel ? 'requestQuote' : 'bookNow'),
+    );
+    setBookingInstructions((serviceData as any).bookingInstructions ?? '');
+    setAppointmentArrangements(
+      (serviceData as any).appointmentArrangements ?? '',
+    );
+    setAvailabilityNotes((serviceData as any).availabilityNotes ?? '');
+
+    const serviceSchedule = serviceData.availability?.schedule;
+    if (Array.isArray(serviceSchedule) && serviceSchedule.length > 0) {
+      setSchedule(
+        serviceSchedule.map((day) => ({
+          ...day,
+          day: String(day.day).toLowerCase(),
+          breaks: day.breaks ?? [],
         })),
-        configurableAddons: serviceData.configurableAddons.map(ca => ({
-          ...ca,
-          price: parseFloat(ca.price),
-        })),
-      });
+      );
+    } else {
+      setSchedule(DEFAULT_SCHEDULE);
     }
-  }, [serviceData, serviceId]);
 
+    setDuration(
+      serviceData.duration || serviceData.availability?.slotDuration || '',
+    );
+    setServiceConditions((serviceData as any).serviceConditions ?? '');
+    setFaqs((serviceData as any).faqs ?? []);
+    setPublish((serviceData.status ?? 'published') !== 'draft');
+  }, [serviceData]);
 
-  const [errors, setErrors] = React.useState<ServiceError>({});
-  const businessName = pickCentralBusiness(listings?.data)?.businessName;
-
-  // Services belong to the user's single MCOM Central business.
-  React.useEffect(() => {
-    const business = pickCentralBusiness(listings?.data);
-    if (business && !formData.businessId) {
-      setFormData(prev => ({ ...prev, businessId: business.id }));
+  const selectDelivery = (value: ServiceDeliveryOption | 'multiple') => {
+    setDeliverySelection(value);
+    if (value === 'multiple') {
+      if (deliveryOptions.length === 0) setDeliveryOptions([]);
+      return;
     }
-  }, [listings, formData.businessId]);
+    setDeliveryOptions([value]);
+  };
 
-  const { mutate: updateService, isPending: isUpdatingService } =
-    useUpdateService();
+  const toggleMultipleOption = (option: ServiceDeliveryOption) => {
+    setDeliveryOptions((current) =>
+      current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option],
+    );
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validateForm()) {
-      updateService(formData, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['my-services'] });
-          setShowSuccessDialog(true);
+  const updateSchedule = (index: number, patch: Record<string, unknown>) => {
+    setSchedule((current) =>
+      current.map((day, i) => (i === index ? { ...day, ...patch } : day)),
+    );
+  };
+
+  const addFaq = () =>
+    setFaqs((current) => [...current, { question: '', answer: '' }]);
+  const updateFaq = (index: number, patch: Partial<ServiceFaq>) =>
+    setFaqs((current) =>
+      current.map((faq, i) => (i === index ? { ...faq, ...patch } : faq)),
+    );
+  const removeFaq = (index: number) =>
+    setFaqs((current) => current.filter((_, i) => i !== index));
+
+  const validate = () => {
+    if (!name.trim() || name.trim().length < 3) {
+      toast.error('Service name must be at least 3 characters.');
+      return false;
+    }
+    if (!shortDescription.trim()) {
+      toast.error('Short description is required.');
+      return false;
+    }
+    if (!description.trim()) {
+      toast.error('Full description is required.');
+      return false;
+    }
+    if (!pricingType) {
+      toast.error('Select a pricing option.');
+      return false;
+    }
+    const min = parseNum(price);
+    const max = parseNum(priceMax);
+    if (
+      ['fixed', 'startingFrom', 'hourly'].includes(pricingType) &&
+      min === undefined
+    ) {
+      toast.error('Enter a price for the selected pricing option.');
+      return false;
+    }
+    if (pricingType === 'range' && (min === undefined || max === undefined)) {
+      toast.error('Enter both a minimum and maximum price.');
+      return false;
+    }
+    if (
+      pricingType === 'range' &&
+      min !== undefined &&
+      max !== undefined &&
+      max < min
+    ) {
+      toast.error('Maximum price cannot be less than the minimum price.');
+      return false;
+    }
+    if (!deliverySelection) {
+      toast.error('Select how the service is delivered.');
+      return false;
+    }
+    if (deliverySelection === 'multiple' && deliveryOptions.length < 2) {
+      toast.error('Select at least two delivery options.');
+      return false;
+    }
+    if (!customerAction) {
+      toast.error('Select the customer action.');
+      return false;
+    }
+    if (existingImages.length === 0 && newFiles.length === 0) {
+      toast.error('Keep or upload at least one service image.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!serviceData || !validate()) return;
+
+    setSaving(true);
+    try {
+      const uploads = await Promise.all(
+        newFiles.map((file) => uploadFile(file)),
+      );
+      const uploadedImages = uploads
+        .filter((result, index) => !newFiles[index].type.startsWith('video/'))
+        .map((result) => result.secure_url);
+      const uploadedVideos = uploads
+        .filter((_, index) => newFiles[index].type.startsWith('video/'))
+        .map((result) => result.secure_url);
+
+      const min = parseNum(price);
+      const max = parseNum(priceMax);
+      const isHourly = pricingType === 'hourly';
+      const isQuote =
+        pricingType === 'quote' || customerAction === 'requestQuote';
+
+      const payload: CreateServiceDto = {
+        businessId: serviceData.businessId,
+        name: name.trim(),
+        shortDescription: shortDescription.trim(),
+        description: description.trim(),
+        shortDesc: shortDescription.trim(),
+        fullDesc: description.trim(),
+        sector: serviceData.sector || taxonomy.sectorName,
+        category: serviceData.category || taxonomy.categoryName,
+        subcategory: serviceData.subcategory || taxonomy.subCategoryName,
+
+        pricingType,
+        price:
+          pricingType === 'quote' || pricingType === 'free' ? undefined : min,
+        priceMax: pricingType === 'range' ? max : undefined,
+
+        deliveryOptions,
+        customerAction,
+        bookingInstructions: bookingInstructions.trim() || undefined,
+        appointmentArrangements: appointmentArrangements.trim() || undefined,
+        availabilityNotes: availabilityNotes.trim() || undefined,
+
+        duration: parseNum(duration) ?? 0,
+        serviceConditions: serviceConditions.trim() || undefined,
+        faqs: faqs.filter((faq) => faq.question.trim() && faq.answer.trim()),
+
+        availability: {
+          ...(serviceData.availability ?? {}),
+          schedule: schedule.map((day) => ({
+            ...day,
+            day: day.day.charAt(0).toUpperCase() + day.day.slice(1),
+            breaks: (day.breaks ?? []).map((brk: any) =>
+              typeof brk === 'string' ? brk : `${brk?.start}-${brk?.end}`,
+            ),
+          })),
+          slotDuration: parseNum(duration) || 60,
+          bufferTime: 0,
+          maxBookingsPerSlot: 1,
+          staffPerBooking: 1,
+          serviceRadiusKm: serviceData.availability?.serviceRadiusKm ?? 0,
         },
-        onError: (error) => {
-          console.error('Error updating service:', error);
-          // Handle error display to the user
-        },
-      });
+
+        images: [...existingImages, ...uploadedImages],
+        media: [...existingVideos, ...uploadedVideos],
+
+        pricingModel: isHourly ? 'perHour' : 'fixed',
+        fixedPrice: isHourly ? undefined : min,
+        pricePerHour: isHourly ? min : undefined,
+        enableGuestPricing: false,
+        isQuoteModel: isQuote,
+        requireApproval: customerAction !== 'bookNow',
+        isActive: publish ? true : false,
+        status: publish ? 'published' : 'draft',
+      };
+
+      await updateService({ ...payload, id: serviceId });
+      setShowSuccessDialog(true);
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Failed to update service.',
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
-  const validateForm = () => {
-    const newErrors: ServiceError = {};
-
-    if (!formData.name) newErrors.name = 'Service name is required.';
-    if (formData.name.length > 160)
-      newErrors.name = 'Service name must be 160 characters or less.';
-    if (!formData.businessId)
-      newErrors.businessId = 'Your MCOM Central business is required.';
-
-    // Pricing model validation
-    if (formData.pricingModel === 'fixed' && formData.fixedPrice == null) {
-      newErrors.fixedPrice = 'Fixed price is required.';
-    } else if (formData.fixedPrice != null && formData.fixedPrice < 0) {
-      newErrors.fixedPrice = 'Price must not be less than 0.';
-    }
-
-    if (formData.pricingModel === 'perHour' && formData.pricePerHour == null) {
-      newErrors.pricePerHour = 'Price per hour is required.';
-    } else if (formData.pricePerHour != null && formData.pricePerHour < 0) {
-      newErrors.pricePerHour = 'Price must not be less than 0.';
-    }
-
-    if (formData.pricingModel === 'perUnit') {
-      if (formData.pricePerUnit == null)
-        newErrors.pricePerUnit = 'Price per unit is required.';
-      else if (formData.pricePerUnit < 0)
-        newErrors.pricePerUnit = 'Price must not be less than 0.';
-      if (!formData.unitName) newErrors.unitName = 'Unit name is required.';
-    }
-
-    // Guest pricing validation
-    if (formData.enableGuestPricing) {
-      if (formData.minGuests == null) {
-        newErrors.minGuests = 'Min guests is required.';
-      } else if (formData.minGuests < 1) {
-        newErrors.minGuests = 'Min guests must not be less than 1.';
-      }
-
-      if (formData.maxGuests == null) {
-        newErrors.maxGuests = 'Max guests is required.';
-      } else if (formData.maxGuests < 1) {
-        newErrors.maxGuests = 'Max guests must not be less than 1.';
-      }
-
-      if (
-        formData.guestPricingModel === 'perGuest' &&
-        formData.pricePerGuest == null
-      ) {
-        newErrors.pricePerGuest = 'Price per guest is required.';
-      } else if (formData.pricePerGuest != null && formData.pricePerGuest < 0) {
-        newErrors.pricePerGuest = 'Price must not be less than 0.';
-      }
-
-      if (
-        formData.guestPricingModel === 'fixedGroup' &&
-        formData.fixedGroupPrice == null
-      ) {
-        newErrors.fixedGroupPrice = 'Fixed group price is required.';
-      } else if (
-        formData.fixedGroupPrice != null &&
-        formData.fixedGroupPrice < 0
-      ) {
-        newErrors.fixedGroupPrice = 'Price must not be less than 0.';
-      }
-
-      if (formData.guestPricingModel === 'baseWithAdditional') {
-        if (formData.basePrice == null)
-          newErrors.basePrice = 'Base price is required.';
-        else if (formData.basePrice < 0)
-          newErrors.basePrice = 'Price must not be less than 0.';
-
-        if (formData.baseGuests == null)
-          newErrors.baseGuests = 'Base guests number is required.';
-        else if (formData.baseGuests < 1)
-          newErrors.baseGuests = 'Base guests must not be less than 1.';
-
-        if (formData.additionalGuestPrice == null)
-          newErrors.additionalGuestPrice = 'Additional guest price is required.';
-        else if (formData.additionalGuestPrice < 0)
-          newErrors.additionalGuestPrice = 'Price must not be less than 0.';
-      }
-    }
-
-    // Quote model validation
-    if (formData.isQuoteModel && formData.bookingFee == null) {
-      newErrors.bookingFee = 'Booking fee is required.';
-    } else if (formData.bookingFee != null && formData.bookingFee < 0) {
-      newErrors.bookingFee = 'Booking fee must not be less than 0.';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    const isNumber = e.target.type === 'number';
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: isNumber ? (value === '' ? undefined : Number(value)) : value,
-    }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSwitchChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
-  };
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#f48c25]" />
+      </div>
+    );
+  }
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans">
-        <div className="max-w-4xl mx-auto">
-          <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-            <h1 className="text-3xl font-bold text-gray-800">
-              Edit Service
-            </h1>
+      <div className="min-h-screen bg-gray-50 p-4 font-sans sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-4xl">
+          <header className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <h1 className="text-3xl font-bold text-gray-800">Edit Service</h1>
             <div className="flex items-center text-sm text-gray-500">
-              <span
-                onClick={() => router.push('/dashboard')}
-                className="cursor-pointer"
-              >
+              <button type="button" onClick={() => router.push('/dashboard')}>
                 Home
-              </span>
-              <ChevronRight className="h-4 w-4 mx-1" />
-              <span
+              </button>
+              <ChevronRight className="mx-1 h-4 w-4" />
+              <button
+                type="button"
                 onClick={() => router.push('/dashboard/services')}
-                className="cursor-pointer"
               >
                 Services
-              </span>
-              <ChevronRight className="h-4 w-4 mx-1" />
+              </button>
+              <ChevronRight className="mx-1 h-4 w-4" />
               <span className="text-gray-700">Edit Service</span>
             </div>
           </header>
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white rounded-lg shadow-sm p-6"
-          >
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <Label htmlFor="name">Service Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                )}
-              </div>
-              <div>
-                <Label>Business</Label>
-                <div className="mt-1 flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-gray-700">
-                  {businessName || 'Your MCOM Central business'}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>
+                  The service is attached to your MCOM Central business
+                  automatically.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl border bg-muted/30 px-4 py-3 text-sm">
+                  <p className="text-xs text-muted-foreground">Business</p>
+                  <p className="font-semibold">
+                    {business?.businessName ||
+                      serviceData?.business?.businessName ||
+                      'Your MCOM Central business'}
+                  </p>
                 </div>
-              </div>
-            </div>
-            <div className="mb-6">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-              />
-            </div>
 
-            {/* Pricing Model */}
-            <div className="mb-6">
-              <Label>Pricing Model</Label>
-              <Select
-                name="pricingModel"
-                value={formData.pricingModel}
-                onValueChange={value => handleSelectChange('pricingModel', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fixed">Fixed Price</SelectItem>
-                  <SelectItem value="perHour">Per Hour</SelectItem>
-                  <SelectItem value="perUnit">Per Unit</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Service Name *</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
 
-            {formData.pricingModel === 'fixed' && (
-              <div className="mb-6">
-                <Label htmlFor="fixedPrice">Fixed Price</Label>
-                <Input
-                  id="fixedPrice"
-                  name="fixedPrice"
-                  type="number"
-                  value={formData.fixedPrice}
-                  onChange={handleInputChange}
-                />
-                {errors.fixedPrice && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.fixedPrice}
+                <div className="space-y-2">
+                  <Label htmlFor="shortDescription">Short Description *</Label>
+                  <Input
+                    id="shortDescription"
+                    value={shortDescription}
+                    onChange={(e) => setShortDescription(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Full Description *</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="min-h-[120px]"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <ImagePlus className="h-4 w-4 text-primary" /> Service
+                    Images
+                  </Label>
+                  {existingImages.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                      {existingImages.map((url) => (
+                        <div
+                          key={url}
+                          className="relative aspect-square overflow-hidden rounded-lg border"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt="Service"
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            aria-label="Remove image"
+                            onClick={() =>
+                              setExistingImages((current) =>
+                                current.filter((item) => item !== url),
+                              )
+                            }
+                            className="absolute right-1 top-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <MultiMediaUpload
+                    onMediaChange={setNewFiles}
+                    maxSize={30 * 1024 * 1024}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Add new images or videos. At least one image is required.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pricing */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Pricing</CardTitle>
+                <CardDescription>
+                  Choose how customers are charged and update the matching
+                  price.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {PRICING_TYPE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        setPricingType(option.value);
+                        if (
+                          option.value === 'quote' ||
+                          option.value === 'free'
+                        ) {
+                          setPrice('');
+                          setPriceMax('');
+                        }
+                      }}
+                      className={cn(
+                        'rounded-xl border-2 p-3 text-left text-sm transition-all',
+                        pricingType === option.value
+                          ? 'border-primary bg-primary/5'
+                          : 'border-gray-100 hover:border-gray-200',
+                      )}
+                    >
+                      <span className="block font-bold text-gray-900">
+                        {option.label}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {option.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {(pricingType === 'fixed' ||
+                  pricingType === 'startingFrom' ||
+                  pricingType === 'hourly') && (
+                  <div className="space-y-2">
+                    <Label>
+                      {pricingType === 'startingFrom'
+                        ? 'Starting Price'
+                        : pricingType === 'hourly'
+                          ? 'Hourly Rate'
+                          : 'Price'}{' '}
+                      *
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {pricingType === 'range' && (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Minimum Price *</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Maximum Price *</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={priceMax}
+                        onChange={(e) => setPriceMax(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {(pricingType === 'quote' || pricingType === 'free') && (
+                  <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                    {pricingType === 'quote'
+                      ? 'Customers will request a quotation. No price is required.'
+                      : 'Customers will see this service as free.'}
                   </p>
                 )}
-              </div>
-            )}
+              </CardContent>
+            </Card>
 
-            {formData.pricingModel === 'perHour' && (
-              <div className="mb-6">
-                <Label htmlFor="pricePerHour">Price Per Hour</Label>
-                <Input
-                  id="pricePerHour"
-                  name="pricePerHour"
-                  type="number"
-                  value={formData.pricePerHour}
-                  onChange={handleInputChange}
-                />
-                {errors.pricePerHour && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.pricePerHour}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {formData.pricingModel === 'perUnit' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <Label htmlFor="pricePerUnit">Price Per Unit</Label>
-                  <Input
-                    id="pricePerUnit"
-                    name="pricePerUnit"
-                    type="number"
-                    value={formData.pricePerUnit}
-                    onChange={handleInputChange}
-                  />
-                  {errors.pricePerUnit && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.pricePerUnit}
-                    </p>
+            {/* Booking & availability */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Booking & Availability</CardTitle>
+                <CardDescription>
+                  Choose how customers receive the service and what they should
+                  do next.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label>Service Delivery *</Label>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {[
+                      {
+                        value: 'atBusiness' as const,
+                        label: DELIVERY_OPTION_LABELS.atBusiness,
+                      },
+                      {
+                        value: 'atCustomer' as const,
+                        label: DELIVERY_OPTION_LABELS.atCustomer,
+                      },
+                      {
+                        value: 'online' as const,
+                        label: DELIVERY_OPTION_LABELS.online,
+                      },
+                      { value: 'multiple' as const, label: 'Multiple Options' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => selectDelivery(option.value)}
+                        className={cn(
+                          'rounded-xl border-2 px-4 py-3 text-left text-sm font-semibold transition-all',
+                          deliverySelection === option.value
+                            ? 'border-primary bg-primary/5'
+                            : 'border-gray-100 hover:border-gray-200',
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {deliverySelection === 'multiple' && (
+                    <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">
+                        Choose every option that applies
+                      </p>
+                      {DELIVERY_VALUES.map((option) => (
+                        <label
+                          key={option}
+                          className="flex items-center gap-3 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={deliveryOptions.includes(option)}
+                            onChange={() => toggleMultipleOption(option)}
+                            className="h-4 w-4 accent-[#f48c25]"
+                          />
+                          {DELIVERY_OPTION_LABELS[option]}
+                        </label>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <div>
-                  <Label htmlFor="unitName">Unit Name</Label>
-                  <Input
-                    id="unitName"
-                    name="unitName"
-                    value={formData.unitName}
-                    onChange={handleInputChange}
-                  />
-                  {errors.unitName && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.unitName}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
 
-            {/* Guest Pricing */}
-            <div className="flex items-center space-x-2 mb-6">
-              <Switch
-                id="enableGuestPricing"
-                checked={formData.enableGuestPricing}
-                onCheckedChange={checked =>
-                  handleSwitchChange('enableGuestPricing', checked)
-                }
-              />
-              <Label htmlFor="enableGuestPricing">Enable Guest Pricing</Label>
-            </div>
-
-            {formData.enableGuestPricing && (
-              <div className="p-4 border rounded-md mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <Label htmlFor="minGuests">Min Guests</Label>
-                    <Input
-                      id="minGuests"
-                      name="minGuests"
-                      type="number"
-                      value={formData.minGuests}
-                      onChange={handleInputChange}
-                    />
-                    {errors.minGuests && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.minGuests}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="maxGuests">Max Guests</Label>
-                    <Input
-                      id="maxGuests"
-                      name="maxGuests"
-                      type="number"
-                      value={formData.maxGuests}
-                      onChange={handleInputChange}
-                    />
-                    {errors.maxGuests && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.maxGuests}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="mb-6">
-                  <Label>Guest Pricing Model</Label>
+                <div className="space-y-2">
+                  <Label>Customer Action *</Label>
                   <Select
-                    name="guestPricingModel"
-                    value={formData.guestPricingModel}
-                    onValueChange={value =>
-                      handleSelectChange('guestPricingModel', value)
+                    value={customerAction}
+                    onValueChange={(value) =>
+                      setCustomerAction(value as CustomerAction)
                     }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="perGuest">Per Guest</SelectItem>
-                      <SelectItem value="fixedGroup">Fixed Group</SelectItem>
-                      <SelectItem value="baseWithAdditional">
-                        Base with Additional
-                      </SelectItem>
+                      {Object.entries(CUSTOMER_ACTION_LABELS).map(
+                        ([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-                {formData.guestPricingModel === 'perGuest' && (
-                  <div className="mb-6">
-                    <Label htmlFor="pricePerGuest">Price Per Guest</Label>
-                    <Input
-                      id="pricePerGuest"
-                      name="pricePerGuest"
-                      type="number"
-                      value={formData.pricePerGuest}
-                      onChange={handleInputChange}
-                    />
-                    {errors.pricePerGuest && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.pricePerGuest}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {formData.guestPricingModel === 'fixedGroup' && (
-                  <div className="mb-6">
-                    <Label htmlFor="fixedGroupPrice">Fixed Group Price</Label>
-                    <Input
-                      id="fixedGroupPrice"
-                      name="fixedGroupPrice"
-                      type="number"
-                      value={formData.fixedGroupPrice}
-                      onChange={handleInputChange}
-                    />
-                    {errors.fixedGroupPrice && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.fixedGroupPrice}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {formData.guestPricingModel === 'baseWithAdditional' && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div>
-                      <Label htmlFor="basePrice">Base Price</Label>
-                      <Input
-                        id="basePrice"
-                        name="basePrice"
-                        type="number"
-                        value={formData.basePrice}
-                        onChange={handleInputChange}
-                      />
-                      {errors.basePrice && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.basePrice}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="baseGuests">Base Guests</Label>
-                      <Input
-                        id="baseGuests"
-                        name="baseGuests"
-                        type="number"
-                        value={formData.baseGuests}
-                        onChange={handleInputChange}
-                      />
-                      {errors.baseGuests && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.baseGuests}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="additionalGuestPrice">
-                        Additional Guest Price
-                      </Label>
-                      <Input
-                        id="additionalGuestPrice"
-                        name="additionalGuestPrice"
-                        type="number"
-                        value={formData.additionalGuestPrice}
-                        onChange={handleInputChange}
-                      />
-                      {errors.additionalGuestPrice && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.additionalGuestPrice}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
-            {/* Quote Model */}
-            <div className="flex items-center space-x-2 mb-6">
-              <Switch
-                id="isQuoteModel"
-                checked={formData.isQuoteModel}
-                onCheckedChange={checked =>
-                  handleSwitchChange('isQuoteModel', checked)
-                }
-              />
-              <Label htmlFor="isQuoteModel">Enable Quote Model</Label>
-            </div>
-            {formData.isQuoteModel && (
-              <div className="mb-6">
-                <Label htmlFor="bookingFee">Booking Fee</Label>
-                <Input
-                  id="bookingFee"
-                  name="bookingFee"
-                  type="number"
-                  value={formData.bookingFee}
-                  onChange={handleInputChange}
-                />
-                {errors.bookingFee && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.bookingFee}
-                  </p>
-                )}
-              </div>
-            )}
+                <div className="space-y-3">
+                  <Label>Working Days & Hours</Label>
+                  {schedule.map((day, index) => (
+                    <div
+                      key={day.day}
+                      className="flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center"
+                    >
+                      <div className="flex items-center justify-between gap-4 sm:w-40">
+                        <span className="text-sm font-bold capitalize">
+                          {day.day}
+                        </span>
+                        <Switch
+                          checked={Boolean(day.enabled)}
+                          onCheckedChange={(checked) =>
+                            updateSchedule(index, { enabled: checked })
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-1 items-center gap-2">
+                        <Input
+                          type="time"
+                          value={day.startTime ?? '09:00'}
+                          disabled={!day.enabled}
+                          onChange={(e) =>
+                            updateSchedule(index, { startTime: e.target.value })
+                          }
+                          className="h-9"
+                        />
+                        <span className="text-gray-400">–</span>
+                        <Input
+                          type="time"
+                          value={day.endTime ?? '17:00'}
+                          disabled={!day.enabled}
+                          onChange={(e) =>
+                            updateSchedule(index, { endTime: e.target.value })
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-            {/* Bundled Services */}
-            <div className="mb-6">
-              <Label>Bundled Services</Label>
-              {formData.bundledServices?.map((service, index) => (
-                <div key={index} className="flex items-center gap-2 mb-2">
-                  <Input
-                    placeholder="Service Name"
-                    value={service.name}
-                    onChange={e => {
-                      const newServices = [...(formData.bundledServices ?? [])];
-                      newServices[index].name = e.target.value;
-                      setFormData(prev => ({
-                        ...prev,
-                        bundledServices: newServices,
-                      }));
-                    }}
+                <div className="space-y-2">
+                  <Label>Appointment Arrangements</Label>
+                  <Textarea
+                    value={appointmentArrangements}
+                    onChange={(e) => setAppointmentArrangements(e.target.value)}
+                    className="min-h-[80px]"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Booking Instructions</Label>
+                  <Textarea
+                    value={bookingInstructions}
+                    onChange={(e) => setBookingInstructions(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Additional Availability Notes</Label>
+                  <Textarea
+                    value={availabilityNotes}
+                    onChange={(e) => setAvailabilityNotes(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Additional information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Information</CardTitle>
+                <CardDescription>
+                  Optional details that help customers decide.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label>Service Duration (minutes)</Label>
                   <Input
                     type="number"
-                    placeholder="Price"
-                    value={service.price}
-                    onChange={e => {
-                      const newServices = [...(formData.bundledServices ?? [])];
-                      newServices[index].price = Number(e.target.value);
-                      setFormData(prev => ({
-                        ...prev,
-                        bundledServices: newServices,
-                      }));
-                    }}
+                    min="1"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    className="max-w-xs"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Service Conditions</Label>
+                  <Textarea
+                    value={serviceConditions}
+                    onChange={(e) => setServiceConditions(e.target.value)}
+                    className="min-h-[90px]"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label>Frequently Asked Questions</Label>
+                  {faqs.map((faq, index) => (
+                    <div
+                      key={index}
+                      className="space-y-2 rounded-xl border bg-muted/20 p-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase text-muted-foreground">
+                          FAQ {index + 1}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFaq(index)}
+                          className="h-8 w-8 text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder="Question"
+                        value={faq.question}
+                        onChange={(e) =>
+                          updateFaq(index, { question: e.target.value })
+                        }
+                      />
+                      <Textarea
+                        placeholder="Answer"
+                        value={faq.answer}
+                        onChange={(e) =>
+                          updateFaq(index, { answer: e.target.value })
+                        }
+                        className="min-h-[70px]"
+                      />
+                    </div>
+                  ))}
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      const newServices = formData.bundledServices?.filter(
-                        (_, i) => i !== index
-                      );
-                      setFormData(prev => ({
-                        ...prev,
-                        bundledServices: newServices,
-                      }));
-                    }}
+                    variant="outline"
+                    onClick={addFaq}
+                    className="w-full border-dashed py-5"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add FAQ
                   </Button>
                 </div>
-              ))}
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-col gap-3 rounded-xl border bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  Publish this service
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Published services are visible to customers on Mcom Mall. Turn
+                  this off to keep the service as a draft.
+                </p>
+              </div>
+              <Switch checked={publish} onCheckedChange={setPublish} />
+            </div>
+
+            <div className="flex justify-end gap-3">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setFormData(prev => ({
-                    ...prev,
-                    bundledServices: [
-                      ...(prev.bundledServices ?? []),
-                      { name: '', price: undefined },
-                    ],
-                  }));
-                }}
+                onClick={() => router.push('/dashboard/services')}
               >
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Bundled Service
+                Cancel
               </Button>
-            </div>
-
-            {/* Configurable Add-ons */}
-            <div className="mb-6">
-              <Label>Configurable Add-ons</Label>
-              {formData.configurableAddons?.map((addon, index) => (
-                <div key={index} className="p-4 border rounded-md mb-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                    <Input
-                      placeholder="Add-on Name"
-                      value={addon.name}
-                      onChange={e => {
-                        const newAddons = [...(formData.configurableAddons ?? [])];
-                        newAddons[index].name = e.target.value;
-                        setFormData(prev => ({
-                          ...prev,
-                          configurableAddons: newAddons,
-                        }));
-                      }}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Price"
-                      value={addon.price}
-                      onChange={e => {
-                        const newAddons = [...(formData.configurableAddons ?? [])];
-                        newAddons[index].price = Number(e.target.value);
-                        setFormData(prev => ({
-                          ...prev,
-                          configurableAddons: newAddons,
-                        }));
-                      }}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Select
-                      value={addon.pricingType}
-                      onValueChange={value => {
-                        const newAddons = [...(formData.configurableAddons ?? [])];
-                        newAddons[index].pricingType = value as 'perUnit' | 'perGuest' | 'oneTime';
-                        setFormData(prev => ({
-                          ...prev,
-                          configurableAddons: newAddons,
-                        }));
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pricing Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="oneTime">One-Time</SelectItem>
-                        <SelectItem value="perGuest">Per Guest</SelectItem>
-                        <SelectItem value="perUnit">Per Unit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {addon.pricingType === 'perUnit' && (
-                      <Input
-                        placeholder="Unit Name"
-                        value={addon.unitName}
-                        onChange={e => {
-                          const newAddons = [...(formData.configurableAddons ?? [])];
-                          newAddons[index].unitName = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            configurableAddons: newAddons,
-                          }));
-                        }}
-                      />
-                    )}
-                  </div>
-                  <div className="flex justify-end mt-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        const newAddons = formData.configurableAddons?.filter(
-                          (_, i) => i !== index
-                        );
-                        setFormData(prev => ({
-                          ...prev,
-                          configurableAddons: newAddons,
-                        }));
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setFormData(prev => ({
-                    ...prev,
-                    configurableAddons: [
-                      ...(prev.configurableAddons ?? []),
-                      {
-                        name: '',
-                        price: undefined,
-                        pricingType: 'oneTime',
-                        unitName: '',
-                      },
-                    ],
-                  }));
-                }}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Add-on
-              </Button>
-            </div>
-
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isUpdatingService}>
-                {isUpdatingService ? (
-                  'Updating...'
-                ) : (
-                  <>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Update Service
-                  </>
-                )}
+              <Button type="submit" disabled={saving || isPending}>
+                <Save className="mr-2 h-4 w-4" />
+                {saving || isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </form>
@@ -790,6 +881,4 @@ const EditServicePage = () => {
       />
     </>
   );
-};
-
-export default EditServicePage;
+}

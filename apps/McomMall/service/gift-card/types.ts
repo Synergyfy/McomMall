@@ -20,6 +20,9 @@ export interface GiftCardTemplate {
   logoUrl?: string | null;
   spendingLocations?: { id: string; label: string; type: string }[] | null;
   previewSvg?: string | null;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  adminDisabled?: boolean;
+  reviewNote?: string | null;
 }
 
 export interface CreateGiftCardTemplateDto {

@@ -4,7 +4,6 @@ import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { useGetCategories, useGetSectors } from '@/service/taxonomy/hook';
 
 // --- Reusable ListItem Component ---
 export const ListItem = ({
@@ -33,57 +32,14 @@ export const ListItem = ({
   );
 };
 
-// --- Business Category Menu Component ---
-const BusinessCategoryMenu = () => {
-  const { data: sectors = [] } = useGetSectors();
-  const { data: categories = [] } = useGetCategories();
-
-  const categoriesBySector = sectors.map(sector => ({
-    name: sector.name,
-    subCategories: categories
-      .filter(c => c.sectorId === sector.id)
-      .map(c => c.name),
-  }));
-
-  if (categoriesBySector.length === 0) {
-    return <div className="p-4">Loading categories...</div>;
-  }
-
-  return (
-    <div className="container mx-auto">
-      <div className="grid w-full grid-cols-2 gap-x-4 gap-y-6 p-4 md:grid-cols-4 lg:grid-cols-6 lg:p-6">
-        {categoriesBySector.map(category => (
-          <div key={category.name} className="space-y-3">
-            <Link
-              href={`/listings?category=${encodeURIComponent(category.name)}`}
-            >
-              <h3 className="font-bold text-gray-900 hover:text-red-500 transition-colors">
-                {category.name}
-              </h3>
-            </Link>
-            <ul className="space-y-2">
-              {category.subCategories.map(subCategory => (
-                <li key={subCategory}>
-                  <Link
-                    href={`/listings?category=${encodeURIComponent(
-                      category.name
-                    )}&subcategory=${encodeURIComponent(subCategory)}`}
-                    className="block text-sm text-gray-600 hover:text-gray-900 hover:underline"
-                  >
-                    {subCategory}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // --- Menu Data ---
-export const menuItems = [
+interface NavMenuItem {
+  title: string;
+  href?: string;
+  content?: React.ReactNode;
+}
+
+export const menuItems: NavMenuItem[] = [
   {
     title: 'Home',
     href: '/',
@@ -91,39 +47,6 @@ export const menuItems = [
   {
     title: 'Marketplace',
     href: '/marketplace',
-  },
-  {
-    title: 'Seasons',
-    content: (
-      <div className="w-64 p-4">
-        <ListItem href="/seasons/winter" title="Winter">
-          Seasonal specials and winter collections.
-        </ListItem>
-        <ListItem href="/seasons/spring" title="Spring">
-          Fresh arrivals for the spring season.
-        </ListItem>
-        <ListItem href="/seasons/summer" title="Summer">
-          Explore our summer sales and new items.
-        </ListItem>
-        <ListItem href="/seasons/autumn" title="Autumn">
-          Explore our autumn sales and new items.
-        </ListItem>
-      </div>
-    ),
-  },
-  {
-    title: 'Business Category',
-    content: <BusinessCategoryMenu />,
-  },
-  {
-    title: 'Listings',
-    content: (
-      <div className="w-64 p-4">
-        <ListItem href="/listings" title="Listing">
-          Listing
-        </ListItem>
-      </div>
-    ),
   },
   {
     title: 'Pricing',

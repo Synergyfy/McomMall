@@ -385,6 +385,9 @@ export interface Product {
   productStatus: string;
   visibility: string;
   adminDisabled?: boolean;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
   purchaseNote?: string;
   enableReviews?: boolean;
   averageRating?: number;

@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Body,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,9 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from 'src/common/role.enum';
 import { AdminProductsService } from '../services/products.admin.service';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { User } from '../../users/entities/user.entity';
+import { ReviewModerationDto } from '../dto/moderation.dto';
 import {
   ProductQueryDto,
   PaginatedProductsDto,
@@ -45,14 +49,30 @@ export class AdminProductsController {
     return this.adminProductsService.findAll(query);
   }
 
+  @Patch(':id/approve')
+  @ApiOperation({ summary: 'Approve a pending product' })
+  approve(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.adminProductsService.approve(id, user.id);
+  }
+
+  @Patch(':id/reject')
+  @ApiOperation({ summary: 'Reject a pending product' })
+  reject(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() dto: ReviewModerationDto,
+  ) {
+    return this.adminProductsService.reject(id, user.id, dto.reviewNote);
+  }
+
   @Patch(':id/deactivate')
-  @ApiOperation({ summary: 'Deactivate a product' })
+  @ApiOperation({ summary: 'Delist a product' })
   deactivate(@Param('id') id: string) {
     return this.adminProductsService.deactivate(id);
   }
 
   @Patch(':id/activate')
-  @ApiOperation({ summary: 'Re-activate a product' })
+  @ApiOperation({ summary: 'Republish a delisted product' })
   activate(@Param('id') id: string) {
     return this.adminProductsService.activate(id);
   }

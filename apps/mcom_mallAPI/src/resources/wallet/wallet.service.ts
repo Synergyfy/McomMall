@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, EntityManager } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { Wallet } from './entities/wallet.entity';
 import { User } from '../users/entities/user.entity';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
@@ -454,11 +455,20 @@ export class WalletService {
       ],
     });
 
-    if (!booking || !booking.payment) {
-      throw new NotFoundException('Booking or payment not found.');
+    if (!booking) {
+      throw new NotFoundException('Booking not found.');
     }
 
-    const { amount } = booking.payment;
+    // Bundled service bookings are paid through the parent order and do not
+    // have their own ServicePayment row. Release the amount that was credited
+    // to pending at payment time (providerAmount), falling back to the legacy
+    // payment amount for older rows.
+    const amount = Number(booking.providerAmount || booking.payment?.amount || 0);
+    if (!amount) {
+      throw new BadRequestException(
+        'This booking has no provider amount to release.',
+      );
+    }
     const userId = booking.service.business.user.id;
 
     return this.dataSource.transaction(async (manager) => {
@@ -504,10 +514,14 @@ export class WalletService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string | null;
     provider: PaymentMethod;
   }> {
     if (initiateDto.amount < 10) {
       throw new BadRequestException('Minimum funding amount is 10 GBP');
+    }
+    if (initiateDto.amount > 500) {
+      throw new BadRequestException('Maximum funding amount is 500 GBP');
     }
     const currency = 'GBP';
 
@@ -519,6 +533,7 @@ export class WalletService {
           {
             reference: `wallet-topup-${userId}`,
             userId,
+            idempotencyKey: `wallet-topup-${userId}-${randomUUID()}`,
             description: 'MCOM Wallet top-up',
           },
         );
@@ -533,10 +548,15 @@ export class WalletService {
         {
           reference: `wallet-topup-${userId}`,
           userId,
+          idempotencyKey: `wallet-topup-${userId}-${randomUUID()}`,
           description: 'MCOM Wallet top-up',
         },
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      return {
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+        provider: PaymentMethod.PAYPAL,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -547,8 +567,13 @@ export class WalletService {
     userId: string,
   ): Promise<Wallet> {
     const { amount, paymentProvider, transactionId } = verifyDto;
+    if (amount < 10 || amount > 500) {
+      throw new BadRequestException(
+        'Top-up amount must be between 10 and 500 GBP.',
+      );
+    }
     const currency = 'GBP';
-    let verificationResult;
+    let verificationResult: { ok: boolean; details?: any; reason?: string };
 
     if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
@@ -556,6 +581,7 @@ export class WalletService {
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       verificationResult =
@@ -563,6 +589,7 @@ export class WalletService {
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
@@ -574,25 +601,37 @@ export class WalletService {
       );
     }
 
+    const details: any = verificationResult.details ?? {};
+    const mcomChargeId: string | null = details.id ?? null;
+    const providerRef: string | null = details.providerRef ?? null;
+    const feeMinor: string | null = details.feeMinor ?? null;
+    const netMinor: string | null = details.netMinor ?? null;
+
     // Credit the centralized MCOM Wallet. The idempotency key is derived from
     // the provider transaction so retries can never double-credit.
     const topUpUser = await this.userRepository.findOne({
       where: { id: userId },
     });
+    let centralWalletTxnId: string | null = null;
     if (topUpUser?.centralUserId && this.mcomWalletService.isEnabled()) {
       try {
-        await this.mcomWalletService.credit({
+        const credited = await this.mcomWalletService.credit({
           userId: topUpUser.centralUserId,
           amount,
           category: 'TRANSFER_IN',
           description: 'MCOM Mall wallet top-up',
           reference: transactionId,
-          metadata: { platform: 'mcom-mall', mallUserId: userId },
+          metadata: {
+            platform: 'mcom-mall',
+            mallUserId: userId,
+            mcomChargeId,
+          },
           idempotencyKey: this.mcomWalletService.buildKey(
             'topup',
-            transactionId,
+            mcomChargeId || transactionId,
           ),
         });
+        centralWalletTxnId = credited.transactionId;
       } catch (err: any) {
         throw this.mcomWalletService.toHttpException(err);
       }
@@ -629,6 +668,13 @@ export class WalletService {
         currency,
         transactionId,
         paymentMethod: paymentProvider,
+        mcomChargeId,
+        providerRef: providerRef || (centralWalletTxnId
+          ? `wallet:${centralWalletTxnId}`
+          : null),
+        feeMinor,
+        netMinor,
+        status: 'paid',
       });
       const savedPayment = await paymentRepo.save(newPayment);
 
@@ -637,21 +683,35 @@ export class WalletService {
         total: amount,
         payment: savedPayment,
       });
-      await orderRepo.save(newOrder);
+      const savedOrder = await orderRepo.save(newOrder);
 
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId:
+            mcomChargeId || `wallet:${centralWalletTxnId || transactionId}`,
+          purpose: 'WALLET_TOPUP',
+          entityType: 'order',
+          entityId: savedOrder.id,
+          userId,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
+      );
+
+      // Central is the single source of truth for spendable credits. Keep a
+      // local audit entry, but never mirror the spendable balance locally.
       let wallet = user.wallet;
       if (!wallet) {
         wallet = walletRepo.create({
           user,
           balance: 0,
           earningsBalance: 0,
-          spendableBalance: amount,
+          spendableBalance: 0,
           earningsFromOrders: 0,
           earningsFromGiftCard: 0,
           earningsFromVoucher: 0,
         });
-      } else {
-        wallet.spendableBalance = Number(wallet.spendableBalance) + amount;
       }
       const savedWallet = await walletRepo.save(wallet);
 
@@ -659,7 +719,7 @@ export class WalletService {
         savedWallet,
         amount,
         WalletTransactionType.FUNDING,
-        'Wallet funded.',
+        `MCOM Wallet topped up${centralWalletTxnId ? ` (central txn ${centralWalletTxnId})` : ''}.`,
         savedWallet.spendableBalance,
         manager,
       );

@@ -9,6 +9,7 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
@@ -93,6 +94,7 @@ import { InstrumentsModule } from './resources/instruments/instruments.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     FlashSalesModule,
     QuizModule,
     CustomerModule,

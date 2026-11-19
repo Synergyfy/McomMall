@@ -188,6 +188,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
       <div className="flex justify-center">
         <PayPalCheckoutButton
           orderID={purchaseResponse.orderId}
+          approvalUrl={(purchaseResponse as any).approvalUrl}
           onPaymentSuccess={(orderID) => handleVerification(orderID)}
         />
       </div>

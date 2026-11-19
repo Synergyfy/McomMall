@@ -168,11 +168,13 @@ export class McomCentralService {
     if (params.postcode) query.set('postcode', params.postcode);
     if (![...query.keys()].length) return null;
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
       const headers = this.getHmacHeaders();
       const response = await fetch(
         `${this.baseUrl}/api/v1/data/local-mall?${query.toString()}`,
-        { headers },
+        { headers, signal: controller.signal },
       );
 
       if (!response.ok) {
@@ -188,6 +190,82 @@ export class McomCentralService {
     } catch (error) {
       this.logger.error('Failed to fetch local mall from MCOM Central:', error);
       return null;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  /**
+   * Exact Central local-mall assignment when available, otherwise the public
+   * postcode resolver. The public endpoint returns only names (no Central ids),
+   * but it lets the marketplace build a usable City → Borough → High Street →
+   * Local Mall tree even when the HMAC secret is not yet aligned.
+   */
+  async getLocalMallOrResolvePostcode(params: {
+    userId?: string | null;
+    postcode?: string | null;
+  }): Promise<any | null> {
+    const exact = await this.getLocalMall(params);
+    if (exact) return exact;
+    if (!params.postcode) return null;
+    return this.resolvePostcodeHierarchy(params.postcode);
+  }
+
+  async resolvePostcodeHierarchy(postcode: string): Promise<any | null> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/geography/validate-postcode`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postcode }),
+          signal: controller.signal,
+        },
+      );
+
+      if (!response.ok) {
+        this.logger.warn(
+          `MCOM Central postcode resolver returned ${response.status} for ${postcode}`,
+        );
+        return null;
+      }
+
+      const body = await response.json();
+      const data = body?.data;
+      if (!data?.postcode) return null;
+
+      return {
+        city: data.city
+          ? { id: null, name: data.city }
+          : null,
+        borough: data.borough
+          ? { id: null, name: data.borough }
+          : null,
+        highStreet: data.highStreet
+          ? {
+              id: null,
+              name: data.highStreet,
+              latitude: data.latitude ?? null,
+              longitude: data.longitude ?? null,
+            }
+          : null,
+        mall: data.localMall
+          ? { id: null, name: data.localMall }
+          : null,
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
+      };
+    } catch (error) {
+      this.logger.warn(
+        `MCOM Central postcode resolver failed for ${postcode}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 

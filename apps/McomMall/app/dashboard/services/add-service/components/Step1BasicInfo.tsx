@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
 import {
   FormControl,
   FormField,
@@ -13,46 +12,32 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Settings, Check, ChevronsUpDown, HelpCircle, X, Store, AlertCircle, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/card';
+import { AlertCircle, ExternalLink, ImagePlus, Store } from 'lucide-react';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
-import { UserListing } from '@/service/listings/types';
+  getBusinessTaxonomy,
+  pickCentralBusiness,
+} from '@/lib/central-business';
 import { useGetUserListings } from '@/service/listings/hook';
-import { getBusinessTaxonomy, pickCentralBusiness } from '@/lib/central-business';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
+import MultiMediaUpload from '@/components/dashboard/media/MultiMediaUpload';
 
-const CENTRAL_BUSINESS_URL = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/dashboard/business-profile`;
+const CENTRAL_BUSINESS_URL = `${
+  process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'
+}/dashboard/business-profile`;
 
-function ClassificationItem({ label, value }: { label: string; value?: string }) {
+function ClassificationItem({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -63,49 +48,41 @@ function ClassificationItem({ label, value }: { label: string; value?: string })
   );
 }
 
-const AUDIENCE_OPTIONS = [
-  "Families", "Seniors", "Students", "Professionals", "Couples", "Children", "Business Owners", "Everyone"
-];
-
-const COMMON_TAGS = [
-  "Reliable", "Fast", "Affordable", "Premium", "Eco-friendly", "Expert", "Licensed", "Insured", "24/7 Service"
-];
-
 export function Step1BasicInfo() {
-  const router = useRouter();
   const form = useFormContext();
   const currentBusinessId = form.watch('businessId');
   const sectorValue = form.watch('sector');
   const categoryValue = form.watch('category');
-  const subCategoryValue = form.watch('subcategory');
+  const media = (form.watch('media') ?? []) as Array<File | string>;
 
-  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(
+    1,
+    100,
+  );
 
-  const [audienceOpen, setAudienceOpen] = useState(false);
-  const [tagsOpen, setTagsOpen] = useState(false);
-  const [showNoBusinessDialog, setShowNoBusinessDialog] = useState(false);
-
+  // Every merchant has one MCOM Central business. Services can be added even
+  // if the business has only sold products so far; the API adds the service
+  // listing type automatically on first publish.
   const businesses = useMemo(() => {
     if (!listings?.data) return [];
-    return listings.data.filter((l: UserListing) =>
-      l.id && l.id.trim() !== '' &&
-      l.listingType.some(type => type.toLowerCase() === 'service')
+    return listings.data.filter(
+      (listing: any) => listing.id && listing.id.trim() !== '',
     );
   }, [listings]);
 
-  useEffect(() => {
-    if (!isLoadingListings && businesses.length === 0) {
-      setShowNoBusinessDialog(true);
-    }
-  }, [isLoadingListings, businesses.length]);
+  const business = pickCentralBusiness(businesses as Array<any>) as any;
+  const businessTaxonomy = getBusinessTaxonomy(business);
 
-  // Every user has one MCOM Central business. Attach services to it
-  // automatically instead of asking them to pick a listing.
-  const business = pickCentralBusiness(businesses);
-  const businessTaxonomy = getBusinessTaxonomy(business as any);
+  const existingImages = useMemo(
+    () => media.filter((item): item is string => typeof item === 'string'),
+    [media],
+  );
+  const existingFiles = useMemo(
+    () => media.filter((item): item is File => typeof item !== 'string'),
+    [media],
+  );
 
   useEffect(() => {
-    const business = pickCentralBusiness(businesses);
     if (isLoadingListings || !business) return;
 
     if (currentBusinessId !== business.id) {
@@ -120,54 +97,38 @@ export function Step1BasicInfo() {
       form.setValue('sector', sector, { shouldValidate: true });
     }
     if (taxonomy.categoryName && categoryValue !== taxonomy.categoryName) {
-      form.setValue('category', taxonomy.categoryName, { shouldValidate: true });
+      form.setValue('category', taxonomy.categoryName, {
+        shouldValidate: true,
+      });
     }
-    if (
-      taxonomy.subCategoryName &&
-      subCategoryValue !== taxonomy.subCategoryName
-    ) {
-      form.setValue('subcategory', taxonomy.subCategoryName, { shouldValidate: true });
+    if (taxonomy.subCategoryName) {
+      form.setValue('subcategory', taxonomy.subCategoryName, {
+        shouldValidate: true,
+      });
     }
   }, [
     isLoadingListings,
-    businesses,
+    business,
     currentBusinessId,
     sectorValue,
     categoryValue,
-    subCategoryValue,
     form,
   ]);
 
-  const toggleSelection = (fieldName: string, value: string) => {
-    const currentValues = form.getValues(fieldName)?.split(',').map((v: string) => v.trim()).filter(Boolean) || [];
-    let newValues;
-    if (currentValues.includes(value)) {
-      newValues = currentValues.filter((v: string) => v !== value);
-    } else {
-      newValues = [...currentValues, value];
-    }
-    form.setValue(fieldName, newValues.join(', '));
-  };
-
-  const removeValue = (fieldName: string, value: string) => {
-    const currentValues = form.getValues(fieldName)?.split(',').map((v: string) => v.trim()).filter(Boolean) || [];
-    const newValues = currentValues.filter((v: string) => v !== value);
-    form.setValue(fieldName, newValues.join(', '));
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Settings className="w-5 h-5 text-primary" />
+      <Card className="gap-4 overflow-hidden py-5 shadow-sm sm:gap-6 sm:py-6">
+        <CardHeader className="px-4 pb-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Store className="w-5 h-5 shrink-0 text-primary" />
             Basic Information
           </CardTitle>
           <CardDescription>
-            Provide the fundamental details of your service. It will be attached to your MCOM Central business automatically.
+            Introduce your service. It will be attached to your MCOM Central
+            business automatically.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 px-4 sm:px-6">
           {/* Attached business (owned by MCOM Central Hub) */}
           <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -183,27 +144,42 @@ export function Step1BasicInfo() {
             </div>
           </div>
 
+          {!isLoadingListings && !business && (
+            <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="flex items-center gap-2 font-semibold">
+                <AlertCircle className="h-4 w-4" />
+                No business profile found
+              </div>
+              <p className="text-xs">
+                Your service must belong to the business registered with MCOM
+                Central. Complete your business profile to continue.
+              </p>
+              <a
+                href={CENTRAL_BUSINESS_URL}
+                className="inline-flex items-center gap-1 text-xs font-semibold underline"
+              >
+                Open MCOM Central business profile
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+
           {/* Service Name */}
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
               <FormItem>
-                <div className="flex items-center gap-2">
-                  <FormLabel className="text-base font-semibold">
-                    Service Name <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Enter a clear, descriptive name for your service.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <FormLabel className="text-base font-semibold">
+                  Service Name <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Professional House Cleaning" {...field} className="py-6 text-base" />
+                  <Input
+                    placeholder="e.g. Professional Plumbing Services"
+                    {...field}
+                    value={field.value ?? ''}
+                    className="py-6 text-base"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -224,12 +200,18 @@ export function Step1BasicInfo() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Sector, category and sub-category are taken from your business profile so
-              services stay consistent with MCOM Central.
+              Sector, category and sub-category are taken from your business
+              profile so services stay consistent with MCOM Central.
             </p>
             <div className="grid grid-cols-1 gap-4 rounded-lg border bg-background px-4 py-3 sm:grid-cols-3">
-              <ClassificationItem label="Sector" value={businessTaxonomy.sectorName} />
-              <ClassificationItem label="Category" value={businessTaxonomy.categoryName} />
+              <ClassificationItem
+                label="Sector"
+                value={businessTaxonomy.sectorName}
+              />
+              <ClassificationItem
+                label="Category"
+                value={businessTaxonomy.categoryName}
+              />
               <ClassificationItem
                 label="Sub-category"
                 value={businessTaxonomy.subCategoryName}
@@ -238,8 +220,8 @@ export function Step1BasicInfo() {
             {(!sectorValue || !categoryValue) && (
               <div className="flex flex-col gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 <span>
-                  This service will inherit an incomplete classification. Add the missing
-                  details to your business profile in MCOM Central.
+                  This service will inherit an incomplete classification. Add
+                  the missing details to your business profile in MCOM Central.
                 </span>
                 <a
                   href={CENTRAL_BUSINESS_URL}
@@ -250,11 +232,6 @@ export function Step1BasicInfo() {
                 </a>
               </div>
             )}
-            {form.formState.errors.sector?.message && (
-              <p className="text-xs text-red-600">
-                {String(form.formState.errors.sector.message)}
-              </p>
-            )}
           </div>
 
           {/* Short Description */}
@@ -263,21 +240,20 @@ export function Step1BasicInfo() {
             name="shortDescription"
             render={({ field }) => (
               <FormItem>
-                <div className="flex items-center gap-2">
-                  <FormLabel className="text-base font-semibold">Short Description</FormLabel>
-                  <span className="text-xs text-muted-foreground">(Optional) - Brief catchphrase for search results.</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      A short summary (max 150 chars) shown in listings.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <FormLabel className="text-base font-semibold">
+                  Short Description <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Expert cleaning for busy homes" {...field} maxLength={150} className="text-sm" />
+                  <Input
+                    placeholder="A brief introduction to the service"
+                    {...field}
+                    value={field.value ?? ''}
+                    className="py-6"
+                  />
                 </FormControl>
+                <FormDescription>
+                  This appears in search results and service cards.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -289,23 +265,15 @@ export function Step1BasicInfo() {
             name="description"
             render={({ field }) => (
               <FormItem>
-                <div className="flex items-center gap-2">
-                  <FormLabel className="text-base font-semibold">Full Description</FormLabel>
-                  <span className="text-xs text-muted-foreground">(Optional) - Detailed explanation of what you offer.</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Provide all the details customers need to know.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <FormLabel className="text-base font-semibold">
+                  Full Description <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Describe your service in detail..."
-                    className="min-h-[120px] text-sm"
+                    placeholder="Explain what the service includes, what customers can expect and its benefits."
                     {...field}
+                    value={field.value ?? ''}
+                    className="min-h-[140px]"
                   />
                 </FormControl>
                 <FormMessage />
@@ -313,185 +281,62 @@ export function Step1BasicInfo() {
             )}
           />
 
-          {/* Target Audience & Tags (Dropdowns) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="targetAudience"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FormLabel className="text-base font-semibold">Target Audience</FormLabel>
-                    <span className="text-xs text-muted-foreground">(Optional)</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Who is this service primarily for?
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Popover open={audienceOpen} onOpenChange={setAudienceOpen}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between h-auto min-h-[48px] py-2 px-3"
+          {/* Service Images */}
+          <FormField
+            control={form.control}
+            name="media"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2 text-base font-semibold">
+                  <ImagePlus className="h-4 w-4 text-primary" />
+                  Service Images <span className="text-red-500">*</span>
+                </FormLabel>
+                {existingImages.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-5">
+                    {existingImages.map((url) => (
+                      <div
+                        key={url}
+                        className="relative aspect-square overflow-hidden rounded-lg border"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt="Service"
+                          className="h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Remove image"
+                          onClick={() =>
+                            field.onChange(media.filter((item) => item !== url))
+                          }
+                          className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-base font-bold leading-none text-white shadow-sm"
                         >
-                          <div className="flex flex-wrap gap-1">
-                            {field.value ? field.value.split(',').map((v: string) => v.trim()).filter(Boolean).map((v: string) => (
-                              <Badge key={v} variant="secondary" className="flex items-center gap-1">
-                                {v}
-                                <X
-                                  className="w-3 h-3 cursor-pointer hover:text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeValue("targetAudience", v);
-                                  }}
-                                />
-                              </Badge>
-                            )) : <span className="text-muted-foreground">Select audience...</span>}
-                          </div>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search audience..." />
-                        <CommandList>
-                          <CommandEmpty>No results found.</CommandEmpty>
-                          <CommandGroup>
-                            {AUDIENCE_OPTIONS.map((option) => (
-                              <CommandItem
-                                key={option}
-                                onSelect={() => toggleSelection("targetAudience", option)}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value?.split(',').map((v: string) => v.trim()).includes(option)
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {option}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="tags"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FormLabel className="text-base font-semibold">Tags</FormLabel>
-                    <span className="text-xs text-muted-foreground">(Optional)</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Add keywords to help customers find your service.
-                      </TooltipContent>
-                    </Tooltip>
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                  <Popover open={tagsOpen} onOpenChange={setTagsOpen}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between h-auto min-h-[48px] py-2 px-3"
-                        >
-                          <div className="flex flex-wrap gap-1">
-                            {field.value ? field.value.split(',').map((v: string) => v.trim()).filter(Boolean).map((v: string) => (
-                              <Badge key={v} variant="secondary" className="flex items-center gap-1">
-                                {v}
-                                <X
-                                  className="w-3 h-3 cursor-pointer hover:text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeValue("tags", v);
-                                  }}
-                                />
-                              </Badge>
-                            )) : <span className="text-muted-foreground">Select tags...</span>}
-                          </div>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search tags..." />
-                        <CommandList>
-                          <CommandEmpty>No results found.</CommandEmpty>
-                          <CommandGroup>
-                            {COMMON_TAGS.map((tag) => (
-                              <CommandItem
-                                key={tag}
-                                onSelect={() => toggleSelection("tags", tag)}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value?.split(',').map((v: string) => v.trim()).includes(tag)
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {tag}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                )}
+                <FormControl>
+                  <MultiMediaUpload
+                    initialFiles={existingFiles}
+                    onMediaChange={(files) =>
+                      field.onChange([...existingImages, ...files])
+                    }
+                    maxSize={30 * 1024 * 1024}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Upload up to 5 high-quality images that represent the service.
+                  Max file size: 30MB.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </CardContent>
       </Card>
-
-      {/* No Business Found Dialog */}
-      <AlertDialog open={showNoBusinessDialog} onOpenChange={setShowNoBusinessDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-3 rounded-full bg-destructive/10">
-                <AlertCircle className="h-6 w-6 text-destructive" />
-              </div>
-              <AlertDialogTitle className="text-xl">No Service Business Found</AlertDialogTitle>
-            </div>
-            <AlertDialogDescription className="text-base leading-relaxed">
-              Your business profile is managed in MCOM Central. You need a <span className="font-semibold">Service</span> type business profile there before you can add a service.
-              <br /><br />
-              Update your business profile in MCOM Central so its listing type includes <span className="font-semibold">Service</span>, then sign back in.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => router.push('/dashboard/services')}>
-              Go Back
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_URL || 'http://localhost:3000'}/getstarted/business?source=mcommall`}>
-              Open MCOM Central
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

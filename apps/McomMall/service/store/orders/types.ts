@@ -28,13 +28,14 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
-  total: string;
+  total: number | string;
   pointsUsedToRedeem: number | null;
   status: string;
   giftCardAmountApplied: number | null;
   giftCardCode: string | null;
   couponDiscountApplied?: number | null;
   couponCode?: string | null;
+  offerDiscountApplied?: number | null;
   rewardDiscountApplied?: number | string | null;
   rewardRedemptions?: OrderRewardRedemption[];
   shippingStatus: string;
@@ -45,6 +46,21 @@ export interface Order {
   labelUrl: string | null;
   user: User;
   items: OrderItem[];
+}
+
+export interface PageMetaDto {
+  totalItems: number;
+  itemCount: number;
+  itemsPerPage: number;
+  totalPages: number;
+  currentPage: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PageDto<T> {
+  data: T[];
+  meta: PageMetaDto;
 }
 
 export interface OrderStats {

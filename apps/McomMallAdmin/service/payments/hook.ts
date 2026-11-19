@@ -83,7 +83,12 @@ export const useGetTrialStatus = () => {
 };
 
 export const useCreateStripeIntent = () => {
-  const create = async (payload: { amount: number }) => {
+  const create = async (payload: {
+    amount?: number;
+    planVariantId?: string;
+    idempotencyKey?: string;
+    purpose?: string;
+  }) => {
     try {
       const response = await api.post('/payments/stripe/create-intent', payload);
       return response.data;
@@ -106,7 +111,12 @@ export const useCreateStripeIntent = () => {
 };
 
 export const useCreatePayPalOrder = () => {
-  const create = async (payload: { amount: number }) => {
+  const create = async (payload: {
+    amount?: number;
+    planVariantId?: string;
+    idempotencyKey?: string;
+    purpose?: string;
+  }) => {
     try {
       const response = await api.post('/payments/paypal/create-order', payload);
       return response.data;

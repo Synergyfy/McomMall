@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 
 import { useAddVoucherProduct } from '@/service/hooks/useVoucherService';
+import { CURRENCY } from '@/lib/utils';
 
 type StepType = 1 | 2;
 
@@ -33,8 +34,10 @@ export default function VoucherCreatorWizard() {
   // --- WIZARD FORM STATE ---
   const [voucherType] = useState('gift_voucher');
   const [name, setName] = useState('');
-  const [value, setValue] = useState(15);
-  const [valueType, setValueType] = useState('percentage'); // 'percentage' | 'currency'
+  const [fixedAmounts, setFixedAmounts] = useState('10, 25, 50');
+  const [allowCustomAmount, setAllowCustomAmount] = useState(false);
+  const [minCustomAmount, setMinCustomAmount] = useState('10');
+  const [maxCustomAmount, setMaxCustomAmount] = useState('500');
   const [expiryDate, setExpiryDate] = useState('');
   const [rules, setRules] = useState('');
   const [distributionChannels] = useState<string[]>(['storefront', 'email', 'qr']);
@@ -69,9 +72,37 @@ export default function VoucherCreatorWizard() {
   // Helper validation for steps
   const isExpiryValid = !expiryDate || expiryDate >= todayISO;
 
+  const parsedFixedAmounts = useMemo(
+    () =>
+      fixedAmounts
+        .split(',')
+        .map((amount) => Number(amount.trim()))
+        .filter((amount) => Number.isFinite(amount) && amount > 0),
+    [fixedAmounts]
+  );
+
+  const customRangeValid =
+    !allowCustomAmount ||
+    (Number(minCustomAmount) > 0 &&
+      Number(maxCustomAmount) >= Number(minCustomAmount));
+
+  const hasPurchaseAmounts =
+    parsedFixedAmounts.length > 0 || allowCustomAmount;
+
+  const amountLabel = parsedFixedAmounts.length
+    ? parsedFixedAmounts.map((amount) => `${CURRENCY}${amount}`).join(' / ')
+    : allowCustomAmount
+      ? `Custom ${CURRENCY}${minCustomAmount}–${CURRENCY}${maxCustomAmount}`
+      : 'No amount set';
+
   const isStepValid = (currentStep: number) => {
     if (currentStep === 1) {
-      return name.trim().length > 0 && value > 0 && isExpiryValid;
+      return (
+        name.trim().length > 0 &&
+        hasPurchaseAmounts &&
+        customRangeValid &&
+        isExpiryValid
+      );
     }
     return true;
   };
@@ -85,7 +116,7 @@ export default function VoucherCreatorWizard() {
     if (!isExpiryValid) {
       toast.error('Expiry date cannot be in the past.');
     } else {
-      toast.error('Please enter a voucher title and value.');
+      toast.error('Please enter a voucher title and at least one purchase amount.');
     }
   };
 
@@ -99,23 +130,46 @@ export default function VoucherCreatorWizard() {
       toast.error('Expiry date cannot be in the past.');
       return;
     }
+    if (!hasPurchaseAmounts) {
+      toast.error('Add at least one fixed amount or allow a custom amount.');
+      return;
+    }
+    if (!customRangeValid) {
+      toast.error('Enter a valid custom amount range.');
+      return;
+    }
     setIsSubmitting(true);
     try {
+      const amountSummary =
+        parsedFixedAmounts.length > 0
+          ? parsedFixedAmounts.map((amount) => `${CURRENCY}${amount}`).join(', ')
+          : `custom from ${CURRENCY}${minCustomAmount}`;
+
       const payload = {
         name,
-        description: `Voucher value: ${valueType === 'percentage' ? `${value}%` : `$${value}`}. ${rules}`,
+        description: rules
+          ? rules
+          : `Spendable voucher — choose ${amountSummary}.`,
         voucherType,
-        valueType,
-        value: Number(value),
+        valueType: 'fixed',
+        value: 0,
+        fixedAmounts: parsedFixedAmounts,
+        allowCustomAmount,
+        minCustomAmount: allowCustomAmount
+          ? Number(minCustomAmount)
+          : undefined,
+        maxCustomAmount: allowCustomAmount
+          ? Number(maxCustomAmount)
+          : undefined,
         rules,
         expiryDate: expiryDate ? new Date(expiryDate).toISOString() : null,
         distributionChannels,
         status: 'active',
-        isEnabled: true
+        isEnabled: true,
       };
 
       await addVoucherProduct(payload);
-      toast.success('Successfully launched campaign!');
+      toast.success('Voucher product submitted for admin approval.');
       router.push('/dashboard/vouchers');
     } catch (err: any) {
       console.error(err);
@@ -194,25 +248,19 @@ export default function VoucherCreatorWizard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-bold text-[#5a4136] uppercase tracking-wider mb-2">Value</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={value}
-                        onChange={(e) => setValue(Number(e.target.value))}
-                        className="w-full bg-[#f8f9ff] border border-slate-200 rounded-xl pl-4 pr-16 py-3 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                      />
-                      <div className="absolute right-2 top-2 bottom-2 bg-slate-100 rounded-lg border border-slate-200 px-3 flex items-center justify-center">
-                        <select
-                          value={valueType}
-                          onChange={(e) => setValueType(e.target.value)}
-                          className="bg-transparent border-none text-xs font-bold text-[#0b1c30] focus:ring-0 p-0"
-                        >
-                          <option value="percentage">%</option>
-                          <option value="currency">$</option>
-                        </select>
-                      </div>
-                    </div>
+                    <label className="block text-xs font-bold text-[#5a4136] uppercase tracking-wider mb-2">
+                      Fixed Amounts
+                    </label>
+                    <input
+                      type="text"
+                      value={fixedAmounts}
+                      onChange={(e) => setFixedAmounts(e.target.value)}
+                      placeholder="10, 25, 50"
+                      className="w-full bg-[#f8f9ff] border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                    />
+                    <p className="mt-1.5 text-[10px] text-gray-400 italic">
+                      Comma-separated amounts customers can buy, e.g. 10, 25, 50.
+                    </p>
                   </div>
 
                   <div>
@@ -237,6 +285,51 @@ export default function VoucherCreatorWizard() {
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={allowCustomAmount}
+                      onChange={(e) => setAllowCustomAmount(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                    Allow customers to enter a custom amount
+                  </label>
+                  {allowCustomAmount && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-[#5a4136] uppercase tracking-wider mb-1">
+                          Minimum ({CURRENCY})
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={minCustomAmount}
+                          onChange={(e) => setMinCustomAmount(e.target.value)}
+                          className="w-full bg-[#f8f9ff] border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-[#5a4136] uppercase tracking-wider mb-1">
+                          Maximum ({CURRENCY})
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={maxCustomAmount}
+                          onChange={(e) => setMaxCustomAmount(e.target.value)}
+                          className="w-full bg-[#f8f9ff] border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {!hasPurchaseAmounts && (
+                    <p className="text-xs font-semibold text-rose-600">
+                      Add at least one fixed amount or enable a custom amount.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -289,8 +382,14 @@ export default function VoucherCreatorWizard() {
                       </div>
                       <span className="font-bold text-sm text-[#0b1c30] block">{name || 'New Voucher'}</span>
                       <div className="flex items-center justify-center gap-1 text-primary mt-1">
-                        <span className="text-2xl font-black">{valueType === 'currency' ? `$${value}` : `${value}`}</span>
-                        <span className="text-xs font-bold">{valueType === 'percentage' ? '% OFF' : ' OFF'}</span>
+                        <span className="text-2xl font-black">
+                          {parsedFixedAmounts[0]
+                            ? `${CURRENCY}${parsedFixedAmounts[0]}`
+                            : 'Flexible'}
+                        </span>
+                        <span className="text-xs font-bold">
+                          {parsedFixedAmounts[0] ? 'VOUCHER' : 'AMOUNT'}
+                        </span>
                       </div>
                     </div>
 
@@ -369,7 +468,7 @@ export default function VoucherCreatorWizard() {
                     <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Voucher Value</span>
                       <span className="text-xl font-black text-primary font-stat-lg">
-                        {valueType === 'currency' ? `$${value}.00` : `${value}% OFF`}
+                        {amountLabel}
                       </span>
                     </div>
                     <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
@@ -440,7 +539,9 @@ export default function VoucherCreatorWizard() {
                             </div>
                             <div>
                               <h3 className="text-3xl font-black text-slate-800 leading-none">
-                                {valueType === 'currency' ? `$${value}` : `${value}%`}
+                                {parsedFixedAmounts[0]
+                                  ? `${CURRENCY}${parsedFixedAmounts[0]}`
+                                  : 'Flexible'}
                               </h3>
                               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mt-1">Store Voucher</span>
                             </div>
@@ -476,7 +577,7 @@ export default function VoucherCreatorWizard() {
                       {/* background decorative icon placeholder */}
                       <Sparkles size={80} className="text-slate-200" />
                       <div className="absolute top-4 left-4 bg-primary text-white font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full shadow-md">
-                        Save {valueType === 'currency' ? `$${value}` : `${value}%`}
+                        Save {parsedFixedAmounts[0] ? `${CURRENCY}${parsedFixedAmounts[0]}` : 'now'}
                       </div>
                     </div>
                     <div className="p-6 flex flex-col items-center text-center justify-between h-3/5">

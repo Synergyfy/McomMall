@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import {
   Injectable,
   Logger,
@@ -29,12 +29,17 @@ import {
 } from './entities/gift-card-transaction.entity';
 import { GiftCardTemplate } from './entities/gift-card-template.entity';
 import { GiftCardTheme } from './entities/gift-card-theme.entity';
+import {
+  applySellerLocationFilter,
+  applySellerNearOrder,
+} from '../geography/location-filter.util';
 import { CreateGiftCardThemeDto } from './dto/create-gift-card-theme.dto';
 import { PurchaseGiftCardDto } from './dto/purchase-gift-card.dto';
 import { CheckBalanceResponseDto } from './dto/check-balance-response.dto';
 import { RedeemGiftCardDto } from './dto/redeem-gift-card.dto';
 import { Business } from '../listings/entities/listing.entity';
 import { Order } from '../order/entities/order.entity';
+import { OrderStatus } from '../order/enums/order-status.enum';
 import { GiftCardSettings } from './entities/gift-card-settings.entity';
 import { MailerService } from '@nestjs-modules/mailer';
 import { CreateGiftCardTemplateDto } from './dto/create-gift-card-template.dto';
@@ -74,6 +79,11 @@ import { WalletService } from '../wallet/wallet.service';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { GiftCardTemplateSearchDto } from './dto/gift-card-template-search.dto';
 import { DigitalValueService } from '../digital-value/digital-value.service';
+import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
 import { DigitalValueType } from '../digital-value/digital-value.enums';
 import { InstrumentScopeService } from '../partner-instruments/instrument-scope.service';
 import {
@@ -198,6 +208,12 @@ export class GiftCardService {
       }
       if (!template.isActive) {
         throw new UnprocessableEntityException('TEMPLATE_INACTIVE');
+      }
+      if (
+        template.approvalStatus !== ApprovalStatus.APPROVED ||
+        template.adminDisabled
+      ) {
+        throw new UnprocessableEntityException('TEMPLATE_NOT_AVAILABLE');
       }
     }
 
@@ -403,11 +419,19 @@ export class GiftCardService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
   }> {
     const template = await this.templateRepository.findOne({
-      where: { id: initiateDto.templateId, isActive: true },
+      where: {
+        id: initiateDto.templateId,
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['owner'],
     });
     if (!template) {
@@ -426,20 +450,35 @@ export class GiftCardService {
 
     const currency = 'GBP';
 
+    const reference = `gift-card-purchase-${template.id}-${userId}`;
+    const idempotencyKey = `gift-card-${template.id}-${userId}-${randomUUID()}`;
+    const metadata = {
+      reference,
+      userId,
+      idempotencyKey,
+      description: 'MCOM Mall gift card purchase',
+      returnUrl: initiateDto.returnUrl,
+      cancelUrl: initiateDto.cancelUrl,
+    };
+
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
       const centralUserId = await this.getCentralUserId(userId);
-      const charge = await this.paymentProviderService.createWalletCharge(
-        initiateDto.amount,
-        currency,
-        {
-          reference: `gift-card-purchase-${template.id}`,
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: centralUserId,
+        amount: initiateDto.amount,
+        reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'gift-card-hold',
+          template.id,
           userId,
-          description: 'MCOM Mall gift card purchase',
-        },
-        centralUserId,
-      );
+          idempotencyKey,
+        ),
+        metadata: { purpose: 'GIFT_CARD', templateId: template.id, userId },
+      });
       return {
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
@@ -449,6 +488,7 @@ export class GiftCardService {
         await this.paymentProviderService.createStripePaymentIntent(
           initiateDto.amount,
           currency,
+          metadata,
         );
       return {
         clientSecret: paymentIntent.client_secret,
@@ -458,8 +498,13 @@ export class GiftCardService {
       const order = await this.paymentProviderService.createPaypalOrder(
         initiateDto.amount,
         currency,
+        metadata,
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      return {
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+        provider: PaymentMethod.PAYPAL,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -487,7 +532,12 @@ export class GiftCardService {
     }
 
     const template = await this.templateRepository.findOne({
-      where: { id: templateId, isActive: true },
+      where: {
+        id: templateId,
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['owner'],
     });
     if (!template) {
@@ -522,29 +572,71 @@ export class GiftCardService {
     }
 
     const currency = 'GBP';
-    let verificationResult;
+    let verificationResult: { ok: boolean; details?: any; reason?: string };
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference = transactionId;
+    const centralUserId =
+      paymentProvider === PaymentMethod.MCOM_WALLET
+        ? await this.getCentralUserId(userId)
+        : undefined;
 
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
       verificationResult =
-        await this.paymentProviderService.verifyWalletCharge(
+        await this.paymentProviderService.settleWalletReference(
           transactionId,
           amount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: centralUserId,
+            holdId: transactionId,
+            reference: `gift-card-purchase-${template.id}-${userId}`,
+          },
+          this.paymentProviderService.buildWalletKey(
+            'gift-card-capture',
+            transactionId,
+          ),
         );
+      const details: any = verificationResult.details ?? {};
+      paymentReference = details.transactionId || details.id || transactionId;
+      paidChargeId =
+        details.id && !String(details.id).startsWith('wallet:')
+          ? details.id
+          : null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       verificationResult =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -563,12 +655,38 @@ export class GiftCardService {
           const giftCardRepo = manager.getRepository(GiftCard);
           const transactionRepo = manager.getRepository(GiftCardTransaction);
 
+          const reused = await paymentRepo.findOne({
+            where: [
+              { transactionId: paymentReference },
+              ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+            ],
+          });
+          if (reused) {
+            const existingOrder = await orderRepo.findOne({
+              where: { payment: { id: reused.id } },
+            });
+            const existingCard = existingOrder
+              ? await giftCardRepo.findOne({
+                  where: { purchaseOrderId: existingOrder.id },
+                })
+              : null;
+            if (existingCard) return existingCard;
+            throw new BadRequestException(
+              'This payment has already been used for another purchase.',
+            );
+          }
+
           const newPayment = paymentRepo.create({
             user: { id: userId } as User,
             amount,
             currency,
-            transactionId,
+            transactionId: paymentReference,
             paymentMethod: paymentProvider,
+            mcomChargeId: paidChargeId,
+            providerRef: paidProviderRef,
+            feeMinor: paidFeeMinor,
+            netMinor: paidNetMinor,
+            status: 'paid',
           });
           const savedPayment = await paymentRepo.save(newPayment);
 
@@ -576,8 +694,22 @@ export class GiftCardService {
             user: { id: userId } as User,
             total: amount,
             payment: savedPayment,
+            status: OrderStatus.COMPLETED,
           });
           const savedOrder = await orderRepo.save(newOrder);
+
+          await this.paymentProviderService.allocateCharge(
+            {
+              mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+              purpose: 'GIFT_CARD',
+              entityType: 'order',
+              entityId: savedOrder.id,
+              userId,
+              amountMinor: String(Math.round(Number(amount) * 100)),
+              currency: 'GBP',
+            },
+            manager,
+          );
 
           const user = await manager.findOne(User, { where: { id: userId } });
 
@@ -739,7 +871,10 @@ export class GiftCardService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
   }> {
     const giftCard = await this.findActiveCardByCode(code);
@@ -754,26 +889,48 @@ export class GiftCardService {
       );
     }
 
+    if (
+      template.approvalStatus !== ApprovalStatus.APPROVED ||
+      template.adminDisabled
+    ) {
+      throw new BadRequestException(
+        'This gift card template is no longer available for reloads.',
+      );
+    }
+
     if (!template.allowReloading) {
       throw new BadRequestException('This gift card cannot be reloaded.');
     }
 
     const currency = 'GBP';
+    this.validatePurchaseAmount(initiateDto.amount, template);
+
+    const reference = `gift-card-reload-${giftCard.id}-${userId}`;
+    const metadata = {
+      reference,
+      userId,
+      idempotencyKey: `gift-card-reload-${giftCard.id}-${userId}-${randomUUID()}`,
+      description: 'MCOM Mall gift card reload',
+    };
 
     if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
       const centralUserId = await this.getCentralUserId(userId);
-      const charge = await this.paymentProviderService.createWalletCharge(
-        initiateDto.amount,
-        currency,
-        {
-          reference: `gift-card-reload-${giftCard.id}`,
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: centralUserId,
+        amount: initiateDto.amount,
+        reference,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'gift-card-reload-hold',
+          giftCard.id,
           userId,
-          description: 'MCOM Mall gift card reload',
-        },
-        centralUserId,
-      );
+          metadata.idempotencyKey,
+        ),
+        metadata: { purpose: 'GIFT_CARD', giftCardId: giftCard.id, userId },
+      });
       return {
-        transactionId: charge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
@@ -783,6 +940,7 @@ export class GiftCardService {
         await this.paymentProviderService.createStripePaymentIntent(
           initiateDto.amount,
           currency,
+          metadata,
         );
       return {
         clientSecret: paymentIntent.client_secret,
@@ -792,8 +950,13 @@ export class GiftCardService {
       const order = await this.paymentProviderService.createPaypalOrder(
         initiateDto.amount,
         currency,
+        metadata,
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      return {
+        orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
+        provider: PaymentMethod.PAYPAL,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -819,6 +982,15 @@ export class GiftCardService {
       );
     }
 
+    if (
+      template.approvalStatus !== ApprovalStatus.APPROVED ||
+      template.adminDisabled
+    ) {
+      throw new BadRequestException(
+        'This gift card template is no longer available for reloads.',
+      );
+    }
+
     if (!template.allowReloading) {
       throw new BadRequestException('This gift card cannot be reloaded.');
     }
@@ -826,27 +998,72 @@ export class GiftCardService {
     const currency = 'GBP';
     let verificationResult;
 
+    this.validatePurchaseAmount(amount, template);
+
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference = transactionId;
+    const centralUserId =
+      paymentProvider === PaymentMethod.MCOM_WALLET
+        ? await this.getCentralUserId(userId)
+        : undefined;
+
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
       verificationResult =
-        await this.paymentProviderService.verifyWalletCharge(
+        await this.paymentProviderService.settleWalletReference(
           transactionId,
           amount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: centralUserId,
+            holdId: transactionId,
+            reference: `gift-card-reload-${giftCard.id}-${userId}`,
+          },
+          this.paymentProviderService.buildWalletKey(
+            'gift-card-reload-capture',
+            transactionId,
+          ),
         );
+      const details: any = verificationResult.details ?? {};
+      paymentReference = details.transactionId || details.id || transactionId;
+      paidChargeId =
+        details.id && !String(details.id).startsWith('wallet:')
+          ? details.id
+          : null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       verificationResult =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           transactionId,
           amount,
           currency,
+          { mallUserId: userId },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -863,9 +1080,12 @@ export class GiftCardService {
       const giftCardRepo = manager.getRepository(GiftCard);
       const transactionRepo = manager.getRepository(GiftCardTransaction);
 
-      // Idempotency check: return giftCard if transactionId already processed
+      // Idempotency check: return giftCard if this payment was already used.
       const existingPayment = await paymentRepo.findOne({
-        where: { transactionId },
+        where: [
+          { transactionId: paymentReference },
+          ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+        ],
       });
       if (existingPayment) {
         return giftCard;
@@ -875,8 +1095,13 @@ export class GiftCardService {
         user: { id: userId } as User,
         amount,
         currency,
-        transactionId,
+        transactionId: paymentReference,
         paymentMethod: paymentProvider,
+        mcomChargeId: paidChargeId,
+        providerRef: paidProviderRef,
+        feeMinor: paidFeeMinor,
+        netMinor: paidNetMinor,
+        status: 'paid',
       });
       const savedPayment = await paymentRepo.save(newPayment);
 
@@ -884,8 +1109,22 @@ export class GiftCardService {
         user: { id: userId } as User,
         total: amount,
         payment: savedPayment,
+        status: OrderStatus.COMPLETED,
       });
       const savedOrder = await orderRepo.save(newOrder);
+
+      await this.paymentProviderService.allocateCharge(
+        {
+          mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+          purpose: 'GIFT_CARD',
+          entityType: 'order',
+          entityId: savedOrder.id,
+          userId,
+          amountMinor: String(Math.round(Number(amount) * 100)),
+          currency: 'GBP',
+        },
+        manager,
+      );
 
       try {
         const dv = await this.digitalValueService.getByCode(code);
@@ -961,7 +1200,12 @@ export class GiftCardService {
     const ownerId = business.user.id;
 
     const templates = await this.templateRepository.find({
-      where: { ownerId, isActive: true },
+      where: {
+        ownerId,
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
     });
 
     return templates;
@@ -976,10 +1220,14 @@ export class GiftCardService {
   ): Promise<GiftCard> {
     const ownerId = business.user.id;
 
-    const template = await this.templateRepository.findOneBy({
-      id: purchaseDto.templateId,
-      ownerId: ownerId,
-      isActive: true,
+    const template = await this.templateRepository.findOne({
+      where: {
+        id: purchaseDto.templateId,
+        ownerId: ownerId,
+        isActive: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
     });
     if (!template) {
       throw new NotFoundException(
@@ -1554,8 +1802,12 @@ export class GiftCardService {
     );
 
     const template = this.templateRepository.create({
-      ...createDto,
+      ...stripModerationFields({ ...createDto } as Record<string, any>),
       owner: { id: ownerId } as User,
+      // New merchant templates must be approved by an admin before shoppers
+      // can see or purchase them.
+      approvalStatus: ApprovalStatus.PENDING,
+      adminDisabled: false,
     });
     return this.templateRepository.save(template);
   }
@@ -1566,7 +1818,13 @@ export class GiftCardService {
     ownerId: string,
   ): Promise<GiftCardTemplate> {
     const template = await this.findTemplateByIdForOwner(templateId, ownerId);
-    Object.assign(template, updateDto);
+    const payload = stripModerationFields({
+      ...updateDto,
+    } as Record<string, any>);
+    Object.assign(template, payload);
+    if (template.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(template);
+    }
     return this.templateRepository.save(template);
   }
 
@@ -1748,6 +2006,21 @@ export class GiftCardService {
     ownerId: string,
   ): Promise<GiftCardAsset[]> {
     const template = await this.findTemplateByIdForOwner(templateId, ownerId);
+    return this.giftCardAssetService.findAssetsByOwner(template.ownerId);
+  }
+
+  /**
+   * Public design assets for an approved template.
+   *
+   * Shoppers must not call the merchant-only endpoint, but they still need the
+   * owner's published designs when personalising a card. Only approved
+   * templates are resolved here, so unapproved/delisted catalog items cannot
+   * leak their assets.
+   */
+  async findPublicAssetsByTemplateId(
+    templateId: string,
+  ): Promise<GiftCardAsset[]> {
+    const template = await this.findTemplateById(templateId);
     return this.giftCardAssetService.findAssetsByOwner(template.ownerId);
   }
 
@@ -2115,7 +2388,11 @@ export class GiftCardService {
     queryBuilder
       .leftJoinAndSelect('template.owner', 'owner')
       .leftJoin('owner.businesses', 'business')
-      .where('template.isActive = :isActive', { isActive: true });
+      .where('template.isActive = :isActive', { isActive: true })
+      .andWhere('template.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('template.adminDisabled = false');
 
     if (search) {
       queryBuilder.andWhere(
@@ -2146,8 +2423,11 @@ export class GiftCardService {
       });
     }
 
+    applySellerLocationFilter(queryBuilder, 'template', 'ownerId', searchDto);
+    applySellerNearOrder(queryBuilder, 'template', 'ownerId', searchDto);
+
     queryBuilder
-      .orderBy('template.created_at', 'DESC')
+      .addOrderBy('template.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
@@ -2184,7 +2464,11 @@ export class GiftCardService {
 
   async findTemplateById(id: string): Promise<GiftCardTemplate> {
     const template = await this.templateRepository.findOne({
-      where: { id },
+      where: {
+        id,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['owner'],
     });
 

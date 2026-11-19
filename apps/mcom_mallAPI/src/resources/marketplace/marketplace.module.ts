@@ -8,6 +8,7 @@ import { MarketplaceSection } from './entities/marketplace-section.entity';
 import { VoucherProduct } from '../voucher/entities/voucher-product.entity';
 import { GiftCardTemplate } from '../gift-card/entities/gift-card-template.entity';
 import { Service } from '../services/entities/service.entity';
+import { GeographyModule } from '../geography/geography.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Service } from '../services/entities/service.entity';
       GiftCardTemplate,
       Service,
     ]),
+    GeographyModule,
   ],
   controllers: [MarketplaceController],
   providers: [MarketplaceService],

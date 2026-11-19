@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   Post,
   Body,
   Patch,
@@ -57,6 +58,7 @@ export class ServicesController {
 
   @Public()
   @Get('public')
+  @Header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120')
   @ApiOperation({
     summary: 'Get all public services with pagination and filtering',
   })

@@ -1,6 +1,7 @@
 import {
   Entity,
   Column,
+  Index,
   ManyToOne,
   JoinColumn,
   OneToMany,
@@ -11,6 +12,7 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { GiftCard } from './gift-card.entity';
 import { Expose } from 'class-transformer';
+import { ApprovalStatus } from '../../../common/moderation/catalog-approval';
 
 @Entity('gift_card_templates')
 export class GiftCardTemplate extends AbstractBaseEntity {
@@ -58,6 +60,25 @@ export class GiftCardTemplate extends AbstractBaseEntity {
   @Expose()
   @Column({ default: true })
   isActive: boolean;
+
+  /** Admin moderation. New merchant templates start pending. */
+  @Index('IDX_gift_card_templates_approval_status')
+  @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
+  approvalStatus: ApprovalStatus;
+
+  @Column({ type: 'text', nullable: true })
+  reviewNote?: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  reviewedBy?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt?: Date | null;
+
+  /** Set by an admin when the template is delisted from the public catalog. */
+  @Index('IDX_gift_card_templates_admin_disabled')
+  @Column({ default: false })
+  adminDisabled: boolean;
 
   @Expose()
   @Column({ default: false })

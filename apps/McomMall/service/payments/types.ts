@@ -64,11 +64,6 @@ export interface RecordPaymentRequest {
 
   isTrial: boolean;               // false
   paygOption?: PaygOption;            // null (unless top-up)
-
-  // Set when the card/PayPal payment was processed centrally by MCOM
-  // Solutions (their Stripe/PayPal accounts). The backend skips mall-side
-  // provider verification and confirms via Solutions instead.
-  viaSolutions?: boolean;
 }
 
 // Retaining old DTOs/Interfaces to avoid breaking existing imports immediately,

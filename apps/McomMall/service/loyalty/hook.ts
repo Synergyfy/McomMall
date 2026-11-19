@@ -144,6 +144,13 @@ export interface LoyaltyEarningConfig {
   servicePointOverrides: Record<string, number>;
 }
 
+export interface PublicLoyaltyEligibleItem {
+  id: string;
+  name: string;
+  /** Fixed points for this item, or null when the spend-based rate applies. */
+  customPoints: number | null;
+}
+
 export interface PublicLoyaltyProgram {
   businessId: string;
   programName: string;
@@ -157,6 +164,8 @@ export interface PublicLoyaltyProgram {
   minSpend?: number | string | null;
   isJoined: boolean;
   memberCount: number;
+  eligibleProducts: PublicLoyaltyEligibleItem[];
+  eligibleServices: PublicLoyaltyEligibleItem[];
 }
 
 export const useLoyaltyStats = (businessId?: string) =>

@@ -2,6 +2,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  Index,
   ManyToOne,
   OneToMany,
   CreateDateColumn,
@@ -12,6 +13,7 @@ import { moneyArrayTransformer, moneyTransformer } from '../../../common/money/m
 import { User } from '../../users/entities/user.entity';
 import { Expose } from 'class-transformer';
 import { Coupon } from './coupon.entity';
+import { ApprovalStatus } from '../../../common/moderation/catalog-approval';
 
 @Entity('coupon_products')
 export class CouponProduct {
@@ -46,6 +48,25 @@ export class CouponProduct {
   @Expose()
   @Column({ default: true })
   isEnabled: boolean;
+
+  /** Admin moderation. New merchant coupon products start pending. */
+  @Index('IDX_coupon_products_approval_status')
+  @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
+  approvalStatus: ApprovalStatus;
+
+  @Column({ type: 'text', nullable: true })
+  reviewNote?: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  reviewedBy?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt?: Date | null;
+
+  /** Set by an admin when the coupon product is delisted. */
+  @Index('IDX_coupon_products_admin_disabled')
+  @Column({ default: false })
+  adminDisabled: boolean;
 
   @Expose()
   @Column({ nullable: true })

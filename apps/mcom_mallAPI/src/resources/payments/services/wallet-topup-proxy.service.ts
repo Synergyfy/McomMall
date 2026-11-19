@@ -108,7 +108,11 @@ export class WalletTopUpProxyService {
     mallUserId: string,
     topUpRequestId: string,
     paymentIntentId: string,
-  ): Promise<{ success: boolean; credited?: number }> {
+  ): Promise<{
+    success: boolean;
+    credited?: number;
+    centralWalletTransactionId?: string;
+  }> {
     const charge = await this.paymentProviderService.getMcomCharge(
       topUpRequestId,
     );
@@ -142,7 +146,7 @@ export class WalletTopUpProxyService {
       );
     }
 
-    await this.mcomWalletService.credit({
+    const credited = await this.mcomWalletService.credit({
       userId: user.centralUserId,
       amount,
       category: 'TRANSFER_IN',
@@ -155,6 +159,24 @@ export class WalletTopUpProxyService {
       ),
     });
 
-    return { success: true, credited: amount };
+    await this.paymentProviderService.allocateCharge({
+      mcomChargeId: topUpRequestId,
+      purpose: 'WALLET_TOPUP',
+      entityType: 'wallet_topup',
+      entityId: topUpRequestId,
+      userId: mallUserId,
+      amountMinor: String(Math.round(Number(amount) * 100)),
+      currency: 'GBP',
+    });
+
+    this.logger.log(
+      `Wallet top-up ${topUpRequestId} credited ${amount} (central txn ${credited.transactionId})`,
+    );
+
+    return {
+      success: true,
+      credited: amount,
+      centralWalletTransactionId: credited.transactionId,
+    };
   }
 }

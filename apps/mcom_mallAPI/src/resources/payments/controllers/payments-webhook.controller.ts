@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Controller,
   Headers,
   HttpCode,
@@ -7,15 +6,11 @@ import {
   Logger,
   Post,
   Req,
-  ServiceUnavailableException,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
-import { WebhookSourceGuard } from '../../../common/guards/webhook-source.guard';
 import { PaymentsService } from '../services/payments.service';
-import { PaymentProviderService } from '../services/payment-provider.service';
 import { McomPayService } from '../services/mcom-pay.service';
 
 @ApiTags('payments-webhooks')
@@ -25,14 +20,16 @@ export class PaymentsWebhookController {
 
   constructor(
     private readonly paymentsService: PaymentsService,
-    private readonly paymentProviderService: PaymentProviderService,
     private readonly mcomPayService: McomPayService,
   ) {}
 
   /**
    * MCOM Pay lifecycle webhook (payment.succeeded / payment.refunded).
-   * Signed with the app's webhook secret; used as a backstop for payments whose
-   * browser confirmation was interrupted.
+   *
+   * This is the only payment webhook: direct Stripe/PayPal webhooks were
+   * removed because MCOM Central owns those merchant accounts and their
+   * ledgers. The endpoint persists every delivery for audit, processes each
+   * payload once, and returns 5xx on a processing failure so Central retries.
    */
   @Public()
   @Post('mcom/webhook')
@@ -50,123 +47,40 @@ export class PaymentsWebhookController {
       throw new UnauthorizedException('Invalid MCOM Pay webhook signature');
     }
 
-    const event = req.body?.event;
-    const chargeId =
-      req.body?.data?.chargeId ||
-      req.body?.data?.id ||
-      req.body?.chargeId;
-    const status = req.body?.data?.status;
+    const event = String(req.body?.event ?? 'unknown');
+    const data = req.body?.data ?? {};
+    const chargeId: string | undefined =
+      data.chargeId || data.id || req.body?.chargeId;
 
-    if (chargeId && typeof chargeId === 'string') {
-      if (event === 'payment.succeeded') {
-        await this.mcomPayService.updateLocalStatus(chargeId, 'paid');
-      } else if (event === 'payment.refunded') {
-        await this.mcomPayService.updateLocalStatus(
-          chargeId,
-          status || 'refunded',
-        );
-      }
+    const { duplicate, record } = await this.mcomPayService.recordWebhookEvent({
+      event,
+      chargeId,
+      payload: req.body ?? {},
+      rawBody,
+    });
+
+    if (duplicate && record.processedAt) {
+      this.logger.log(
+        `Ignoring duplicate MCOM Pay webhook "${event}"${chargeId ? ` for charge ${chargeId}` : ''}`,
+      );
+      return { received: true, duplicate: true };
+    }
+
+    try {
+      await this.paymentsService.handleMcomPayEvent(req.body ?? {});
+      await this.mcomPayService.markWebhookProcessed(record.id);
+    } catch (err: any) {
+      await this.mcomPayService.markWebhookProcessed(record.id, err);
+      this.logger.error(
+        `MCOM Pay webhook "${event}"${chargeId ? ` for charge ${chargeId}` : ''} failed: ${err?.message || err}`,
+      );
+      // Return 5xx so Central retries the delivery.
+      throw err;
     }
 
     this.logger.log(
-      `MCOM Pay webhook "${event ?? 'unknown'}"${chargeId ? ` for charge ${chargeId}` : ''}`,
+      `MCOM Pay webhook "${event}"${chargeId ? ` for charge ${chargeId}` : ''} processed`,
     );
-    return { received: true, event: event ?? 'unknown' };
-  }
-
-  @Public()
-  @UseGuards(WebhookSourceGuard)
-  @Post('stripe/webhook')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Stripe webhook receiver (signature verified)' })
-  @ApiResponse({ status: 200, description: 'Event received' })
-  async stripeWebhook(
-    @Req() req: any,
-    @Headers('stripe-signature') signature?: string,
-  ) {
-    if (!signature) {
-      throw new BadRequestException('Missing stripe-signature header');
-    }
-
-    // Always verify against the exact raw bytes Stripe signed. Never fall back
-    // to the re-serialised body, which would not match the signature.
-    const rawBody = req.rawBody;
-    if (!rawBody) {
-      throw new BadRequestException('Missing raw request body');
-    }
-
-    let event: any;
-    try {
-      event = this.paymentProviderService.constructStripeEvent(
-        rawBody,
-        signature,
-      );
-    } catch (err: any) {
-      // Misconfiguration is a server error; anything else is a bad signature.
-      if (err instanceof ServiceUnavailableException) {
-        throw err;
-      }
-      this.logger.warn(`Rejected Stripe webhook: ${err?.message}`);
-      throw new BadRequestException('Invalid Stripe webhook signature');
-    }
-
-    // Replay protection: ignore events we have already processed.
-    if (this.paymentsService.isDuplicateWebhookEvent(event.id)) {
-      this.logger.log(`Ignoring duplicate Stripe event ${event.id}`);
-      return { received: true, duplicate: true };
-    }
-
-    // Reject test-mode events in production so sandbox traffic can never
-    // mutate live orders.
-    if (process.env.NODE_ENV === 'production' && event.livemode === false) {
-      this.logger.warn(`Rejected Stripe test-mode event ${event.id}`);
-      throw new BadRequestException('Test-mode Stripe events are not accepted');
-    }
-
-    await this.paymentsService.handleStripeWebhookEvent(event);
-    return { received: true, type: event.type };
-  }
-
-  @Public()
-  @UseGuards(WebhookSourceGuard)
-  @Post('paypal/webhook')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'PayPal webhook receiver (signature verified)' })
-  @ApiResponse({ status: 200, description: 'Event received' })
-  async paypalWebhook(
-    @Req() req: any,
-    @Headers() headers: Record<string, any>,
-  ) {
-    // Require the PayPal transmission headers up-front so unsigned requests
-    // are rejected before any outbound verification call is made.
-    if (
-      !headers['paypal-transmission-id'] ||
-      !headers['paypal-transmission-sig'] ||
-      !headers['paypal-cert-url'] ||
-      !headers['paypal-auth-algo']
-    ) {
-      throw new BadRequestException('Missing PayPal webhook signature headers');
-    }
-
-    const verification = await this.paymentProviderService.verifyPaypalWebhook(
-      headers,
-      req.body,
-    );
-    if (!verification.ok) {
-      this.logger.warn(
-        `Rejected PayPal webhook: ${verification.reason ?? 'verification failed'}`,
-      );
-      throw new UnauthorizedException('Invalid PayPal webhook signature');
-    }
-
-    // Replay protection by event id.
-    const eventId = req.body?.id;
-    if (this.paymentsService.isDuplicateWebhookEvent(eventId)) {
-      this.logger.log(`Ignoring duplicate PayPal event ${eventId}`);
-      return { received: true, duplicate: true };
-    }
-
-    await this.paymentsService.handlePaypalWebhookEvent(req.body ?? {});
-    return { received: true };
+    return { received: true, event };
   }
 }

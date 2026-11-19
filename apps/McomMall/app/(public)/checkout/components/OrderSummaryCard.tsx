@@ -17,6 +17,7 @@ interface OrderSummaryCardProps {
   quantity: number;
   setQuantity: (quantity: number | ((prev: number) => number)) => void;
   basePrice: number;
+  subtotal?: number;
   totalPrice: number;
   couponDiscount: number;
   giftCardDiscount: number;
@@ -36,6 +37,7 @@ export default function OrderSummaryCard({
   quantity,
   setQuantity,
   basePrice,
+  subtotal,
   totalPrice,
   couponDiscount,
   giftCardDiscount,
@@ -254,7 +256,7 @@ export default function OrderSummaryCard({
           <p className="text-gray-600">Subtotal</p>
           <p className="font-semibold text-gray-800">
             {CURRENCY}
-            {(basePrice + servicesTotal).toFixed(2)}
+            {Number(subtotal ?? basePrice + servicesTotal).toFixed(2)}
           </p>
         </div>
 

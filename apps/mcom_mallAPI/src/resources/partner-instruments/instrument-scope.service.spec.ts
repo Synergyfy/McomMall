@@ -1,6 +1,7 @@
 import { ForbiddenException, UnprocessableEntityException } from '@nestjs/common';
 import { InstrumentScopeService } from './instrument-scope.service';
 import { ScopeLine, ScopeMode } from './enums';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 function makeService() {
   const businessRepository = {
@@ -22,6 +23,7 @@ function makeService() {
         (where?.id?._value ?? where?.id ?? []).map((id: string) => ({
           id,
           productStatus: 'published',
+          approvalStatus: ApprovalStatus.APPROVED,
           business: { id: 'b1' },
         })),
       ),
@@ -33,6 +35,7 @@ function makeService() {
         (where?.id?._value ?? where?.id ?? []).map((id: string) => ({
           id,
           status: 'published',
+          approvalStatus: ApprovalStatus.APPROVED,
           businessId: 'b1',
         })),
       ),

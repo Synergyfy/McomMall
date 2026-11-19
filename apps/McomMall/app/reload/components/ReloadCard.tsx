@@ -31,6 +31,9 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
   const [provider, setProvider] = useState<'stripe' | 'paypal'>('stripe');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const initiateFund = useInitiateFund();
   const verifyFund = useVerifyFund();
@@ -89,6 +92,7 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
           }
           if (data.orderId) {
             setOrderId(data.orderId);
+            setPaypalApprovalUrl(data.approvalUrl ?? null);
           }
         },
         onError: (error) => {
@@ -223,6 +227,7 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
         {provider === 'paypal' && orderId && (
           <PayPalCheckoutButton
             orderID={orderId}
+            approvalUrl={paypalApprovalUrl}
             onPaymentSuccess={handleVerifyFund}
           />
         )}

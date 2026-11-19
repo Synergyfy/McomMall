@@ -6,7 +6,11 @@ export interface AdminProduct {
     category: string;
     price: number;
     stock: number;
-    status: 'active' | 'inactive' | 'out_of_stock';
+    status: 'active' | 'inactive' | 'out_of_stock' | 'pending' | 'rejected' | 'delisted';
+    approvalStatus?: 'pending' | 'approved' | 'rejected';
+    adminDisabled?: boolean;
+    reviewNote?: string | null;
+    reviewedAt?: string | null;
     description: string;
     images: string[];
     createdAt: string;

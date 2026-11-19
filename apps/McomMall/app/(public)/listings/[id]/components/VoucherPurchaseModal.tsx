@@ -29,6 +29,11 @@ import {
 } from '@stripe/react-stripe-js';
 import { InitiateVoucherPurchaseDto } from '@/service/vouchers/types';
 import PayPalButtonWrapper from '@/components/PayPalButtonWrapper';
+import { getPaymentErrorInfo, showPaymentError } from '@/lib/payment-errors';
+import {
+  buildPayPalReturnUrls,
+  storePendingPayPalPurchase,
+} from '@/lib/paypal-return';
 
 interface VoucherPurchaseModalProps {
   product: VoucherProduct;
@@ -38,7 +43,7 @@ interface VoucherPurchaseModalProps {
 }
 
 const stripePromise = loadStripe(
-  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 const StripePaymentForm = ({
@@ -101,9 +106,15 @@ export default function VoucherPurchaseModal({
   >('stripe');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [purchaseDetails, setPurchaseDetails] =
     useState<InitiateVoucherPurchaseDto | null>(null);
+  const hasAmountOptions =
+    (product.fixedAmounts?.length ?? 0) > 0 || product.allowCustomAmount;
 
   const initiatePurchase = useInitiateVoucherPurchase();
   const verifyPurchase = useVerifyVoucherPurchase();
@@ -140,11 +151,15 @@ export default function VoucherPurchaseModal({
       return;
     }
 
+    setError(null);
     setIsLoading(true);
+    const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
     const details: InitiateVoucherPurchaseDto = {
       voucherProductId: product.id,
       amount: Number(selectedAmount),
       paymentProvider,
+      returnUrl,
+      cancelUrl,
       ...(recipientName.trim() ? { recipientName: recipientName.trim() } : {}),
       ...(recipientEmail.trim()
         ? { recipientEmail: recipientEmail.trim() }
@@ -169,10 +184,15 @@ export default function VoucherPurchaseModal({
         setClientSecret(response.clientSecret);
       } else {
         setPaypalOrderId(response.orderId);
+        setPaypalApprovalUrl((response as any).approvalUrl ?? null);
+        storePendingPayPalPurchase(
+          'voucher',
+          details as unknown as Record<string, unknown>,
+        );
       }
-    } catch (error) {
-      toast.error('Failed to initiate purchase. Please try again.');
-      console.error(error);
+    } catch (err) {
+      setError(getPaymentErrorInfo(err).message);
+      showPaymentError(err);
     } finally {
       setIsLoading(false);
     }
@@ -192,8 +212,9 @@ export default function VoucherPurchaseModal({
       });
       onPurchaseSuccess(verifiedVoucher);
       resetForm();
-    } catch (error) {
-      toast.error('Stripe payment verification failed.');
+    } catch (err) {
+      setError(getPaymentErrorInfo(err).message);
+      showPaymentError(err);
     } finally {
       setIsLoading(false);
     }
@@ -213,9 +234,9 @@ export default function VoucherPurchaseModal({
       });
       onPurchaseSuccess(verifiedVoucher);
       resetForm();
-    } catch (error) {
-      toast.error('PayPal payment verification failed.');
-      console.error(error);
+    } catch (err) {
+      setError(getPaymentErrorInfo(err).message);
+      showPaymentError(err);
     } finally {
       setIsLoading(false);
     }
@@ -230,6 +251,8 @@ export default function VoucherPurchaseModal({
     setPaymentProvider('stripe');
     setClientSecret(null);
     setPaypalOrderId(null);
+    setPaypalApprovalUrl(null);
+    setError(null);
     setPurchaseDetails(null);
     onClose();
   };
@@ -251,10 +274,17 @@ export default function VoucherPurchaseModal({
             )}
             <div className="space-y-2">
               <Label>Select Amount</Label>
+              {!hasAmountOptions && (
+                <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700">
+                  This voucher does not have an online purchase amount yet.
+                  Ask the business to add fixed amounts or a custom amount.
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {product.fixedAmounts?.map(amount => (
                   <Button
                     key={amount}
+                    type="button"
                     variant={
                       selectedAmount === amount && !customAmountInput
                         ? 'default'
@@ -275,7 +305,9 @@ export default function VoucherPurchaseModal({
                     type="number"
                     value={customAmountInput}
                     onChange={handleCustomAmountChange}
-                    placeholder={`Between ${product.minCustomAmount} and ${product.maxCustomAmount}`}
+                    placeholder={`Between ${CURRENCY}${product.minCustomAmount ?? 0} and ${CURRENCY}${product.maxCustomAmount ?? 'any'}`}
+                    min={product.minCustomAmount ?? undefined}
+                    max={product.maxCustomAmount ?? undefined}
                     className="mt-1"
                   />
                 </div>
@@ -313,11 +345,12 @@ export default function VoucherPurchaseModal({
               <RadioGroup
                 defaultValue="stripe"
                 value={paymentProvider}
-                onValueChange={value =>
+                onValueChange={value => {
                   setPaymentProvider(
                     value as 'stripe' | 'paypal' | 'mcom_wallet'
-                  )
-                }
+                  );
+                  setError(null);
+                }}
                 className="flex gap-4"
               >
                 <Label
@@ -343,6 +376,7 @@ export default function VoucherPurchaseModal({
                 </Label>
               </RadioGroup>
             </div>
+            {error && <p className="text-sm text-rose-600">{error}</p>}
           </div>
         ) : clientSecret ? (
           <Elements stripe={stripePromise} options={{ clientSecret }}>
@@ -353,6 +387,7 @@ export default function VoucherPurchaseModal({
             <div className="flex w-full items-center justify-center py-4">
               <PayPalButtonWrapper
                 orderId={paypalOrderId}
+                approvalUrl={paypalApprovalUrl}
                 onApprove={handlePayPalApprove}
               />
             </div>
@@ -367,7 +402,7 @@ export default function VoucherPurchaseModal({
               </DialogClose>
               <Button
                 onClick={handleInitiatePurchase}
-                disabled={!selectedAmount || isLoading}
+                disabled={!selectedAmount || isLoading || !hasAmountOptions}
               >
                 {isLoading ? 'Loading...' : 'Proceed to Payment'}
               </Button>

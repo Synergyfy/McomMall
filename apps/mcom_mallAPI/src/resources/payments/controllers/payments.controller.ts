@@ -64,7 +64,22 @@ export class PaymentsController {
   ) {
     return this.paymentProviderService.capturePaypalOrder(
       capturePaypalOrderDto.orderId,
+      { mallUserId: req.user.id },
     );
+  }
+
+  @Get('config')
+  @UseGuards(JwtAuthGuard)
+  getPaymentConfig(@Req() req) {
+    // Publishable keys are public by design; never expose secrets here.
+    return {
+      mcomPayEnabled: this.paymentProviderService.isEnabled(),
+      publishableKey: this.walletTopUpProxyService.getPublishableKey() || null,
+      walletEnabled: this.mcomWalletService.isEnabled(),
+      topUpUrl: this.mcomWalletService.getTopUpUrl(),
+      paypalMode: process.env.NODE_ENV === 'production' ? 'live' : 'sandbox',
+      currency: 'GBP',
+    };
   }
 
   @Post('record')

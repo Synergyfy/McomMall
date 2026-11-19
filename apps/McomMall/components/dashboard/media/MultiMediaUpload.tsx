@@ -1,5 +1,11 @@
 'use client';
-import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  ChangeEvent,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import { Plus, X, UploadCloud, Crop } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import MediaCropper from './MediaCropper';
@@ -16,33 +22,55 @@ interface MultiMediaUploadProps {
   maxFiles?: number;
   maxSize?: number;
   initialMedia?: string[];
+  /** Files restored from form state (e.g. navigating back a wizard step). */
+  initialFiles?: File[];
 }
+
+const toMediaFile = (file: File): MediaFile => ({
+  file,
+  previewUrl: URL.createObjectURL(file),
+  type: file.type.startsWith('video/') ? 'video' : 'image',
+});
 
 const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   onMediaChange,
   maxFiles = 5,
   maxSize = 30 * 1024 * 1024, // 30MB default
   initialMedia = [],
+  initialFiles,
 }) => {
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
-  const [initialMediaFiles, setInitialMediaFiles] = useState<string[]>(initialMedia || []);
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(() =>
+    (initialFiles ?? []).map(toMediaFile),
+  );
+  const [initialMediaFiles, setInitialMediaFiles] = useState<string[]>(
+    initialMedia || [],
+  );
   const [error, setError] = useState<string | null>(null);
+
+  // Keep the latest callback in a ref so a new inline callback on the parent
+  // does not re-trigger the media sync effect on every render.
+  const onMediaChangeRef = useRef(onMediaChange);
+  useEffect(() => {
+    onMediaChangeRef.current = onMediaChange;
+  }, [onMediaChange]);
 
   // Cropping State
   const [croppingIndex, setCroppingIndex] = useState<number | null>(null);
 
   const handleFiles = useCallback(
     (files: File[]) => {
-      setMediaFiles(prevMediaFiles => {
+      setMediaFiles((prevMediaFiles) => {
         if (prevMediaFiles.length + files.length > maxFiles) {
           setError(`You can only upload a maximum of ${maxFiles} files.`);
           return prevMediaFiles;
         }
 
         const newMediaFiles: MediaFile[] = files
-          .map(file => {
+          .map((file) => {
             if (file.size > maxSize) {
-              setError(`File ${file.name} exceeds the ${maxSize / 1024 / 1024}MB size limit.`);
+              setError(
+                `File ${file.name} exceeds the ${maxSize / 1024 / 1024}MB size limit.`,
+              );
               return null;
             }
             const fileType = file.type.startsWith('image/')
@@ -72,7 +100,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
         return prevMediaFiles;
       });
     },
-    [maxFiles, maxSize]
+    [maxFiles, maxSize],
   );
 
   const handleFileChange = useCallback(
@@ -81,7 +109,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
       handleFiles(files);
       e.target.value = '';
     },
-    [handleFiles]
+    [handleFiles],
   );
 
   const handleDelete = (index: number) => {
@@ -96,7 +124,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   const handleCropSave = (croppedFile: File) => {
     if (croppingIndex === null) return;
 
-    setMediaFiles(prev => {
+    setMediaFiles((prev) => {
       const updated = [...prev];
       const oldMedia = updated[croppingIndex];
 
@@ -115,24 +143,40 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
 
   useEffect(() => {
     try {
-      onMediaChange(mediaFiles.map(mf => mf.file));
+      onMediaChangeRef.current(mediaFiles.map((mf) => mf.file));
     } catch (e) {
       console.error('Error in onMediaChange:', e);
     }
-    const hasImage = mediaFiles.some(mf => mf.type === 'image');
+    const hasImage = mediaFiles.some((mf) => mf.type === 'image');
     if (mediaFiles.length > 0 && !hasImage) {
       setError('At least one image file is required.');
     } else if (error === 'At least one image file is required.' && hasImage) {
       setError(null);
     }
-  }, [mediaFiles, onMediaChange, error]);
-
-  useEffect(() => {
-    // Cleanup object URLs on unmount
-    return () => {
-      mediaFiles.forEach(mf => URL.revokeObjectURL(mf.previewUrl));
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaFiles]);
+
+  // Reconcile files handed back by the parent (e.g. after a form reset or a
+  // restored draft). Previews are owned by this component, so only rebuild
+  // them when the incoming list genuinely differs.
+  useEffect(() => {
+    const incoming = initialFiles ?? [];
+    setMediaFiles((prev) => {
+      const current = prev.map((mf) => mf.file);
+      const isSame =
+        incoming.length === current.length &&
+        incoming.every((file, index) => file === current[index]);
+      if (isSame) return prev;
+
+      prev.forEach((mf) => {
+        if (!incoming.includes(mf.file)) {
+          URL.revokeObjectURL(mf.previewUrl);
+        }
+      });
+      return incoming.map(toMediaFile);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFiles]);
 
   return (
     <div className="space-y-4">
@@ -169,7 +213,11 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
             />
             <button
               type="button"
-              onClick={() => setInitialMediaFiles(initialMediaFiles.filter((_, i) => i !== index))}
+              onClick={() =>
+                setInitialMediaFiles(
+                  initialMediaFiles.filter((_, i) => i !== index),
+                )
+              }
               className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
               aria-label="Delete file"
             >
@@ -215,7 +263,9 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
         {mediaFiles.length < maxFiles && (
           <button
             type="button"
-            onClick={() => document.getElementById('media-upload-input')?.click()}
+            onClick={() =>
+              document.getElementById('media-upload-input')?.click()
+            }
             className="relative aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-gray-400 hover:text-orange-500 hover:border-orange-500 transition-colors"
             aria-label="Add more files"
           >

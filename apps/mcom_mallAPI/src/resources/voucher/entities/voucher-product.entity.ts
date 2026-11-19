@@ -2,6 +2,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  Index,
   ManyToOne,
   OneToMany,
   CreateDateColumn,
@@ -11,6 +12,7 @@ import { moneyArrayTransformer, moneyTransformer } from '../../../common/money/m
 import { User } from '../../users/entities/user.entity';
 import { Voucher } from './voucher.entity';
 import { Expose } from 'class-transformer';
+import { ApprovalStatus } from '../../../common/moderation/catalog-approval';
 
 export enum VoucherUsage {
   ONLINE_ONLY = 'online_only',
@@ -128,6 +130,25 @@ export class VoucherProduct {
   @Expose()
   @Column({ type: 'varchar', length: 20, default: 'active' })
   status: string;
+
+  /** Admin moderation. New merchant voucher products start pending. */
+  @Index('IDX_voucher_products_approval_status')
+  @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
+  approvalStatus: ApprovalStatus;
+
+  @Column({ type: 'text', nullable: true })
+  reviewNote?: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  reviewedBy?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewedAt?: Date | null;
+
+  /** Set by an admin when the voucher product is delisted. */
+  @Index('IDX_voucher_products_admin_disabled')
+  @Column({ default: false })
+  adminDisabled: boolean;
 
   /**
    * Optional restriction inherited by partner instruments. Shape mirrors an

@@ -19,6 +19,8 @@ import {
   buildNewUserIdentity,
   syncCentralIdentity,
 } from './central-profile-sync';
+import { Business } from '../listings/entities/listing.entity';
+import { hierarchyToBusinessGeoPatch } from '../geography/business-geography.service';
 
 @Injectable()
 export class SsoService {
@@ -403,6 +405,49 @@ export class SsoService {
       logger: this.logger,
     });
     localUser = synced.user;
+
+    // Mirror Central's canonical City → Borough → High Street → Local Mall
+    // assignment onto the business. This is one lookup per login and is
+    // best-effort: a Central hiccup must never block sign-in.
+    const geographyIsFresh =
+      synced.business?.geoResolvedAt &&
+      Date.now() - new Date(synced.business.geoResolvedAt).getTime() <
+        15 * 60 * 1000 &&
+      Boolean(
+        synced.business.geoCityId ||
+          synced.business.geoBoroughId ||
+          synced.business.geoHighStreetId ||
+          synced.business.geoLocalMallId,
+      );
+
+    if (synced.business && !geographyIsFresh) {
+      try {
+        const centralBusiness = centralUser.businessProfile || {};
+        const centralPostcode =
+          centralUser.postcode || centralBusiness.postcode || null;
+        const hierarchy = await Promise.race([
+          this.mcomCentralService.getLocalMallOrResolvePostcode({
+            userId: centralUserId,
+            postcode: centralPostcode,
+          }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+        ]);
+        if (hierarchy) {
+          await this.dataSource
+            .getRepository(Business)
+            .update(
+              synced.business.id,
+              hierarchyToBusinessGeoPatch(hierarchy),
+            );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Could not sync business geography for ${centralUserId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
 
     // Store the Solutions SSO refresh token (encrypted at rest) so the mall
     // can proxy user-scoped Solutions calls (embedded wallet card top-ups).

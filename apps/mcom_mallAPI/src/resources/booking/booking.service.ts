@@ -78,6 +78,7 @@ import { MoneyEngineService } from '../money-engine/money-engine.service';
 import { FunctionalType } from '../money-engine/entities/reward-definition.entity';
 import { FeatureFlagsService } from '../../common/feature-flags/feature-flags.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 import { randomUUID } from 'crypto';
 
 const DAY_NAMES = [
@@ -160,7 +161,13 @@ export class BookingService {
     const { serviceId, startTime, endTime } = checkAvailabilityDto;
 
     const service = await this.serviceRepository.findOne({
-      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
+      where: {
+        id: serviceId,
+        isActive: true,
+        status: 'published',
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['business', 'business.user', 'business.businessHours'],
     });
 
@@ -319,7 +326,13 @@ export class BookingService {
     dateStr: string,
   ): Promise<string[]> {
     const service = await this.serviceRepository.findOne({
-      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
+      where: {
+        id: serviceId,
+        isActive: true,
+        status: 'published',
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['business', 'business.user', 'business.businessHours'],
     });
 
@@ -524,7 +537,13 @@ export class BookingService {
       createBookingDto;
 
     const service = await transactionalEntityManager.findOne(Service, {
-      where: { id: serviceId, isActive: true, status: 'published', adminDisabled: false },
+      where: {
+        id: serviceId,
+        isActive: true,
+        status: 'published',
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: [
         'business',
         'business.user',
@@ -950,6 +969,71 @@ export class BookingService {
   }
 
   /**
+   * Price a service that is being booked as part of a product checkout.
+   *
+   * Uses the exact same authoritative calculation as a standalone booking so a
+   * bundled service can never be silently under-charged or drift from the
+   * amount shown to the shopper.
+   */
+  quoteForService(
+    service: Service,
+    startTime: Date | string,
+    endTime: Date | string,
+    options?: {
+      tierId?: string;
+      variantId?: string;
+      quantity?: number;
+      numberOfGuests?: number;
+      addonIds?: string[];
+    },
+  ): {
+    totalAmount: number;
+    commissionAmount: number;
+    providerAmount: number;
+  } {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      end <= start
+    ) {
+      throw new BadRequestException(
+        'A valid start time and a later end time are required for a service booking.',
+      );
+    }
+
+    const addonDetails =
+      options?.addonIds && options.addonIds.length > 0
+        ? options.addonIds
+            .map((id) =>
+              service.configurableAddons?.find((addon) => addon.id === id),
+            )
+            .filter((addon): addon is NonNullable<typeof addon> =>
+              Boolean(addon),
+            )
+            .map((addon) => ({
+              id: addon.id,
+              name: addon.name,
+              price: Number(addon.price),
+            }))
+        : null;
+
+    const draft = {
+      service,
+      startTime: start,
+      endTime: end,
+      tierId: options?.tierId,
+      variantId: options?.variantId,
+      quantity: options?.quantity ?? 1,
+      numberOfGuests: options?.numberOfGuests ?? 1,
+      addonDetails,
+    } as unknown as ServiceBooking;
+
+    return this.calculateBookingPricing(draft);
+  }
+
+  /**
    * Authoritative booking price from the service configuration. Used by both
    * payment initiation and reward eligibility so both agree on the base.
    */
@@ -1331,7 +1415,10 @@ export class BookingService {
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
+    approvalUrl?: string | null;
     transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
     provider: PaymentMethod;
     amount: number;
     rewardDiscount?: number;
@@ -1354,6 +1441,7 @@ export class BookingService {
     }
 
     if (
+      booking.service.approvalStatus !== ApprovalStatus.APPROVED ||
       booking.service.status !== 'published' ||
       !booking.service.isActive ||
       booking.service.adminDisabled
@@ -1641,6 +1729,7 @@ export class BookingService {
           booking.paymentIntentId,
           payableAmount,
           currency,
+          { mallUserId: userId, mcomUserId: centralUserId },
         );
         if (existing.ok) {
           return {
@@ -1651,33 +1740,39 @@ export class BookingService {
             totalAmount,
           };
         }
+        // An unconfirmed attempt is a hold, not a charge: release it rather
+        // than refunding, then place a fresh hold for the current total.
         try {
-          await this.paymentProviderService.refundStripePayment(
+          await this.paymentProviderService.releaseWalletHold(
             booking.paymentIntentId,
+            'Superseded by a new booking payment attempt',
           );
-        } catch (refundErr) {
+        } catch (releaseErr) {
           this.logger.warn(
-            `Could not refund superseded wallet charge ${booking.paymentIntentId}: ${refundErr instanceof Error ? refundErr.message : refundErr}`,
+            `Could not release superseded wallet hold ${booking.paymentIntentId}: ${releaseErr instanceof Error ? releaseErr.message : releaseErr}`,
           );
         }
       }
 
-      const walletCharge = await this.paymentProviderService.createWalletCharge(
-        payableAmount,
-        currency,
-        {
-          bookingId: booking.id,
-          userId,
-          idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
-          description: `MCOM Mall booking ${booking.id}`,
-        },
-        centralUserId,
-      );
-      booking.paymentIntentId = walletCharge.chargeId;
+      const hold = await this.paymentProviderService.createWalletHold({
+        mcomUserId: centralUserId,
+        amount: payableAmount,
+        reference: `booking-${booking.id}`,
+        idempotencyKey: this.paymentProviderService.buildWalletKey(
+          'booking-hold',
+          booking.id,
+          payableAmount.toFixed(2),
+          Date.now(),
+        ),
+        metadata: { purpose: 'BOOKING', bookingId: booking.id, userId },
+      });
+      booking.paymentIntentId = hold.holdId;
       await this.bookingRepository.save(booking);
 
       return {
-        transactionId: walletCharge.chargeId,
+        transactionId: hold.holdId,
+        holdId: hold.holdId,
+        expiresAt: hold.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
         amount: payableAmount,
         rewardDiscount,
@@ -1698,10 +1793,12 @@ export class BookingService {
               payableAmount,
               currency,
             );
-          // If it's already succeeded or still processing, we can return it (though succeeded should be handled by verify)
+          // If the existing intent is already settled we cannot re-supply a
+          // client secret. Fall through to the idempotent create below, which
+          // replays the same MCOM Pay charge and returns its client secret.
           if (
-            existingIntent.ok ||
-            existingIntent.reason?.includes('status succeeded')
+            existingIntent.ok &&
+            (existingIntent.details as any)?.client_secret
           ) {
             return {
               clientSecret: (existingIntent.details as any).client_secret,
@@ -1720,10 +1817,17 @@ export class BookingService {
           currency,
           {
             bookingId: booking.id,
+            userId,
+            // Verification binds the charge to this booking by reference.
+            // Keep it identical to the reference passed to verify-payment.
+            reference: `booking-${booking.id}`,
             idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
           },
         );
-      booking.paymentIntentId = paymentIntent.id;
+      // `id` is the MCOM Pay charge id. Persist the provider handle (the Stripe
+      // PaymentIntent id) so verify-payment can compare like-for-like.
+      booking.paymentIntentId =
+        (paymentIntent as any).providerRef ?? paymentIntent.id;
       await this.bookingRepository.save(booking);
 
       return {
@@ -1740,6 +1844,8 @@ export class BookingService {
         currency,
         {
           bookingId: booking.id,
+          userId,
+          reference: `booking-${booking.id}`,
           idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
         },
       );
@@ -1748,6 +1854,7 @@ export class BookingService {
 
       return {
         orderId: order.id,
+        approvalUrl: order.approvalUrl ?? null,
         provider: PaymentMethod.PAYPAL,
         amount: payableAmount,
         rewardDiscount,
@@ -1781,6 +1888,7 @@ export class BookingService {
     }
 
     if (
+      booking.service.approvalStatus !== ApprovalStatus.APPROVED ||
       booking.service.status !== 'published' ||
       !booking.service.isActive ||
       booking.service.adminDisabled
@@ -1803,12 +1911,16 @@ export class BookingService {
     }
 
     // Server-side amount check: the client must pay the post-reward total.
+    // Price-reducer and money-voucher deductions are part of payableAmount and
+    // must be subtracted here too, otherwise those bookings can never verify.
     const expectedAmount = this.toMoney(
       Number(booking.totalAmount || 0) -
         Number(booking.rewardDiscountApplied || 0) -
         Number(booking.couponDiscountApplied || 0) -
         Number(booking.giftCardAmountApplied || 0) -
-        Number(booking.voucherAmountApplied || 0),
+        Number(booking.voucherAmountApplied || 0) -
+        Number(booking.priceReducerAmountApplied || 0) -
+        Number(booking.moneyVoucherAmountApplied || 0),
     );
     if (expectedAmount > 0 && Math.abs(Number(amount) - expectedAmount) > 0.01) {
       throw new BadRequestException(
@@ -1816,27 +1928,104 @@ export class BookingService {
       );
     }
 
+    if (
+      booking.paymentIntentId &&
+      transactionId &&
+      booking.paymentIntentId !== transactionId
+    ) {
+      // Legacy rows stored the MCOM Pay charge id in `paymentIntentId`, while
+      // the browser sends the Stripe PaymentIntent / PayPal order handle. Allow
+      // that mapping once, then normalise the row to the provider handle.
+      let matchedLegacyCharge = false;
+      if (paymentProvider === PaymentMethod.STRIPE) {
+        try {
+          const charge = await this.paymentProviderService.getMcomCharge(
+            booking.paymentIntentId,
+          );
+          matchedLegacyCharge = charge.providerRef === transactionId;
+        } catch {
+          matchedLegacyCharge = false;
+        }
+      }
+      if (matchedLegacyCharge) {
+        booking.paymentIntentId = transactionId;
+        await this.bookingRepository.save(booking);
+      } else {
+        throw new BadRequestException(
+          'This payment reference does not belong to this booking.',
+        );
+      }
+    }
+
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference = transactionId;
+
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
       verificationResult =
-        await this.paymentProviderService.verifyWalletCharge(
+        await this.paymentProviderService.settleWalletReference(
           transactionId,
-          amount,
+          expectedAmount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: booking.user?.centralUserId,
+            holdId: transactionId,
+            reference: `booking-${booking.id}`,
+          },
+          this.paymentProviderService.buildWalletKey(
+            'booking-capture',
+            booking.id,
+          ),
         );
+      const details: any = verificationResult.details ?? {};
+      paymentReference =
+        details.transactionId || details.id || transactionId;
+      paidChargeId =
+        details.id && !String(details.id).startsWith('wallet:')
+          ? details.id
+          : null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       verificationResult =
         await this.paymentProviderService.verifyStripePaymentIntent(
           transactionId,
-          amount,
+          expectedAmount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: booking.user?.centralUserId,
+            reference: `booking-${booking.id}`,
+          },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       verificationResult =
         await this.paymentProviderService.captureAndVerifyPaypalOrder(
           transactionId,
-          amount,
+          expectedAmount,
           currency,
+          {
+            mallUserId: userId,
+            mcomUserId: booking.user?.centralUserId,
+            reference: `booking-${booking.id}`,
+          },
         );
+      const details: any = verificationResult.details ?? {};
+      paidChargeId = details.id ?? null;
+      paidProviderRef = details.providerRef ?? null;
+      paidFeeMinor = details.feeMinor ?? null;
+      paidNetMinor = details.netMinor ?? null;
+      paymentReference = paidChargeId || transactionId;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -1847,19 +2036,63 @@ export class BookingService {
       );
     }
 
+    // Idempotent replay: the same charge already confirmed this booking.
+    const existingServicePayment = await this.servicePaymentRepository.findOne({
+      where: [
+        { transactionId: paymentReference },
+        ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+      ],
+    });
+    if (existingServicePayment) {
+      const existingBooking = await this.bookingRepository.findOne({
+        where: { payment: { id: existingServicePayment.id } },
+      });
+      if (existingBooking) return existingBooking;
+    }
+
     try {
       const confirmedBooking = await this.dataSource.transaction(async (manager) => {
         const paymentRepo = manager.getRepository(ServicePayment);
         const transactionRepo = manager.getRepository(BookingTransaction);
 
+        const reused = await paymentRepo.findOne({
+          where: [
+            { transactionId: paymentReference },
+            ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+          ],
+        });
+        if (reused) {
+          throw new BadRequestException(
+            'This payment has already been used for another booking.',
+          );
+        }
+
         const newPayment = paymentRepo.create({
           user: { id: userId },
           amount,
           currency,
-          transactionId,
+          transactionId: paymentReference,
           paymentMethod: paymentProvider,
+          mcomChargeId: paidChargeId,
+          providerRef: paidProviderRef,
+          feeMinor: paidFeeMinor,
+          netMinor: paidNetMinor,
+          status: 'paid',
         });
         const savedPayment = await paymentRepo.save(newPayment);
+
+        await this.paymentProviderService.allocateCharge(
+          {
+            mcomChargeId: paidChargeId || `wallet:${paymentReference}`,
+            purpose: 'BOOKING',
+            entityType: 'booking',
+            entityId: booking.id,
+            userId,
+            amountMinor: String(Math.round(Number(amount) * 100)),
+            currency: 'GBP',
+          },
+          manager,
+        );
 
         const newTransaction = transactionRepo.create({
           booking,
@@ -2159,7 +2392,17 @@ export class BookingService {
           }
         }
 
-        await this.walletService.releaseBookingPayment(booking.id);
+        // Bundled service bookings do not have their own ServicePayment and
+        // therefore no external transfer. Their pending provider earning was
+        // credited by the parent order; release it once.
+        if (!booking.payment) {
+          if (!booking.payoutProcessed) {
+            await this.walletService.releaseBookingPayment(booking.id);
+            booking.payoutProcessed = true;
+          }
+        } else {
+          await this.walletService.releaseBookingPayment(booking.id);
+        }
       }
 
       return manager.save(booking);

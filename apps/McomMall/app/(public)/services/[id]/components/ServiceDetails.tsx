@@ -8,11 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { BookingModal } from '@/components/BookingModal';
 import { Service } from '@/service/services/types';
+import {
+  CUSTOMER_ACTION_LABELS,
+  getServicePriceLabel,
+} from '@/lib/service-pricing';
 
 const isImageUrl = (url: string) => {
   if (!url) return false;
   return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
-}
+};
 
 type ServiceDetailsProps = {
   serviceId: string;
@@ -43,25 +47,18 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
   }
 
   if (isError) {
-    return <div className="text-center py-20 text-red-500">Error loading service. Please try again later.</div>;
+    return (
+      <div className="text-center py-20 text-red-500">
+        Error loading service. Please try again later.
+      </div>
+    );
   }
 
   if (!service) {
     return <div className="text-center py-20">Service not found.</div>;
   }
 
-  const getPriceDisplay = (service: Service) => {
-    switch (service.pricingModel) {
-      case 'fixed':
-        return `£${service.fixedPrice}`;
-      case 'perHour':
-        return `£${service.pricePerHour}/hour`;
-      case 'perUnit':
-        return `£${service.pricePerUnit}/${service.unitName}`;
-      default:
-        return 'Enquire for Price';
-    }
-  };
+  const getPriceDisplay = (service: Service) => getServicePriceLabel(service);
 
   const firstImageUrl =
     service.media?.find(isImageUrl) || '/images/placeholder.svg';
@@ -90,12 +87,13 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-6 w-6 ${i < 4 ? 'fill-current' : ''
-                        }`}
+                      className={`h-6 w-6 ${i < 4 ? 'fill-current' : ''}`}
                     />
                   ))}
                 </div>
-                <span className="ml-3 text-md text-gray-600">(5 customer reviews)</span>
+                <span className="ml-3 text-md text-gray-600">
+                  (5 customer reviews)
+                </span>
               </div>
             </div>
 
@@ -116,9 +114,21 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
                 className="flex-1 text-lg py-7 bg-orange-600 hover:bg-orange-700 rounded-full shadow-lg"
                 onClick={handleBookNow}
               >
-                Book Now
+                {
+                  CUSTOMER_ACTION_LABELS[
+                    service.customerAction ??
+                      (service.isQuoteModel ? 'requestQuote' : 'bookNow')
+                  ]
+                }
               </Button>
-              <Button variant="outline" size="icon" className="rounded-full w-14 h-14" onClick={() => toast.info('Wishlist functionality coming soon!')}>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full w-14 h-14"
+                onClick={() =>
+                  toast.info('Wishlist functionality coming soon!')
+                }
+              >
                 <Heart className="h-7 w-7 text-gray-400" />
               </Button>
             </div>
@@ -130,10 +140,16 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
                 <span>Professional & Verified Provider</span>
               </div>
               {service.pricingModel === 'perHour' && (
-                <div className="flex items-center text-gray-600"><Clock className="h-5 w-5 mr-3 text-blue-500" /> Billed on an hourly basis</div>
+                <div className="flex items-center text-gray-600">
+                  <Clock className="h-5 w-5 mr-3 text-blue-500" /> Billed on an
+                  hourly basis
+                </div>
               )}
               {service.enableGuestPricing && (
-                <div className="flex items-center text-gray-600"><Users className="h-5 w-5 mr-3 text-orange-500" /> Custom pricing per guest available</div>
+                <div className="flex items-center text-gray-600">
+                  <Users className="h-5 w-5 mr-3 text-orange-500" /> Custom
+                  pricing per guest available
+                </div>
               )}
             </div>
           </div>
@@ -143,15 +159,25 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
         <div className="mt-20">
           <Tabs defaultValue="description" className="w-full">
             <TabsList className="grid w-full grid-cols-2 text-lg p-2 h-auto">
-              <TabsTrigger value="description" className="py-3">Service Details</TabsTrigger>
-              <TabsTrigger value="reviews" className="py-3">Reviews</TabsTrigger>
+              <TabsTrigger value="description" className="py-3">
+                Service Details
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="py-3">
+                Reviews
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="description" className="mt-6 p-8 border rounded-lg text-lg">
+            <TabsContent
+              value="description"
+              className="mt-6 p-8 border rounded-lg text-lg"
+            >
               <p className="text-gray-700 whitespace-pre-wrap">
                 {service.description}
               </p>
             </TabsContent>
-            <TabsContent value="reviews" className="mt-6 p-8 border rounded-lg text-lg">
+            <TabsContent
+              value="reviews"
+              className="mt-6 p-8 border rounded-lg text-lg"
+            >
               <p className="text-gray-700">No reviews yet.</p>
             </TabsContent>
           </Tabs>

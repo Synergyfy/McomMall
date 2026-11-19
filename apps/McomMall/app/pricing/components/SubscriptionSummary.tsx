@@ -86,7 +86,7 @@ export default function SubscriptionSummary({
       </dl>
       {!isPayg && (
         <p className="mt-2 text-right text-[11px] text-gray-400">
-          One-off payment · no auto-renewal
+          Auto-renews from your MCOM Wallet · cancel any time
         </p>
       )}
     </motion.div>

@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Get, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Param,
+  Patch,
+} from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import {
   ApiTags,
@@ -18,6 +26,7 @@ import { InitiateMembershipPaymentDto } from './dto/initiate-membership-payment.
 import { VerifyMembershipPaymentDto } from './dto/verify-membership-payment.dto';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { JoinTrialDto } from './dto/join-trial.dto';
+import { UpdateRenewalDto } from './dto/update-renewal.dto';
 import { MembershipCredit } from './entities/membership-credit.entity';
 import {
   CreateMembershipCreditDto,
@@ -43,6 +52,23 @@ export class MembershipController {
   @ApiResponse({ status: 404, description: 'Membership not found.' })
   findOne(@CurrentUser() user: User): Promise<Membership> {
     return this.membershipService.findOne(user);
+  }
+
+  @Get('renewal')
+  @Roles(UserRole.OWNER, UserRole.CUSTOMER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get auto-renewal state for the current membership' })
+  getRenewal(@CurrentUser() user: User) {
+    return this.membershipService.getRenewalState(user.id);
+  }
+
+  @Patch('renewal')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Enable or cancel automatic renewal' })
+  updateRenewal(
+    @CurrentUser() user: User,
+    @Body() dto: UpdateRenewalDto,
+  ) {
+    return this.membershipService.updateRenewal(user.id, dto.autoRenew);
   }
 
   @Post('initiate-payment')

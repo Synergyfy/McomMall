@@ -11,13 +11,18 @@ import { toast } from 'sonner';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 
-const stripePublishableKey = (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+// Card charges are created by MCOM Pay, so the browser must use the
+// publishable key of Central's Stripe account — never the mall's own key.
+const stripePublishableKey =
+  process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '';
 
 if (!stripePublishableKey) {
-  console.error('Stripe publishable key is missing!');
+  console.error('MCOM Solutions Stripe publishable key is missing!');
 }
 
-const stripePromise = loadStripe(stripePublishableKey);
+const stripePromise = stripePublishableKey
+  ? loadStripe(stripePublishableKey)
+  : null;
 
 interface StripeCheckoutFormProps {
   clientSecret: string;

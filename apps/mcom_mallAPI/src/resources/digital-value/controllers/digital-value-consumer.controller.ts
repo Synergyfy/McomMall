@@ -15,7 +15,6 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { DigitalValueService } from '../digital-value.service';
-import { FundDigitalValueDto } from '../dto/fund-digital-value.dto';
 import { LinkMerchantDto } from '../dto/link-merchant.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -80,29 +79,6 @@ export class DigitalValueConsumerController {
       throw new ForbiddenException('You do not own this instrument');
     }
     return this.digitalValueService.getTransactions(id);
-  }
-
-  @Post(':id/fund')
-  @ApiOperation({
-    summary: 'Fund or top-up a digital value instrument',
-    description:
-      'Adds funds to an existing instrument. Requires payment verification (omitted for brevity in this engine, usually called via webhook).',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Funding successful. Returns updated instrument.',
-  })
-  async fund(
-    @Param('id') id: string,
-    @Body() fundDto: FundDigitalValueDto,
-    @Req() req,
-  ) {
-    // Check ownership before funding? Usually yes.
-    const instrument = await this.digitalValueService.getById(id);
-    if (instrument.owner.id !== req.user.id) {
-      throw new ForbiddenException('You do not own this instrument');
-    }
-    return this.digitalValueService.fund(id, fundDto);
   }
 
   @Post(':id/link')

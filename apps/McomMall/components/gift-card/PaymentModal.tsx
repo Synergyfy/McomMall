@@ -10,11 +10,19 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Palmtree, CreditCard, Wallet } from "lucide-react";
-import { useInitiateGiftCardPurchase, useVerifyGiftCardPurchase } from "@/service/hooks/useGiftCardPayment";
+import {
+  useInitiateGiftCardPurchase,
+  useVerifyGiftCardPurchase,
+} from "@/service/hooks/useGiftCardPayment";
 import { InitiatePurchaseDto, PaymentProvider } from "@/service/gift-cards/types";
 import { PayPalCheckoutButton } from "@/components/PayPalCheckoutButton";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { StripeCheckoutForm } from "@/components/StripeCheckoutForm";
+import { CURRENCY } from "@/lib/utils";
+import { getPaymentErrorInfo, showPaymentError } from "@/lib/payment-errors";
+import {
+  buildPayPalReturnUrls,
+  storePendingPayPalPurchase,
+} from "@/lib/paypal-return";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -23,152 +31,164 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
-// It is strongly recommended to move the key to environment variables
-const stripePromise = (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  ? loadStripe((process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''))
-  : null;
-
-const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails: Omit<InitiatePurchaseDto, "paymentProvider">, onSuccess: () => void, onClose: () => void }) => {
-  const stripe = useStripe();
-  const elements = useElements();
+const PaymentForm = ({
+  purchaseDetails,
+  onSuccess,
+  onClose,
+}: {
+  purchaseDetails: Omit<InitiatePurchaseDto, "paymentProvider">;
+  onSuccess: () => void;
+  onClose: () => void;
+}) => {
   const { initiatePurchase, isInitiating } = useInitiateGiftCardPurchase();
   const { verifyPurchase, isVerifying } = useVerifyGiftCardPurchase();
-  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>("stripe");
-  const [error, setError] = useState<string | null>(null);
+  const [paymentProvider, setPaymentProvider] =
+    useState<PaymentProvider>("stripe");
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const resetPayment = () => {
+    setClientSecret(null);
+    setPaypalOrderId(null);
+    setPaypalApprovalUrl(null);
+    setError(null);
+  };
+
+  const verifyPayment = async (
+    provider: PaymentProvider,
+    transactionId: string,
+  ) => {
+    setError(null);
+    try {
+      await verifyPurchase({
+        paymentProvider: provider,
+        transactionId,
+        purchaseDetails: { ...purchaseDetails, paymentProvider: provider },
+      });
+      onSuccess();
+    } catch (err: unknown) {
+      const info = getPaymentErrorInfo(err);
+      setError(info.message);
+      showPaymentError(err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (paymentProvider === 'mcom_wallet') {
-      try {
-        const initiationRes = await initiatePurchase({
-          ...purchaseDetails,
-          paymentProvider,
-        });
+    if (paymentProvider === "stripe" && clientSecret) {
+      return;
+    }
+
+    try {
+      const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
+      const initiationRes = await initiatePurchase({
+        ...purchaseDetails,
+        paymentProvider,
+        returnUrl,
+        cancelUrl,
+      });
+
+      if (paymentProvider === "mcom_wallet") {
         const transactionId = initiationRes?.data?.transactionId;
         if (!transactionId) {
-          throw new Error('MCOM Wallet did not return a payment reference.');
+          throw new Error("MCOM Wallet did not return a payment reference.");
         }
-        await verifyPurchase({
-          paymentProvider,
-          transactionId,
-          purchaseDetails: { ...purchaseDetails, paymentProvider },
-        });
-        onSuccess();
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Wallet payment failed.');
+        await verifyPayment(paymentProvider, transactionId);
+        return;
       }
-      return;
-    }
 
-    if (paymentProvider === 'paypal') {
-      try {
-        const initiationRes = await initiatePurchase({
-          ...purchaseDetails,
-          paymentProvider,
-        });
+      if (paymentProvider === "paypal") {
         if (!initiationRes?.data?.orderId) {
-          throw new Error('PayPal order could not be created.');
+          throw new Error("PayPal order could not be created.");
         }
         setPaypalOrderId(initiationRes.data.orderId);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'PayPal payment failed.');
-      }
-      return;
-    }
-
-    if (paymentProvider === 'stripe') {
-      if (!stripe || !elements) {
-        setError("Stripe is not ready.");
-        return;
-      }
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        setError("Card details not found.");
-        return;
-      }
-
-      try {
-        const initiationRes = await initiatePurchase({
-          ...purchaseDetails,
-          paymentProvider,
-        });
-
-        if (!initiationRes?.data?.clientSecret) {
-          throw new Error("Failed to initiate payment.");
-        }
-
-        const paymentResult = await stripe.confirmCardPayment(
-          initiationRes.data.clientSecret,
-          {
-            payment_method: {
-              card: cardElement,
-              billing_details: {
-                email: purchaseDetails.recipientEmail,
-                name: purchaseDetails.recipientName,
-              },
-            },
-          }
+        setPaypalApprovalUrl(
+          (initiationRes.data as { approvalUrl?: string | null }).approvalUrl ??
+            null,
         );
-
-        if (paymentResult.error) {
-          setError(paymentResult.error.message ?? "An unknown error occurred.");
-          return;
-        }
-
-        if (paymentResult.paymentIntent?.status === "succeeded") {
-          await verifyPurchase({
-            paymentProvider,
-            transactionId: paymentResult.paymentIntent.id,
-            purchaseDetails: {
-              ...purchaseDetails,
-              paymentProvider,
-            },
-          });
-          onSuccess();
-        }
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-          setError(e.message);
-        } else {
-          setError("Payment failed. Please try again.");
-        }
+        storePendingPayPalPurchase('gift-card', {
+          ...purchaseDetails,
+          paymentProvider: 'paypal',
+        });
+        return;
       }
+
+      if (!initiationRes?.data?.clientSecret) {
+        throw new Error("Failed to initiate payment.");
+      }
+      setClientSecret(initiationRes.data.clientSecret);
+    } catch (err: unknown) {
+      const info = getPaymentErrorInfo(err);
+      setError(info.message);
+      showPaymentError(err);
     }
   };
 
-  const handlePayPalSuccess = async (orderId: string) => {
-    await verifyPurchase({
-      paymentProvider: 'paypal',
-      transactionId: orderId,
-      purchaseDetails: { ...purchaseDetails, paymentProvider: 'paypal' },
-    });
-    onSuccess();
-  };
+  if (clientSecret) {
+    return (
+      <div className="space-y-4">
+        <StripeCheckoutForm
+          clientSecret={clientSecret}
+          onPaymentSuccess={(paymentIntentId) =>
+            verifyPayment("stripe", paymentIntentId)
+          }
+        />
+        {isVerifying && (
+          <p className="flex items-center justify-center gap-2 text-sm text-gray-500">
+            <Loader2 className="h-4 w-4 animate-spin" /> Issuing your gift card…
+          </p>
+        )}
+        {error && <p className="text-sm text-red-500">{error}</p>}
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={resetPayment}
+            disabled={isVerifying}
+          >
+            Choose another payment method
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="flex justify-center space-x-4 mb-6">
+      <div className="mb-6 flex flex-wrap justify-center gap-2">
         <Button
           type="button"
-          onClick={() => setPaymentProvider("stripe")}
+          onClick={() => {
+            resetPayment();
+            setPaymentProvider("stripe");
+          }}
           variant={paymentProvider === "stripe" ? "default" : "outline"}
-          className="bg-orange-600"
+          className={paymentProvider === "stripe" ? "bg-orange-600" : ""}
         >
           <CreditCard className="mr-2 h-4 w-4" /> Card
         </Button>
         <Button
           type="button"
-          onClick={() => setPaymentProvider("paypal")}
+          onClick={() => {
+            resetPayment();
+            setPaymentProvider("paypal");
+          }}
           variant={paymentProvider === "paypal" ? "default" : "outline"}
         >
           <Palmtree className="mr-2 h-4 w-4" /> PayPal
         </Button>
         <Button
           type="button"
-          onClick={() => setPaymentProvider("mcom_wallet")}
+          onClick={() => {
+            resetPayment();
+            setPaymentProvider("mcom_wallet");
+          }}
           variant={paymentProvider === "mcom_wallet" ? "default" : "outline"}
         >
           <Wallet className="mr-2 h-4 w-4" /> MCOM Wallet
@@ -179,53 +199,79 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
         <div className="mb-4 flex justify-center">
           <PayPalCheckoutButton
             orderID={paypalOrderId}
-            onPaymentSuccess={handlePayPalSuccess}
+            approvalUrl={paypalApprovalUrl}
+            onPaymentSuccess={(orderId) => verifyPayment("paypal", orderId)}
           />
         </div>
       )}
 
       {paymentProvider === "mcom_wallet" && !paypalOrderId && (
         <p className="mb-4 rounded-md border border-orange-100 bg-orange-50 p-3 text-sm text-orange-800">
-          Your MCOM Wallet will be charged when you press Pay.
+          Your MCOM Wallet will be charged when you press Pay. Wallet payments
+          are processed by MCOM Pay and the standard processing fee applies.
         </p>
       )}
 
       {paymentProvider === "stripe" && (
-        <div className="mb-4 p-4 border rounded-md">
-          <CardElement options={{ style: { base: { fontSize: "16px" } } }} />
-        </div>
+        <p className="mb-4 rounded-md border border-slate-100 bg-slate-50 p-3 text-sm text-slate-600">
+          You will enter your card details on the next step. Card data is
+          handled by MCOM Pay / Stripe and never stored by MCOM Mall.
+        </p>
       )}
 
-      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+      {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="ghost" onClick={onClose} disabled={isInitiating || isVerifying}>
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onClose}
+          disabled={isInitiating || isVerifying}
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={isInitiating || isVerifying || !stripe || !!paypalOrderId} className="bg-orange-600 hover:bg-orange-700">
-          {(isInitiating || isVerifying) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Pay ${purchaseDetails.amount}
+        <Button
+          type="submit"
+          disabled={isInitiating || isVerifying || !!paypalOrderId}
+          className="bg-orange-600 hover:bg-orange-700"
+        >
+          {(isInitiating || isVerifying) && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
+          {paymentProvider === "stripe"
+            ? "Continue to card payment"
+            : paymentProvider === "paypal"
+              ? "Continue with PayPal"
+              : `Pay ${CURRENCY}${Number(purchaseDetails.amount).toFixed(2)}`}
         </Button>
       </div>
     </form>
   );
 };
 
-const PaymentModal = ({ isOpen, onClose, purchaseDetails, onSuccess }: PaymentModalProps) => {
+const PaymentModal = ({
+  isOpen,
+  onClose,
+  purchaseDetails,
+  onSuccess,
+}: PaymentModalProps) => {
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Complete Your Purchase</DialogTitle>
           <DialogDescription>
-            Securely pay for your gift card.
+            Securely pay {CURRENCY}
+            {Number(purchaseDetails.amount).toFixed(2)} for your gift card.
           </DialogDescription>
         </DialogHeader>
-        <Elements stripe={stripePromise}>
-          <PaymentForm purchaseDetails={purchaseDetails} onSuccess={onSuccess} onClose={onClose} />
-        </Elements>
+        <PaymentForm
+          purchaseDetails={purchaseDetails}
+          onSuccess={onSuccess}
+          onClose={onClose}
+        />
       </DialogContent>
     </Dialog>
   );

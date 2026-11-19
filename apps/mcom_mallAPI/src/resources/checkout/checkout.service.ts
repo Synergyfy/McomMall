@@ -18,7 +18,10 @@ import { Order } from '../order/entities/order.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { McomWalletService } from '../payments/services/mcom-wallet.service';
-import { PaymentMethod } from '../order/entities/order-payment.entity';
+import {
+  PaymentMethod,
+  OrderPayment,
+} from '../order/entities/order-payment.entity';
 import { OrderStatus } from '../order/enums/order-status.enum';
 import { CompleteCheckoutDto } from './dto/complete-checkout.dto';
 import { RedeemGiftCardDto } from '../gift-card/dto/redeem-gift-card.dto';
@@ -34,6 +37,7 @@ import {
   ScopeLine,
   ScopeMode,
 } from '../partner-instruments/enums';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 import {
   computeCouponDiscount,
   computeInstrumentApplication,
@@ -117,6 +121,7 @@ export class CheckoutService {
     // if someone has the ID (e.g. an old link or a direct API call).
     const unavailableProduct = products.find(
       (p) =>
+        p.approvalStatus !== ApprovalStatus.APPROVED ||
         p.productStatus !== 'published' ||
         p.visibility !== 'public' ||
         p.adminDisabled,
@@ -493,19 +498,24 @@ export class CheckoutService {
             'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
           );
         }
-        const charge = await this.paymentProviderService.createWalletCharge(
-          Number(remainingTotal.toFixed(2)),
-          'GBP',
-          {
-            reference: `mall-checkout-${newOrder.id}`,
-            userId,
-            description: 'MCOM Mall order',
-          },
-          centralUserId,
-        );
+        // Pre-authorise only. The debit happens when the order is completed,
+        // so an abandoned checkout can never strand customer funds.
+        const hold = await this.paymentProviderService.createWalletHold({
+          mcomUserId: centralUserId,
+          amount: Number(remainingTotal.toFixed(2)),
+          reference: `mall-checkout-${newOrder.id}`,
+          idempotencyKey: this.mcomWalletService.buildKey(
+            'checkout-hold',
+            newOrder.id,
+            remainingTotal.toFixed(2),
+          ),
+          metadata: { purpose: 'ORDER', orderId: newOrder.id, userId },
+        });
         return {
           orderId: newOrder.id,
-          transactionId: charge.chargeId,
+          transactionId: hold.holdId,
+          holdId: hold.holdId,
+          expiresAt: hold.expiresAt,
           paymentRequired: true,
           paymentMethod: PaymentMethod.MCOM_WALLET,
           remainingTotal,
@@ -516,7 +526,11 @@ export class CheckoutService {
         const order = await this.paymentProviderService.createPaypalOrder(
           remainingTotal,
           'GBP',
-          { reference: `mall-checkout-${newOrder.id}` },
+          {
+            reference: `mall-checkout-${newOrder.id}`,
+            userId,
+            idempotencyKey: `checkout-${newOrder.id}`,
+          },
         );
         return {
           orderId: newOrder.id,
@@ -532,7 +546,11 @@ export class CheckoutService {
         await this.paymentProviderService.createStripePaymentIntent(
           remainingTotal,
           'GBP',
-          { reference: `mall-checkout-${newOrder.id}` },
+          {
+            reference: `mall-checkout-${newOrder.id}`,
+            userId,
+            idempotencyKey: `checkout-${newOrder.id}`,
+          },
         );
       return {
         orderId: newOrder.id,
@@ -558,11 +576,20 @@ export class CheckoutService {
     const { orderId, transactionId, paymentProvider, holdId } =
       completeCheckoutDto;
     const order = await this.orderRepository.findOne({
-      where: { id: orderId, user: { id: userId }, status: OrderStatus.PENDING },
+      where: { id: orderId, user: { id: userId } },
     });
 
     if (!order) {
-      throw new NotFoundException('Pending order not found.');
+      throw new NotFoundException('Order not found.');
+    }
+    // Idempotent replay of a successful completion.
+    if (order.status === OrderStatus.COMPLETED) {
+      return order;
+    }
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException(
+        'This order is not awaiting payment.',
+      );
     }
 
     const remainingTotal =
@@ -573,50 +600,55 @@ export class CheckoutService {
       (order.voucherAmountApplied || 0) -
       (order.moneyVoucherAmountApplied || 0);
 
-    // Verify payment if one was made
+    // Verify/settle payment if one is due. Holds are captured here — never at
+    // initiate — so a failed completion leaves the money in the wallet.
+    let paidChargeId: string | null = null;
+    let paidProviderRef: string | null = null;
+    let paidFeeMinor: string | null = null;
+    let paidNetMinor: string | null = null;
+    let paymentReference: string | null = null;
+
     if (remainingTotal > 0) {
-      const walletHoldId =
+      const walletReference =
         holdId ||
         (paymentProvider === PaymentMethod.MCOM_WALLET
           ? transactionId
           : undefined);
-      if (walletHoldId) {
-        // Legacy pre-authorization hold: convert the hold into a real debit.
-        // New checkouts use a settled MCOM Pay wallet charge instead.
-        const isLegacyHold =
-          Boolean(holdId) ||
-          (!transactionId && Boolean(walletHoldId));
-        if (isLegacyHold) {
-          try {
-            await this.mcomWalletService.captureHold({
-              holdId: walletHoldId,
-              amount: Number(remainingTotal.toFixed(2)),
+
+      if (walletReference) {
+        const buyer = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        const verification =
+          await this.paymentProviderService.settleWalletReference(
+            walletReference,
+            Number(remainingTotal.toFixed(2)),
+            'GBP',
+            {
+              mallUserId: userId,
+              mcomUserId: buyer?.centralUserId,
+              holdId,
               reference: `mall-checkout-${orderId}`,
-              idempotencyKey: this.mcomWalletService.buildKey(
-                'capture',
-                orderId,
-              ),
-            });
-          } catch (err: any) {
-            order.status = OrderStatus.FAILED;
-            await this.orderRepository.save(order);
-            throw this.mcomWalletService.toHttpException(err);
-          }
-        } else {
-          const verification =
-            await this.paymentProviderService.verifyWalletCharge(
-              walletHoldId,
-              Number(remainingTotal.toFixed(2)),
-              'GBP',
-            );
-          if (!verification.ok) {
-            order.status = OrderStatus.FAILED;
-            await this.orderRepository.save(order);
-            throw new BadRequestException(
-              `Payment verification failed: ${verification.reason}`,
-            );
-          }
+            },
+            this.mcomWalletService.buildKey('capture', orderId),
+          );
+        if (!verification.ok) {
+          order.status = OrderStatus.FAILED;
+          await this.orderRepository.save(order);
+          throw new BadRequestException(
+            `Payment verification failed: ${verification.reason}`,
+          );
         }
+        const details: any = verification.details ?? {};
+        paymentReference =
+          details.transactionId || details.id || walletReference;
+        paidChargeId =
+          details.id && !String(details.id).startsWith('wallet:')
+            ? details.id
+            : null;
+        paidProviderRef = details.providerRef ?? null;
+        paidFeeMinor = details.feeMinor ?? null;
+        paidNetMinor = details.netMinor ?? null;
       } else {
         if (!transactionId || !paymentProvider) {
           throw new BadRequestException(
@@ -629,11 +661,13 @@ export class CheckoutService {
                 transactionId,
                 remainingTotal,
                 'GBP',
+                { mallUserId: userId },
               )
             : await this.paymentProviderService.verifyStripePaymentIntent(
                 transactionId,
                 remainingTotal,
                 'GBP',
+                { mallUserId: userId },
               );
         if (!verification.ok) {
           order.status = OrderStatus.FAILED;
@@ -642,6 +676,12 @@ export class CheckoutService {
             `Payment verification failed: ${verification.reason}`,
           );
         }
+        const details: any = verification.details ?? {};
+        paidChargeId = details.id ?? null;
+        paidProviderRef = details.providerRef ?? null;
+        paidFeeMinor = details.feeMinor ?? null;
+        paidNetMinor = details.netMinor ?? null;
+        paymentReference = paidChargeId || transactionId;
       }
     }
 
@@ -786,6 +826,56 @@ export class CheckoutService {
         );
       }
 
+      if (remainingTotal > 0 && paymentReference) {
+        const paymentRepo = manager.getRepository(OrderPayment);
+        // One charge can fund one order. Checking here (as well as relying on
+        // the unique indexes) produces a clear error instead of a 500.
+        const reused = await paymentRepo.findOne({
+          where: [
+            { transactionId: paymentReference },
+            ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+          ],
+        });
+        if (reused) {
+          throw new ConflictException(
+            'This payment has already been used for another order.',
+          );
+        }
+        const payment = await paymentRepo.save(
+          paymentRepo.create({
+            user: { id: userId } as User,
+            amount: Number(remainingTotal.toFixed(2)),
+            currency: 'gbp',
+            transactionId: paymentReference,
+            paymentMethod:
+              paymentProvider ?? PaymentMethod.MCOM_WALLET,
+            mcomChargeId: paidChargeId,
+            providerRef: paidProviderRef,
+            feeMinor: paidFeeMinor,
+            netMinor: paidNetMinor,
+            status: 'paid',
+          }),
+        );
+        lockedOrder.payment = payment;
+
+        await this.paymentProviderService.allocateCharge(
+          {
+            mcomChargeId:
+              paidChargeId ||
+              (paymentReference.startsWith('wallet:')
+                ? paymentReference
+                : `wallet:${paymentReference}`),
+            purpose: 'ORDER',
+            entityType: 'order',
+            entityId: lockedOrder.id,
+            userId,
+            amountMinor: String(Math.round(Number(remainingTotal) * 100)),
+            currency: 'GBP',
+          },
+          manager,
+        );
+      }
+
       lockedOrder.status = OrderStatus.COMPLETED;
       return await orderRepo.save(lockedOrder);
     });
@@ -820,6 +910,10 @@ export class CheckoutService {
       .leftJoinAndSelect('offer.includedProducts', 'includedProducts')
       .leftJoinAndSelect('offer.excludedProducts', 'excludedProducts')
       .where('offer.isActive = :isActive', { isActive: true })
+      .andWhere('offer.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('offer.adminDisabled = false')
       .andWhere('creator.id IN (:...productOwnerIds)', { productOwnerIds })
       .getMany();
 

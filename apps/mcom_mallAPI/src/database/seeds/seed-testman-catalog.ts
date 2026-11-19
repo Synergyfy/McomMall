@@ -4,6 +4,7 @@ import { Business } from '../../resources/listings/entities/listing.entity';
 import { Product } from '../../resources/product/entities/product.entity';
 import { Service } from '../../resources/services/entities/service.entity';
 import { PricingModel } from '../../resources/services/service.enum';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 const EMAIL = 'testman00@gmail.com';
 
@@ -256,6 +257,7 @@ async function seed() {
       useVariantPricing: false,
       productStatus: 'published',
       visibility: 'public',
+      approvalStatus: ApprovalStatus.APPROVED,
       enableReviews: true,
       tags: [item.category, 'seed'],
       media: [item.image],
@@ -280,6 +282,7 @@ async function seed() {
       category: item.category,
       status: 'published',
       isActive: true,
+      approvalStatus: ApprovalStatus.APPROVED,
       pricingModel: PricingModel.FIXED,
       fixedPrice: item.price,
       duration: item.duration,

@@ -87,6 +87,59 @@ export interface MarketplaceSections {
   [key: string]: MarketplaceSectionConfig | undefined;
 }
 
+export type MarketplaceLocationLevel =
+  | 'city'
+  | 'borough'
+  | 'high-street'
+  | 'local-mall'
+  | 'area'
+  | 'postcode';
+
+export interface MarketplaceLocationFacet {
+  id: string;
+  name: string;
+  count: number;
+  latitude: number | null;
+  longitude: number | null;
+  children: MarketplaceLocationFacet[];
+}
+
+export interface MarketplaceLocationFacets {
+  cities: MarketplaceLocationFacet[];
+  /** Legacy `locations.city` / `resolvedArea` fallback, available pre-backfill. */
+  areas: MarketplaceLocationFacet[];
+  totalBusinesses: number;
+  updatedAt: string;
+}
+
+export interface MarketplaceLocationSearchResult {
+  level: MarketplaceLocationLevel;
+  id: string;
+  name: string;
+  count: number;
+  path: string[];
+}
+
+export interface MarketplaceLocationSearchResponse {
+  results: MarketplaceLocationSearchResult[];
+}
+
+export interface ResolvedMarketplaceLocation {
+  scope: {
+    type: MarketplaceLocationLevel;
+    id: string;
+    name: string;
+  } | null;
+  hierarchy: {
+    city: { id: string; name: string } | null;
+    borough: { id: string; name: string } | null;
+    highStreet: { id: string; name: string } | null;
+    localMall: { id: string; name: string } | null;
+  };
+  source: 'profile' | 'postcode' | 'geolocation' | 'nearest' | 'none';
+  country: string | null;
+}
+
 export interface MarketplacePublicData {
   heroSlides: HeroSlide[];
   sidebarBanners: SidebarBanner[];

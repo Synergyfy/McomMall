@@ -3,6 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CouponProduct } from './entities/coupon-product.entity';
 import { CouponProductSearchDto } from './dto/coupon-product-search.dto';
+import {
+  applySellerLocationFilter,
+  applySellerNearOrder,
+} from '../geography/location-filter.util';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { Business } from '../listings/entities/listing.entity';
@@ -10,6 +14,12 @@ import { CapabilityService, ActionType } from '../capability/capability.service'
 import { CreateCouponProductDto } from './dto/create-coupon-product.dto';
 import { UpdateCouponProductDto } from './dto/update-coupon-product.dto';
 import { User } from '../users/entities/user.entity';
+import {
+  ApprovalStatus,
+  resubmitForApproval,
+  stripModerationFields,
+} from '../../common/moderation/catalog-approval';
+import { UserRole } from '../../common/role.enum';
 
 @Injectable()
 export class CouponProductService {
@@ -39,6 +49,8 @@ export class CouponProductService {
       where: {
         user: { id: business.user.id },
         isEnabled: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
       },
     });
   }
@@ -50,8 +62,15 @@ export class CouponProductService {
     await this.capabilityService.checkPermission(user.id, ActionType.CREATE_COUPON_TEMPLATE, { currentCount });
 
     const couponProduct = this.couponProductRepository.create({
-      ...createCouponProductDto,
+      ...stripModerationFields({ ...createCouponProductDto } as Record<string, any>),
       user,
+      // New merchant coupon products wait for admin approval; admin-authored
+      // products are immediately usable.
+      approvalStatus:
+        user.role === UserRole.ADMIN
+          ? ApprovalStatus.APPROVED
+          : ApprovalStatus.PENDING,
+      adminDisabled: false,
     });
     return this.couponProductRepository.save(couponProduct);
   }
@@ -69,7 +88,13 @@ export class CouponProductService {
     if (!couponProduct) {
       return null;
     }
-    Object.assign(couponProduct, updateCouponProductDto);
+    Object.assign(
+      couponProduct,
+      stripModerationFields({ ...updateCouponProductDto } as Record<string, any>),
+    );
+    if (couponProduct.approvalStatus === ApprovalStatus.REJECTED) {
+      resubmitForApproval(couponProduct);
+    }
     return this.couponProductRepository.save(couponProduct);
   }
 
@@ -87,7 +112,12 @@ export class CouponProductService {
 
   async findPublicById(id: string): Promise<CouponProduct> {
     const product = await this.couponProductRepository.findOne({
-      where: { id, isEnabled: true },
+      where: {
+        id,
+        isEnabled: true,
+        approvalStatus: ApprovalStatus.APPROVED,
+        adminDisabled: false,
+      },
       relations: ['user'],
     });
     if (!product) {
@@ -104,7 +134,11 @@ export class CouponProductService {
     queryBuilder
       .leftJoinAndSelect('couponProduct.user', 'user')
       .leftJoin('user.businesses', 'business')
-      .where('couponProduct.isEnabled = :isEnabled', { isEnabled: true });
+      .where('couponProduct.isEnabled = :isEnabled', { isEnabled: true })
+      .andWhere('couponProduct.approvalStatus = :approvalStatus', {
+        approvalStatus: ApprovalStatus.APPROVED,
+      })
+      .andWhere('couponProduct.adminDisabled = false');
 
     if (search) {
       queryBuilder.andWhere(
@@ -131,8 +165,21 @@ export class CouponProductService {
       });
     }
 
+    applySellerLocationFilter(
+      queryBuilder,
+      'couponProduct',
+      'userId',
+      searchDto,
+    );
+    applySellerNearOrder(
+      queryBuilder,
+      'couponProduct',
+      'userId',
+      searchDto,
+    );
+
     queryBuilder
-      .orderBy('couponProduct.createdAt', 'DESC')
+      .addOrderBy('couponProduct.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

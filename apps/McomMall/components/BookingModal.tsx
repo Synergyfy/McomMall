@@ -51,7 +51,7 @@ import { CURRENCY } from '@/lib/utils';
 import { format } from 'date-fns';
 
 const stripePromise = loadStripe(
-  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 const LoadingOverlay = () => (
@@ -84,6 +84,9 @@ export function BookingModal({
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+    null,
+  );
   const [rewardIssuanceId, setRewardIssuanceId] = useState<string | undefined>();
   const [amount, setAmount] = useState<number>(0);
   const [totalAmount, setTotalAmount] = useState<number>(0);
@@ -121,6 +124,9 @@ export function BookingModal({
         setClientSecret(initiatePayment.data.clientSecret);
       } else if (initiatePayment.data.provider === 'paypal') {
         setOrderId(initiatePayment.data.orderId);
+        setPaypalApprovalUrl(
+          (initiatePayment.data as any).approvalUrl ?? null,
+        );
       } else if (initiatePayment.data.provider === 'mcom_wallet') {
         const transactionId = initiatePayment.data.transactionId;
         const paidAmount = initiatePayment.data.amount ?? 0;
@@ -507,6 +513,7 @@ export function BookingModal({
                             >
                               <PayPalCheckoutButton
                                 orderID={orderId}
+                                approvalUrl={paypalApprovalUrl}
                                 onPaymentSuccess={handlePaymentSuccess}
                               />
                             </PayPalScriptProvider>

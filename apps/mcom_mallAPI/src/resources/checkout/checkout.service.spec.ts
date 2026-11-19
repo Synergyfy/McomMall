@@ -5,11 +5,13 @@ import {
 } from '@nestjs/common';
 import { CheckoutService } from './checkout.service';
 import { OrderStatus } from '../order/enums/order-status.enum';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 const product = {
   id: 'product-b',
   title: 'Product B',
   business: { id: 'business-b' },
+  approvalStatus: ApprovalStatus.APPROVED,
   productStatus: 'published',
   visibility: 'public',
   adminDisabled: false,
@@ -75,6 +77,11 @@ function buildService(overrides: Record<string, any> = {}) {
   };
   const paymentProviderService = {
     verifyWalletCharge: jest.fn().mockResolvedValue({ ok: true }),
+    settleWalletReference: jest.fn().mockResolvedValue({ ok: true }),
+    createWalletHold: jest.fn().mockResolvedValue({ holdId: 'hold-1', amount: 10 }),
+    buildWalletKey: jest.fn(() => 'wallet-key'),
+    allocateCharge: jest.fn().mockResolvedValue({ id: 'allocation-1' }),
+    getMcomCharge: jest.fn().mockResolvedValue({ id: 'charge-1' }),
     verifyStripePaymentIntent: jest.fn().mockResolvedValue({ ok: true }),
     captureAndVerifyPaypalOrder: jest.fn().mockResolvedValue({ ok: true }),
     createStripePaymentIntent: jest

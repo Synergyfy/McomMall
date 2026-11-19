@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Header, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CouponProductService } from './coupon-product.service';
 import { CouponProductSearchDto } from './dto/coupon-product-search.dto';
@@ -13,6 +13,7 @@ export class CouponProductPublicController {
   ) {}
 
   @Get('public')
+  @Header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120')
   @ApiOperation({ summary: 'List publicly available coupon products' })
   findAll(@Query() searchDto: CouponProductSearchDto) {
     return this.couponProductService.findAllPublic(searchDto);

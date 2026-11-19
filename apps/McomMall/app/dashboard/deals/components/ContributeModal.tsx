@@ -44,6 +44,9 @@ export function ContributeModal({ deal, open, onOpenChange }: ContributeModalPro
     const [method, setMethod] = useState<PaymentMethod>('STRIPE');
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+    const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
+      null,
+    );
 
     const initiateMutation = useInitiateVoucherContribution();
     const contributeMutation = useContributeToVoucher();
@@ -116,6 +119,7 @@ export function ContributeModal({ deal, open, onOpenChange }: ContributeModalPro
                     throw new Error('PayPal order could not be created.');
                 }
                 setPaypalOrderId(initiated.orderId);
+                setPaypalApprovalUrl((initiated as any).approvalUrl ?? null);
             }
             setStep('payment');
         } catch (error) {
@@ -228,6 +232,7 @@ export function ContributeModal({ deal, open, onOpenChange }: ContributeModalPro
                         {method === 'PAYPAL' && paypalOrderId && (
                             <PayPalCheckoutButton
                                 orderID={paypalOrderId}
+                                approvalUrl={paypalApprovalUrl}
                                 onPaymentSuccess={handlePaymentSuccess}
                             />
                         )}

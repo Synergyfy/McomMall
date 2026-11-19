@@ -55,12 +55,22 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+function getProductDisplayStatus(product: AdminProduct): string {
+    if (product.approvalStatus === 'pending') return 'pending';
+    if (product.approvalStatus === 'rejected') return 'rejected';
+    if (product.adminDisabled) return 'delisted';
+    return product.status;
+}
+
 // Status Badge
-function ProductStatusBadge({ status }: { status: AdminProduct['status'] }) {
-    const config = {
+function ProductStatusBadge({ status }: { status: string }) {
+    const config: Record<string, { label: string; className: string; icon: typeof CheckCircle2 }> = {
         active: { label: 'Active', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
         inactive: { label: 'Inactive', className: 'bg-slate-100 text-slate-700 border-slate-200', icon: XCircle },
         out_of_stock: { label: 'Out of Stock', className: 'bg-red-100 text-red-700 border-red-200', icon: AlertCircle },
+        pending: { label: 'Pending approval', className: 'bg-amber-100 text-amber-800 border-amber-200', icon: AlertCircle },
+        rejected: { label: 'Rejected', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
+        delisted: { label: 'Delisted', className: 'bg-slate-100 text-slate-700 border-slate-200', icon: Archive },
     };
 
     const { label, className, icon: Icon } = config[status];
@@ -103,7 +113,7 @@ function ProductDetailSheet({
                 <SheetHeader className="p-6 pb-4 border-b pr-12">
                     <SheetTitle className="text-xl">{product.name}</SheetTitle>
                     <SheetDescription className="flex items-center gap-2 mt-2">
-                        <ProductStatusBadge status={product.status} />
+                        <ProductStatusBadge status={getProductDisplayStatus(product)} />
                         <Badge variant="secondary">{product.category}</Badge>
                     </SheetDescription>
                 </SheetHeader>
@@ -371,8 +381,11 @@ export default function ProductsPage() {
                                 <SelectContent>
                                     <SelectItem value="all">All Status</SelectItem>
                                     <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="pending">Pending approval</SelectItem>
+                                    <SelectItem value="rejected">Rejected</SelectItem>
                                     <SelectItem value="inactive">Inactive</SelectItem>
                                     <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                                    <SelectItem value="delisted">Delisted</SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -481,7 +494,7 @@ export default function ProductsPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <ProductStatusBadge status={product.status} />
+                                                <ProductStatusBadge status={getProductDisplayStatus(product)} />
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="sm" onClick={() => handleView(product)}>

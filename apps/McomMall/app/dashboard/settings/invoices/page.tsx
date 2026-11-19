@@ -26,11 +26,36 @@ export default function InvoicesLogPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'failed'>('all');
 
   const handleDownloadInvoice = (invoiceId: string) => {
-    toast.success(`Downloading invoice receipt INV-${invoiceId.slice(0, 8).toUpperCase()}...`);
+    toast.success(`Receipt INV-${invoiceId.slice(0, 8).toUpperCase()} is available from MCOM Central.`);
   };
 
   const handleExportCSV = () => {
-    toast.success('Exporting transaction history to CSV...');
+    if (!invoices?.length) {
+      toast.error('No transactions to export.');
+      return;
+    }
+    const rows = [
+      ['date', 'invoice', 'description', 'amount_gbp', 'status'],
+      ...invoices.map((inv: any) => [
+        new Date(inv.created_at || inv.createdAt).toISOString(),
+        `INV-${String(inv.id).slice(0, 12).toUpperCase()}`,
+        String(inv.description || 'Payment').replace(/"/g, '""'),
+        Number(inv.amount || 0).toFixed(2),
+        'paid',
+      ]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+      )
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'mcom-mall-invoices.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   // Filtered invoices
@@ -142,10 +167,10 @@ export default function InvoicesLogPage() {
                           INV-{inv.id.slice(0, 12).toUpperCase()}
                         </td>
                         <td className="py-3.5 text-gray-500 dark:text-gray-400 max-w-[150px] truncate">
-                          {inv.description || 'Pro Monthly Subscription Renewal'}
+                          {inv.description || 'MCOM Mall payment'}
                         </td>
                         <td className="py-3.5 font-bold text-gray-900 dark:text-white">
-                          ${Number(inv.amount || 0).toFixed(2)}
+                          £{Number(inv.amount || 0).toFixed(2)}
                         </td>
                         <td className="py-3.5">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${

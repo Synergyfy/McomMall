@@ -54,11 +54,23 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+type AdminServiceStatus = AdminService['status'];
+
+function getServiceDisplayStatus(service: AdminService): AdminServiceStatus {
+    if (service.approvalStatus === 'pending') return 'pending';
+    if (service.approvalStatus === 'rejected') return 'rejected';
+    if (service.adminDisabled) return 'delisted';
+    return service.status;
+}
+
 // Status Badge
-function ServiceStatusBadge({ status }: { status: AdminService['status'] }) {
+function ServiceStatusBadge({ status }: { status: AdminServiceStatus }) {
     const config = {
         active: { label: 'Active', className: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
         inactive: { label: 'Inactive', className: 'bg-slate-100 text-slate-700 border-slate-200', icon: XCircle },
+        pending: { label: 'Pending approval', className: 'bg-amber-100 text-amber-800 border-amber-200', icon: Clock },
+        rejected: { label: 'Rejected', className: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
+        delisted: { label: 'Delisted', className: 'bg-slate-100 text-slate-700 border-slate-200', icon: Archive },
     };
 
     const { label, className, icon: Icon } = config[status];
@@ -101,7 +113,7 @@ function ServiceDetailSheet({
                 <SheetHeader className="p-6 pb-4 border-b pr-12">
                     <SheetTitle className="text-xl">{service.name}</SheetTitle>
                     <SheetDescription className="flex items-center gap-2 mt-2">
-                        <ServiceStatusBadge status={service.status} />
+                        <ServiceStatusBadge status={getServiceDisplayStatus(service)} />
                         <Badge variant="secondary">{service.category}</Badge>
                     </SheetDescription>
                 </SheetHeader>
@@ -366,7 +378,10 @@ export default function ServicesPage() {
                                 <SelectContent>
                                     <SelectItem value="all">All Status</SelectItem>
                                     <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="pending">Pending approval</SelectItem>
+                                    <SelectItem value="rejected">Rejected</SelectItem>
                                     <SelectItem value="inactive">Inactive</SelectItem>
+                                    <SelectItem value="delisted">Delisted</SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -462,7 +477,7 @@ export default function ServicesPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <ServiceStatusBadge status={service.status} />
+                                                <ServiceStatusBadge status={getServiceDisplayStatus(service)} />
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="sm" onClick={() => handleView(service)}>

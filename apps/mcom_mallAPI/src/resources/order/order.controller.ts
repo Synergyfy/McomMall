@@ -19,8 +19,8 @@ import { Public } from '../../common/decorators/public.decorator';
 import { OrderService } from './order.service';
 import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
 import { RewardRedemptionReconcileService } from './reward-redemption-reconcile.service';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { QuoteCheckoutDto } from './dto/quote-checkout.dto';
 import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
 import {
   ApiBearerAuth,
@@ -43,6 +43,16 @@ export class OrderController {
     private readonly rewardRedemptionReconcileService: RewardRedemptionReconcileService,
   ) {}
 
+  @Post('quote')
+  @ApiOperation({
+    summary: 'Quote a checkout',
+    description:
+      'Returns the server-authoritative totals and applied-instrument caps for a cart or direct purchase. No payment is created and no order is written.',
+  })
+  quote(@Body() quoteCheckoutDto: QuoteCheckoutDto, @Req() req) {
+    return this.orderService.quote(req.user.id, quoteCheckoutDto);
+  }
+
   @Post('checkout')
   @ApiOperation({
     summary: 'Checkout process',
@@ -57,18 +67,6 @@ export class OrderController {
   checkout(@Body() createCheckoutDto: CreateCheckoutDto, @Req() req) {
     const userId = req.user.id;
     return this.orderService.checkout(userId, createCheckoutDto);
-  }
-
-  @Post()
-  @ApiOperation({
-    summary: 'Create a direct order',
-    description:
-      'Directly creates an order for products. Roles: CUSTOMER, OWNER.',
-  })
-  @ApiResponse({ status: 201, type: Order })
-  createOrder(@Body() createOrderDto: CreateOrderDto, @Req() req) {
-    const userId = req.user.id;
-    return this.orderService.createOrder(createOrderDto, userId);
   }
 
   @Get()

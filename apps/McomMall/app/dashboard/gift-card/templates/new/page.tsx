@@ -47,7 +47,7 @@ export default function NewGiftCardTemplatePage() {
         expiryPeriodDays: Number(expiryPeriodDays) || undefined,
         logoUrl: logoUrl || undefined,
       } as any);
-      toast.success('Gift card template created.');
+      toast.success('Gift card template submitted for admin approval.');
       router.push('/dashboard/gift-card/templates');
     } catch {
       toast.error('Could not create the gift card template.');

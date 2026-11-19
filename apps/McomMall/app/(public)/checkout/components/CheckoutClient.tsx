@@ -17,6 +17,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
+import { PaymentPurpose } from '@/service/payments/types';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import { useCheckGiftCardBalance } from '@/service/gift-card/hook';
 import { useVoucherBalance } from '@/service/vouchers/hook';
@@ -34,13 +35,15 @@ import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
 import {
+  CheckoutQuoteRequest,
   CreateCheckoutDto,
   ServiceBookingDetailsDto,
+  useCheckoutQuote,
 } from '@/hooks/useCheckout';
 import { Product } from '@/service/listings/types';
 
 const stripePromise = loadStripe(
-  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
+  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
 );
 
 export default function CheckoutClient() {
@@ -108,14 +111,17 @@ export default function CheckoutClient() {
 
   const [giftCardCode, setGiftCardCode] = useState('');
   const [giftCardDiscount, setGiftCardDiscount] = useState(0);
+  const [giftCardRequested, setGiftCardRequested] = useState(0);
   const [isGiftCardLoading, setGiftCardLoading] = useState(false);
 
   const [voucherCode, setVoucherCode] = useState('');
   const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [voucherRequested, setVoucherRequested] = useState(0);
   const [isVoucherLoading, setVoucherLoading] = useState(false);
 
   const [moneyVoucherCode, setMoneyVoucherCode] = useState('');
   const [moneyVoucherDiscount, setMoneyVoucherDiscount] = useState(0);
+  const [moneyVoucherRequested, setMoneyVoucherRequested] = useState(0);
   const [isMoneyVoucherLoading, setMoneyVoucherLoading] = useState(false);
 
   const [priceReducerCode, setPriceReducerCode] = useState('');
@@ -144,6 +150,7 @@ export default function CheckoutClient() {
       ? crypto.randomUUID()
       : `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`
   );
+  const lastPaymentIntentKeyRef = useRef<string | null>(null);
   const { mutate: checkout } = useCheckout();
   const { mutateAsync: createPaymentIntent, isPending: isStripeLoading } =
     useStripePayment();
@@ -154,19 +161,34 @@ export default function CheckoutClient() {
   const { data: myVouchers } = useGetMyVouchers();
   const applyOffer = useApplyOffer();
 
-  const productIds = fromCart
-    ? cart?.items.map((item) => item.product.id) || []
-    : productId
-      ? [productId]
-      : [];
+  const productIds = useMemo(
+    () =>
+      fromCart
+        ? cart?.items.map((item) => item.product.id) || []
+        : productId
+          ? [productId]
+          : [],
+    [fromCart, cart, productId],
+  );
 
   const { data: applicableOffers, isLoading: areOffersLoading } =
     useGetApplicableOffers(productIds);
 
-  const serviceBookingsForOrder = Object.entries(bookings)
-    .filter(([productId, booking]) => booking && productIds.includes(productId))
-    .map(([, booking]) => booking)
-    .filter((booking): booking is ServiceBookingDetailsDto => booking !== null);
+  // Bundled service bookings are only supported by the API on a direct
+  // purchase. A cart checkout must not send them or it will be rejected.
+  const serviceBookingsForOrder = useMemo(
+    () =>
+      Object.entries(bookings)
+        .filter(
+          ([productId, booking]) =>
+            !fromCart && booking && productIds.includes(productId),
+        )
+        .map(([, booking]) => booking)
+        .filter(
+          (booking): booking is ServiceBookingDetailsDto => booking !== null,
+        ),
+    [bookings, fromCart, productIds],
+  );
 
   const servicesTotalPrice = serviceBookingsForOrder.reduce(
     (total, booking) => total + Number(booking?.price || 0),
@@ -266,17 +288,97 @@ export default function CheckoutClient() {
         : 0) || 0;
   }, [fromCart, cart, product, selectedVariants, quantity, calculateItemPrice, calculateProductPrice]);
 
-  const subtotal = basePrice + servicesTotalPrice;
+  const quoteRequest = useMemo<CheckoutQuoteRequest>(() => {
+    const request: CheckoutQuoteRequest = {
+      couponCode: couponCode || undefined,
+      offerId: selectedOffer || undefined,
+      giftCardCode: giftCardCode || undefined,
+      giftCardAmount: giftCardRequested > 0 ? giftCardRequested : undefined,
+      voucherCode: voucherCode || undefined,
+      voucherAmount: voucherRequested > 0 ? voucherRequested : undefined,
+      priceReducerCode: priceReducerCode || undefined,
+      moneyVoucherCode: moneyVoucherCode || undefined,
+      moneyVoucherAmount:
+        moneyVoucherRequested > 0 ? moneyVoucherRequested : undefined,
+      rewardApplications:
+        rewardApplications.length > 0 ? rewardApplications : undefined,
+      serviceBookings:
+        serviceBookingsForOrder.length > 0
+          ? serviceBookingsForOrder
+          : undefined,
+    };
 
-  const totalDiscount =
-    couponDiscount +
-    offerDiscount +
-    giftCardDiscount +
-    voucherDiscount +
-    moneyVoucherDiscount +
-    priceReducerDiscount +
-    rewardDiscount;
-  const totalPrice = Math.max(0, subtotal - totalDiscount);
+    if (!fromCart && product) {
+      request.directPurchase = {
+        productId: product.id,
+        quantity,
+        selectedVariants:
+          Object.keys(selectedVariants).length > 0
+            ? selectedVariants
+            : undefined,
+      };
+    }
+
+    return request;
+  }, [
+    fromCart,
+    product,
+    productId,
+    quantity,
+    selectedVariants,
+    couponCode,
+    selectedOffer,
+    giftCardCode,
+    giftCardRequested,
+    voucherCode,
+    voucherRequested,
+    priceReducerCode,
+    moneyVoucherCode,
+    moneyVoucherRequested,
+    rewardApplications,
+    serviceBookingsForOrder,
+  ]);
+
+  const {
+    data: quote,
+    isFetching: isQuoteFetching,
+    error: quoteError,
+    refetch: refetchQuote,
+  } = useCheckoutQuote(quoteRequest, {
+    enabled: fromCart ? Boolean(cart?.items?.length) : Boolean(product),
+  });
+
+  // Keep the existing summary components in sync with the server quote. The
+  // quote owns every discount amount, including caps from scoped instruments.
+  useEffect(() => {
+    if (!quote) return;
+    setCouponDiscount(quote.couponDiscount);
+    setOfferDiscount(quote.offerDiscount);
+    setGiftCardDiscount(quote.giftCardApplied);
+    setVoucherDiscount(quote.voucherApplied);
+    setMoneyVoucherDiscount(quote.moneyVoucherApplied);
+    setPriceReducerDiscount(quote.priceReducerDiscount);
+    setRewardDiscount(quote.rewardDiscount);
+  }, [quote]);
+
+  const subtotal = quote?.subtotal ?? basePrice + servicesTotalPrice;
+  const totalPrice = quote?.finalAmount ?? 0;
+  const displayServiceBookings = useMemo(
+    () =>
+      serviceBookingsForOrder.map((booking) => ({
+        ...booking,
+        price:
+          quote?.serviceBookings.find(
+            (quoted) => quoted.serviceId === booking.serviceId,
+          )?.amount ?? booking.price,
+      })),
+    [serviceBookingsForOrder, quote],
+  );
+  const quoteErrorMessage = quoteError
+    ? (quoteError as any)?.response?.data?.message ||
+      (quoteError as Error)?.message ||
+      'Could not calculate this order. Please review your discounts.'
+    : null;
 
   const handleCheckVoucherBalance = async (code: string) => {
     setVoucherLoading(true);
@@ -297,6 +399,7 @@ export default function CheckoutClient() {
   };
 
   const handleApplyVoucherDiscount = (code: string, amount: number) => {
+    setVoucherRequested(amount);
     setVoucherDiscount(amount);
     setVoucherCode(code);
   };
@@ -328,8 +431,10 @@ export default function CheckoutClient() {
       priceReducerDiscount +
       rewardDiscount;
     const maxApplicable = Math.max(0, subtotal - otherDiscounts);
+    const requested = Math.min(amount, maxApplicable);
     setMoneyVoucherCode(code);
-    setMoneyVoucherDiscount(Math.min(amount, maxApplicable));
+    setMoneyVoucherRequested(requested);
+    setMoneyVoucherDiscount(requested);
   };
 
   const handleCheckPriceReducerBalance = async (code: string) => {
@@ -391,6 +496,7 @@ export default function CheckoutClient() {
   };
 
   const handleApplyGiftCardDiscount = (code: string, amount: number) => {
+    setGiftCardRequested(amount);
     setGiftCardDiscount(amount);
     setGiftCardCode(code);
   };
@@ -455,10 +561,18 @@ export default function CheckoutClient() {
         ? cart?.items.map(item => item.product.id) || []
         : productId ? [productId] : [];
 
-      const serviceBookings = Object.entries(bookings)
-        .filter(([pid, booking]) => currentProductIds.includes(pid) && booking)
-        .map(([, booking]) => booking)
-        .filter((booking): booking is ServiceBookingDetailsDto => booking !== null);
+      const serviceBookings = fromCart
+        ? []
+        : Object.entries(bookings)
+            .filter(
+              ([pid, booking]) =>
+                currentProductIds.includes(pid) && booking,
+            )
+            .map(([, booking]) => booking)
+            .filter(
+              (booking): booking is ServiceBookingDetailsDto =>
+                booking !== null,
+            );
 
       const checkoutData: CreateCheckoutDto = {
         payment: {
@@ -493,8 +607,20 @@ export default function CheckoutClient() {
       checkout(checkoutData, {
         onSuccess: () => setSuccessModalOpen(true),
         onError: (error: any) => {
+          const response = error?.response;
+          const data = response?.data;
+          if (
+            response?.status === 409 &&
+            String(data?.message || '').includes('order total changed')
+          ) {
+            lastPaymentIntentKeyRef.current = null;
+            setClientSecret(undefined);
+            setOrderID(undefined);
+            setPaypalApprovalUrl(undefined);
+            refetchQuote();
+          }
           const message =
-            error?.response?.data?.message ||
+            data?.message ||
             error?.message ||
             'Checkout failed. Please review your discounts and try again.';
           alert(Array.isArray(message) ? message.join('\n') : message);
@@ -522,35 +648,70 @@ export default function CheckoutClient() {
       priceReducerCode,
       rewardApplications,
       paymentMethod,
+      refetchQuote,
     ]
   );
 
   const [orderID, setOrderID] = useState<string | undefined>();
+  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<
+    string | null | undefined
+  >();
   const createPaypalOrderAsync = createOrderMutation.mutateAsync;
 
+  const paymentIntentKey = `${paymentMethod}:${totalPrice.toFixed(2)}`;
+
+  // Any change to the server quote invalidates the payment session. Clear the
+  // old client secret before the effect below creates a new one for the new
+  // amount, so the browser can never confirm a stale intent.
   useEffect(() => {
+    setClientSecret(undefined);
+    setOrderID(undefined);
+    setPaypalApprovalUrl(undefined);
+  }, [paymentIntentKey]);
+
+  useEffect(() => {
+    if (!quote || isQuoteFetching) return;
+    if (lastPaymentIntentKeyRef.current === paymentIntentKey) return;
+
+    lastPaymentIntentKeyRef.current = paymentIntentKey;
+
     if (paymentMethod === PaymentMethod.STRIPE && totalPrice > 0) {
       createPaymentIntent({
         amount: totalPrice,
+        purpose: PaymentPurpose.PAYG_TOPUP,
         idempotencyKey: checkoutIdempotencyKey.current,
       })
         .then((data) => {
           setClientSecret(data.clientSecret);
         })
-        .catch((err) =>
-          console.error('Failed to create payment intent', err)
-        );
+        .catch((err) => {
+          lastPaymentIntentKeyRef.current = null;
+          console.error('Failed to create payment intent', err);
+        });
     } else if (paymentMethod === PaymentMethod.PAYPAL && totalPrice > 0) {
       createPaypalOrderAsync({
         amount: totalPrice,
+        purpose: PaymentPurpose.PAYG_TOPUP,
         idempotencyKey: checkoutIdempotencyKey.current,
       })
         .then((order) => {
           setOrderID(order.id);
+          setPaypalApprovalUrl(order.approvalUrl ?? null);
         })
-        .catch((err) => console.error('Failed to create paypal order', err));
+        .catch((err) => {
+          lastPaymentIntentKeyRef.current = null;
+          console.error('Failed to create paypal order', err);
+        });
     }
-  }, [totalPrice, paymentMethod, createPaymentIntent, createPaypalOrderAsync]);
+  }, [
+    paymentIntentKey,
+    totalPrice,
+    paymentMethod,
+    quote,
+    isQuoteFetching,
+    createPaymentIntent,
+    createPaypalOrderAsync,
+  ]);
 
   useEffect(() => {
     if (stripeRedirect && paymentIntentClientSecret) {
@@ -614,7 +775,14 @@ export default function CheckoutClient() {
                     {validationError}
                     <div className="mt-2 text-sm text-red-500">Please adjust your order to proceed.</div>
                   </div>
-                ) : isStripeLoading ? (
+                ) : quoteErrorMessage ? (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 font-medium text-center">
+                    {Array.isArray(quoteErrorMessage)
+                      ? quoteErrorMessage.join('\n')
+                      : quoteErrorMessage}
+                    <div className="mt-2 text-sm text-red-500">Please adjust your discounts to proceed.</div>
+                  </div>
+                ) : isStripeLoading || isQuoteFetching ? (
                   <div className="flex justify-center items-center h-48">
                     <Loader className="animate-spin text-orange-600" size={32} />
                   </div>
@@ -627,6 +795,7 @@ export default function CheckoutClient() {
                     setPaymentMethod={setPaymentMethod}
                     clientSecret={clientSecret}
                     orderID={orderID}
+                    paypalApprovalUrl={paypalApprovalUrl}
                   />
                 )}
               </div>
@@ -698,6 +867,7 @@ export default function CheckoutClient() {
                   quantity={quantity}
                   setQuantity={setQuantity}
                   basePrice={basePrice}
+                  subtotal={quote?.subtotal}
                   totalPrice={totalPrice}
                   couponDiscount={couponDiscount}
                   giftCardDiscount={giftCardDiscount}
@@ -706,7 +876,7 @@ export default function CheckoutClient() {
                   priceReducerDiscount={priceReducerDiscount}
                   offerDiscount={offerDiscount}
                   rewardDiscount={rewardDiscount}
-                  serviceBookings={serviceBookingsForOrder}
+                  serviceBookings={displayServiceBookings}
                   selectedVariants={selectedVariants}
                 />
               </div>

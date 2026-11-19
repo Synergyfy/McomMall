@@ -15,6 +15,7 @@ interface PaymentFormProps {
   onPaymentSuccess: (orderId: string, method?: PaymentMethod) => void;
   clientSecret?: string;
   orderID?: string;
+  paypalApprovalUrl?: string | null;
   setPaymentMethod: (method: PaymentMethod) => void;
   allowWallet?: boolean;
 }
@@ -24,6 +25,7 @@ export default function PaymentForm({
   onPaymentSuccess,
   clientSecret,
   orderID,
+  paypalApprovalUrl,
   setPaymentMethod,
   allowWallet = true,
 }: PaymentFormProps) {
@@ -167,7 +169,8 @@ export default function PaymentForm({
             />
           </motion.div>
         )}
-        {selectedMethod === PaymentMethod.PAYPAL && orderID && (
+        {selectedMethod === PaymentMethod.PAYPAL &&
+          (orderID || paypalApprovalUrl) && (
           <motion.div
             key="paypal"
             initial={{ opacity: 0, x: -20 }}
@@ -177,6 +180,7 @@ export default function PaymentForm({
           >
             <PayPalCheckoutButton
               orderID={orderID}
+              approvalUrl={paypalApprovalUrl}
               onPaymentSuccess={onPaymentSuccess}
             />
           </motion.div>
@@ -217,21 +221,36 @@ export default function PaymentForm({
                     {formatCurrency(Number(wallet?.availableBalance ?? 0))}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Order total {formatCurrency(totalPrice)}
+                    Order total {formatCurrency(totalPrice)} · processed by MCOM
+                    Pay (standard processing fee applies).
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  onClick={handleWalletPay}
-                  disabled={
-                    Number(wallet?.availableBalance ?? 0) < totalPrice
-                  }
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
-                >
-                  {Number(wallet?.availableBalance ?? 0) < totalPrice
-                    ? 'Insufficient balance'
-                    : 'Pay with MCOM Wallet'}
-                </Button>
+                <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                  <Button
+                    type="button"
+                    onClick={handleWalletPay}
+                    disabled={
+                      Number(wallet?.availableBalance ?? 0) < totalPrice
+                    }
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    {Number(wallet?.availableBalance ?? 0) < totalPrice
+                      ? 'Insufficient balance'
+                      : 'Pay with MCOM Wallet'}
+                  </Button>
+                  {Number(wallet?.availableBalance ?? 0) < totalPrice &&
+                    wallet?.topUpUrl && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          window.location.href = wallet.topUpUrl!;
+                        }}
+                      >
+                        Top up MCOM Wallet
+                      </Button>
+                    )}
+                </div>
               </div>
             )}
           </motion.div>

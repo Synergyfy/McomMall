@@ -54,14 +54,22 @@ export class FeatureFlagsService {
   }
 
   isLedgerConsolidationEnabled(): boolean {
-    return this.isEnabled(FEATURE_FLAG_KEYS.LEDGER_CONSOLIDATION, true);
+    // Coupon products are purchasable by default. Set the flag to `true` to
+    // retire the legacy balance-bearing coupon path during a migration.
+    return this.isEnabled(FEATURE_FLAG_KEYS.LEDGER_CONSOLIDATION, false);
   }
 
   /** Stable snapshot for audit logs and startup diagnostics. */
   snapshot(): Record<FeatureFlagKey, boolean> {
-    const entries = Object.values(FEATURE_FLAG_KEYS).map(
-      (key) => [key, this.isEnabled(key, true)] as const,
-    );
-    return Object.fromEntries(entries) as Record<FeatureFlagKey, boolean>;
+    return {
+      [FEATURE_FLAG_KEYS.FUNCTIONAL_TYPE_ENFORCEMENT]:
+        this.isFunctionalTypeEnforcementEnabled(),
+      [FEATURE_FLAG_KEYS.MONEY_VOUCHER_CHECKOUT]:
+        this.isMoneyVoucherCheckoutEnabled(),
+      [FEATURE_FLAG_KEYS.DEALS_HUB]: this.isDealsHubEnabled(),
+      [FEATURE_FLAG_KEYS.CASHBACK_CAP]: this.isCashbackCapEnabled(),
+      [FEATURE_FLAG_KEYS.LEDGER_CONSOLIDATION]:
+        this.isLedgerConsolidationEnabled(),
+    };
   }
 }

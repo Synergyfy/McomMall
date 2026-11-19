@@ -43,7 +43,11 @@ export interface AdminService {
   category: string;
   price: number;
   duration: number;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'pending' | 'rejected' | 'delisted';
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  adminDisabled?: boolean;
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
   description: string;
   images: string[];
   createdAt: string;

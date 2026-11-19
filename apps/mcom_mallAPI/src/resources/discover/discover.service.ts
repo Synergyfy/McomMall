@@ -9,6 +9,7 @@ import { BoroughCampaignsService } from '../visibility/borough-campaigns.service
 import { HighStreetService } from '../visibility/high-street.service';
 import { MembershipService } from '../membership/membership.service';
 import { WalletService } from '../wallet/wallet.service';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 export interface BusinessWithDistance extends Business {
   distance?: string;
@@ -163,7 +164,11 @@ export class DiscoverService {
       .leftJoinAndSelect('event.business', 'business')
       .leftJoinAndSelect('business.location', 'businessLocation')
       .leftJoinAndSelect('event.voucherProduct', 'voucherProduct')
-      .where('event.status != :status', { status: 'cancelled' });
+      .where('event.status != :status', { status: 'cancelled' })
+      .andWhere(
+        '(voucherProduct.id IS NULL OR (voucherProduct.approvalStatus = :approvedVoucher AND voucherProduct.adminDisabled = false))',
+        { approvedVoucher: ApprovalStatus.APPROVED },
+      );
 
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -338,7 +343,11 @@ export class DiscoverService {
       // available
       const now = new Date();
       const offers = await this.offerRepository.find({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          approvalStatus: ApprovalStatus.APPROVED,
+          adminDisabled: false,
+        },
         relations: ['user', 'user.businesses'],
         order: { created_at: 'DESC' },
         take: limit,

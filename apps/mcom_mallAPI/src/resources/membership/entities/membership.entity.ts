@@ -6,6 +6,7 @@ import { MembershipPayment } from './membership-payment.entity';
 import { PlanVariant } from '../../plans/entities/plan-variant.entity';
 import { PlanType } from '../dto/initiate-membership-payment.dto';
 import { ApiProperty } from '@nestjs/swagger';
+import { moneyTransformer } from '../../../common/money/money';
 
 @Entity('memberships')
 export class Membership extends AbstractBaseEntity {
@@ -84,4 +85,43 @@ export class Membership extends AbstractBaseEntity {
   @OneToOne(() => MembershipPayment, (payment) => payment.membership)
   @JoinColumn()
   payment: MembershipPayment;
+
+  // ── Recurring billing (MCOM Mall plans) ───────────────────────────────────
+  // MCOM Pay is one-time only and stores no partner mandate, so recurring
+  // renewals debit the central MCOM Wallet. Buyers can cancel any time.
+  @ApiProperty({ example: true })
+  @Column({ default: true })
+  autoRenew: boolean;
+
+  @ApiProperty({ example: 'active', enum: ['active', 'past_due', 'canceled'] })
+  @Column({ default: 'active' })
+  renewalStatus: string;
+
+  @ApiProperty({ example: '2026-12-01T02:00:00Z', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
+  nextChargeAt: Date | null;
+
+  @ApiProperty({ example: 0 })
+  @Column({ default: 0 })
+  renewalAttempts: number;
+
+  @ApiProperty({ example: '2026-11-01T02:00:00Z', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
+  lastRenewalAt: Date | null;
+
+  @ApiProperty({ example: 49.99, nullable: true })
+  @Column({
+    type: 'bigint',
+    transformer: moneyTransformer,
+    nullable: true,
+  })
+  renewalAmount: number | null;
+
+  @ApiProperty({ example: 'GBP' })
+  @Column({ length: 3, default: 'GBP' })
+  renewalCurrency: string;
+
+  @ApiProperty({ example: 'mcom_wallet' })
+  @Column({ default: 'mcom_wallet' })
+  renewalMethod: string;
 }

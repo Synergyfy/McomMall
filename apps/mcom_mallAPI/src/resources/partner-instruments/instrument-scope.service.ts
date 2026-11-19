@@ -15,6 +15,7 @@ import { Service } from '../services/entities/service.entity';
 import { InstrumentScopeDto } from './dto/instrument-scope.dto';
 import { InstrumentScope } from './entities/instrument-scope.entity';
 import { InstrumentType, ScopeLine, ScopeMode } from './enums';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 export interface PartnerRequestContext {
   callerAppId?: string;
@@ -347,6 +348,14 @@ export class InstrumentScopeService {
           `SCOPE_INVALID: product "${product.id}" is not published.`,
         );
       }
+      if (
+        product.approvalStatus !== ApprovalStatus.APPROVED ||
+        product.adminDisabled
+      ) {
+        throw new UnprocessableEntityException(
+          `SCOPE_INVALID: product "${product.id}" is not approved for the public catalogue.`,
+        );
+      }
       if (businessId && product.business?.id !== businessId) {
         throw new ForbiddenException(
           'CROSS_TENANT_SCOPE: product does not belong to the bound business.',
@@ -370,6 +379,14 @@ export class InstrumentScopeService {
       if ((service.status || '').toLowerCase() !== 'published') {
         throw new UnprocessableEntityException(
           `SCOPE_INVALID: service "${service.id}" is not published.`,
+        );
+      }
+      if (
+        service.approvalStatus !== ApprovalStatus.APPROVED ||
+        service.adminDisabled
+      ) {
+        throw new UnprocessableEntityException(
+          `SCOPE_INVALID: service "${service.id}" is not approved for the public catalogue.`,
         );
       }
       if (businessId && service.businessId !== businessId) {

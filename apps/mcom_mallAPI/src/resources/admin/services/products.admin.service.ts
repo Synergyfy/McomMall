@@ -8,6 +8,7 @@ import {
   ProductStatsDto,
   AdminProductDto,
 } from '../dto/catalog.dto';
+import { ApprovalStatus } from 'src/common/moderation/catalog-approval';
 
 @Injectable()
 export class AdminProductsService {
@@ -17,13 +18,27 @@ export class AdminProductsService {
   ) {}
 
   async getStats(): Promise<ProductStatsDto> {
-    const [total, active, outOfStock] = await Promise.all([
-      this.productsRepository.count(),
-      this.productsRepository.count({ where: { productStatus: 'published' } }),
-      this.productsRepository.count({ where: { stock: 0 } }),
-    ]);
+    const [total, active, outOfStock, pending, rejected, delisted] =
+      await Promise.all([
+        this.productsRepository.count(),
+        this.productsRepository.count({
+          where: {
+            productStatus: 'published',
+            approvalStatus: ApprovalStatus.APPROVED,
+            adminDisabled: false,
+          },
+        }),
+        this.productsRepository.count({ where: { stock: 0 } }),
+        this.productsRepository.count({
+          where: { approvalStatus: ApprovalStatus.PENDING },
+        }),
+        this.productsRepository.count({
+          where: { approvalStatus: ApprovalStatus.REJECTED },
+        }),
+        this.productsRepository.count({ where: { adminDisabled: true } }),
+      ]);
 
-    return { total, active, outOfStock };
+    return { total, active, outOfStock, pending, rejected, delisted };
   }
 
   async findAll(query: ProductQueryDto): Promise<PaginatedProductsDto> {
@@ -52,9 +67,28 @@ export class AdminProductsService {
         qb.andWhere('product.stock = 0');
       } else if (status === 'inactive') {
         qb.andWhere(
-          '(product.adminDisabled = true OR product.productStatus = :draftStatus)',
-          { draftStatus: 'draft' },
+          '(product.adminDisabled = true OR product.approvalStatus != :approvedStatus OR product.productStatus = :draftStatus)',
+          {
+            approvedStatus: ApprovalStatus.APPROVED,
+            draftStatus: 'draft',
+          },
         );
+      } else if (status === 'pending') {
+        qb.andWhere('product.approvalStatus = :approvalStatus', {
+          approvalStatus: ApprovalStatus.PENDING,
+        });
+      } else if (status === 'rejected') {
+        qb.andWhere('product.approvalStatus = :approvalStatus', {
+          approvalStatus: ApprovalStatus.REJECTED,
+        });
+      } else if (status === 'delisted') {
+        qb.andWhere('product.adminDisabled = true');
+      } else if (status === 'active') {
+        qb.andWhere('product.productStatus = :pStatus', { pStatus });
+        qb.andWhere('product.approvalStatus = :approvalStatus', {
+          approvalStatus: ApprovalStatus.APPROVED,
+        });
+        qb.andWhere('product.adminDisabled = false');
       } else {
         qb.andWhere('product.productStatus = :pStatus', { pStatus });
       }
@@ -75,7 +109,7 @@ export class AdminProductsService {
       price: p.price,
       stock: p.stock,
       status:
-        p.adminDisabled
+        p.adminDisabled || p.approvalStatus !== ApprovalStatus.APPROVED
           ? 'inactive'
           : p.productStatus === 'published'
             ? 'active'
@@ -84,6 +118,10 @@ export class AdminProductsService {
               : 'inactive',
       description: p.description,
       images: p.media || [],
+      approvalStatus: p.approvalStatus,
+      adminDisabled: p.adminDisabled,
+      reviewNote: p.reviewNote ?? null,
+      reviewedAt: p.reviewedAt ?? null,
       createdAt: p.created_at,
     }));
 
@@ -105,7 +143,35 @@ export class AdminProductsService {
   async activate(id: string) {
     const product = await this.productsRepository.findOne({ where: { id } });
     if (!product) throw new NotFoundException('Product not found');
-    return this.productsRepository.update(id, { adminDisabled: false });
+    // The legacy admin "Activate" action both republishes a delisted product
+    // and approves it when it is still awaiting review. Dedicated
+    // approve/reject endpoints remain available for explicit moderation.
+    return this.productsRepository.update(id, {
+      adminDisabled: false,
+      approvalStatus: ApprovalStatus.APPROVED,
+      reviewedAt: new Date(),
+    });
+  }
+
+  async approve(id: string, reviewerId: string) {
+    const product = await this.productsRepository.findOne({ where: { id } });
+    if (!product) throw new NotFoundException('Product not found');
+    return this.productsRepository.update(id, {
+      approvalStatus: ApprovalStatus.APPROVED,
+      reviewedBy: reviewerId,
+      reviewedAt: new Date(),
+    });
+  }
+
+  async reject(id: string, reviewerId: string, reviewNote?: string) {
+    const product = await this.productsRepository.findOne({ where: { id } });
+    if (!product) throw new NotFoundException('Product not found');
+    return this.productsRepository.update(id, {
+      approvalStatus: ApprovalStatus.REJECTED,
+      reviewedBy: reviewerId,
+      reviewedAt: new Date(),
+      reviewNote: reviewNote ?? null,
+    });
   }
 
   async remove(id: string) {

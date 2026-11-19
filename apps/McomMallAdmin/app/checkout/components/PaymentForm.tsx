@@ -13,6 +13,8 @@ interface PaymentFormProps {
   onPaymentSuccess: (orderId: string) => void;
   clientSecret?: string;
   orderID?: string;
+  paypalApprovalUrl?: string | null;
+  publishableKey?: string;
   setPaymentMethod: (method: PaymentMethod) => void;
 }
 
@@ -21,6 +23,8 @@ export default function PaymentForm({
   onPaymentSuccess,
   clientSecret,
   orderID,
+  paypalApprovalUrl,
+  publishableKey,
   setPaymentMethod,
 }: PaymentFormProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
@@ -86,11 +90,13 @@ export default function PaymentForm({
           >
             <StripeCheckoutForm
               clientSecret={clientSecret}
+              publishableKey={publishableKey}
               onPaymentSuccess={onPaymentSuccess}
             />
           </motion.div>
         )}
-        {selectedMethod === PaymentMethod.PAYPAL && orderID && (
+        {selectedMethod === PaymentMethod.PAYPAL &&
+          (orderID || paypalApprovalUrl) && (
           <motion.div
             key="paypal"
             initial={{ opacity: 0, x: -20 }}
@@ -100,6 +106,7 @@ export default function PaymentForm({
           >
             <PayPalCheckoutButton
               orderID={orderID}
+              approvalUrl={paypalApprovalUrl}
               onSuccess={onPaymentSuccess}
             />
           </motion.div>

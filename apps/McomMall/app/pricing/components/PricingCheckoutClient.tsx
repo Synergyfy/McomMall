@@ -107,7 +107,10 @@ export default function PricingCheckoutClient({
     // 1. Not a stripe redirect (which means we are coming back from stripe)
     // 2. Either (totalPrice > 0 OR it's a membership with tierId)
     // Note: Membership trial might be 0 or small amount, but backend logic handles it.
-    if (!stripeRedirect) {
+    // Membership card/PayPal details are created by MembershipCardPanel from
+    // the server-priced plan. Only PAYG (legacy amount-based checkout) needs
+    // an intent here; creating one on every visit was an unused charge.
+    if (!stripeRedirect && isPayg && totalPrice > 0) {
       if (paymentMethod === PaymentMethod.STRIPE) {
         const payload: CreateStripeIntentRequest = {
           idempotencyKey: paymentAttemptKey.current,
@@ -529,7 +532,9 @@ export default function PricingCheckoutClient({
                         </>
                       ) : (
                         <p className="mt-2 text-xs text-gray-500">
-                          {totalPrice.toFixed(2)} MCOM will be debited from your wallet.
+                          {totalPrice.toFixed(2)} MCOM will be debited from your
+                          wallet. Wallet payments are processed by MCOM Pay;
+                          MCOM&apos;s standard processing fee applies.
                         </p>
                       )}
                       {walletError && (

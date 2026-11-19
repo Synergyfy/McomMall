@@ -29,4 +29,21 @@ export class OrderPayment extends AbstractBaseEntity {
 
   @Column({ unique: true })
   transactionId: string;
+
+  /** MCOM Pay charge id (Central Hub). */
+  @Column({ nullable: true, unique: true })
+  mcomChargeId?: string | null;
+
+  /** Provider handle: Stripe PaymentIntent id or PayPal order id. */
+  @Column({ nullable: true })
+  providerRef?: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  feeMinor?: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  netMinor?: string | null;
+
+  @Column({ nullable: true })
+  status?: string | null;
 }
