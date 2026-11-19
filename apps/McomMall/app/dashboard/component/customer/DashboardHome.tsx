@@ -1,20 +1,28 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  MapPin, Search, Store, Gift, Calendar, Dices, Sparkles, Clock,
-  Star, RotateCw, ChevronDown, Bell, ChevronRight,
-  Utensils, Dumbbell, Coffee, Layers, RefreshCw, Heart, Zap,
-  Map, Ticket, Sun, Plus, CloudSun, Thermometer, Droplets,
-  Check, Trophy
+  MapPin, Store, Gift, Calendar, Sparkles,
+  Star, ChevronDown, Bell, ChevronRight,
+  Utensils, Dumbbell, Layers,
+  Map, Ticket, Sun, CloudSun, Thermometer, Droplets,
+  Cloud, CloudRain, CloudSnow, CloudLightning,
+  CloudFog, CloudDrizzle, Building2,
 } from 'lucide-react';
 
 import StatsCards from '../StatsCards';
 import RecentActivities from '../RecentActivities';
 import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useGetMarketplaceLocations } from '@/service/marketplace/discovery';
+import { useGetUserProfile } from '@/service/user/hook';
+import { useWeather } from '@/lib/hooks/useWeather';
+import {
+  useCustomerHome,
+  useCustomerRewards,
+} from '@/service/customers/dashboard';
 
 interface DashboardHomeProps {
   userName: string;
@@ -27,97 +35,33 @@ interface DashboardHomeProps {
   setActiveTab: (tab: 'home' | 'discover' | 'rewards' | 'profile') => void;
 }
 
-const UK_LOCATIONS = [
-  'Camden Town',
-  'Shoreditch',
-  'Greenwich',
-  'Notting Hill',
-  'Brixton',
-];
+const WEATHER_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
+  sun: Sun,
+  'cloud-sun': CloudSun,
+  cloud: Cloud,
+  'cloud-fog': CloudFog,
+  'cloud-drizzle': CloudDrizzle,
+  'cloud-rain': CloudRain,
+  'cloud-snow': CloudSnow,
+  'cloud-lightning': CloudLightning,
+};
 
-const MOCK_BUSINESSES = [
-  {
-    id: 'urban-bistro',
-    name: 'The Urban Bistro',
-    category: 'Dining',
-    rating: 4.8,
-    distance: '0.4 miles',
-    price: '$$',
-    tag: 'Reward available',
-    image:
-      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=600',
-  },
-  {
-    id: 'peak-performance',
-    name: 'Peak Performance',
-    category: 'Health',
-    rating: 4.9,
-    distance: '1.2 miles',
-    price: 'Member Exclusive',
-    tag: 'Reward available',
-    image:
-      'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=600',
-  },
-];
+const categoryIcon = (category?: string) => {
+  const value = (category || '').toLowerCase();
+  if (/(food|dining|cafe|coffee|restaurant|bakery)/.test(value)) {
+    return Utensils;
+  }
+  if (/(fitness|health|gym|sport)/.test(value)) {
+    return Dumbbell;
+  }
+  return Store;
+};
 
-const ACTIVITY_ITEMS = [
-  {
-    id: 'artisan-kitchen',
-    title: 'Artisan Kitchen',
-    desc: 'Flash Sale: 2x Points on all lunch bowls until 2 PM.',
-    image:
-      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&q=80&w=600',
-    tag: 'TRENDING',
-    tagColor: 'bg-emerald-600',
-    points: '+50 PTS EXTRA',
-    spanFull: true,
-  },
-  {
-    id: 'morning-brew',
-    title: 'Morning Brew',
-    desc: 'Claim your free refill',
-    image:
-      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=600',
-    tag: null,
-    tagColor: null,
-    points: null,
-    spanFull: false,
-  },
-  {
-    id: 'borough-fitness',
-    title: 'Borough Fitness',
-    desc: 'Class starts in 15m',
-    image:
-      'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=600',
-    tag: null,
-    tagColor: null,
-    points: null,
-    spanFull: false,
-  },
-];
-
-const TRENDING_ITEMS = [
-  {
-    name: 'Sakura Zen Dining',
-    desc: 'Now offering seasonal lunch rewards...',
-    tag: '#1 Trending',
-    tagColor: 'text-[#a14000]',
-    progress: 85,
-    progressColor: 'bg-[#a14000]',
-    image:
-      'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&q=80&w=600',
-  },
-  {
-    name: 'Velocity Sports',
-    desc: 'Join the Sneaker Hunt event this Friday!',
-    tag: 'New Drop',
-    tagColor: 'text-emerald-600',
-    progress: 40,
-    progressColor: 'bg-emerald-600',
-    image:
-      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
-  },
-];
+const plural = (count: number, singular: string, pluralForm?: string) =>
+  count === 1 ? singular : pluralForm || `${singular}s`;
 
 export const DashboardHome: React.FC<DashboardHomeProps> = ({
   userName,
@@ -126,72 +70,60 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   isLoadingStats,
   activities,
   isLoadingActivities,
-  onAddPoints,
   setActiveTab,
 }) => {
   const router = useRouter();
-  const [isRefreshing, setIsRefreshing] = useState(true);
-  const [selectedBorough, setSelectedBorough] = useState('Camden Town');
+  const [boroughOverride, setBoroughOverride] = useState<string | null>(null);
   const [isBoroughOpen, setIsBoroughOpen] = useState(false);
-  const [spinState, setSpinState] = useState<'ready' | 'spinning' | 'won'>('ready');
-  const [spinResult, setSpinResult] = useState('');
-  const [scratchState, setScratchState] = useState<'ready' | 'revealed'>('ready');
-  const [scratchPrize, setScratchPrize] = useState('');
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsRefreshing(false), 3000);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data: home, isLoading: isLoadingHome } = useCustomerHome(
+    boroughOverride ?? undefined,
+  );
+  const { data: locationFacets } = useGetMarketplaceLocations();
+  const { data: rewards } = useCustomerRewards();
+  const { data: profile } = useGetUserProfile();
+
+  const assignedBorough =
+    home?.location?.borough || home?.location?.city || null;
+  const activeBorough = boroughOverride || assignedBorough;
+
+  const { data: weather } = useWeather({
+    latitude: home?.location?.latitude,
+    longitude: home?.location?.longitude,
+    postcode: profile?.postcode,
+  });
+
+  const boroughOptions = useMemo(() => {
+    const names = new Set<string>();
+    const cities = locationFacets?.cities ?? [];
+    cities.forEach((city) => {
+      city.children.forEach((borough) => {
+        if (borough.name) names.add(borough.name);
+      });
+    });
+    if (assignedBorough) names.add(assignedBorough);
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [locationFacets, assignedBorough]);
+
+  const trending = home?.trending ?? [];
+  const rewardItems = rewards?.rewards ?? [];
+  const deals = home?.nearbyDeals ?? [];
+  const liveOffers = home?.liveOffersCount ?? 0;
+  const newOffers = home?.newOffersCount ?? 0;
+  const activeCampaigns = home?.activeCampaignsCount ?? 0;
+  const displayPoints = home?.user?.points ?? points;
+
+  const WeatherIcon = weather?.available
+    ? WEATHER_ICONS[weather.icon || 'cloud-sun'] || CloudSun
+    : CloudSun;
 
   const handleBoroughChange = (borough: string) => {
-    setSelectedBorough(borough);
+    setBoroughOverride(borough);
     setIsBoroughOpen(false);
-  };
-
-  const handleSpinClick = () => {
-    if (spinState !== 'ready') return;
-    setSpinState('spinning');
-    setTimeout(() => {
-      setSpinState('won');
-      setSpinResult('Won 50 pts!');
-      onAddPoints(50);
-    }, 1500);
-  };
-
-  const handlePlayClick = () => {
-    const el = document.getElementById('daily-spin-widget');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-      el.classList.add('ring-4', 'ring-[#ff6900]/50');
-      setTimeout(() => el.classList.remove('ring-4', 'ring-[#ff6900]/50'), 1500);
-    }
   };
 
   return (
     <div className="space-y-6 pb-6 relative min-h-screen">
-      {/* ── Refreshing Overlay ── */}
-      {isRefreshing && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#fff8f6]/90 backdrop-blur-sm transition-opacity duration-700">
-          <div className="relative flex items-center justify-center w-24 h-24 mb-4">
-            <div className="animate-pulse-ring absolute w-24 h-24 rounded-full border-4 border-[#ff6900] opacity-20" />
-            <div
-              className="animate-pulse-ring absolute w-24 h-24 rounded-full border-4 border-[#ff6900] opacity-20"
-              style={{ animationDelay: '0.5s' }}
-            />
-            <div
-              className="animate-pulse-ring absolute w-24 h-24 rounded-full border-4 border-[#ff6900] opacity-20"
-              style={{ animationDelay: '1s' }}
-            />
-            <div className="z-10 bg-[#f8ddd2] p-3 rounded-full shadow-lg animate-refresh-bounce">
-              <RefreshCw className="text-[#a14000] text-3xl w-8 h-8 font-bold animate-rotate-sync" />
-            </div>
-          </div>
-          <p className="font-label-md text-label-md text-[#a14000] animate-pulse">
-            Syncing Borough Pulse...
-          </p>
-        </div>
-      )}
-
       {/* ── Top App Bar ── */}
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-3">
@@ -213,11 +145,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
           <div className="flex items-center gap-1 bg-[#ff9969] px-2.5 py-1 rounded-full">
             <Star className="w-[14px] h-[14px] fill-[#773005] text-[#773005]" />
             <span className="text-[11px] font-extrabold text-[#773005]">
-              {points.toLocaleString()} pts
-            </span>
-            <span className="w-px h-3 bg-[#773005]/30 mx-0.5" />
-            <span className="text-[10px] font-bold text-[#773005]">
-              Gold
+              {displayPoints.toLocaleString()} pts
             </span>
           </div>
           <button className="p-2 hover:bg-[#f8ddd2] rounded-full transition-colors">
@@ -229,74 +157,103 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       {/* ── Location & Weather Widget ── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#1a2a3a] via-[#2c3e50] to-[#34495e] p-5 rounded-2xl text-white shadow-lg">
         <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
-          <CloudSun className="w-full h-full" />
+          <WeatherIcon className="w-full h-full" />
         </div>
         <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-2xl" />
         <div className="relative z-10">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center shrink-0">
-                <CloudSun className="w-7 h-7" />
+                <WeatherIcon className="w-7 h-7" />
               </div>
               <div>
                 <div className="relative">
-                  <button
-                    onClick={() => setIsBoroughOpen(!isBoroughOpen)}
-                    className="flex items-center gap-1 text-base font-bold"
-                  >
-                    {selectedBorough}
-                    <ChevronDown className="w-4 h-4 text-white/60" />
-                  </button>
-                  {isBoroughOpen && (
-                    <div className="absolute top-8 left-0 z-50 bg-white border border-[#e2bfb0] shadow-lg rounded-xl py-2 w-48 animate-in fade-in slide-in-from-top-2 duration-150">
-                      {UK_LOCATIONS.map((b) => (
+                  {boroughOptions.length > 0 ? (
+                    <button
+                      onClick={() => setIsBoroughOpen(!isBoroughOpen)}
+                      className="flex items-center gap-1 text-base font-bold"
+                    >
+                      {activeBorough || 'Your area'}
+                      <ChevronDown className="w-4 h-4 text-white/60" />
+                    </button>
+                  ) : (
+                    <span className="flex items-center gap-1 text-base font-bold">
+                      <MapPin className="w-4 h-4 text-white/70" />
+                      {activeBorough || 'Your area'}
+                    </span>
+                  )}
+                  {isBoroughOpen && boroughOptions.length > 0 && (
+                    <div className="absolute top-8 left-0 z-50 bg-white border border-[#e2bfb0] shadow-lg rounded-xl py-2 w-48 max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
+                      {boroughOptions.map((borough) => (
                         <button
-                          key={b}
-                          onClick={() => handleBoroughChange(b)}
+                          key={borough}
+                          onClick={() => handleBoroughChange(borough)}
                           className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-colors ${
-                            selectedBorough === b
+                            activeBorough === borough
                               ? 'text-[#a14000] bg-[#fff1ec]'
                               : 'text-[#5a4136] hover:bg-[#fff8f6]'
                           }`}
                         >
-                          {b}
+                          {borough}
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
                 <div className="flex items-center gap-3 mt-1">
-                  <div className="flex items-center gap-1">
-                    <Thermometer className="w-3.5 h-3.5 text-white/70" />
-                    <span className="text-sm font-bold">18&deg;C</span>
-                  </div>
-                  <span className="w-px h-3 bg-white/20" />
-                  <div className="flex items-center gap-1">
-                    <Droplets className="w-3.5 h-3.5 text-white/70" />
-                    <span className="text-xs text-white/80">65%</span>
-                  </div>
-                  <span className="w-px h-3 bg-white/20" />
-                  <span className="text-xs text-white/80 flex items-center gap-1">
-                    <Sun className="w-3 h-3" /> Partly Cloudy
-                  </span>
+                  {weather?.available ? (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Thermometer className="w-3.5 h-3.5 text-white/70" />
+                        <span className="text-sm font-bold">
+                          {weather.temperature}&deg;C
+                        </span>
+                      </div>
+                      <span className="w-px h-3 bg-white/20" />
+                      <div className="flex items-center gap-1">
+                        <Droplets className="w-3.5 h-3.5 text-white/70" />
+                        <span className="text-xs text-white/80">
+                          {weather.humidity}%
+                        </span>
+                      </div>
+                      <span className="w-px h-3 bg-white/20" />
+                      <span className="text-xs text-white/80 flex items-center gap-1">
+                        <WeatherIcon className="w-3 h-3" />
+                        {weather.condition}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-white/70">
+                      {weather?.available === false
+                        ? 'Weather unavailable'
+                        : isLoadingHome
+                          ? 'Locating your weather...'
+                          : 'Weather unavailable'}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="flex -space-x-2">
-              <div className="w-9 h-9 rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm text-white text-[10px] flex items-center justify-center font-bold">
-                85%
+            {home && (
+              <div className="flex -space-x-2">
+                <div className="w-9 h-9 rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm text-white text-[10px] flex items-center justify-center font-bold">
+                  {liveOffers}
+                </div>
+                <div className="w-9 h-9 rounded-full border-2 border-white/30 bg-[#ff6900] text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeCampaigns}
+                </div>
               </div>
-              <div className="w-9 h-9 rounded-full border-2 border-white/30 bg-[#ff6900] text-white text-[10px] flex items-center justify-center font-bold">
-                LVL4
-              </div>
-            </div>
+            )}
           </div>
-          <div className="mt-3 flex items-center gap-2">
-            <div className="h-1.5 flex-1 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-[#ff6900] rounded-full" style={{ width: '80%' }} />
+          {home && (
+            <div className="mt-3 flex items-center gap-2 text-[10px] font-semibold text-white/70">
+              <Store className="w-3.5 h-3.5" />
+              {liveOffers} live {plural(liveOffers, 'offer')} &middot;{' '}
+              {activeCampaigns} active{' '}
+              {plural(activeCampaigns, 'campaign')} in{' '}
+              {activeBorough || 'your borough'}
             </div>
-            <span className="text-[10px] font-semibold text-white/70">High Activity</span>
-          </div>
+          )}
         </div>
       </section>
 
@@ -332,15 +289,21 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         </div>
       </section>
 
-      {/* ── Gamification Banner ── */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ── Offers Banner ── */}
+      <section>
         <div className="relative overflow-hidden rounded-2xl bg-[#a14000] p-6 text-white shadow-xl min-h-[160px] flex flex-col justify-between">
           <div className="z-10">
             <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full font-label-sm text-label-sm font-bold mb-2">
               Happening Now
             </span>
             <h2 className="font-headline-lg-mobile text-headline-lg-mobile leading-tight">
-              3 new offers in your borough
+              {!home && isLoadingHome
+                ? `Checking offers in ${activeBorough || 'your borough'}...`
+                : newOffers > 0
+                  ? `${newOffers} new ${plural(newOffers, 'offer')} in ${activeBorough || 'your borough'}`
+                  : liveOffers > 0
+                    ? `${liveOffers} live ${plural(liveOffers, 'offer')} in ${activeBorough || 'your borough'}`
+                    : `No new offers in ${activeBorough || 'your borough'} yet`}
             </h2>
           </div>
           <button
@@ -354,155 +317,6 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
             <Store className="w-full h-full" />
           </div>
         </div>
-
-        <div
-          id="daily-spin-widget"
-          className="rounded-2xl bg-[#f8ddd2] p-6 border border-[#e2bfb0] flex items-center gap-4 relative overflow-hidden group cursor-pointer"
-        >
-          <div className="flex-1 z-10">
-            <h3 className="font-label-md text-label-md font-extrabold text-[#a14000] mb-1">
-              Lucky Streak: Day 5
-            </h3>
-            <p className="font-body-md text-body-md font-bold text-[#261812] mb-2">
-              Your Daily Spin is ready!
-            </p>
-            <div className="w-full bg-[#fff1ec] h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-[#a14000] h-full transition-all duration-1000"
-                style={{ width: spinState === 'won' ? '100%' : '70%' }}
-              />
-            </div>
-            <button
-              onClick={handleSpinClick}
-              disabled={spinState !== 'ready'}
-              className={`mt-3 px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
-                spinState === 'won'
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : spinState === 'spinning'
-                  ? 'bg-[#ff9969] text-[#773005]'
-                  : 'bg-[#ff6900] text-white hover:bg-[#a14000]'
-              }`}
-            >
-              {spinState === 'ready' && 'Spin Now'}
-              {spinState === 'spinning' && (
-                <span className="flex items-center gap-1">
-                  <RotateCw className="w-3 h-3 animate-spin" /> Spinning...
-                </span>
-              )}
-              {spinState === 'won' && spinResult}
-            </button>
-          </div>
-          <div className="relative z-10">
-            <div className="w-16 h-16 rounded-full bg-[#ff9969] flex items-center justify-center shadow-lg animate-bounce duration-1000">
-              <Dices className="w-7 h-7 text-[#773005]" />
-            </div>
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-        </div>
-      </section>
-
-      {/* ── Games & Challenges ── */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-headline-md text-headline-md text-[#261812] flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#a14000]" />
-            Games & Challenges
-          </h2>
-          <span className="text-[10px] font-bold text-[#a14000] uppercase tracking-wider">Play & Earn</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* ── Scratch Card ── */}
-          <div
-            onClick={() => {
-              if (scratchState === 'ready') {
-                const prizes = ['25 Bonus Points', '50 Bonus Points', 'Free Coffee Voucher', '10% Off Coupon', '100 Bonus Points', 'Try Again Tomorrow'];
-                const prize = prizes[Math.floor(Math.random() * prizes.length)];
-                setScratchPrize(prize);
-                setScratchState('revealed');
-                if (prize.includes('Points')) {
-                  const pts = parseInt(prize) || 25;
-                  onAddPoints(pts);
-                }
-              }
-            }}
-            className="rounded-2xl bg-white p-5 border border-[#e2bfb0]/30 shadow-sm cursor-pointer active:scale-[0.97] transition-transform relative overflow-hidden group"
-          >
-            {scratchState === 'ready' && (
-              <div className="text-center py-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#ff6900] to-[#a14000] flex items-center justify-center shadow-lg mb-3">
-                  <span className="text-2xl font-black text-white">?</span>
-                </div>
-                <h3 className="text-sm font-extrabold text-[#261812] mb-1">Scratch & Win</h3>
-                <p className="text-[10px] text-[#5a4136] font-semibold">Tap to reveal your prize!</p>
-                <div className="mt-3 flex justify-center gap-1">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-[#ff9969] animate-pulse" style={{ animationDelay: `${i * 0.3}s` }} />
-                  ))}
-                </div>
-              </div>
-            )}
-            {scratchState === 'revealed' && (
-              <div className="text-center py-4 animate-in zoom-in-95 duration-300">
-                <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center shadow-lg mb-3">
-                  <Gift className="w-7 h-7 text-emerald-600" />
-                </div>
-                <h3 className="text-sm font-extrabold text-[#261812] mb-1">You Won!</h3>
-                <p className="text-base font-black text-[#a14000]">{scratchPrize}</p>
-                <p className="text-[9px] text-[#5a4136] font-semibold mt-2">Come back tomorrow for another scratch!</p>
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
-          </div>
-
-          {/* ── Shop & Earn Challenge ── */}
-          <div className="rounded-2xl bg-white p-5 border border-[#e2bfb0]/30 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center">
-                  <Trophy className="w-4 h-4 text-cyan-700" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-extrabold text-[#261812]">Shop & Earn Challenge</h3>
-                  <p className="text-[9px] text-[#5a4136] font-semibold">Spend $200 across 3 stores this week</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-full">2/3</span>
-            </div>
-            <div className="space-y-2 mb-3">
-              <div className="flex items-center gap-2 text-[10px] font-semibold text-[#5a4136]">
-                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <Check className="w-3 h-3 text-emerald-600" />
-                </div>
-                <span>The Urban Bistro — $68.50</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-semibold text-[#5a4136]">
-                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <Check className="w-3 h-3 text-emerald-600" />
-                </div>
-                <span>Peak Performance — $52.00</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-semibold text-[#5a4136]">
-                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center">
-                  <span className="text-slate-400 text-[9px] font-bold">3</span>
-                </div>
-                <span className="text-slate-400">One more store to go!</span>
-              </div>
-            </div>
-            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-              <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full rounded-full" style={{ width: '66%' }} />
-            </div>
-            <p className="text-[9px] text-[#5a4136] font-semibold mt-2 flex justify-between">
-              <span>$120.50 spent</span>
-              <span className="font-bold text-cyan-700">$200 goal</span>
-            </p>
-            <button
-              onClick={() => setActiveTab('discover')}
-              className="mt-3 w-full py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl text-[10px] font-bold active:scale-95 transition-transform shadow-md"
-            >
-              Find a Store to Shop
-            </button>
-          </div>
-        </div>
       </section>
 
       {/* ── Recommended for You ── */}
@@ -511,196 +325,227 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
           <h2 className="font-headline-md text-headline-md text-[#261812]">
             Recommended for You
           </h2>
-          <button className="text-[#a14000] font-label-md text-label-md flex items-center">
+          <button
+            onClick={() => setActiveTab('discover')}
+            className="text-[#a14000] font-label-md text-label-md flex items-center"
+          >
             View all <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {MOCK_BUSINESSES.map((biz) => (
-            <div
-              key={biz.id}
-              className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group border border-[#e2bfb0]/30"
-            >
-              <div className="h-40 relative">
-                <img
-                  alt={biz.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  src={biz.image}
-                />
-                <div className="absolute top-3 right-3 px-3 py-1 bg-[#ff9969] text-[#773005] font-label-sm text-label-sm font-bold rounded-full shadow-sm">
-                  {biz.tag}
+        {trending.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {trending.slice(0, 4).map((biz) => {
+              const CategoryIcon = categoryIcon(biz.category);
+              const image = biz.bannerUrl || biz.logoUrl;
+              return (
+                <div
+                  key={biz.id}
+                  onClick={() => setActiveTab('discover')}
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group border border-[#e2bfb0]/30 cursor-pointer"
+                >
+                  <div className="h-40 relative bg-gradient-to-br from-[#f8ddd2] to-[#fff1ec]">
+                    {image ? (
+                      <img
+                        alt={biz.businessName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        src={image}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Store className="w-12 h-12 text-[#a14000]/30" />
+                      </div>
+                    )}
+                    <div className="absolute top-3 right-3 px-3 py-1 bg-[#ff9969] text-[#773005] font-label-sm text-label-sm font-bold rounded-full shadow-sm">
+                      {biz.category}
+                    </div>
+                    <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md text-white font-label-sm text-label-sm font-bold rounded flex items-center gap-1">
+                      <CategoryIcon className="w-[14px] h-[14px]" />
+                      {biz.category}
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-headline-md text-headline-md leading-tight text-[#261812]">
+                        {biz.businessName}
+                      </h3>
+                      <span className="flex items-center gap-0.5 text-[#97481e] font-bold">
+                        {Number(biz.rating || 0).toFixed(1)}{' '}
+                        <Star className="w-[16px] h-[16px] fill-[#97481e] text-[#97481e]" />
+                      </span>
+                    </div>
+                    <p className="text-[#5a4136] font-body-md text-body-md mb-4 line-clamp-2">
+                      {biz.shortDescription || 'A local business in your borough.'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 bg-[#f8ddd2] text-[#5a4136] rounded font-label-sm text-label-sm font-bold">
+                        {biz.reviewCount}{' '}
+                        {plural(biz.reviewCount, 'review')}
+                      </span>
+                      {biz.distance && (
+                        <span className="px-2 py-1 bg-[#f8ddd2] text-[#5a4136] rounded font-label-sm text-label-sm font-bold">
+                          {biz.distance}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md text-white font-label-sm text-label-sm font-bold rounded flex items-center gap-1">
-                  {biz.category === 'Dining' ? (
-                    <Utensils className="w-[14px] h-[14px]" />
-                  ) : (
-                    <Dumbbell className="w-[14px] h-[14px]" />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-[#e2bfb0]/30 p-6 text-center">
+            <Store className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-xs font-semibold text-[#5a4136]">
+              {isLoadingHome
+                ? 'Loading businesses in your borough...'
+                : 'No businesses listed in your borough yet.'}
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* ── Picked for You ── */}
+      {(rewardItems.length > 0 || deals.length > 0) && (
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-[#a14000]" />
+            <h2 className="font-headline-md text-headline-md text-[#261812]">
+              Picked for you
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {rewardItems.length > 0 ? (
+              <>
+                <div className="col-span-2 row-span-2 bg-white/70 backdrop-blur-[12px] border border-white/30 rounded-3xl p-6 flex flex-col justify-between overflow-hidden relative group">
+                  <div className="z-10">
+                    <span className="text-[#a14000] font-label-sm text-label-sm font-bold uppercase tracking-widest mb-2 block">
+                      {rewardItems[0].brand || 'Reward'}
+                    </span>
+                    <h3 className="font-headline-lg-mobile text-headline-lg-mobile max-w-[220px] mb-4 text-[#261812]">
+                      {rewardItems[0].title}
+                    </h3>
+                    <p className="text-[#5a4136] font-body-md text-body-md mb-6 line-clamp-3">
+                      {rewardItems[0].description ||
+                        'Redeem this reward with your points.'}
+                    </p>
+                  </div>
+                  <div className="z-10 flex items-center gap-3">
+                    <span className="bg-[#a14000] text-white px-3 py-1 rounded-full text-[10px] font-bold">
+                      REDEEM {rewardItems[0].cost.toLocaleString()} PTS
+                    </span>
+                    <button
+                      onClick={() => setActiveTab('rewards')}
+                      className="text-xs font-bold text-[#a14000] flex items-center"
+                    >
+                      View <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                  {rewardItems[0].image && (
+                    <img
+                      alt={rewardItems[0].title}
+                      src={rewardItems[0].image}
+                      className="absolute inset-0 w-full h-full object-cover opacity-10"
+                    />
                   )}
-                  {biz.category}
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-headline-md text-headline-md leading-tight text-[#261812]">
-                    {biz.name}
-                  </h3>
-                  <span className="flex items-center gap-0.5 text-[#97481e] font-bold">
-                    {biz.rating}{' '}
-                    <Star className="w-[16px] h-[16px] fill-[#97481e] text-[#97481e]" />
-                  </span>
-                </div>
-                <p className="text-[#5a4136] font-body-md text-body-md mb-4">
-                  {biz.category === 'Dining'
-                    ? 'Artisanal fusion kitchen with locally sourced ingredients.'
-                    : 'Elite training facility featuring state-of-the-art bio-tracking.'}
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 bg-[#f8ddd2] text-[#5a4136] rounded font-label-sm text-label-sm font-bold">
-                    {biz.distance}
-                  </span>
-                  <span className="px-2 py-1 bg-[#f8ddd2] text-[#5a4136] rounded font-label-sm text-label-sm font-bold">
-                    {biz.price}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── AI Picked for You ── */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-[#a14000]" />
-          <h2 className="font-headline-md text-headline-md text-[#261812]">
-            Picked for you
-          </h2>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="col-span-2 row-span-2 bg-white/70 backdrop-blur-[12px] border border-white/30 rounded-3xl p-6 flex flex-col justify-between overflow-hidden relative group">
-            <div className="z-10">
-              <span className="text-[#a14000] font-label-sm text-label-sm font-bold uppercase tracking-widest mb-2 block">
-                Curation AI
-              </span>
-              <h3 className="font-headline-lg-mobile text-headline-lg-mobile max-w-[200px] mb-4 text-[#261812]">
-                Next Gen Running Gear
-              </h3>
-              <p className="text-[#5a4136] font-body-md text-body-md mb-6">
-                Based on your gym activity last week.
-              </p>
-            </div>
-            <div className="z-10 flex items-center gap-3">
-              <div className="flex -space-x-3">
-                <div className="w-10 h-10 rounded-full border-2 border-white bg-[#f8ddd2] flex items-center justify-center text-xs font-bold text-[#a14000]">
-                  S
-                </div>
-                <div className="w-10 h-10 rounded-full border-2 border-white bg-[#fff1ec] flex items-center justify-center text-xs font-bold text-[#5a4136]">
-                  B
-                </div>
-              </div>
-              <span className="font-label-md text-label-md font-bold text-[#a14000]">
-                +4 items
-              </span>
-            </div>
-            <div className="absolute -right-10 bottom-0 opacity-10 group-hover:scale-110 transition-transform duration-500">
-              <Sparkles className="w-[200px] h-[200px]" />
-            </div>
-          </div>
-
-          <div className="bg-[#f8ddd2] rounded-3xl p-4 flex flex-col items-center text-center justify-center gap-2 border border-[#e2bfb0]/30">
-            <Coffee className="w-9 h-9 text-[#a14000]" />
-            <h4 className="font-label-md text-label-md font-bold text-[#261812]">
-              Morning Blend
-            </h4>
-            <span className="bg-[#009efb] text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
-              REDEEM 200 PTS
-            </span>
-          </div>
-
-          <div className="bg-[#f8ddd2] rounded-3xl p-4 flex flex-col items-center text-center justify-center gap-2 border border-[#e2bfb0]/30">
-            <Ticket className="w-9 h-9 text-[#a14000]" />
-            <h4 className="font-label-md text-label-md font-bold text-[#261812]">
-              Rooftop Jazz
-            </h4>
-            <span className="bg-[#ff6900] text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
-              EXCLUSIVE
-            </span>
-          </div>
-
-          <div className="col-span-2 bg-[#ff6900] text-white rounded-3xl p-5 flex items-center justify-between">
-            <div>
-              <h4 className="font-headline-md text-headline-md">Boost Rewards</h4>
-              <p className="font-label-sm text-label-sm font-semibold opacity-80">
-                Invite a friend to MCOM Mall
-              </p>
-            </div>
-            <button className="bg-white text-[#a14000] px-4 py-2 rounded-full font-label-md text-label-md font-bold">
-              Share
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Borough Activity Bento ── */}
-      <section className="space-y-4 pt-2">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="font-headline-md text-headline-md text-[#261812]">
-            What&apos;s New
-          </h2>
-          <button className="text-[#a14000] font-label-md text-label-md font-bold">
-            View All
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {ACTIVITY_ITEMS.map((item) => (
-            <div
-              key={item.id}
-              className={`${
-                item.spanFull ? 'col-span-2 md:col-span-1' : ''
-              } bg-white rounded-xl border border-[#e2bfb0]/30 overflow-hidden flex flex-col group hover:shadow-md transition-all duration-200 cursor-pointer`}
-              onClick={() => setActiveTab('discover')}
-            >
-              <div className="h-40 relative bg-[#fff1ec]">
-                <img
-                  alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  src={item.image}
-                />
-                {item.tag && (
-                  <div className="absolute top-3 left-3 ${item.tagColor} text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 fill-white" />
-                    {item.tag}
+                  <div className="absolute -right-10 bottom-0 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                    <Sparkles className="w-[200px] h-[200px]" />
                   </div>
-                )}
-                <div className="absolute top-3 right-3">
-                  <button
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+                </div>
+
+                {rewardItems.slice(1, 3).map((reward) => (
+                  <div
+                    key={reward.id}
+                    onClick={() => setActiveTab('rewards')}
+                    className="bg-[#f8ddd2] rounded-3xl p-4 flex flex-col items-center text-center justify-center gap-2 border border-[#e2bfb0]/30 cursor-pointer"
                   >
-                    <Heart className="w-4 h-4 text-[#5a4136] hover:text-red-500 transition-colors" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-4 flex-grow flex flex-col justify-between">
-                <div>
-                  <h4 className="font-label-md text-label-md font-bold text-[#261812] mb-1">
-                    {item.title}
-                  </h4>
-                  <p className="text-[#5a4136] font-label-sm text-label-sm font-semibold leading-relaxed">
-                    {item.desc}
-                  </p>
-                </div>
-                {item.points && (
-                  <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-[#97481e]">
-                    <Zap className="w-4 h-4 fill-[#97481e] text-[#97481e]" />
-                    <span>{item.points}</span>
+                    <Gift className="w-9 h-9 text-[#a14000]" />
+                    <h4 className="font-label-md text-label-md font-bold text-[#261812] line-clamp-2">
+                      {reward.title}
+                    </h4>
+                    <span className="bg-[#009efb] text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
+                      REDEEM {reward.cost.toLocaleString()} PTS
+                    </span>
                   </div>
-                )}
+                ))}
+              </>
+            ) : (
+              <>
+                <div
+                  onClick={() => setActiveTab('discover')}
+                  className="col-span-2 row-span-2 bg-white/70 backdrop-blur-[12px] border border-white/30 rounded-3xl p-6 flex flex-col justify-between overflow-hidden relative group cursor-pointer"
+                >
+                  <div className="z-10">
+                    <span className="text-[#a14000] font-label-sm text-label-sm font-bold uppercase tracking-widest mb-2 block">
+                      Offer in {activeBorough || 'your borough'}
+                    </span>
+                    <h3 className="font-headline-lg-mobile text-headline-lg-mobile max-w-[220px] mb-4 text-[#261812]">
+                      {deals[0].name}
+                    </h3>
+                    <p className="text-[#5a4136] font-body-md text-body-md mb-6 line-clamp-3">
+                      {deals[0].description || 'Available from a local merchant.'}
+                    </p>
+                  </div>
+                  <div className="z-10 flex items-center gap-2">
+                    <span className="bg-[#a14000] text-white px-3 py-1 rounded-full text-[10px] font-bold">
+                      +{deals[0].points} PTS
+                    </span>
+                    {deals[0].businesses[0] && (
+                      <span className="text-[10px] font-semibold text-[#5a4136]">
+                        {deals[0].businesses[0]}
+                      </span>
+                    )}
+                  </div>
+                  <div className="absolute -right-10 bottom-0 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                    <Store className="w-[200px] h-[200px]" />
+                  </div>
+                </div>
+
+                {deals.slice(1, 3).map((deal) => (
+                  <div
+                    key={deal.id}
+                    onClick={() => setActiveTab('discover')}
+                    className="bg-[#f8ddd2] rounded-3xl p-4 flex flex-col items-center text-center justify-center gap-2 border border-[#e2bfb0]/30 cursor-pointer"
+                  >
+                    <Ticket className="w-9 h-9 text-[#a14000]" />
+                    <h4 className="font-label-md text-label-md font-bold text-[#261812] line-clamp-2">
+                      {deal.name}
+                    </h4>
+                    <span className="bg-[#ff6900] text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
+                      +{deal.points} PTS
+                    </span>
+                  </div>
+                ))}
+              </>
+            )}
+
+            <div className="col-span-2 bg-[#ff6900] text-white rounded-3xl p-5 flex items-center justify-between">
+              <div>
+                <h4 className="font-headline-md text-headline-md">
+                  Boost Rewards
+                </h4>
+                <p className="font-label-sm text-label-sm font-semibold opacity-80">
+                  Invite a friend to MCOM Mall
+                </p>
               </div>
+              <button
+                onClick={() => {
+                  if (typeof navigator !== 'undefined' && navigator.share) {
+                    navigator
+                      .share({
+                        title: 'Join me on MCOM Mall',
+                        url: typeof window !== 'undefined' ? window.location.origin : undefined,
+                      })
+                      .catch(() => undefined);
+                  }
+                }}
+                className="bg-white text-[#a14000] px-4 py-2 rounded-full font-label-md text-label-md font-bold"
+              >
+                Share
+              </button>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* ── Integrated Stats & Activities ── */}
       <section className="space-y-4 pt-2 border-t border-[#e2bfb0]/30">
@@ -740,51 +585,70 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       {/* ── Trending in Borough ── */}
       <section className="space-y-3">
         <h3 className="font-headline-md text-headline-md text-[#261812]">
-          Trending in {selectedBorough.split(' ')[0]}
+          Trending in {activeBorough || 'your borough'}
         </h3>
-        <div className="space-y-3">
-          {TRENDING_ITEMS.map((item) => (
-            <div
-              key={item.name}
-              onClick={() => setActiveTab('discover')}
-              className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-[#e2bfb0]/30 hover:bg-[#fff1ec] transition-colors cursor-pointer"
-            >
-              <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#fff1ec] flex-shrink-0">
-                <img
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                  src={item.image}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <h4 className="font-label-md text-label-md font-bold text-[#261812] truncate">
-                    {item.name}
-                  </h4>
-                  <span className={`font-extrabold text-[10px] ${item.tagColor}`}>
-                    {item.tag}
-                  </span>
-                </div>
-                <p className="text-[#5a4136] text-[11px] font-semibold truncate">
-                  {item.desc}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="h-1 flex-1 bg-[#f8ddd2] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${item.progressColor} rounded-full`}
-                      style={{ width: `${item.progress}%` }}
-                    />
+        {trending.length > 0 ? (
+          <div className="space-y-3">
+            {trending.slice(0, 5).map((item, index) => {
+              const rating = Number(item.rating || 0);
+              const image = item.logoUrl || item.bannerUrl;
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setActiveTab('discover')}
+                  className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-[#e2bfb0]/30 hover:bg-[#fff1ec] transition-colors cursor-pointer"
+                >
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#fff1ec] flex-shrink-0 flex items-center justify-center">
+                    {image ? (
+                      <img
+                        alt={item.businessName}
+                        className="w-full h-full object-cover"
+                        src={image}
+                      />
+                    ) : (
+                      <Store className="w-7 h-7 text-[#a14000]/40" />
+                    )}
                   </div>
-                  <span className="text-[9px] font-bold text-[#5a4136] uppercase tracking-wider">
-                    {item.progress > 70 ? 'Hot Now' : 'Rising'}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <h4 className="font-label-md text-label-md font-bold text-[#261812] truncate">
+                        {item.businessName}
+                      </h4>
+                      <span className="font-extrabold text-[10px] text-[#a14000] whitespace-nowrap">
+                        #{index + 1} Trending
+                      </span>
+                    </div>
+                    <p className="text-[#5a4136] text-[11px] font-semibold truncate">
+                      {item.shortDescription || item.category}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="h-1 flex-1 bg-[#f8ddd2] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#a14000] rounded-full"
+                          style={{ width: `${Math.min(100, (rating / 5) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] font-bold text-[#5a4136] uppercase tracking-wider whitespace-nowrap">
+                        {rating.toFixed(1)} &middot; {item.reviewCount}{' '}
+                        {plural(item.reviewCount, 'review')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-[#e2bfb0]/30 p-6 text-center">
+            <Building2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-xs font-semibold text-[#5a4136]">
+              {isLoadingHome
+                ? 'Loading trending businesses...'
+                : 'No trending businesses in your borough yet.'}
+            </p>
+          </div>
+        )}
       </section>
-
     </div>
   );
 };

@@ -29,11 +29,14 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const logout = useLogout();
+  const customerHiddenRoutes = new Set([
+    '/dashboard/activity-timer',
+    '/dashboard/deals',
+    '/dashboard/messages',
+  ]);
   const visibleMainMenuItems =
     String(userRole).toLowerCase() === 'customer'
-      ? mainMenuItems.filter(
-          (item) => item.href !== '/dashboard/activity-timer',
-        )
+      ? mainMenuItems.filter((item) => !customerHiddenRoutes.has(item.href))
       : mainMenuItems;
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>(
     {}

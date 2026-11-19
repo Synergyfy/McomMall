@@ -2,6 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class CustomerStatsDto {
   @ApiProperty({
+    description: 'Current spendable points balance',
+    example: 1250,
+  })
+  pointsBalance: number;
+
+  @ApiProperty({
     description: 'Total amount spent on product orders',
     example: 750.25,
   })

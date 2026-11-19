@@ -15,6 +15,7 @@ interface LocalMallHeaderProps {
   onNotificationsClick: () => void;
   onSearchClick: () => void;
   onStatusClick: () => void;
+  isCustomer?: boolean;
 }
 
 export const LocalMallHeader: FC<LocalMallHeaderProps> = ({
@@ -29,6 +30,7 @@ export const LocalMallHeader: FC<LocalMallHeaderProps> = ({
   onNotificationsClick,
   onSearchClick,
   onStatusClick,
+  isCustomer = false,
 }) => {
   return (
     <header className="w-full bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-100 px-4 py-3 flex items-center justify-between shadow-sm">
@@ -62,16 +64,18 @@ export const LocalMallHeader: FC<LocalMallHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Visibility Score Indicator */}
-        <button 
-          onClick={onStatusClick}
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors active:scale-95"
-        >
-          <Info className="w-4 h-4" />
-          <span className="text-xs font-bold">
-            {visibilityScore != null ? `Reach Score: ${visibilityScore}` : 'Listing status'}
-          </span>
-        </button>
+        {/* Visibility Score Indicator — business owners only */}
+        {!isCustomer && (
+          <button
+            onClick={onStatusClick}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors active:scale-95"
+          >
+            <Info className="w-4 h-4" />
+            <span className="text-xs font-bold">
+              {visibilityScore != null ? `Reach Score: ${visibilityScore}` : 'Listing status'}
+            </span>
+          </button>
+        )}
 
         {/* Search Toggle */}
         <button

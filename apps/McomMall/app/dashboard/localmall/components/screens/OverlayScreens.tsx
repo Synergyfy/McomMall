@@ -1,6 +1,7 @@
 'use client';
 
 import { FC, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Search, 
   X, 
@@ -21,12 +22,15 @@ import api from '@/service/api';
 interface SearchFilterScreenProps {
   onNavigate: (screen: string) => void;
   mallData: any;
+  isCustomer?: boolean;
 }
 
 export const SearchFilterScreen: FC<SearchFilterScreenProps> = ({
   onNavigate,
   mallData,
+  isCustomer = false,
 }) => {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'verified' | 'claimed'>('all');
 
@@ -78,7 +82,11 @@ export const SearchFilterScreen: FC<SearchFilterScreenProps> = ({
         {filtered.map((b: any) => (
           <div 
             key={b.id}
-            onClick={() => onNavigate(`profile:${b.id}`)}
+            onClick={() =>
+              isCustomer
+                ? router.push(`/listings/${b.id}?source=in-house`)
+                : onNavigate(`profile:${b.id}`)
+            }
             className="p-4 bg-white rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md cursor-pointer transition-all"
           >
             <div className="flex items-center gap-3">

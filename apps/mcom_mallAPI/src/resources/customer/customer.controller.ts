@@ -70,8 +70,8 @@ export class CustomerController {
   })
   @ApiUnauthorizedResponse({ description: 'Missing or expired JWT token' })
   @ApiInternalServerErrorResponse({ description: 'Unexpected database error' })
-  getHome(@CurrentUser() user: User) {
-    return this.customerService.getHome(user.id);
+  getHome(@CurrentUser() user: User, @Query('borough') borough?: string) {
+    return this.customerService.getHome(user.id, borough);
   }
 
   @Get('rewards')

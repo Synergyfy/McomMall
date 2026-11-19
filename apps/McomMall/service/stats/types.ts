@@ -11,6 +11,7 @@ export interface OwnerStatsDto {
 }
 
 export interface CustomerStatsDto {
+  pointsBalance: number;
   totalAmountSpentOnProductOrdered: number;
   totalNumberOfProductOrdered: number;
   totalNumberOfServiceBooked: number;

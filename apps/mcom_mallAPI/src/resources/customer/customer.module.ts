@@ -20,9 +20,11 @@ import { ScratchCardLedger } from './entities/scratch-card-ledger.entity';
 import { Challenge } from './entities/challenge.entity';
 import { ChallengeProgress } from './entities/challenge-progress.entity';
 import { EventRsvp } from './entities/event-rsvp.entity';
+import { GeographyModule } from '../geography/geography.module';
 
 @Module({
   imports: [
+    GeographyModule,
     TypeOrmModule.forFeature([
       User,
       Business,

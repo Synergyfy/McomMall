@@ -41,12 +41,6 @@ const CUSTOMER_LINKS: UserMenuLink[] = [
   { title: 'My Orders', href: '/dashboard/store/orders', icon: ShoppingBag },
   { title: 'Wishlist', href: '/dashboard/wishlist', icon: Heart },
   { title: 'Rewards', href: '/dashboard/rewards', icon: Star },
-  {
-    title: 'Deals',
-    href: '/dashboard/deals',
-    icon: Ticket,
-  },
-  { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { title: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];

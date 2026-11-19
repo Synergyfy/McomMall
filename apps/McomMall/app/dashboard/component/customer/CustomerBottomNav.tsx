@@ -10,7 +10,6 @@ import {
   Grid3X3,
   Building2,
   Wallet,
-  MessageSquare,
   User,
 } from 'lucide-react';
 
@@ -27,7 +26,6 @@ export const CustomerBottomNav: React.FC = () => {
     if (
       pathname?.startsWith('/dashboard/localmall') ||
       pathname?.startsWith('/dashboard/wallet') ||
-      pathname?.startsWith('/dashboard/messages') ||
       pathname?.startsWith('/dashboard/my-profile') ||
       pathname?.startsWith('/dashboard/interests')
     ) return 'more';
@@ -46,7 +44,6 @@ export const CustomerBottomNav: React.FC = () => {
   const moreItems = [
     { href: '/dashboard/localmall', icon: Building2, label: 'Local Mall' },
     { href: '/dashboard/wallet', icon: Wallet, label: 'Wallet' },
-    { href: '/dashboard/messages', icon: MessageSquare, label: 'Messages' },
     { href: '/dashboard/my-profile', icon: User, label: 'Profile' },
   ];
 

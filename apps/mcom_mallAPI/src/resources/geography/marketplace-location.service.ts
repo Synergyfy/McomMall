@@ -63,6 +63,13 @@ export interface ResolvedMarketplaceLocation {
   /** Profile assignment, postcode, browser coordinates or nearest-city fallback. */
   source: 'profile' | 'postcode' | 'geolocation' | 'nearest' | 'none';
   country: string | null;
+  /**
+   * Coordinates for the resolved location, when Central or the postcode cache
+   * supplied them. Consumers such as the weather widget use these to avoid a
+   * second geocoding round-trip.
+   */
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface FacetRow {
@@ -167,6 +174,8 @@ export class MarketplaceLocationService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(GeoPostcodeResolution)
     private readonly resolutionRepository: Repository<GeoPostcodeResolution>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly central: McomCentralService,
   ) {}
 
@@ -621,7 +630,13 @@ export class MarketplaceLocationService {
     lat?: number | null;
     lng?: number | null;
   }): Promise<ResolvedMarketplaceLocation> {
-    const { user } = params;
+    // Controllers pass the JWT payload, which does not include the synced
+    // postcode or Central profile snapshot. Reload the row so profile-based
+    // resolution works for directly registered customers as well.
+    const profile = params.user?.id
+      ? await this.userRepository.findOne({ where: { id: params.user.id } })
+      : null;
+    const user = profile ?? params.user ?? null;
 
     // Explicit input from "My location" or a postcode must beat the profile:
     // the shopper is deliberately asking for their current position.
@@ -784,6 +799,11 @@ export class MarketplaceLocationService {
             ? { type: 'local-mall' as const, node: localMall }
             : null;
 
+    const latitude =
+      hierarchy.latitude ?? hierarchy.highStreet?.latitude ?? null;
+    const longitude =
+      hierarchy.longitude ?? hierarchy.highStreet?.longitude ?? null;
+
     return {
       scope: scopeNode
         ? {
@@ -795,6 +815,8 @@ export class MarketplaceLocationService {
       hierarchy: { city, borough, highStreet, localMall },
       source,
       country: 'GB',
+      latitude: latitude == null ? null : Number(latitude),
+      longitude: longitude == null ? null : Number(longitude),
     };
   }
 
@@ -869,6 +891,12 @@ export class MarketplaceLocationService {
       },
       source: 'nearest',
       country: null,
+      latitude: match.mall?.latitude ?? match.highStreet?.latitude ?? match.borough?.latitude ?? match.city.latitude,
+      longitude:
+        match.mall?.longitude ??
+        match.highStreet?.longitude ??
+        match.borough?.longitude ??
+        match.city.longitude,
     };
   }
 
@@ -958,6 +986,8 @@ export class MarketplaceLocationService {
       },
       source: 'none',
       country: null,
+      latitude: null,
+      longitude: null,
     };
   }
 

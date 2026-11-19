@@ -138,6 +138,8 @@ export interface ResolvedMarketplaceLocation {
   };
   source: 'profile' | 'postcode' | 'geolocation' | 'nearest' | 'none';
   country: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface MarketplacePublicData {

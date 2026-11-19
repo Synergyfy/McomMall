@@ -2,11 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { LocalMall } from './entities/localmall.entity';
 import { User } from '../users/entities/user.entity';
 import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 import { McomCentralService } from '../sso/mcom-central.service';
 import { UserRole } from '../../common/role.enum';
+import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 
 type PartnershipState =
   | 'none'
@@ -90,7 +92,14 @@ export class LocalMallFeedService {
     lat?: string | null;
     lon?: string | null;
   }) {
-    const { user } = params;
+    // `@CurrentUser()` is the JWT payload, which deliberately carries only
+    // identity claims. Load the profile row so postcode/centralProfile data
+    // from the last Central sync is available even for directly registered
+    // customers.
+    const profile = params.user?.id
+      ? await this.userRepository.findOne({ where: { id: params.user.id } })
+      : null;
+    const user = profile ?? params.user ?? null;
 
     const myBusiness = user
       ? await this.businessRepository.findOne({
@@ -109,7 +118,10 @@ export class LocalMallFeedService {
     let centralMall: any = null;
     if (user?.centralUserId || postcode) {
       try {
-        centralMall = await this.central.getLocalMall({
+        // Prefer the exact Central assignment. When the service-to-service
+        // HMAC is unavailable/misconfigured, the public postcode resolver still
+        // returns the City → Borough → High Street → Local Mall hierarchy.
+        centralMall = await this.central.getLocalMallOrResolvePostcode({
           userId: user?.centralUserId || null,
           postcode,
         });
@@ -165,46 +177,88 @@ export class LocalMallFeedService {
       centralMall?.longitude ??
       null;
 
-    const [consumerCount, pointsBalance, weeklyPointsEarned, partnerCandidates] =
+    const [consumerCount, pointsBalance, weeklyPointsEarned] =
       await Promise.all([
         this.countConsumers(centralMall),
         this.getPointsBalance(user),
         this.getWeeklyPoints(user),
-        this.findPartnerCandidates({
-          user,
-          myBusiness,
-          localMallId: localMall?.id ?? myBusiness?.localMallId ?? null,
-          mallPostcodes,
-          originLatitude,
-          originLongitude,
-        }),
       ]);
 
+    // Partnership matching is a merchant-only capability. Customers browse
+    // the same mall without receiving partner candidate data.
+    const partnerCandidates =
+      user && user.role !== UserRole.CUSTOMER
+        ? await this.findPartnerCandidates({
+            user,
+            myBusiness,
+            localMallId: localMall?.id ?? myBusiness?.localMallId ?? null,
+            mallPostcodes,
+            originLatitude,
+            originLongitude,
+          })
+        : [];
+
+    // Central is authoritative, but fall back to the published businesses in
+    // the same outcode so the page still shows City → Borough → High Street →
+    // Local Mall when the signed Central lookup is unavailable.
+    const localHint = localBusinesses.find(
+      (business) =>
+        business.geoCityName ||
+        business.geoBoroughName ||
+        business.geoHighStreetName ||
+        business.geoLocalMallName,
+    );
+
+    const city =
+      centralMall?.city?.name ||
+      localHint?.geoCityName ||
+      myBusiness?.location?.city ||
+      null;
     const borough =
       centralMall?.borough?.name ||
       centralMall?.mall?.borough ||
+      localHint?.geoBoroughName ||
       myBusiness?.location?.resolvedArea ||
       myBusiness?.location?.city ||
+      null;
+    const resolvedHighStreet =
+      centralMall?.highStreet?.name ||
+      centralMall?.mall?.primaryHighStreet ||
+      localHint?.geoHighStreetName ||
+      null;
+    const resolvedMallName =
+      centralMall?.mall?.name ||
+      localMall?.name ||
+      localHint?.geoLocalMallName ||
       null;
 
     return {
       // Real local mall resolved from MCOM Central.
       mallId: centralMall?.mall?.id ?? localMall?.id ?? null,
-      mallName: centralMall?.mall?.name ?? localMall?.name ?? null,
-      mall: centralMall?.mall ?? null,
+      mallName: resolvedMallName,
+      mall:
+        centralMall?.mall ??
+        (resolvedMallName ? { id: null, name: resolvedMallName } : null),
       matchType: centralMall?.matchType ?? null,
       distanceKm: centralMall?.distanceKm ?? null,
-      city: centralMall?.city?.name ?? null,
+      city,
       borough,
-      highStreet:
-        centralMall?.highStreet?.name ?? centralMall?.mall?.primaryHighStreet ?? null,
+      highStreet: resolvedHighStreet,
       postcode: resolvedPostcode,
       outwardCode: outcode,
       postcodes: centralMall?.mall?.postcodes ?? (outcode ? [outcode] : []),
       latitude:
-        centralMall?.highStreet?.latitude ?? centralMall?.latitude ?? null,
+        centralMall?.highStreet?.latitude ??
+        centralMall?.latitude ??
+        localHint?.geoLatitude ??
+        localHint?.location?.latitude ??
+        null,
       longitude:
-        centralMall?.highStreet?.longitude ?? centralMall?.longitude ?? null,
+        centralMall?.highStreet?.longitude ??
+        centralMall?.longitude ??
+        localHint?.geoLongitude ??
+        localHint?.location?.longitude ??
+        null,
       radiusCoverage: centralMall?.mall?.radiusCoverage ?? null,
       description: centralMall?.mall?.description ?? null,
       tagline: centralMall?.mall?.tagline ?? null,
@@ -555,17 +609,21 @@ export class LocalMallFeedService {
       .leftJoinAndSelect('business.category', 'category')
       .leftJoinAndSelect('business.user', 'owner')
       .leftJoinAndSelect('owner.offers', 'offers')
-      .leftJoinAndSelect('business.campaigns', 'campaigns');
+      .leftJoinAndSelect('business.campaigns', 'campaigns')
+      .where('business.status = :status', {
+        status: BusinessStatus.PUBLISHED,
+      })
+      .andWhere('business.deleted_at IS NULL');
 
     if (localMallId && outcode) {
-      query.where(
+      query.andWhere(
         '(business.localMallId = :localMallId OR location.postcode ILIKE :postcodePrefix)',
         { localMallId, postcodePrefix: `${outcode}%` },
       );
     } else if (localMallId) {
-      query.where('business.localMallId = :localMallId', { localMallId });
+      query.andWhere('business.localMallId = :localMallId', { localMallId });
     } else {
-      query.where('location.postcode ILIKE :postcodePrefix', {
+      query.andWhere('location.postcode ILIKE :postcodePrefix', {
         postcodePrefix: `${outcode}%`,
       });
     }
@@ -573,18 +631,71 @@ export class LocalMallFeedService {
     return query.getMany();
   }
 
+  private localBusinessToFeed(business: Business): FeedBusiness {
+    return {
+      id: business.id,
+      businessName: business.businessName,
+      shortDescription: business.shortDescription || business.about || null,
+      logoUrl: business.logoUrl || null,
+      category: business.category?.name || business.centralCategory || 'Store',
+      address: business.location?.addressLine1 || '',
+      postcode: business.location?.postcode || null,
+      isClaimed: business.isClaimed,
+      isVerified: business.isVerified,
+      phone: business.businessPhone || null,
+      email: business.businessEmail || null,
+      website: business.website || null,
+      latitude: business.location?.latitude ?? null,
+      longitude: business.location?.longitude ?? null,
+      source: 'mall',
+    };
+  }
+
+  /**
+   * Merges Central's local-mall members with the mall database. When a Central
+   * business also exists locally we always emit the local row: its id is what
+   * the customer profile/listing page can actually open.
+   */
   private mergeBusinesses(
     centralBusinesses: any[],
     localBusinesses: Business[],
   ): FeedBusiness[] {
     const merged: FeedBusiness[] = [];
     const seenCentralIds = new Set<string>();
+    const seenLocalIds = new Set<string>();
     const seenNames = new Set<string>();
+
+    const localById = new Map(
+      localBusinesses.map((business) => [business.id, business]),
+    );
+    const localByCentralId = new Map(
+      localBusinesses
+        .filter((business) => Boolean(business.centralBusinessId))
+        .map((business) => [business.centralBusinessId as string, business]),
+    );
+    const localByName = new Map(
+      localBusinesses.map((business) => [
+        normaliseName(business.businessName),
+        business,
+      ]),
+    );
 
     for (const business of centralBusinesses) {
       if (!business?.id) continue;
       seenCentralIds.add(business.id);
       seenNames.add(normaliseName(business.businessName));
+
+      const localMatch =
+        localById.get(business.id) ||
+        localByCentralId.get(business.id) ||
+        localByName.get(normaliseName(business.businessName));
+
+      if (localMatch) {
+        seenLocalIds.add(localMatch.id);
+        merged.push(this.localBusinessToFeed(localMatch));
+        continue;
+      }
+
       merged.push({
         id: business.id,
         businessName: business.businessName,
@@ -605,6 +716,7 @@ export class LocalMallFeedService {
     }
 
     for (const business of localBusinesses) {
+      if (seenLocalIds.has(business.id)) continue;
       const name = normaliseName(business.businessName);
       if (
         (business.centralBusinessId &&
@@ -614,23 +726,7 @@ export class LocalMallFeedService {
         continue;
       }
       seenNames.add(name);
-      merged.push({
-        id: business.id,
-        businessName: business.businessName,
-        shortDescription: business.shortDescription || business.about || null,
-        logoUrl: business.logoUrl || null,
-        category: business.category?.name || business.centralCategory || 'Store',
-        address: business.location?.addressLine1 || '',
-        postcode: business.location?.postcode || null,
-        isClaimed: business.isClaimed,
-        isVerified: business.isVerified,
-        phone: business.businessPhone || null,
-        email: business.businessEmail || null,
-        website: business.website || null,
-        latitude: business.location?.latitude ?? null,
-        longitude: business.location?.longitude ?? null,
-        source: 'mall',
-      });
+      merged.push(this.localBusinessToFeed(business));
     }
 
     return merged.sort((a, b) =>
@@ -663,7 +759,16 @@ export class LocalMallFeedService {
 
     for (const business of businesses) {
       for (const offer of business.user?.offers || []) {
-        if (!offer.isActive) continue;
+        if (
+          !offer.isActive ||
+          offer.approvalStatus !== ApprovalStatus.APPROVED ||
+          offer.adminDisabled ||
+          offer.isTimeBonus
+        ) {
+          continue;
+        }
+        if (offer.beginDate && new Date(offer.beginDate) > now) continue;
+        if (offer.endDate && new Date(offer.endDate) < now) continue;
         nearbyDeals.push({
           business: business.businessName,
           deal: offer.name,
