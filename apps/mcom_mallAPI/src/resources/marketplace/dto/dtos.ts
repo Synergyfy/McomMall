@@ -23,6 +23,7 @@ import { GiftCardTemplate } from '../../gift-card/entities/gift-card-template.en
 import { Coupon } from '../../coupon/entities/coupon.entity';
 import { Service } from '../../services/entities/service.entity';
 import { Product } from '../../product/entities/product.entity';
+import { Business } from '../../listings/entities/listing.entity';
 
 // --- BANNER DTOs ---
 
@@ -166,4 +167,7 @@ export class MarketplacePublicViewDto {
 
   @ApiProperty({ type: [Product] })
   products: Product[];
+
+  @ApiProperty({ type: [Business] })
+  businesses: Business[];
 }

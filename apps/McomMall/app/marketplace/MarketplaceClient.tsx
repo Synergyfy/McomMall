@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   LayoutDashboard,
   ArrowRight,
+  Store,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MarketplaceSidebar, {
@@ -26,6 +27,7 @@ import ProductCard from '@/components/marketplace/ProductCard';
 import VoucherCard from '@/components/marketplace/VoucherCard';
 import GiftCardCard from '@/components/marketplace/GiftCardCard';
 import ServiceCard from '@/components/marketplace/ServiceCard';
+import BusinessCard from '@/components/marketplace/BusinessCard';
 import Pagination from '@/components/marketplace/Pagination';
 import MarketplaceSection from '@/components/marketplace/MarketplaceSection';
 import MarketplaceLocationPicker, {
@@ -48,6 +50,7 @@ import {
   useGetPublicVouchers,
   useGetPublicGiftCards,
   useGetPublicCoupons,
+  useGetPublicBusinesses,
   useResolveMarketplaceLocation,
 } from '@/service/marketplace/discovery';
 import {
@@ -55,6 +58,7 @@ import {
   PageMetaDto,
   MarketplacePublicData,
   PageDto,
+  PublicBusiness,
   ResolvedMarketplaceLocation,
 } from '@/service/marketplace/types';
 import { PromotionalItem } from '@/lib/listing-data';
@@ -66,6 +70,7 @@ type ListingType =
   | 'all'
   | 'products'
   | 'services'
+  | 'businesses'
   | 'vouchers'
   | 'gift-cards'
   | 'coupons';
@@ -100,9 +105,7 @@ export default function MarketplaceClient({
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeSidebarSlide, setActiveSidebarSlide] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [listingType, setListingType] = useState<ListingType>(
-    initialSearch.trim() ? 'products' : 'all',
-  );
+  const [listingType, setListingType] = useState<ListingType>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('newest');
   const [searchQuery, setSearchQuery] = useState(initialSearch);
@@ -227,12 +230,11 @@ export default function MarketplaceClient({
     });
   }, [resolvedLocation]);
 
-  // Deep-link support: /marketplace?search=shoes lands on the products grid
-  // with the query already applied. Switching tabs keeps the query.
+  // Deep-link support: /marketplace?search=shoes lands on the combined search
+  // view with the query already applied. Switching tabs keeps the query.
   useEffect(() => {
     setSearchQuery(initialSearch);
     if (initialSearch.trim()) {
-      setListingType('products');
       setCurrentPage(1);
     }
   }, [initialSearch]);
@@ -322,6 +324,8 @@ export default function MarketplaceClient({
   }, [filters.categories, apiCategories]);
 
   // Data Fetching: Discovery
+  const isSearching = searchQuery.trim().length > 0;
+
   const discoveryParams = {
     page: currentPage,
     limit: ITEMS_PER_PAGE,
@@ -345,13 +349,14 @@ export default function MarketplaceClient({
     filters.priceRange[0] === 0 &&
     filters.priceRange[1] === 5000;
 
-  const { data: newProductsData } = useGetPublicProducts(
-    { ...discoveryParams, limit: 4, page: 1 },
-    {
-      enabled: listingType === 'all',
-      initialData: isDefaultProductsQuery ? initialNewProducts : undefined,
-    },
-  );
+  const { data: newProductsData, isLoading: newProductsLoading } =
+    useGetPublicProducts(
+      { ...discoveryParams, limit: 4, page: 1 },
+      {
+        enabled: listingType === 'all',
+        initialData: isDefaultProductsQuery ? initialNewProducts : undefined,
+      },
+    );
 
   const { data: productsData, isLoading: productsLoading } =
     useGetPublicProducts(discoveryParams, {
@@ -373,6 +378,26 @@ export default function MarketplaceClient({
     discoveryParams,
     { enabled: listingType === 'coupons' },
   );
+  const { data: businessesData, isLoading: businessesLoading } =
+    useGetPublicBusinesses(discoveryParams, {
+      enabled: listingType === 'businesses',
+    });
+
+  // Businesses matching the current query on the combined "All" search view.
+  const { data: searchBusinessesData, isLoading: searchBusinessesLoading } =
+    useGetPublicBusinesses(
+      {
+        page: 1,
+        limit: 5,
+        search: searchQuery.trim() || undefined,
+        ...locationParams,
+      },
+      { enabled: listingType === 'all' && isSearching },
+    );
+
+  const featuredBusinesses: PublicBusiness[] = isSearching
+    ? searchBusinessesData?.data || []
+    : publicData?.businesses || [];
 
   // Resolve current data based on listing type
   const currentData = useMemo(() => {
@@ -381,6 +406,8 @@ export default function MarketplaceClient({
         return productsData;
       case 'services':
         return servicesData;
+      case 'businesses':
+        return businessesData;
       case 'vouchers':
         return vouchersData;
       case 'gift-cards':
@@ -394,6 +421,7 @@ export default function MarketplaceClient({
     listingType,
     productsData,
     servicesData,
+    businessesData,
     vouchersData,
     giftCardsData,
     couponsData,
@@ -405,6 +433,8 @@ export default function MarketplaceClient({
         return productsLoading;
       case 'services':
         return servicesLoading;
+      case 'businesses':
+        return businessesLoading;
       case 'vouchers':
         return vouchersLoading;
       case 'gift-cards':
@@ -420,6 +450,7 @@ export default function MarketplaceClient({
     listingType,
     productsLoading,
     servicesLoading,
+    businessesLoading,
     vouchersLoading,
     giftCardsLoading,
     couponsLoading,
@@ -486,13 +517,22 @@ export default function MarketplaceClient({
 
   // Display Items for Single Category View
   const displayItems = useMemo(() => {
-    if (listingType === 'all' || !currentData?.data) return [];
-    return currentData.data.map((item: MarketItem) =>
-      mapToDisplayItem(item, listingType),
+    if (
+      listingType === 'all' ||
+      listingType === 'businesses' ||
+      !currentData?.data
+    ) {
+      return [];
+    }
+    return currentData.data.map((item) =>
+      mapToDisplayItem(item as MarketItem, listingType),
     );
   }, [currentData, listingType]);
 
   const pageMeta: PageMetaDto | undefined = currentData?.meta;
+  const businessItems: PublicBusiness[] = businessesData?.data || [];
+  const resultsCount =
+    listingType === 'businesses' ? businessItems.length : displayItems.length;
 
   // Sections Config Helper
   const getSection = (
@@ -585,12 +625,7 @@ export default function MarketplaceClient({
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    // The "All" dashboard has no result grid, so start with products as soon
-    // as the shopper searches. They can switch to the other tabs afterwards.
-    if (value.trim() && listingType === 'all') {
-      setListingType('products');
-      setCurrentPage(1);
-    }
+    setCurrentPage(1);
   };
 
   const renderBanner = (banner: SidebarBanner, index: number) => {
@@ -732,10 +767,12 @@ export default function MarketplaceClient({
     title,
     type,
     items,
+    onSeeAll,
   }: {
     title: string;
     type: ListingType;
     items: MarketItem[];
+    onSeeAll?: () => void;
   }) => {
     // Only render if items exist
     if (!items || items.length === 0) return null;
@@ -748,6 +785,9 @@ export default function MarketplaceClient({
     if (type === 'gift-cards') href = '/gift-cards';
     if (type === 'coupons') href = '/coupons';
 
+    const seeAllClass =
+      'text-orange-500 hover:text-orange-600 text-sm font-semibold flex items-center gap-1 group';
+
     return (
       <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-gray-50">
@@ -757,19 +797,75 @@ export default function MarketplaceClient({
               {title}
             </h2>
           </div>
-          <Link
-            href={href}
-            className="text-orange-500 hover:text-orange-600 text-sm font-semibold flex items-center gap-1 group"
-          >
-            SEE ALL{' '}
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          {onSeeAll ? (
+            <button type="button" onClick={onSeeAll} className={seeAllClass}>
+              SEE ALL{' '}
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          ) : (
+            <Link href={href} className={seeAllClass}>
+              SEE ALL{' '}
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          )}
         </div>
         <div className="p-4 bg-white">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
             {displayItems
               .slice(0, 5)
               .map((item) => renderItemCard(item, 'grid', type))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Businesses section for the "All" dashboard and combined search results.
+  const BusinessRow = ({
+    title,
+    items,
+    onSeeAll,
+  }: {
+    title: string;
+    items: PublicBusiness[];
+    onSeeAll?: () => void;
+  }) => {
+    if (!items || items.length === 0) return null;
+
+    const openBusinesses = () => {
+      setListingType('businesses');
+      setCurrentPage(1);
+    };
+
+    return (
+      <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-gray-50">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-6 bg-orange-500 rounded-full" />
+            <h2 className="text-lg md:text-xl font-bold text-gray-900">
+              {title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onSeeAll || openBusinesses}
+            className="text-orange-500 hover:text-orange-600 text-sm font-semibold flex items-center gap-1 group"
+          >
+            SEE ALL{' '}
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+        <div className="p-4 bg-white">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+            {items
+              .slice(0, 5)
+              .map((business) => (
+                <BusinessCard
+                  key={business.id}
+                  business={business}
+                  viewMode="grid"
+                />
+              ))}
           </div>
         </div>
       </div>
@@ -896,7 +992,7 @@ export default function MarketplaceClient({
           <div className="relative max-w-2xl mx-auto mb-5">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
-              placeholder="Search products, services, vouchers..."
+              placeholder="Search products, services, businesses, vouchers..."
               className="pl-12 h-12 bg-white border-gray-200 rounded-full text-base focus-visible:ring-orange-500 shadow-sm"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
@@ -908,6 +1004,7 @@ export default function MarketplaceClient({
               { key: 'all', label: 'All', icon: LayoutDashboard },
               { key: 'products', label: 'Products', icon: ShoppingBag },
               { key: 'services', label: 'Services', icon: Briefcase },
+              { key: 'businesses', label: 'Businesses', icon: Store },
               { key: 'vouchers', label: 'Vouchers', icon: Ticket },
               { key: 'gift-cards', label: 'Gift Cards', icon: Gift },
               { key: 'coupons', label: 'Coupons', icon: Tag },
@@ -1031,6 +1128,20 @@ export default function MarketplaceClient({
 
                   <div className="space-y-1">
                     <button
+                      onClick={() => setListingType('businesses')}
+                      className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'businesses' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}
+                    >
+                      <Store className="w-4 h-4" /> Businesses
+                    </button>
+                    {listingType === 'businesses' && (
+                      <p className="block w-full text-left pl-9 py-1 text-sm text-gray-500">
+                        Search by business name
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <button
                       onClick={() => setListingType('vouchers')}
                       className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'vouchers' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}
                     >
@@ -1122,6 +1233,7 @@ export default function MarketplaceClient({
                           <SelectItem value="all">All</SelectItem>
                           <SelectItem value="products">Products</SelectItem>
                           <SelectItem value="services">Services</SelectItem>
+                          <SelectItem value="businesses">Businesses</SelectItem>
                           <SelectItem value="vouchers">Vouchers</SelectItem>
                           <SelectItem value="gift-cards">Gift Cards</SelectItem>
                           <SelectItem value="coupons">Coupons</SelectItem>
@@ -1164,7 +1276,7 @@ export default function MarketplaceClient({
                   <p>
                     Showing{' '}
                     <span className="font-semibold text-gray-900">
-                      {displayItems.length}
+                      {resultsCount}
                     </span>{' '}
                     results for{' '}
                     <span className="font-semibold text-primary capitalize">
@@ -1185,92 +1297,157 @@ export default function MarketplaceClient({
 
             {/* Content Logic */}
             {listingType === 'all' ? (
-              // Dashboard View (Sections)
-              <div className="space-y-12">
-                {/* Dynamic Sections (Flash Sale / Promo) */}
-                {flashSaleConfig?.isVisible &&
-                  (flashSaleConfig.products || flashSaleConfig.productIds) && (
-                    <MarketplaceSection
-                      title={flashSaleConfig.title}
-                      productIds={flashSaleConfig.productIds}
-                      products={flashSaleConfig.products}
-                    />
-                  )}
-                {promoCarouselConfig?.isVisible &&
-                  (promoCarouselConfig.products ||
-                    promoCarouselConfig.productIds) && (
-                    <MarketplaceSection
-                      title={promoCarouselConfig.title}
-                      productIds={promoCarouselConfig.productIds}
-                      products={promoCarouselConfig.products}
-                    />
-                  )}
+              isSearching ? (
+                // Combined search view so a business name is findable from
+                // the global search without switching tabs first.
+                <div className="space-y-8">
+                  <BusinessRow
+                    title={`Businesses matching “${searchQuery}”`}
+                    items={featuredBusinesses}
+                  />
+                  <SectionRow
+                    title={`Products matching “${searchQuery}”`}
+                    type="products"
+                    items={newProductsData?.data || []}
+                    onSeeAll={() => {
+                      setListingType('products');
+                      setCurrentPage(1);
+                    }}
+                  />
 
-                {/* Main Sections */}
-                <SectionRow
-                  title="Featured Products"
-                  type="products"
-                  items={publicData?.products || []}
-                />
-                <SectionRow
-                  title="Featured Services"
-                  type="services"
-                  items={publicData?.services || []}
-                />
-                <SectionRow
-                  title="Newest Vouchers"
-                  type="vouchers"
-                  items={publicData?.vouchers || []}
-                />
-                <SectionRow
-                  title="Gift Cards"
-                  type="gift-cards"
-                  items={publicData?.giftCards || []}
-                />
-                <SectionRow
-                  title="Latest Coupons"
-                  type="coupons"
-                  items={publicData?.coupons || []}
-                />
-
-                {!publicData?.products?.length &&
-                  !publicData?.services?.length &&
-                  !publicData?.vouchers?.length &&
-                  !publicData?.giftCards?.length &&
-                  !publicData?.coupons?.length &&
-                  !isPublicDataLoading && (
-                    <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                      <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Search className="h-8 w-8 text-gray-400" />
+                  {!searchBusinessesLoading &&
+                    !newProductsLoading &&
+                    featuredBusinesses.length === 0 &&
+                    (newProductsData?.data?.length ?? 0) === 0 && (
+                      <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                        <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Search className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                          No results for “{searchQuery}”
+                        </h3>
+                        <p className="text-gray-500">
+                          Try a different spelling or search the business
+                          directory directly.
+                        </p>
+                        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                          <Button
+                            onClick={() => {
+                              setListingType('businesses');
+                              setCurrentPage(1);
+                            }}
+                          >
+                            Search businesses
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setSearchQuery('')}
+                          >
+                            Clear search
+                          </Button>
+                        </div>
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">
-                        No items found
-                      </h3>
-                      <p className="text-gray-500">
-                        {activeScope
-                          ? `No featured items in ${activeScope.name}.`
-                          : filters.categories.length > 0
-                            ? 'No items found in this category.'
-                            : 'No featured items available right now.'}
-                      </p>
-                      <Button
-                        variant="link"
-                        className="mt-2 text-primary"
-                        onClick={() => {
-                          handleFilterChange({ ...filters, categories: [] });
-                          if (activeScope) {
-                            handleLocationSelect({
-                              level: 'all',
-                              name: 'All locations',
+                    )}
+                </div>
+              ) : (
+                // Dashboard View (Sections)
+                <div className="space-y-12">
+                  {/* Dynamic Sections (Flash Sale / Promo) */}
+                  {flashSaleConfig?.isVisible &&
+                    (flashSaleConfig.products ||
+                      flashSaleConfig.productIds) && (
+                      <MarketplaceSection
+                        title={flashSaleConfig.title}
+                        productIds={flashSaleConfig.productIds}
+                        products={flashSaleConfig.products}
+                      />
+                    )}
+                  {promoCarouselConfig?.isVisible &&
+                    (promoCarouselConfig.products ||
+                      promoCarouselConfig.productIds) && (
+                      <MarketplaceSection
+                        title={promoCarouselConfig.title}
+                        productIds={promoCarouselConfig.productIds}
+                        products={promoCarouselConfig.products}
+                      />
+                    )}
+
+                  {/* Main Sections */}
+                  <BusinessRow
+                    title="Featured Businesses"
+                    items={publicData?.businesses || []}
+                  />
+                  <SectionRow
+                    title="Featured Products"
+                    type="products"
+                    items={publicData?.products || []}
+                  />
+                  <SectionRow
+                    title="Featured Services"
+                    type="services"
+                    items={publicData?.services || []}
+                  />
+                  <SectionRow
+                    title="Newest Vouchers"
+                    type="vouchers"
+                    items={publicData?.vouchers || []}
+                  />
+                  <SectionRow
+                    title="Gift Cards"
+                    type="gift-cards"
+                    items={publicData?.giftCards || []}
+                  />
+                  <SectionRow
+                    title="Latest Coupons"
+                    type="coupons"
+                    items={publicData?.coupons || []}
+                  />
+
+                  {!publicData?.products?.length &&
+                    !publicData?.services?.length &&
+                    !publicData?.businesses?.length &&
+                    !publicData?.vouchers?.length &&
+                    !publicData?.giftCards?.length &&
+                    !publicData?.coupons?.length &&
+                    !isPublicDataLoading && (
+                      <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                        <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Search className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                          No items found
+                        </h3>
+                        <p className="text-gray-500">
+                          {activeScope
+                            ? `No featured items in ${activeScope.name}.`
+                            : filters.categories.length > 0
+                              ? 'No items found in this category.'
+                              : 'No featured items available right now.'}
+                        </p>
+                        <Button
+                          variant="link"
+                          className="mt-2 text-primary"
+                          onClick={() => {
+                            handleFilterChange({
+                              ...filters,
+                              categories: [],
                             });
-                          }
-                        }}
-                      >
-                        {activeScope ? 'Show all locations' : 'Clear filters'}
-                      </Button>
-                    </div>
-                  )}
-              </div>
+                            if (activeScope) {
+                              handleLocationSelect({
+                                level: 'all',
+                                name: 'All locations',
+                              });
+                            }
+                          }}
+                        >
+                          {activeScope
+                            ? 'Show all locations'
+                            : 'Clear filters'}
+                        </Button>
+                      </div>
+                    )}
+                </div>
+              )
             ) : (
               // Discovery View (Paginated Grid)
               <>
@@ -1283,7 +1460,9 @@ export default function MarketplaceClient({
                       />
                     ))}
                   </div>
-                ) : displayItems.length > 0 ? (
+                ) : (listingType === 'businesses'
+                    ? businessItems.length
+                    : displayItems.length) > 0 ? (
                   <div
                     className={
                       viewMode === 'grid'
@@ -1291,9 +1470,17 @@ export default function MarketplaceClient({
                         : 'flex flex-col gap-4'
                     }
                   >
-                    {displayItems.map((item) =>
-                      renderItemCard(item, viewMode, listingType),
-                    )}
+                    {listingType === 'businesses'
+                      ? businessItems.map((business) => (
+                          <BusinessCard
+                            key={business.id}
+                            business={business}
+                            viewMode={viewMode}
+                          />
+                        ))
+                      : displayItems.map((item) =>
+                          renderItemCard(item, viewMode, listingType),
+                        )}
                   </div>
                 ) : (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">

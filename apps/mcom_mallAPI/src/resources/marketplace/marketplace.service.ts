@@ -22,6 +22,7 @@ import { GiftCardTemplate } from '../gift-card/entities/gift-card-template.entit
 import { Coupon } from '../coupon/entities/coupon.entity';
 import { CouponStatus, CouponSourceType } from '../coupon/coupon.enum';
 import { Service } from '../services/entities/service.entity';
+import { Business } from '../listings/entities/listing.entity';
 import { BusinessStatus } from '../listings/listing.enum';
 import { ApprovalStatus } from '../../common/moderation/catalog-approval';
 import { LocationFilterDto } from '../geography/dto/location-filter.dto';
@@ -116,13 +117,14 @@ export class MarketplaceService {
       return section;
     });
 
-    const [vouchers, giftCards, coupons, services, products] =
+    const [vouchers, giftCards, coupons, services, products, businessPage] =
       await Promise.all([
         this.findPublicVouchers(location, 5),
         this.findPublicGiftCards(location, 5),
         this.findPublicPlatformCoupons(5),
         this.findPublicServices(location, 5),
         this.findPublicProducts(location, 5),
+        this.findPublicBusinesses({ location, limit: 5 }),
       ]);
 
     return {
@@ -140,6 +142,85 @@ export class MarketplaceService {
       coupons,
       services,
       products,
+      businesses: businessPage.data,
+    };
+  }
+
+  /**
+   * Public business directory used by the marketplace "Businesses" tab.
+   * Shoppers can search by name/description/category, and the same location
+   * filter used by every other listing type keeps results local.
+   */
+  async findPublicBusinesses(
+    params: {
+      location?: LocationFilterDto;
+      page?: number;
+      limit?: number;
+      search?: string;
+      category?: string;
+    } = {},
+  ) {
+    const { location, category } = params;
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
+    const search = params.search?.trim();
+
+    const query = this.dataSource.manager
+      .createQueryBuilder(Business, 'business')
+      .leftJoinAndSelect('business.location', 'businessLocation')
+      .leftJoinAndSelect('business.category', 'category')
+      .leftJoinAndSelect('business.sector', 'sector')
+      .where('business.status = :status', {
+        status: BusinessStatus.PUBLISHED,
+      });
+
+    if (search) {
+      query.andWhere(
+        `(business.businessName ILIKE :search
+          OR business.shortDescription ILIKE :search
+          OR business.about ILIKE :search
+          OR category.name ILIKE :search
+          OR sector.name ILIKE :search)`,
+        { search: `%${search}%` },
+      );
+    }
+
+    if (category) {
+      query.andWhere('business.categoryId = :category', { category });
+    }
+
+    applyBusinessLocationFilter(
+      query,
+      'business',
+      location,
+      'bizLoc',
+      'businessLocation',
+    );
+
+    // Near-first ordering: local mall → high street → borough, then newest
+    // within the same scope. Falls back to newest-first when the shopper has
+    // not shared a location hierarchy.
+    applyBusinessNearOrder(query, 'business', location);
+    query.addOrderBy('business.created_at', 'DESC');
+
+    const [data, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        totalItems: total,
+        itemCount: data.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
     };
   }
 

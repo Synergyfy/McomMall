@@ -79,6 +79,28 @@ export class MarketplaceController {
   }
 
   @Public()
+  @Get('businesses')
+  @Header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120')
+  @ApiOperation({
+    summary: 'Search public businesses',
+    description:
+      'Paginated business directory for the marketplace Businesses tab. Matches business names and descriptions and accepts the same location filters as the other public listing endpoints.',
+  })
+  async getPublicBusinesses(
+    @Query() location: LocationFilterDto,
+    @Query('search') search?: string,
+    @Query('category') category?: string,
+  ) {
+    return this.marketplaceService.findPublicBusinesses({
+      location,
+      page: location.page,
+      limit: location.limit,
+      search,
+      category,
+    });
+  }
+
+  @Public()
   @Get('locations')
   @Header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
   @ApiOperation({
