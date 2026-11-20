@@ -19,6 +19,8 @@ import {
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { GooglePlaceResult, InHouseBusiness } from '@/service/listings/types';
+import SafeImage from '@/components/SafeImage';
+import { MALL_API_URL, resolveBusinessImageUrl } from '@/lib/media';
 
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
@@ -27,71 +29,52 @@ function isGoogleResult(
 }
 
 function getListingImageUrl(listing: GooglePlaceResult | InHouseBusiness): string {
+  if (isGoogleResult(listing)) {
+    const photoReference = listing.photos?.[0]?.photoReference;
+    return photoReference
+      ? `${MALL_API_URL}/google/google-business/photo/${photoReference}`
+      : '';
+  }
+
+  const inHouse = listing as InHouseBusiness;
+  return (
+    resolveBusinessImageUrl(
+      inHouse.logoUrl || inHouse.bannerUrl || inHouse.media?.[0],
+    ) || ''
+  );
+}
+
+/** Thematic fallback used when a listing has no usable image. */
+function getListingFallbackImage(
+  listing: GooglePlaceResult | InHouseBusiness,
+): string {
   const isGoogle = isGoogleResult(listing);
-  let imgUrl = '';
+  const nameLower = (isGoogle ? listing.name : listing.businessName || '').toLowerCase();
 
-  const rawApiUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    'https://mcom-mall-api.vercel.app/api/v1';
-
-  // Normalize API_URL by removing trailing slash if present
-  const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
-
-  // Base API host (without /api/v1) for serving static media/uploads
-  const API_BASE = API_URL.replace('/api/v1', '');
-
+  let categoryName = '';
   if (isGoogle) {
-    if (listing.photos && listing.photos.length > 0) {
-      const { photoReference } = listing.photos[0];
-      if (photoReference) {
-        imgUrl = `${API_URL}/google/google-business/photo/${photoReference}`;
-      }
-    }
+    categoryName = listing.types?.[0] || '';
   } else {
     const inHouse = listing as InHouseBusiness;
-    imgUrl = inHouse.logoUrl || inHouse.bannerUrl || (inHouse.media && inHouse.media.length > 0 ? inHouse.media[0] : '');
+    categoryName = inHouse.category?.name || inHouse.categories?.map(c => c.name).join(' ') || '';
+  }
+  const catLower = categoryName.toLowerCase();
 
-    if (imgUrl) {
-      // If it's a relative path starting with /uploads or uploads
-      if (imgUrl.startsWith('/') || imgUrl.startsWith('uploads/')) {
-        const cleanPath = imgUrl.startsWith('/') ? imgUrl : `/${imgUrl}`;
-        imgUrl = `${API_BASE}${cleanPath}`;
-      }
-    }
+  if (nameLower.includes('cafe') || nameLower.includes('coffee') || catLower.includes('cafe') || catLower.includes('coffee')) {
+    return 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80'; // Beautiful Coffee Shop
+  }
+  if (nameLower.includes('restaurant') || nameLower.includes('food') || catLower.includes('restaurant') || catLower.includes('food')) {
+    return 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80'; // Beautiful Restaurant
+  }
+  if (nameLower.includes('store') || nameLower.includes('shop') || catLower.includes('store') || catLower.includes('shop') || catLower.includes('retail')) {
+    return 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80'; // Beautiful Retail Shop
+  }
+  if (catLower.includes('beauty') || catLower.includes('spa') || catLower.includes('salon') || catLower.includes('health') || catLower.includes('fitness')) {
+    return 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80'; // Beautiful Spa / Wellness / Fitness
   }
 
-  // Premium, thematic fallback images from Unsplash (which is already configured in next.config.ts remote patterns)
-  if (!imgUrl) {
-    const nameLower = (isGoogle ? listing.name : listing.businessName || '').toLowerCase();
-    
-    let categoryName = '';
-    if (isGoogle) {
-      categoryName = listing.types?.[0] || '';
-    } else {
-      const inHouse = listing as InHouseBusiness;
-      categoryName = inHouse.category?.name || inHouse.categories?.map(c => c.name).join(' ') || '';
-    }
-    const catLower = categoryName.toLowerCase();
-
-    if (nameLower.includes('cafe') || nameLower.includes('coffee') || catLower.includes('cafe') || catLower.includes('coffee')) {
-      return 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80'; // Beautiful Coffee Shop
-    }
-    if (nameLower.includes('restaurant') || nameLower.includes('food') || catLower.includes('restaurant') || catLower.includes('food')) {
-      return 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80'; // Beautiful Restaurant
-    }
-    if (nameLower.includes('store') || nameLower.includes('shop') || catLower.includes('store') || catLower.includes('shop') || catLower.includes('retail')) {
-      return 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80'; // Beautiful Retail Shop
-    }
-    if (catLower.includes('beauty') || catLower.includes('spa') || catLower.includes('salon') || catLower.includes('health') || catLower.includes('fitness')) {
-      return 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=800&q=80'; // Beautiful Spa / Wellness / Fitness
-    }
-    
-    // Default high-quality modern office / storefront placeholder
-    return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80';
-  }
-
-  return imgUrl;
+  // Default high-quality modern office / storefront placeholder
+  return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80';
 }
 
 export default function ListingCard({
@@ -103,6 +86,7 @@ export default function ListingCard({
 }) {
   const isGoogle = isGoogleResult(listing);
   const finalImgUrl = getListingImageUrl(listing);
+  const fallbackImgUrl = getListingFallbackImage(listing);
 
   const name = isGoogle ? listing.name : listing.businessName;
   const category = (isGoogle ? listing.types?.[0] : ((listing as InHouseBusiness).category?.name || (listing as InHouseBusiness).categories?.[0]?.name)) || null;
@@ -139,13 +123,12 @@ export default function ListingCard({
         <Link href={href} className="block">
           <Card className="w-full overflow-hidden border-none bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.15)] transition-all duration-500 rounded-3xl flex flex-col md:flex-row h-full">
             <div className="relative md:w-80 h-64 md:h-auto overflow-hidden bg-gray-100">
-              {finalImgUrl && (
-                <img
-                  src={finalImgUrl}
-                  alt={name}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-              )}
+              <SafeImage
+                src={finalImgUrl}
+                alt={name}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                fallbackSrc={fallbackImgUrl}
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               {category && (
                 <div className="absolute top-4 left-4 z-10">
@@ -223,13 +206,12 @@ export default function ListingCard({
       <Link href={href} className="block h-full">
         <Card className="h-full overflow-hidden border-none bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.12)] transition-all duration-500 rounded-[2.5rem] flex flex-col">
           <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-            {finalImgUrl && (
-              <img
-                src={finalImgUrl}
-                alt={name}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-            )}
+            <SafeImage
+              src={finalImgUrl}
+              alt={name}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+              fallbackSrc={fallbackImgUrl}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
             {/* Overlay Elements */}

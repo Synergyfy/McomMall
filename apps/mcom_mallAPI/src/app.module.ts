@@ -68,6 +68,8 @@ import { InterestSignalsModule } from './resources/interest-signals/interest-sig
 import { VisibilityModule } from './resources/visibility/visibility.module';
 import { TeamModule } from './resources/team/team.module';
 import { SsoModule } from './resources/sso/sso.module';
+import { ProfileSyncModule } from './resources/profile-sync/profile-sync.module';
+import { MediaProxyModule } from './resources/media-proxy/media-proxy.module';
 import { ServiceMeshModule } from './resources/service-mesh/service-mesh.module';
 import { RewardsIntegrationModule } from './resources/rewards-integration/rewards-integration.module';
 import { PartnerInstrumentsModule } from './resources/partner-instruments/partner-instruments.module';
@@ -190,6 +192,8 @@ import { InstrumentsModule } from './resources/instruments/instruments.module';
     CampaignCashbackModule,
     SeasonsModule,
     SsoModule,
+    ProfileSyncModule,
+    MediaProxyModule,
     ServiceMeshModule,
     PartnerInstrumentsModule,
     RewardsIntegrationModule,

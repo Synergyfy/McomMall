@@ -75,6 +75,12 @@ export const envValidationSchema = Joi.object({
     .allow('')
     .optional(),
   MCOM_WEBHOOK_SECRET: Joi.string().allow('').optional(),
+  // Central -> Mall profile propagation (Profile Update Endpoint).
+  MCOM_PROFILE_WEBHOOK_SECRET: Joi.string().allow('').optional(),
+  MCOM_PROFILE_SYNC_HMAC_FALLBACK: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
   // Embedded Solutions card top-up (proxied user-scoped top-up APIs).
   TOKEN_ENCRYPTION_KEY: Joi.string().allow('').optional(),
   MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY: Joi.string().allow('').optional(),

@@ -2,17 +2,22 @@
 
 import { motion } from 'framer-motion';
 import { InHouseBusiness } from '@/service/listings/types';
+import SafeImage from '@/components/SafeImage';
 import { 
   MapPin, 
   Clock, 
   Share2, 
   Heart, 
   CheckCircle2,
+  Building2,
   Calendar,
   Globe,
   MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+const FALLBACK_COVER =
+  'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=80';
 
 interface HeroSectionProps {
   listing: InHouseBusiness;
@@ -28,10 +33,11 @@ export default function HeroSection({ listing }: HeroSectionProps) {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="absolute inset-0"
       >
-        <img
-          src={listing.bannerUrl || 'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=80'}
+        <SafeImage
+          src={listing.bannerUrl}
           alt={listing.bannerAltText || listing.businessName}
           className="absolute inset-0 h-full w-full object-cover opacity-60"
+          fallbackSrc={FALLBACK_COVER}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#FDFDFD] via-black/20 to-black/40" />
       </motion.div>
@@ -49,11 +55,16 @@ export default function HeroSection({ listing }: HeroSectionProps) {
               className="relative -mb-16 md:mb-0"
             >
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] bg-white p-2 shadow-2xl border-4 border-white overflow-hidden">
-                <div className="relative w-full h-full rounded-[2rem] overflow-hidden bg-gray-50">
-                   <img
-                    src={listing.logoUrl || '/images/placeholder.svg'}
+                <div className="relative w-full h-full rounded-[2rem] overflow-hidden bg-white">
+                   <SafeImage
+                    src={listing.logoUrl}
                     alt={listing.logoAltText || listing.businessName}
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="absolute inset-0 h-full w-full object-contain p-2"
+                    fallback={
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Building2 className="h-14 w-14 text-gray-300" />
+                      </div>
+                    }
                   />
                 </div>
               </div>

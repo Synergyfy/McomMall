@@ -19,6 +19,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import CentralManagedProfileNotice from '@/components/CentralManagedProfileNotice';
+import SafeImage from '@/components/SafeImage';
 import { pickCentralBusiness } from '@/lib/central-business';
 import { useGetUserListings } from '@/service/listings/hook';
 import { BusinessHour, UserListing } from '@/service/listings/types';
@@ -180,9 +181,9 @@ const BusinessOverview = ({ listing }: { listing: UserListing }) => {
       <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
         <div className="relative h-40 bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300 sm:h-52">
           {listing.bannerUrl && (
-            <img
+            <SafeImage
               src={listing.bannerUrl}
-              alt=""
+              alt={`${listing.businessName} cover`}
               className="h-full w-full object-cover"
             />
           )}
@@ -195,15 +196,12 @@ const BusinessOverview = ({ listing }: { listing: UserListing }) => {
           <div className="-mt-10 flex flex-col gap-4 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-gray-100 shadow-md sm:h-24 sm:w-24">
-                {listing.logoUrl ? (
-                  <img
-                    src={listing.logoUrl}
-                    alt={listing.businessName}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <Building2 className="h-9 w-9 text-gray-300" />
-                )}
+                <SafeImage
+                  src={listing.logoUrl}
+                  alt={listing.businessName}
+                  className="h-full w-full object-contain p-1.5"
+                  fallback={<Building2 className="h-9 w-9 text-gray-300" />}
+                />
               </div>
               <div className="pb-1">
                 <div className="flex flex-wrap items-center gap-2">

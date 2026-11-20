@@ -302,6 +302,16 @@ export default function ClientListingDetail({
 
   const inHouseListing = listing as InHouseBusiness;
 
+  // Central sends `listingType` as lowercase values ("product", "service"),
+  // while older in-house records used uppercase ("RETAIL", "SERVICE").
+  // Normalise before deciding which tabs to show.
+  const listingTypes = (
+    Array.isArray(inHouseListing.listingType) ? inHouseListing.listingType : []
+  ).map((type) => String(type).toUpperCase());
+  const hasProducts =
+    listingTypes.includes('RETAIL') || listingTypes.includes('PRODUCT');
+  const hasServices = listingTypes.includes('SERVICE');
+
   return (
     <div className="min-h-screen bg-[#FDFDFD]">
       <HeroSection listing={inHouseListing} />
@@ -322,8 +332,8 @@ export default function ClientListingDetail({
               const isActive = activeSection === item.id;
 
               // Skip sections that don't have content based on listingType
-              if (item.id === 'products' && !inHouseListing.listingType.includes('RETAIL')) return null;
-              if (item.id === 'services' && !inHouseListing.listingType.includes('SERVICE')) return null;
+              if (item.id === 'products' && !hasProducts) return null;
+              if (item.id === 'services' && !hasServices) return null;
               if (item.id === 'media' && (!inHouseListing.media || inHouseListing.media.length === 0)) return null;
 
               return (

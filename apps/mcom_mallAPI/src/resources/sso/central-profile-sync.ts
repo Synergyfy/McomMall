@@ -34,6 +34,8 @@ export interface NormalizedBusinessProfile {
   description: string | null;
   website: string | null;
   logoUrl: string | null;
+  bannerUrl: string | null;
+  media: string[];
   openingHours: string | null;
   socialMedia: unknown;
   isOnGoogle: boolean | null;
@@ -128,6 +130,14 @@ function normaliseSocialMedia(value: unknown): unknown {
   }
 }
 
+/** Central stores gallery images as a `String[]` of absolute URLs. */
+function normaliseMedia(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => clean(entry))
+    .filter((entry): entry is string => Boolean(entry));
+}
+
 export function normalizeCentralUser(centralUser: any): NormalizedCentralUser {
   const raw = asRecord(centralUser) ?? {};
   const businessProfile = asRecord(raw.businessProfile);
@@ -207,6 +217,8 @@ export function normalizeCentralUser(centralUser: any): NormalizedCentralUser {
           description: clean(businessProfile?.description),
           website: clean(businessProfile?.website),
           logoUrl: businessLogo,
+          bannerUrl: firstNonEmpty(businessProfile?.bannerUrl, raw.bannerUrl),
+          media: normaliseMedia(businessProfile?.media),
           openingHours: clean(businessProfile?.openingHours),
           socialMedia: normaliseSocialMedia(businessProfile?.socialMedia),
           isOnGoogle:
@@ -570,6 +582,12 @@ function businessUpdatesFromProfile(
   if (profile.logoUrl && existing.logoUrl !== profile.logoUrl) {
     updates.logoUrl = profile.logoUrl;
   }
+  if (profile.bannerUrl && existing.bannerUrl !== profile.bannerUrl) {
+    updates.bannerUrl = profile.bannerUrl;
+  }
+  if (profile.media.length && !sameJson(existing.media ?? [], profile.media)) {
+    updates.media = profile.media;
+  }
   if (profile.description) {
     if (existing.about !== profile.description) {
       updates.about = profile.description;
@@ -745,6 +763,8 @@ async function provisionBusiness(
     businessEmail: profile.email || localUser.email,
     website: profile.website || undefined,
     logoUrl: profile.logoUrl || undefined,
+    bannerUrl: profile.bannerUrl || undefined,
+    media: profile.media.length ? profile.media : undefined,
     shortDescription:
       description.length >= 20
         ? truncate(description, 180)

@@ -14,6 +14,7 @@ import { PricingModel } from '@/service/search/enums';
 import { BookingModal } from '@/components/BookingModal';
 import { baseURL } from '@/service/api';
 import EmptyState from './EmptyState';
+import SafeImage from '@/components/SafeImage';
 
 const SearchResultsPage = () => {
   const searchParams = useSearchParams();
@@ -272,13 +273,16 @@ const SearchResultsPage = () => {
                         className="group bg-white border border-[#e2bfb0]/20 hover:border-[#ff6900]/40 rounded-3xl p-4 flex gap-4 hover:shadow-lg hover:shadow-orange-500/5 transition-all cursor-pointer shadow-xs"
                       >
                         <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 bg-gray-50 border border-gray-100 flex items-center justify-center relative">
-                          {item.logoUrl ? (
-                            <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src={item.logoUrl} alt={item.businessName} />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[#ff6900]/40">
-                              <Store className="w-8 h-8" />
-                            </div>
-                          )}
+                          <SafeImage
+                            className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300"
+                            src={item.logoUrl}
+                            alt={item.businessName}
+                            fallback={
+                              <div className="w-full h-full flex items-center justify-center text-[#ff6900]/40">
+                                <Store className="w-8 h-8" />
+                              </div>
+                            }
+                          />
                         </div>
                         <div className="flex-grow flex flex-col justify-between min-w-0">
                           <div>
