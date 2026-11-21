@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { CSSProperties } from 'react';
 import { Open_Sans } from 'next/font/google';
 import 'leaflet/dist/leaflet.css';
 import './globals.css';
@@ -69,7 +70,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      style={{ '--admin-sidebar-width': '260px' } as CSSProperties}
+    >
       <body className={`${opensans.variable} antialiased overflow-hidden`}>
         {process.env.NODE_ENV === 'development' && (
           <script

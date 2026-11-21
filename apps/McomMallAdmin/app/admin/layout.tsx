@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { AdminSidebar } from './components/AdminSidebar';
 import { AdminHeader } from './components/AdminHeader';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -14,8 +14,20 @@ export default function AdminLayout({
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+    useEffect(() => {
+        document.documentElement.style.setProperty(
+            '--admin-sidebar-width',
+            sidebarCollapsed ? '70px' : '260px',
+        );
+    }, [sidebarCollapsed]);
+
     return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden">
+        <div
+            className="flex h-screen bg-slate-50 overflow-hidden"
+            style={{
+                '--admin-sidebar-width': sidebarCollapsed ? '70px' : '260px',
+            } as CSSProperties}
+        >
             {/* Desktop Sidebar */}
             <div className="hidden md:block">
                 <AdminSidebar
