@@ -6,6 +6,7 @@ import {
   Logger,
   Post,
   Req,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -57,6 +58,13 @@ export class PaymentsWebhookController {
       chargeId,
       payload: req.body ?? {},
       rawBody,
+      // `payment.succeeded` is at-most-once per charge, even if Central
+      // re-delivers a payload with a different reference/timestamp. Refunds
+      // stay keyed on the raw body because a charge can be refunded repeatedly.
+      dedupeKey:
+        event === 'payment.succeeded' && chargeId
+          ? `payment.succeeded:${chargeId}`
+          : undefined,
     });
 
     if (duplicate && record.processedAt) {
@@ -64,6 +72,15 @@ export class PaymentsWebhookController {
         `Ignoring duplicate MCOM Pay webhook "${event}"${chargeId ? ` for charge ${chargeId}` : ''}`,
       );
       return { received: true, duplicate: true };
+    }
+
+    // Only one delivery may process an event. A concurrent duplicate gets 503
+    // so Central retries after the winner commits (or releases its claim).
+    const claimed = await this.mcomPayService.claimWebhookEvent(record.id);
+    if (!claimed) {
+      throw new ServiceUnavailableException(
+        'This MCOM Pay webhook is already being processed. Retry shortly.',
+      );
     }
 
     try {

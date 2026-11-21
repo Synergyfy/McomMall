@@ -29,6 +29,10 @@ export class McomPayWebhookEvent extends AbstractBaseEntity {
   @Column({ type: 'timestamptz', nullable: true })
   processedAt?: Date | null;
 
+  /** Atomic claim so two deliveries cannot process the event concurrently. */
+  @Column({ type: 'timestamptz', nullable: true })
+  processingAt?: Date | null;
+
   @Column({ type: 'int', default: 0 })
   attempts: number;
 

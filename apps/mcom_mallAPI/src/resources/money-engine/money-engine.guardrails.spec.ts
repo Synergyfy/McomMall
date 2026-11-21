@@ -43,6 +43,12 @@ function buildService(manager: any) {
     refundPaypalOrder: jest.fn().mockResolvedValue({ id: 'refund-2' }),
   };
   const eventEmitter = { emit: jest.fn() };
+  const paymentOrchestrator = {
+    initiate: jest.fn(),
+    confirm: jest.fn().mockResolvedValue({ ok: true, raw: {} }),
+    refund: jest.fn().mockResolvedValue({ id: 'refund-1' }),
+    refundCharge: jest.fn().mockResolvedValue({ id: 'refund-1' }),
+  };
   const featureFlags = {
     isMoneyVoucherCheckoutEnabled: jest.fn(() => true),
     isDealsHubEnabled: jest.fn(() => true),
@@ -59,6 +65,7 @@ function buildService(manager: any) {
   const service = new MoneyEngineService(
     dataSource as any,
     paymentProviderService as any,
+    paymentOrchestrator as any,
     eventEmitter as any,
     featureFlags as any,
     digitalValueService as any,

@@ -95,25 +95,6 @@ export interface WalletTopUpConfig {
   limits: { min: number; max: number; currency: string };
 }
 
-export interface InitiateWalletTopUpRequest {
-  amount: number;
-  currency?: string;
-}
-
-export interface InitiateWalletTopUpResponse {
-  clientSecret: string;
-  paymentIntentId: string;
-  topUpRequestId: string;
-  amount: number;
-  currency: string;
-  checkoutUrl?: string | null;
-}
-
-export interface ConfirmWalletTopUpRequest {
-  topUpRequestId: string;
-  paymentIntentId: string;
-}
-
 // Membership card/PayPal via MCOM Solutions: POST /membership/initiate-payment
 // with paymentProvider stripe|paypal. Card money is processed by Solutions
 // (their Stripe/PayPal accounts); the mall only proxies initiate/confirm.

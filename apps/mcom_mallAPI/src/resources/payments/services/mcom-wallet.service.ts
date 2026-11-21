@@ -90,10 +90,15 @@ export class McomWalletService {
         this.configService.get<string>('MCOM_WALLET_ENABLED') || 'true'
       ).toLowerCase() !== 'false';
 
-    const frontend =
+    // The wallet lives in Central Hub. Prefer its frontend URL, then the
+    // Central API origin (Partner Guide B1.1 / B4.1a), and never the mall.
+    const centralUrl =
       this.configService.get<string>('MCOM_SOLUTIONS_FRONTEND_URL') ||
-      'http://localhost:3000';
-    this.topUpUrl = `${frontend.replace(/\/$/, '')}/dashboard/wallet`;
+      this.configService.get<string>('MCOM_SOLUTIONS_URL') ||
+      'http://localhost:3010';
+    this.topUpUrl = `${centralUrl
+      .replace(/\/api\/v1\/?$/, '')
+      .replace(/\/$/, '')}/dashboard/wallet`;
 
     if (!this.hmacSecret) {
       this.logger.warn(
@@ -363,10 +368,14 @@ export class McomWalletService {
   }
 
   async releaseHold(input: { holdId: string; reason?: string }) {
+    // Central's `/hold/release` DTO accepts only `holdId`; sending `reason`
+    // fails validation (`property reason should not exist`) and the hold stays
+    // active, blocking the available balance. `reason` is kept for callers'
+    // diagnostics and logging only.
     return this.request<{ success: boolean }>(
       'POST',
       '/hold/release',
-      input,
+      { holdId: input.holdId },
       undefined,
       1,
     );

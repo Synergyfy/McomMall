@@ -34,7 +34,6 @@ import { ServicesModule } from './resources/services/services.module';
 import { OfferModule } from './resources/offer/offer.module';
 import { NotificationModule } from './resources/notification/notification.module';
 import { ReviewsModule } from './resources/reviews/reviews.module';
-import { CheckoutModule } from './resources/checkout/checkout.module';
 import { ActivitiesModule } from './resources/activities/activities.module';
 import { WalletModule } from './resources/wallet/wallet.module';
 import { StatsModule } from './resources/stats/stats.module';
@@ -181,7 +180,6 @@ import { InstrumentsModule } from './resources/instruments/instruments.module';
     OfferModule,
     NotificationModule,
     ReviewsModule,
-    CheckoutModule,
     ActivitiesModule,
     WalletModule,
     StatsModule,

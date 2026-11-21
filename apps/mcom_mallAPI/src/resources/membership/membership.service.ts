@@ -16,6 +16,7 @@ import { Membership } from './entities/membership.entity';
 import { MembershipTier } from './membership-tier.enum';
 import { McomWalletService } from '../payments/services/mcom-wallet.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { PaymentOrchestratorService } from '../payments/services/payment-orchestrator.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import {
@@ -61,6 +62,7 @@ export class MembershipService {
     @Inject(forwardRef(() => McomWalletService))
     private readonly mcomWalletService: McomWalletService,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly mcomCentralService: McomCentralService,
     private readonly plansService: PlansService,
@@ -407,9 +409,11 @@ export class MembershipService {
       const planType = initiateDto.planType || PlanType.MONTHLY;
       // Pre-authorise, don't debit. The hold is captured only when the
       // membership can actually be granted; abandoned attempts expire safely.
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: centralUserId,
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: PaymentMethod.MCOM_WALLET,
         amount: Number(price),
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId },
         reference: `membership-${scope}-${user.id}`,
         idempotencyKey: this.mcomWalletService.buildKey(
           'membership-hold',
@@ -418,18 +422,24 @@ export class MembershipService {
           Number(price).toFixed(2),
           initiateDto.idempotencyKey || randomUUID(),
         ),
-        metadata: {
+        walletHoldMetadata: {
           purpose: 'MEMBERSHIP',
           userId: user.id,
           planVariantId: initiateDto.planVariantId,
           tierId: initiateDto.tierId,
           planType,
+          intent: 'SUBSCRIPTION',
         },
+        intent: 'SUBSCRIPTION',
+        walletMode: 'hold',
       });
+      if (initiated.rail !== 'mcom_wallet') {
+        throw new BadRequestException('Invalid payment rail for wallet.');
+      }
       return {
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
@@ -439,37 +449,45 @@ export class MembershipService {
       initiateDto.tierId ||
       initiateDto.tier ||
       'membership';
+    const localContext = {
+      purpose: 'MEMBERSHIP',
+      userId: user.id,
+      purchaseDetails: {
+        planVariantId: initiateDto.planVariantId,
+        tierId: initiateDto.tierId,
+        tier: initiateDto.tier,
+        planType: initiateDto.planType || PlanType.MONTHLY,
+      },
+    };
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
       // Card money moves through MCOM Pay (Central owns the Stripe account).
-      const intent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          Number(price),
-          'GBP',
-          {
-            reference: `membership-${scope}-${user.id}`,
-            userId: user.id,
-            idempotencyKey:
-              initiateDto.idempotencyKey ||
-              `membership-${scope}-${user.id}-${Number(price).toFixed(2)}`,
-            description: 'MCOM Mall membership',
-          },
-        );
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: PaymentMethod.STRIPE,
+        amount: Number(price),
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId: user.centralUserId },
+        metadata: { localContext },
+        reference: `membership-${scope}-${user.id}`,
+        idempotencyKey:
+          initiateDto.idempotencyKey ||
+          `membership-${scope}-${user.id}-${Number(price).toFixed(2)}`,
+        description: 'MCOM Mall membership',
+        intent: 'SUBSCRIPTION',
+      });
       return {
-        clientSecret: intent.client_secret ?? undefined,
+        clientSecret:
+          initiated.rail === 'stripe' ? initiated.clientSecret : undefined,
         provider: PaymentMethod.STRIPE,
       };
     } else if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
-      const order = await this.paymentProviderService.createPaypalOrder(
-        Number(price),
-        'GBP',
-        {
-          reference: `membership-${scope}-${user.id}`,
-          userId: user.id,
-          idempotencyKey:
-            initiateDto.idempotencyKey ||
-            `membership-${scope}-${user.id}-${Number(price).toFixed(2)}`,
-          description: 'MCOM Mall membership',
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: PaymentMethod.PAYPAL,
+        amount: Number(price),
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId: user.centralUserId },
+        metadata: {
+          localContext,
           returnUrl:
             initiateDto.returnUrl ||
             `${(process.env.MALL_FRONTEND_URL || process.env.FRONTEND_URL || '').replace(/\/$/, '')}/pricing?paypal=return`,
@@ -477,15 +495,52 @@ export class MembershipService {
             initiateDto.cancelUrl ||
             `${(process.env.MALL_FRONTEND_URL || process.env.FRONTEND_URL || '').replace(/\/$/, '')}/pricing`,
         },
-      );
+        reference: `membership-${scope}-${user.id}`,
+        idempotencyKey:
+          initiateDto.idempotencyKey ||
+          `membership-${scope}-${user.id}-${Number(price).toFixed(2)}`,
+        description: 'MCOM Mall membership',
+        intent: 'SUBSCRIPTION',
+      });
       return {
-        orderId: order.id,
-        approvalUrl: order.approvalUrl ?? undefined,
+        orderId: initiated.rail === 'paypal' ? initiated.orderId : undefined,
+        approvalUrl:
+          initiated.rail === 'paypal' ? initiated.approvalUrl ?? undefined : undefined,
         provider: PaymentMethod.PAYPAL,
       };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
+  }
+
+  /** Webhook backstop for a membership payment whose browser closed. */
+  async verifyMembershipFromWebhook(input: {
+    context: Record<string, any>;
+    method: string;
+    chargeId: string;
+    providerRef?: string | null;
+  }): Promise<Membership> {
+    const user = await this.userRepository.findOne({
+      where: { id: input.context.userId },
+    });
+    if (!user) throw new NotFoundException('User not found.');
+
+    const method = String(input.method || '').toLowerCase();
+    const paymentProvider =
+      method === 'paypal'
+        ? PaymentMethod.PAYPAL
+        : method === 'wallet' || method === 'mcom_wallet'
+          ? PaymentMethod.MCOM_WALLET
+          : PaymentMethod.STRIPE;
+
+    return this.verifyAndCreateMembership(
+      {
+        paymentProvider,
+        transactionId: input.providerRef || input.chargeId,
+        purchaseDetails: input.context.purchaseDetails,
+      },
+      user,
+    );
   }
 
   async verifyAndCreateMembership(
@@ -526,11 +581,8 @@ export class MembershipService {
       centralUserId = dbUser?.centralUserId;
     }
 
-    let verificationResult: {
-      ok: boolean;
-      details?: any;
-      reason?: string;
-    };
+    const expectedAmount = Number(Number(price).toFixed(2));
+
     let mcomChargeId: string | null = null;
     let providerRef: string | null = null;
     let feeMinor: string | null = null;
@@ -548,80 +600,79 @@ export class MembershipService {
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      verificationResult =
-        await this.paymentProviderService.settleWalletReference(
+      const verification = await this.paymentOrchestrator.confirm({
+        rail: PaymentMethod.MCOM_WALLET,
+        reference: walletReference,
+        amount: expectedAmount,
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId },
+        holdId,
+        contextReference: `membership-${targetVariantId || tierEnum || 'membership'}-${user.id}`,
+        intent: 'SUBSCRIPTION',
+        idempotencyKey: this.mcomWalletService.buildKey(
+          'sub-capture',
           walletReference,
-          Number(Number(price).toFixed(2)),
-          'GBP',
-          {
-            mallUserId: user.id,
-            mcomUserId: centralUserId,
-            holdId,
-            reference: `membership-${targetVariantId || tierEnum || 'membership'}-${user.id}`,
-          },
-          this.mcomWalletService.buildKey('sub-capture', walletReference),
+        ),
+      });
+      if (!verification.ok) {
+        throw new BadRequestException(
+          `Payment verification failed: ${verification.reason}`,
         );
-      if (verificationResult.ok) {
-        const details = verificationResult.details ?? {};
-        transactionId =
-          details.transactionId || details.id || walletReference;
-        const detailId = String(details.id || '');
-        mcomChargeId =
-          detailId && !detailId.startsWith('wallet:') ? detailId : null;
-        providerRef = details.providerRef ?? null;
-        feeMinor = details.feeMinor ?? null;
-        netMinor = details.netMinor ?? null;
-        currency = 'GBP';
       }
+      transactionId = verification.transactionId || walletReference;
+      mcomChargeId = verification.chargeId;
+      providerRef = verification.providerRef;
+      feeMinor = verification.feeMinor;
+      netMinor = verification.netMinor;
+      currency = 'GBP';
     } else if (paymentProvider === PaymentMethod.STRIPE) {
       if (!transactionId) {
         throw new BadRequestException(
           'A Stripe payment reference is required.',
         );
       }
-      verificationResult =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          Number(Number(price).toFixed(2)),
-          'GBP',
-          {
-            mallUserId: user.id,
-            mcomUserId: centralUserId,
-          },
+      const verification = await this.paymentOrchestrator.confirm({
+        rail: PaymentMethod.STRIPE,
+        reference: transactionId,
+        amount: expectedAmount,
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId },
+        intent: 'SUBSCRIPTION',
+      });
+      if (!verification.ok) {
+        throw new BadRequestException(
+          `Payment verification failed: ${verification.reason}`,
         );
-      const details: any = verificationResult.details ?? {};
-      mcomChargeId = details.id ?? null;
-      providerRef = details.providerRef ?? null;
-      feeMinor = details.feeMinor ?? null;
-      netMinor = details.netMinor ?? null;
+      }
+      mcomChargeId = verification.chargeId;
+      providerRef = verification.providerRef;
+      feeMinor = verification.feeMinor;
+      netMinor = verification.netMinor;
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       if (!transactionId) {
         throw new BadRequestException('A PayPal order ID is required.');
       }
-      verificationResult =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          Number(Number(price).toFixed(2)),
-          'GBP',
-          {
-            mallUserId: user.id,
-            mcomUserId: centralUserId,
-          },
+      const verification = await this.paymentOrchestrator.confirm({
+        rail: PaymentMethod.PAYPAL,
+        reference: transactionId,
+        amount: expectedAmount,
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId },
+        intent: 'SUBSCRIPTION',
+      });
+      if (!verification.ok) {
+        throw new BadRequestException(
+          `Payment verification failed: ${verification.reason}`,
         );
-      const details: any = verificationResult.details ?? {};
-      mcomChargeId = details.id ?? null;
-      providerRef = details.providerRef ?? null;
-      feeMinor = details.feeMinor ?? null;
-      netMinor = details.netMinor ?? null;
+      }
+      mcomChargeId = verification.chargeId;
+      providerRef = verification.providerRef;
+      feeMinor = verification.feeMinor;
+      netMinor = verification.netMinor;
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
 
-    if (!verificationResult.ok) {
-      throw new BadRequestException(
-        `Payment verification failed: ${verificationResult.reason}`,
-      );
-    }
     if (!transactionId) {
       throw new BadRequestException(
         'A payment reference could not be resolved.',

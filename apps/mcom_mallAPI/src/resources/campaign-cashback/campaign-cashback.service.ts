@@ -35,6 +35,8 @@ import { Season } from '../seasons/entities/season.entity';
 import { WalletService } from '../wallet/wallet.service';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { PaymentOrchestratorService } from '../payments/services/payment-orchestrator.service';
+import type { PaymentRail } from '../payments/services/payment-orchestrator.service';
 import {
   OrderPayment,
   PaymentMethod,
@@ -60,6 +62,7 @@ export class CampaignCashbackService {
     @Inject(forwardRef(() => WalletService))
     private walletService: WalletService,
     private paymentProviderService: PaymentProviderService,
+    private paymentOrchestrator: PaymentOrchestratorService,
     private dataSource: DataSource,
   ) {}
 
@@ -270,71 +273,76 @@ export class CampaignCashbackService {
     const reference = `campaign-contribution-${id}`;
     const idempotencyKey = `campaign-${id}-${user.id}-${amount.toFixed(2)}`;
 
-    if (paymentMethod === ContributionPaymentProvider.WALLET) {
+    const rail: PaymentRail =
+      paymentMethod === ContributionPaymentProvider.WALLET
+        ? 'mcom_wallet'
+        : paymentMethod === ContributionPaymentProvider.PAYPAL
+          ? 'paypal'
+          : 'stripe';
+
+    if (rail === 'mcom_wallet') {
       if (!user.centralUserId) {
         throw new BadRequestException(
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: user.centralUserId,
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail,
         amount,
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId: user.centralUserId },
         reference,
-        idempotencyKey: this.paymentProviderService.buildWalletKey(
+        idempotencyKey,
+        walletIdempotencyKey: this.paymentProviderService.buildWalletKey(
           'campaign-hold',
           id,
           user.id,
           amount.toFixed(2),
         ),
-        metadata: { purpose: 'CAMPAIGN', campaignId: id, userId: user.id },
+        walletHoldMetadata: {
+          purpose: 'CAMPAIGN',
+          campaignId: id,
+          userId: user.id,
+        },
+        description: 'Campaign contribution',
+        walletMode: 'hold',
       });
+      if (initiated.rail !== 'mcom_wallet') {
+        throw new BadRequestException('Invalid payment rail.');
+      }
       return {
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
         provider: ContributionPaymentProvider.WALLET,
         amount,
       };
     }
 
-    if (paymentMethod === ContributionPaymentProvider.STRIPE) {
-      const intent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          amount,
-          'GBP',
-          {
-            reference,
-            userId: user.id,
-            idempotencyKey,
-            description: 'Campaign contribution',
-          },
-        );
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail,
+      amount,
+      currency: 'GBP',
+      payer: { mallUserId: user.id, centralUserId: user.centralUserId },
+      reference,
+      idempotencyKey,
+      description: 'Campaign contribution',
+    });
+    if (initiated.rail === 'stripe') {
       return {
-        clientSecret: intent.client_secret ?? undefined,
+        clientSecret: initiated.clientSecret ?? undefined,
         provider: ContributionPaymentProvider.STRIPE,
         amount,
       };
     }
-
-    if (paymentMethod === ContributionPaymentProvider.PAYPAL) {
-      const order = await this.paymentProviderService.createPaypalOrder(
-        amount,
-        'GBP',
-        {
-          reference,
-          userId: user.id,
-          idempotencyKey,
-          description: 'Campaign contribution',
-        },
-      );
+    if (initiated.rail === 'paypal') {
       return {
-        orderId: order.id,
-        approvalUrl: order.approvalUrl ?? null,
+        orderId: initiated.orderId,
+        approvalUrl: initiated.approvalUrl,
         provider: ContributionPaymentProvider.PAYPAL,
         amount,
       };
     }
-
     throw new BadRequestException('Invalid payment provider specified.');
   }
 
@@ -363,89 +371,49 @@ export class CampaignCashbackService {
       throw new BadRequestException('A payment reference is required');
     }
 
-    let paidChargeId: string | null = null;
-    let paidProviderRef: string | null = null;
-    let paidFeeMinor: string | null = null;
-    let paidNetMinor: string | null = null;
-    let paymentReference = contributeDto.transactionId;
-
     const existingPayment = await this.orderPaymentRepository.findOne({
       where: { transactionId: contributeDto.transactionId },
     });
     if (existingPayment)
       throw new BadRequestException('Transaction already processed');
 
-    if (contributeDto.paymentMethod === ContributionPaymentProvider.STRIPE) {
-      const result =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          contributeDto.transactionId,
-          contributeDto.amount,
-          currency,
-          { mallUserId: user.id, mcomUserId: user.centralUserId },
-        );
-      if (!result.ok)
-        throw new BadRequestException(
-          `Stripe verification failed: ${result.reason}`,
-        );
-      const details: any = result.details ?? {};
-      paidChargeId = details.id ?? null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-      paymentReference = paidChargeId || contributeDto.transactionId;
-    } else if (
-      contributeDto.paymentMethod === ContributionPaymentProvider.PAYPAL
-    ) {
-      const result =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          contributeDto.transactionId,
-          contributeDto.amount,
-          currency,
-          { mallUserId: user.id, mcomUserId: user.centralUserId },
-        );
-      if (!result.ok)
-        throw new BadRequestException(
-          `PayPal verification failed: ${result.reason}`,
-        );
-      const details: any = result.details ?? {};
-      paidChargeId = details.id ?? null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-      paymentReference = paidChargeId || contributeDto.transactionId;
-    } else if (
+    const rail: PaymentRail =
       contributeDto.paymentMethod === ContributionPaymentProvider.WALLET
-    ) {
-      const result = await this.paymentProviderService.settleWalletReference(
-        contributeDto.transactionId,
-        contributeDto.amount,
-        currency,
-        {
-          mallUserId: user.id,
-          mcomUserId: user.centralUserId,
-          holdId: contributeDto.transactionId,
-          reference: `campaign-contribution-${id}`,
-        },
-        this.paymentProviderService.buildWalletKey(
-          'campaign-capture',
-          contributeDto.transactionId,
-        ),
+        ? 'mcom_wallet'
+        : contributeDto.paymentMethod === ContributionPaymentProvider.PAYPAL
+          ? 'paypal'
+          : 'stripe';
+
+    const verification = await this.paymentOrchestrator.confirm({
+      rail,
+      reference: contributeDto.transactionId,
+      amount: contributeDto.amount,
+      currency,
+      payer: { mallUserId: user.id, centralUserId: user.centralUserId },
+      holdId:
+        rail === 'mcom_wallet' ? contributeDto.transactionId : undefined,
+      contextReference: `campaign-contribution-${id}`,
+      idempotencyKey:
+        rail === 'mcom_wallet'
+          ? this.paymentProviderService.buildWalletKey(
+              'campaign-capture',
+              contributeDto.transactionId,
+            )
+          : undefined,
+    });
+
+    if (!verification.ok) {
+      throw new BadRequestException(
+        `Payment verification failed: ${verification.reason}`,
       );
-      if (!result.ok)
-        throw new BadRequestException(
-          `MCOM Wallet verification failed: ${result.reason}`,
-        );
-      const details: any = result.details ?? {};
-      paymentReference =
-        details.transactionId || details.id || contributeDto.transactionId;
-      paidChargeId =
-        details.id && !String(details.id).startsWith('wallet:')
-          ? details.id
-          : null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
     }
+
+    const paidChargeId = verification.chargeId;
+    const paidProviderRef = verification.providerRef;
+    const paidFeeMinor = verification.feeMinor;
+    const paidNetMinor = verification.netMinor;
+    const paymentReference =
+      verification.transactionId || contributeDto.transactionId;
 
     // 3. SECURE UPDATE (Inside Transaction with Pessimistic Lock)
     return this.dataSource.transaction(async (manager) => {

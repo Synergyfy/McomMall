@@ -30,6 +30,15 @@ import {
   PaypalPayoutBatch,
   PaymentProviderService,
 } from '../payments/services/payment-provider.service';
+import { PaymentOrchestratorService } from '../payments/services/payment-orchestrator.service';
+import {
+  McomPayIntent,
+  McomPaySplit,
+} from '../payments/services/mcom-pay.service';
+import {
+  allocateCashSplits,
+  WeightedSplit,
+} from '../payments/services/payment-splits.util';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import { Service } from '../services/entities/service.entity';
@@ -134,6 +143,7 @@ export class BookingService {
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly emailService: EmailService,
     private readonly rewardsClient: RewardsClientService,
@@ -824,24 +834,18 @@ export class BookingService {
           const transactionRepo = manager.getRepository(BookingTransaction);
           let refundResult;
 
-          if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
-            refundResult =
-              await this.paymentProviderService.refundStripePayment(
-                booking.paymentIntentId,
-              );
-            booking.refundId = refundResult.id;
-          } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
-            refundResult = await this.paymentProviderService.refundPaypalOrder(
+          const method = booking.payment?.paymentMethod;
+          if (method === PaymentMethod.MCOM_WALLET) {
+            await this.paymentProviderService.releaseWalletHold(
               booking.paymentIntentId,
+              'Booking cancelled',
             );
-            booking.refundId = refundResult.id;
-          } else if (
-            booking.payment?.paymentMethod === PaymentMethod.MCOM_WALLET
-          ) {
-            refundResult =
-              await this.paymentProviderService.refundStripePayment(
-                booking.paymentIntentId,
-              );
+          } else if (method) {
+            refundResult = await this.paymentOrchestrator.refund({
+              rail: method,
+              reference: booking.paymentIntentId,
+              reason: 'MCOM Mall booking refund',
+            });
             booking.refundId = refundResult.id;
           }
 
@@ -857,6 +861,7 @@ export class BookingService {
               status: TransactionStatus.COMPLETED,
             });
             await transactionRepo.save(refundTx);
+            await this.reverseLocalRefundEarnings(booking.id, manager);
           }
         } catch (error) {
           console.error(
@@ -1139,6 +1144,145 @@ export class BookingService {
     const commissionAmount = this.toMoney(totalAmount * commissionRate);
     const providerAmount = this.toMoney(totalAmount - commissionAmount);
     return { totalAmount, commissionAmount, providerAmount };
+  }
+
+  /**
+   * Payee splits for a booking's cash charge: the provider's share and the
+   * Mall's commission. When the buyer used instruments/discounts, the cash is
+   * apportioned proportionally and the provider keeps the remainder in the
+   * local escrow/earnings ledger.
+   */
+  private buildBookingSettlement(
+    booking: ServiceBooking,
+    cashAmount: number,
+  ): {
+    splits?: McomPaySplit[];
+    providerCashMinor: bigint;
+    providerOwnerId?: string;
+  } {
+    const providerOwner = booking.service?.business?.user;
+    const providerAmount = Number(booking.providerAmount || 0);
+    const commissionAmount = Number(booking.commissionAmount || 0);
+    if (providerAmount <= 0 && commissionAmount <= 0) {
+      return { providerCashMinor: 0n, providerOwnerId: providerOwner?.id };
+    }
+
+    const providerKey = `provider:${providerOwner?.id ?? 'unknown'}`;
+    const platformKey =
+      process.env.MCOM_PLATFORM_PAYEE_ID || 'mcom-mall-platform';
+    const payees: WeightedSplit[] = [];
+
+    if (providerAmount > 0) {
+      payees.push({
+        key: providerKey,
+        entitlementMinor: BigInt(Math.round(providerAmount * 100)),
+        split: providerOwner?.centralUserId
+          ? {
+              payeeType: 'mcom_user',
+              payeeUserId: providerOwner.centralUserId,
+            }
+          : {
+              payeeType: 'external',
+              payeeExternalId: `business:${booking.service.business.id}`,
+            },
+      });
+    }
+    if (commissionAmount > 0) {
+      payees.push({
+        key: platformKey,
+        entitlementMinor: BigInt(Math.round(commissionAmount * 100)),
+        split: { payeeType: 'external', payeeExternalId: platformKey },
+      });
+    }
+
+    const allocation = this.paymentProviderService.isSplitsEnabled()
+      ? allocateCashSplits(
+          BigInt(Math.round(cashAmount * 100)),
+          payees,
+          platformKey,
+        )
+      : undefined;
+
+    return {
+      splits: allocation?.splits?.length ? allocation.splits : undefined,
+      providerCashMinor: allocation?.allocatedMinor.get(providerKey) ?? 0n,
+      providerOwnerId: providerOwner?.id,
+    };
+  }
+
+  /**
+   * The provider's local (un-split) earnings for a booking. MCOM Pay reverses
+   * the split portion itself on refund, so only this remainder is reversed in
+   * the Mall's wallet ledger.
+   */
+  private async localProviderEarningsForRefund(
+    bookingId: string,
+    manager?: EntityManager,
+  ): Promise<number> {
+    const repo = manager
+      ? manager.getRepository(ServiceBooking)
+      : this.bookingRepository;
+    const booking = await repo.findOne({
+      where: { id: bookingId },
+      relations: [
+        'service',
+        'service.business',
+        'service.business.user',
+        'payment',
+      ],
+    });
+    if (!booking?.payment) return 0;
+
+    const providerAmount = Number(booking.providerAmount || 0);
+    if (providerAmount <= 0) return 0;
+    if (!booking.payment.mcomChargeId) return providerAmount;
+
+    const local = await this.paymentProviderService.getLocalChargeMeta(
+      booking.payment.mcomChargeId,
+    );
+    const splits = local.splits.length
+      ? local.splits
+      : local.intent === 'BOOKING'
+        ? this.buildBookingSettlement(
+            booking,
+            Number(booking.payment.amount || 0),
+          ).splits ?? []
+        : [];
+    const cash = this.bookingProviderCashMinor(splits, booking);
+    return Math.max(0, providerAmount - Number(cash) / 100);
+  }
+
+  private async reverseLocalRefundEarnings(
+    bookingId: string,
+    manager: EntityManager,
+  ): Promise<void> {
+    const localAmount = await this.localProviderEarningsForRefund(
+      bookingId,
+      manager,
+    );
+    if (localAmount > 0) {
+      await this.walletService.reverseBookingEarnings(
+        bookingId,
+        localAmount,
+        manager,
+      );
+    }
+  }
+
+  private bookingProviderCashMinor(
+    splits: McomPaySplit[],
+    booking: ServiceBooking,
+  ): bigint {
+    if (!splits?.length) return 0n;
+    const providerOwner = booking.service?.business?.user;
+    const expectedUser = providerOwner?.centralUserId;
+    const expectedExternal = `business:${booking.service.business?.id}`;
+    return splits.reduce((total, split) => {
+      const matches = expectedUser
+        ? split.payeeUserId === expectedUser
+        : split.payeeExternalId === expectedExternal;
+      return matches ? total + BigInt(split.amountMinor || '0') : total;
+    }, 0n);
   }
 
   /** Rewards a shopper can apply to a specific booking. */
@@ -1709,6 +1853,10 @@ export class BookingService {
     booking.moneyVoucherAmountApplied = moneyVoucherAmount;
     booking.moneyVoucherCode = initiateDto.moneyVoucherCode ?? null;
     const currency = 'GBP';
+    const bookingSettlement = this.buildBookingSettlement(
+      booking,
+      payableAmount,
+    );
 
     if (paymentProvider === PaymentMethod.MCOM_WALLET) {
       const centralUserId = booking.user?.centralUserId;
@@ -1725,11 +1873,11 @@ export class BookingService {
         booking.paymentIntentId &&
         !booking.paymentIntentId.startsWith('pi_')
       ) {
-        const existing = await this.paymentProviderService.verifyWalletCharge(
+        const existing = await this.paymentOrchestrator.checkWalletCharge(
           booking.paymentIntentId,
           payableAmount,
           currency,
-          { mallUserId: userId, mcomUserId: centralUserId },
+          { mallUserId: userId, centralUserId },
         );
         if (existing.ok) {
           return {
@@ -1754,9 +1902,11 @@ export class BookingService {
         }
       }
 
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: centralUserId,
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: PaymentMethod.MCOM_WALLET,
         amount: payableAmount,
+        currency,
+        payer: { mallUserId: userId, centralUserId },
         reference: `booking-${booking.id}`,
         idempotencyKey: this.paymentProviderService.buildWalletKey(
           'booking-hold',
@@ -1764,15 +1914,25 @@ export class BookingService {
           payableAmount.toFixed(2),
           Date.now(),
         ),
-        metadata: { purpose: 'BOOKING', bookingId: booking.id, userId },
+        walletHoldMetadata: {
+          purpose: 'BOOKING',
+          bookingId: booking.id,
+          userId,
+          intent: 'BOOKING' as McomPayIntent,
+        },
+        intent: 'BOOKING' as McomPayIntent,
+        walletMode: 'hold',
       });
-      booking.paymentIntentId = hold.holdId;
+      if (initiated.rail !== 'mcom_wallet') {
+        throw new BadRequestException('Invalid payment rail for wallet.');
+      }
+      booking.paymentIntentId = initiated.holdId;
       await this.bookingRepository.save(booking);
 
       return {
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
         amount: payableAmount,
         rewardDiscount,
@@ -1788,10 +1948,14 @@ export class BookingService {
       ) {
         try {
           const existingIntent =
-            await this.paymentProviderService.verifyStripePaymentIntent(
+            await this.paymentOrchestrator.checkStripePayment(
               booking.paymentIntentId,
               payableAmount,
               currency,
+              {
+                mallUserId: userId,
+                centralUserId: booking.user?.centralUserId,
+              },
             );
           // If the existing intent is already settled we cannot re-supply a
           // client secret. Fall through to the idempotent create below, which
@@ -1811,27 +1975,31 @@ export class BookingService {
         }
       }
 
-      const paymentIntent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          payableAmount,
-          currency,
-          {
-            bookingId: booking.id,
-            userId,
-            // Verification binds the charge to this booking by reference.
-            // Keep it identical to the reference passed to verify-payment.
-            reference: `booking-${booking.id}`,
-            idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
-          },
-        );
-      // `id` is the MCOM Pay charge id. Persist the provider handle (the Stripe
-      // PaymentIntent id) so verify-payment can compare like-for-like.
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: PaymentMethod.STRIPE,
+        amount: payableAmount,
+        currency,
+        payer: {
+          mallUserId: userId,
+          centralUserId: booking.user?.centralUserId,
+        },
+        metadata: { bookingId: booking.id },
+        reference: `booking-${booking.id}`,
+        idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
+        intent: 'BOOKING' as McomPayIntent,
+        splits: bookingSettlement.splits,
+      });
+      if (initiated.rail !== 'stripe') {
+        throw new BadRequestException('Invalid payment rail for card.');
+      }
+      // `chargeId` is the MCOM Pay charge id; persist the provider handle (the
+      // Stripe PaymentIntent id) so verify-payment can compare like-for-like.
       booking.paymentIntentId =
-        (paymentIntent as any).providerRef ?? paymentIntent.id;
+        initiated.providerRef ?? initiated.chargeId;
       await this.bookingRepository.save(booking);
 
       return {
-        clientSecret: paymentIntent.client_secret,
+        clientSecret: initiated.clientSecret,
         provider: PaymentMethod.STRIPE,
         amount: payableAmount,
         rewardDiscount,
@@ -1839,22 +2007,29 @@ export class BookingService {
       };
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       // For PayPal, we usually create a new order unless we want to track capture state
-      const order = await this.paymentProviderService.createPaypalOrder(
-        payableAmount,
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: PaymentMethod.PAYPAL,
+        amount: payableAmount,
         currency,
-        {
-          bookingId: booking.id,
-          userId,
-          reference: `booking-${booking.id}`,
-          idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
+        payer: {
+          mallUserId: userId,
+          centralUserId: booking.user?.centralUserId,
         },
-      );
-      booking.paymentIntentId = order.id;
+        metadata: { bookingId: booking.id },
+        reference: `booking-${booking.id}`,
+        idempotencyKey: `booking-payment-${booking.id}-${payableAmount.toFixed(2)}`,
+        intent: 'BOOKING' as McomPayIntent,
+        splits: bookingSettlement.splits,
+      });
+      if (initiated.rail !== 'paypal') {
+        throw new BadRequestException('Invalid payment rail for PayPal.');
+      }
+      booking.paymentIntentId = initiated.orderId;
       await this.bookingRepository.save(booking);
 
       return {
-        orderId: order.id,
-        approvalUrl: order.approvalUrl ?? null,
+        orderId: initiated.orderId,
+        approvalUrl: initiated.approvalUrl,
         provider: PaymentMethod.PAYPAL,
         amount: payableAmount,
         rewardDiscount,
@@ -1871,7 +2046,6 @@ export class BookingService {
   ): Promise<ServiceBooking> {
     const { bookingId, amount, paymentProvider, transactionId } = verifyDto;
     const currency = 'GBP';
-    let verificationResult;
 
     const booking = await this.bookingRepository.findOne({
       where: { id: bookingId, user: { id: userId } },
@@ -1927,6 +2101,10 @@ export class BookingService {
         `The payment amount (${amount}) does not match the expected total (${expectedAmount}).`,
       );
     }
+    const bookingSettlement = this.buildBookingSettlement(
+      booking,
+      expectedAmount,
+    );
 
     if (
       booking.paymentIntentId &&
@@ -1939,7 +2117,7 @@ export class BookingService {
       let matchedLegacyCharge = false;
       if (paymentProvider === PaymentMethod.STRIPE) {
         try {
-          const charge = await this.paymentProviderService.getMcomCharge(
+          const charge = await this.paymentOrchestrator.getCharge(
             booking.paymentIntentId,
           );
           matchedLegacyCharge = charge.providerRef === transactionId;
@@ -1957,84 +2135,60 @@ export class BookingService {
       }
     }
 
-    let paidChargeId: string | null = null;
-    let paidProviderRef: string | null = null;
-    let paidFeeMinor: string | null = null;
-    let paidNetMinor: string | null = null;
-    let paymentReference = transactionId;
+    const verification = await this.paymentOrchestrator.confirm({
+      rail: paymentProvider,
+      reference: transactionId,
+      amount: expectedAmount,
+      currency,
+      payer: {
+        mallUserId: userId,
+        centralUserId: booking.user?.centralUserId,
+      },
+      holdId:
+        paymentProvider === PaymentMethod.MCOM_WALLET
+          ? transactionId
+          : undefined,
+      contextReference: `booking-${booking.id}`,
+      intent: 'BOOKING' as McomPayIntent,
+      splits: bookingSettlement.splits,
+      // Include the hold reference: a hold is unique per attempt, so a retry
+      // of the same hold replays the same charge, while a failed attempt (or a
+      // superseded hold) gets a fresh key instead of being stuck on Central's
+      // "idempotency key already used for a failed charge" error.
+      idempotencyKey: this.paymentProviderService.buildWalletKey(
+        'booking-capture',
+        booking.id,
+        transactionId,
+      ),
+    });
 
-    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
-      verificationResult =
-        await this.paymentProviderService.settleWalletReference(
-          transactionId,
-          expectedAmount,
-          currency,
-          {
-            mallUserId: userId,
-            mcomUserId: booking.user?.centralUserId,
-            holdId: transactionId,
-            reference: `booking-${booking.id}`,
-          },
-          this.paymentProviderService.buildWalletKey(
-            'booking-capture',
-            booking.id,
-          ),
-        );
-      const details: any = verificationResult.details ?? {};
-      paymentReference =
-        details.transactionId || details.id || transactionId;
-      paidChargeId =
-        details.id && !String(details.id).startsWith('wallet:')
-          ? details.id
-          : null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-    } else if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          expectedAmount,
-          currency,
-          {
-            mallUserId: userId,
-            mcomUserId: booking.user?.centralUserId,
-            reference: `booking-${booking.id}`,
-          },
-        );
-      const details: any = verificationResult.details ?? {};
-      paidChargeId = details.id ?? null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-      paymentReference = paidChargeId || transactionId;
-    } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          expectedAmount,
-          currency,
-          {
-            mallUserId: userId,
-            mcomUserId: booking.user?.centralUserId,
-            reference: `booking-${booking.id}`,
-          },
-        );
-      const details: any = verificationResult.details ?? {};
-      paidChargeId = details.id ?? null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-      paymentReference = paidChargeId || transactionId;
-    } else {
-      throw new BadRequestException('Invalid payment provider specified.');
-    }
-
-    if (!verificationResult.ok) {
+    if (!verification.ok) {
       throw new BadRequestException(
-        `Payment verification failed: ${verificationResult.reason}`,
+        `Payment verification failed: ${verification.reason}`,
       );
     }
+
+    const paidChargeId = verification.chargeId;
+    const paidProviderRef = verification.providerRef;
+    const paidFeeMinor = verification.feeMinor;
+    const paidNetMinor = verification.netMinor;
+    const paymentReference = verification.transactionId || transactionId;
+
+    const localCharge = paidChargeId
+      ? await this.paymentProviderService.getLocalChargeMeta(paidChargeId)
+      : { splits: [], intent: null };
+    // Webhook-created rows have the intent label but not the splits (Central
+    // does not return metadata). Recompute the deterministic booking splits so
+    // the local earnings credit is not doubled.
+    const appliedSplits = localCharge.splits.length
+      ? localCharge.splits
+      : localCharge.intent === 'BOOKING'
+        ? bookingSettlement.splits ?? []
+        : [];
+    const providerCashMinor = this.bookingProviderCashMinor(
+      appliedSplits,
+      booking,
+    );
 
     // Idempotent replay: the same charge already confirmed this booking.
     const existingServicePayment = await this.servicePaymentRepository.findOne({
@@ -2055,6 +2209,16 @@ export class BookingService {
         const paymentRepo = manager.getRepository(ServicePayment);
         const transactionRepo = manager.getRepository(BookingTransaction);
 
+        // Serialize concurrent confirmations of the same booking. The browser
+        // calls verify-payment while MCOM Pay also delivers payment.succeeded;
+        // without this lock both can pass the idempotency check and one then
+        // violates the unique mcomChargeId constraint, which would trigger a
+        // spurious compensating refund for a legitimate payment.
+        await manager.findOne(ServiceBooking, {
+          where: { id: booking.id },
+          lock: { mode: 'pessimistic_write' },
+        });
+
         const reused = await paymentRepo.findOne({
           where: [
             { transactionId: paymentReference },
@@ -2062,6 +2226,17 @@ export class BookingService {
           ],
         });
         if (reused) {
+          const alreadyPaidBooking = await manager.findOne(ServiceBooking, {
+            where: { payment: { id: reused.id } },
+            relations: [
+              'user',
+              'service',
+              'service.business',
+              'service.business.user',
+              'payment',
+            ],
+          });
+          if (alreadyPaidBooking) return alreadyPaidBooking;
           throw new BadRequestException(
             'This payment has already been used for another booking.',
           );
@@ -2210,15 +2385,26 @@ export class BookingService {
           }
         }
 
-        await this.walletService.creditEarning(
-          {
-            userId: booking.service.business.user.id,
-            amount: booking.providerAmount, // Only credit provider amount for earnings info (though it's in escrow)
-            type: WalletTransactionType.EARNING_BOOKING,
-            description: `Pending payment in escrow for booking #${booking.id}`,
-          },
-          manager,
+        // Subtract the part already paid to the provider through MCOM Pay
+        // splits; the local ledger only carries the un-split remainder.
+        const providerLocalAmount = this.toMoney(
+          Math.max(
+            0,
+            Number(booking.providerAmount || 0) -
+              Number(providerCashMinor) / 100,
+          ),
         );
+        if (providerLocalAmount > 0) {
+          await this.walletService.creditEarning(
+            {
+              userId: booking.service.business.user.id,
+              amount: providerLocalAmount, // Only credit provider amount for earnings info (though it's in escrow)
+              type: WalletTransactionType.EARNING_BOOKING,
+              description: `Pending payment in escrow for booking #${booking.id}`,
+            },
+            manager,
+          );
+        }
 
         // Process Cashback
         if (booking.user.email) {
@@ -2243,6 +2429,40 @@ export class BookingService {
       await this.enqueueBookingInstrumentCallbacks(confirmedBooking);
       return confirmedBooking;
     } catch (dbErr) {
+      // Race fallback: if a concurrent confirmation (usually the webhook)
+      // committed this same payment first, the insert fails on the unique
+      // charge key. That is a successful replay, not a failed booking, so
+      // return the paid booking instead of refunding it.
+      const duplicateKey =
+        (dbErr as any)?.code === '23505' ||
+        (dbErr as any)?.driverError?.code === '23505';
+      if (duplicateKey) {
+        const existingPayment = await this.servicePaymentRepository.findOne({
+          where: [
+            { transactionId: paymentReference },
+            ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+          ],
+        });
+        if (existingPayment) {
+          const existingBooking = await this.bookingRepository.findOne({
+            where: { payment: { id: existingPayment.id } },
+            relations: [
+              'user',
+              'service',
+              'service.business',
+              'service.business.user',
+              'payment',
+            ],
+          });
+          if (existingBooking && existingBooking.id === booking.id) {
+            this.logger.warn(
+              `Booking ${bookingId} was already confirmed by a concurrent payment event; returning the existing confirmation.`,
+            );
+            return existingBooking;
+          }
+        }
+      }
+
       this.logger.error(
         `Database transaction failed for booking ${bookingId} after payment was verified/captured. Initiating compensating refund.`,
         dbErr,
@@ -2252,22 +2472,18 @@ export class BookingService {
         'booking_payment_failed',
       );
       try {
-        if (paymentProvider === PaymentMethod.STRIPE) {
-          await this.paymentProviderService.refundStripePayment(
+        if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+          await this.paymentProviderService.releaseWalletHold(
             transactionId,
-            amount,
+            'Booking payment failed',
           );
-        } else if (paymentProvider === PaymentMethod.PAYPAL) {
-          await this.paymentProviderService.refundPaypalOrder(
-            transactionId,
+        } else {
+          await this.paymentOrchestrator.refund({
+            rail: paymentProvider,
+            reference: transactionId,
             amount,
-            currency,
-          );
-        } else if (paymentProvider === PaymentMethod.MCOM_WALLET) {
-          await this.paymentProviderService.refundStripePayment(
-            transactionId,
-            amount,
-          );
+            reason: 'MCOM Mall booking payment failed',
+          });
         }
       } catch (refundErr) {
         this.logger.error(
@@ -2278,6 +2494,47 @@ export class BookingService {
         'An error occurred while confirming your booking. If your account was charged, a refund has been initiated.',
       );
     }
+  }
+
+  /**
+   * Webhook backstop: confirm a booking from a paid MCOM Pay charge when the
+   * browser closed before `/bookings/verify-payment`.
+   */
+  async verifyPaymentFromWebhook(input: {
+    bookingId: string;
+    chargeId: string;
+    amountMinor: string;
+    method: string;
+    providerRef?: string | null;
+  }): Promise<ServiceBooking> {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: input.bookingId },
+      relations: ['user'],
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking not found.');
+    }
+
+    const paymentProvider =
+      input.method === 'paypal'
+        ? PaymentMethod.PAYPAL
+        : input.method === 'wallet'
+          ? PaymentMethod.MCOM_WALLET
+          : PaymentMethod.STRIPE;
+    const transactionId =
+      paymentProvider === PaymentMethod.MCOM_WALLET
+        ? input.chargeId
+        : input.providerRef || input.chargeId;
+
+    return this.verifyPayment(
+      {
+        bookingId: input.bookingId,
+        amount: Number(input.amountMinor) / 100,
+        paymentProvider,
+        transactionId,
+      },
+      booking.user.id,
+    );
   }
 
   async completeBooking(
@@ -2320,8 +2577,23 @@ export class BookingService {
       if (booking.businessOwnerCompleted && booking.customerCompleted) {
         booking.status = BookingStatus.COMPLETED;
 
-        // --- Escrow Payout Logic ---
-        if (!booking.payoutProcessed && !booking.refundProcessed) {
+        // If MCOM Pay already split the cash to the provider, never run the
+        // Mall's own Stripe/PayPal escrow payout for the same booking. The
+        // un-split remainder is still released from the local pending bucket
+        // by `releaseBookingPayment` below.
+        const chargeSplits = booking.payment?.mcomChargeId
+          ? await this.paymentProviderService.getLocalChargeSplits(
+              booking.payment.mcomChargeId,
+            )
+          : [];
+        const paidViaSplits = chargeSplits.length > 0;
+
+        // --- Escrow Payout Logic (legacy / no payee splits) ---
+        if (
+          !paidViaSplits &&
+          !booking.payoutProcessed &&
+          !booking.refundProcessed
+        ) {
           const transactionRepo = manager.getRepository(BookingTransaction);
 
           let transferResult: { id: string } | PaypalPayoutBatch | undefined;
@@ -2506,22 +2778,17 @@ export class BookingService {
       const transactionRepo = manager.getRepository(BookingTransaction);
       let refundResult;
 
-      if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
-        refundResult = await this.paymentProviderService.refundStripePayment(
+      if (booking.payment?.paymentMethod === PaymentMethod.MCOM_WALLET) {
+        await this.paymentProviderService.releaseWalletHold(
           booking.paymentIntentId,
+          'Booking refunded',
         );
-        booking.refundId = refundResult.id;
-      } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
-        refundResult = await this.paymentProviderService.refundPaypalOrder(
-          booking.paymentIntentId,
-        );
-        booking.refundId = refundResult.id;
-      } else if (
-        booking.payment?.paymentMethod === PaymentMethod.MCOM_WALLET
-      ) {
-        refundResult = await this.paymentProviderService.refundStripePayment(
-          booking.paymentIntentId,
-        );
+      } else if (booking.payment?.paymentMethod) {
+        refundResult = await this.paymentOrchestrator.refund({
+          rail: booking.payment.paymentMethod,
+          reference: booking.paymentIntentId,
+          reason: 'MCOM Mall booking refund',
+        });
         booking.refundId = refundResult.id;
       }
 
@@ -2537,6 +2804,7 @@ export class BookingService {
           status: TransactionStatus.COMPLETED,
         });
         await transactionRepo.save(refundTx);
+        await this.reverseLocalRefundEarnings(booking.id, manager);
       }
 
       return manager.save(booking);

@@ -23,12 +23,25 @@ import {
   buildPayPalReturnUrls,
   storePendingPayPalPurchase,
 } from "@/lib/paypal-return";
+import { usePaymentFlow } from "@mcommall/payments";
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   purchaseDetails: Omit<InitiatePurchaseDto, "paymentProvider">;
   onSuccess: () => void;
+}
+
+interface GiftCardInitiation {
+  data: {
+    clientSecret?: string;
+    orderId?: string;
+    approvalUrl?: string | null;
+    transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
+    provider: PaymentProvider;
+  };
 }
 
 const PaymentForm = ({
@@ -40,42 +53,46 @@ const PaymentForm = ({
   onSuccess: () => void;
   onClose: () => void;
 }) => {
-  const { initiatePurchase, isInitiating } = useInitiateGiftCardPurchase();
-  const { verifyPurchase, isVerifying } = useVerifyGiftCardPurchase();
+  const { initiatePurchase } = useInitiateGiftCardPurchase();
+  const { verifyPurchase } = useVerifyGiftCardPurchase();
   const [paymentProvider, setPaymentProvider] =
     useState<PaymentProvider>("stripe");
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
-  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
-    null,
-  );
   const [error, setError] = useState<string | null>(null);
 
+  const flow = usePaymentFlow<GiftCardInitiation, unknown>({
+    initiate: async () => {
+      const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
+      return initiatePurchase({
+        ...purchaseDetails,
+        paymentProvider,
+        returnUrl,
+        cancelUrl,
+      });
+    },
+    confirm: async (transactionId) => {
+      return verifyPurchase({
+        paymentProvider,
+        transactionId,
+        purchaseDetails: { ...purchaseDetails, paymentProvider },
+      });
+    },
+    onSuccess: () => onSuccess(),
+    onError: (err) => {
+      setError(getPaymentErrorInfo(err).message);
+      showPaymentError(err);
+    },
+  });
+
   const resetPayment = () => {
-    setClientSecret(null);
-    setPaypalOrderId(null);
-    setPaypalApprovalUrl(null);
+    flow.reset();
     setError(null);
   };
 
-  const verifyPayment = async (
-    provider: PaymentProvider,
-    transactionId: string,
-  ) => {
-    setError(null);
-    try {
-      await verifyPurchase({
-        paymentProvider: provider,
-        transactionId,
-        purchaseDetails: { ...purchaseDetails, paymentProvider: provider },
-      });
-      onSuccess();
-    } catch (err: unknown) {
-      const info = getPaymentErrorInfo(err);
-      setError(info.message);
-      showPaymentError(err);
-    }
-  };
+  const isInitiating = flow.status === "initiating";
+  const isVerifying = flow.status === "confirming";
+  const clientSecret = flow.handle?.data?.clientSecret;
+  const paypalOrderId = flow.handle?.data?.orderId;
+  const paypalApprovalUrl = flow.handle?.data?.approvalUrl ?? null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,48 +102,28 @@ const PaymentForm = ({
       return;
     }
 
-    try {
-      const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
-      const initiationRes = await initiatePurchase({
+    const initiationRes = await flow.start();
+    if (!initiationRes) return;
+
+    if (paymentProvider === "mcom_wallet") {
+      const transactionId = initiationRes.data?.transactionId;
+      if (!transactionId) {
+        setError("MCOM Wallet did not return a payment reference.");
+        return;
+      }
+      await flow.confirm(transactionId);
+      return;
+    }
+
+    if (paymentProvider === "paypal") {
+      if (!initiationRes.data?.orderId) {
+        setError("PayPal order could not be created.");
+        return;
+      }
+      storePendingPayPalPurchase('gift-card', {
         ...purchaseDetails,
-        paymentProvider,
-        returnUrl,
-        cancelUrl,
+        paymentProvider: 'paypal',
       });
-
-      if (paymentProvider === "mcom_wallet") {
-        const transactionId = initiationRes?.data?.transactionId;
-        if (!transactionId) {
-          throw new Error("MCOM Wallet did not return a payment reference.");
-        }
-        await verifyPayment(paymentProvider, transactionId);
-        return;
-      }
-
-      if (paymentProvider === "paypal") {
-        if (!initiationRes?.data?.orderId) {
-          throw new Error("PayPal order could not be created.");
-        }
-        setPaypalOrderId(initiationRes.data.orderId);
-        setPaypalApprovalUrl(
-          (initiationRes.data as { approvalUrl?: string | null }).approvalUrl ??
-            null,
-        );
-        storePendingPayPalPurchase('gift-card', {
-          ...purchaseDetails,
-          paymentProvider: 'paypal',
-        });
-        return;
-      }
-
-      if (!initiationRes?.data?.clientSecret) {
-        throw new Error("Failed to initiate payment.");
-      }
-      setClientSecret(initiationRes.data.clientSecret);
-    } catch (err: unknown) {
-      const info = getPaymentErrorInfo(err);
-      setError(info.message);
-      showPaymentError(err);
     }
   };
 
@@ -135,9 +132,7 @@ const PaymentForm = ({
       <div className="space-y-4">
         <StripeCheckoutForm
           clientSecret={clientSecret}
-          onPaymentSuccess={(paymentIntentId) =>
-            verifyPayment("stripe", paymentIntentId)
-          }
+          onPaymentSuccess={(paymentIntentId) => flow.confirm(paymentIntentId)}
         />
         {isVerifying && (
           <p className="flex items-center justify-center gap-2 text-sm text-gray-500">
@@ -200,7 +195,7 @@ const PaymentForm = ({
           <PayPalCheckoutButton
             orderID={paypalOrderId}
             approvalUrl={paypalApprovalUrl}
-            onPaymentSuccess={(orderId) => verifyPayment("paypal", orderId)}
+            onPaymentSuccess={(orderId) => flow.confirm(orderId)}
           />
         </div>
       )}

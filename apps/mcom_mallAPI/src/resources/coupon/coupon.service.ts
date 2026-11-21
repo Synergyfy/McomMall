@@ -54,6 +54,8 @@ import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { SavedCoupon } from './entities/saved-coupon.entity';
 import { CouponProduct } from './entities/coupon-product.entity';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { PaymentOrchestratorService } from '../payments/services/payment-orchestrator.service';
+import type { ConfirmPaymentResult } from '../payments/services/payment-orchestrator.service';
 import { OrderPayment, PaymentMethod } from '../order/entities/order-payment.entity';
 import { CouponStatsDto } from './dto/coupon-stats.dto';
 import { CouponChartDataDto } from './dto/coupon-chart-data.dto';
@@ -92,6 +94,7 @@ export class CouponService {
     @InjectRepository(OrderPayment)
     private readonly orderPaymentRepository: Repository<OrderPayment>,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
@@ -1278,53 +1281,73 @@ export class CouponService {
       userId,
       idempotencyKey: `coupon-${product.id}-${userId}-${crypto.randomUUID()}`,
       description: `MCOM Mall coupon purchase — ${product.name}`,
+      intent: 'PURCHASE',
+      splits: this.paymentProviderService.buildSellerSplits(amount, {
+        userId: product.user.id,
+        centralUserId: product.user.centralUserId,
+        externalId: `user:${product.user.id}`,
+      }),
       returnUrl: dto.returnUrl,
       cancelUrl: dto.cancelUrl,
+      localContext: {
+        purpose: 'COUPON',
+        userId,
+        purchaseDetails: {
+          couponProductId: product.id,
+          amount: dto.amount,
+        },
+      },
     };
 
-    if (method === PaymentMethod.MCOM_WALLET) {
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: await this.getCentralUserId(userId),
-        amount,
-        reference: metadata.reference,
-        idempotencyKey: this.paymentProviderService.buildWalletKey(
-          'coupon-hold',
-          product.id,
-          userId,
-          metadata.idempotencyKey,
-        ),
-        metadata: { purpose: 'COUPON', productId: product.id, userId },
-      });
-      return {
-        provider: method,
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
-        amount,
-      };
-    }
-    if (method === PaymentMethod.STRIPE) {
-      const intent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          amount,
-          'GBP',
-          metadata,
-        );
-      return {
-        provider: method,
-        clientSecret: intent.client_secret,
-        amount,
-      };
-    }
-    const order = await this.paymentProviderService.createPaypalOrder(
+    const centralUserId =
+      method === PaymentMethod.MCOM_WALLET
+        ? await this.getCentralUserId(userId)
+        : undefined;
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail: method,
       amount,
-      'GBP',
+      currency: 'GBP',
+      payer: { mallUserId: userId, centralUserId },
       metadata,
-    );
+      reference: metadata.reference,
+      idempotencyKey: metadata.idempotencyKey,
+      walletIdempotencyKey: this.paymentProviderService.buildWalletKey(
+        'coupon-hold',
+        product.id,
+        userId,
+        metadata.idempotencyKey,
+      ),
+      walletHoldMetadata: {
+        purpose: 'COUPON',
+        productId: product.id,
+        userId,
+      },
+      description: `MCOM Mall coupon purchase — ${product.name}`,
+      intent: 'PURCHASE',
+      splits: metadata.splits,
+      walletMode: 'hold',
+    });
+
+    if (initiated.rail === 'mcom_wallet') {
+      return {
+        provider: method,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
+        amount,
+      };
+    }
+    if (initiated.rail === 'stripe') {
+      return {
+        provider: method,
+        clientSecret: initiated.clientSecret,
+        amount,
+      };
+    }
     return {
       provider: method,
-      orderId: order.id,
-      approvalUrl: order.approvalUrl ?? null,
+      orderId: initiated.orderId,
+      approvalUrl: initiated.approvalUrl,
       amount,
     };
   }
@@ -1335,7 +1358,11 @@ export class CouponService {
     amount: number,
     userId?: string,
     reference?: string,
-  ): Promise<{ ok: boolean; details?: any; reason?: string }> {
+    walletOptions?: {
+      intent?: 'PURCHASE';
+      splits?: import('../payments/services/mcom-pay.service').McomPaySplit[];
+    },
+  ): Promise<ConfirmPaymentResult> {
     if (!transactionId) {
       throw new BadRequestException('A payment reference is required.');
     }
@@ -1343,36 +1370,22 @@ export class CouponService {
       method === PaymentMethod.MCOM_WALLET && userId
         ? await this.getCentralUserId(userId)
         : undefined;
-    const result =
-      method === PaymentMethod.MCOM_WALLET
-        ? await this.paymentProviderService.settleWalletReference(
-            transactionId,
-            amount,
-            'GBP',
-            {
-              mallUserId: userId,
-              mcomUserId: centralUserId,
-              holdId: transactionId,
-              reference,
-            },
-            this.paymentProviderService.buildWalletKey(
-              'coupon-capture',
-              transactionId,
-            ),
-          )
-        : method === PaymentMethod.PAYPAL
-          ? await this.paymentProviderService.captureAndVerifyPaypalOrder(
-              transactionId,
-              amount,
-              'GBP',
-              { mallUserId: userId },
-            )
-          : await this.paymentProviderService.verifyStripePaymentIntent(
-              transactionId,
-              amount,
-              'GBP',
-              { mallUserId: userId },
-            );
+    const result = await this.paymentOrchestrator.confirm({
+      rail: method,
+      reference: transactionId,
+      amount,
+      currency: 'GBP',
+      payer: { mallUserId: userId, centralUserId },
+      holdId:
+        method === PaymentMethod.MCOM_WALLET ? transactionId : undefined,
+      contextReference: reference,
+      intent: walletOptions?.intent,
+      splits: walletOptions?.splits,
+      idempotencyKey: this.paymentProviderService.buildWalletKey(
+        'coupon-capture',
+        transactionId,
+      ),
+    });
     if (!result.ok) {
       throw new BadRequestException(
         `Payment verification failed: ${result.reason}`,
@@ -1401,23 +1414,27 @@ export class CouponService {
       throw new NotFoundException('Coupon product not found or inactive.');
     }
     this.validateCouponProductAmount(product, amount);
+    const expectedSplits = this.paymentProviderService.buildSellerSplits(
+      amount,
+      {
+        userId: product.user.id,
+        centralUserId: product.user.centralUserId,
+        externalId: `user:${product.user.id}`,
+      },
+    );
     const verification = await this.verifyCouponPayment(
       method,
       dto.transactionId,
       amount,
       userId,
       `coupon-purchase-${product.id}-${userId}`,
+      { intent: 'PURCHASE', splits: expectedSplits },
     );
-    const details: any = verification.details ?? {};
-    const paymentReference =
-      details.transactionId || details.id || dto.transactionId;
-    const paidChargeId =
-      details.id && !String(details.id).startsWith('wallet:')
-        ? details.id
-        : null;
-    const paidProviderRef = details.providerRef ?? null;
-    const paidFeeMinor = details.feeMinor ?? null;
-    const paidNetMinor = details.netMinor ?? null;
+    const paymentReference = verification.transactionId || dto.transactionId;
+    const paidChargeId = verification.chargeId;
+    const paidProviderRef = verification.providerRef;
+    const paidFeeMinor = verification.feeMinor;
+    const paidNetMinor = verification.netMinor;
 
     const existingPayment = await this.orderPaymentRepository.findOne({
       where: [
@@ -1539,6 +1556,7 @@ export class CouponService {
     }
     const product = await this.couponProductRepository.findOne({
       where: { id: metadata.couponProductId },
+      relations: ['user'],
     });
     if (!product?.allowReloading) {
       throw new BadRequestException('This coupon cannot be reloaded.');
@@ -1554,51 +1572,70 @@ export class CouponService {
       userId,
       idempotencyKey: `coupon-reload-${coupon.id}-${userId}-${crypto.randomUUID()}`,
       description: `MCOM Mall coupon reload — ${product.name}`,
+      intent: 'PURCHASE',
+      splits: this.paymentProviderService.buildSellerSplits(amount, {
+        userId: product.user.id,
+        centralUserId: product.user.centralUserId,
+        externalId: `user:${product.user.id}`,
+      }),
+      localContext: {
+        purpose: 'COUPON_RELOAD',
+        userId,
+        couponId: coupon.id,
+        code: coupon.code,
+        amount,
+      },
     };
 
-    if (method === PaymentMethod.MCOM_WALLET) {
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: await this.getCentralUserId(userId),
-        amount,
-        reference: paymentMetadata.reference,
-        idempotencyKey: this.paymentProviderService.buildWalletKey(
-          'coupon-reload-hold',
-          coupon.id,
-          userId,
-          paymentMetadata.idempotencyKey,
-        ),
-        metadata: { purpose: 'COUPON', couponId: coupon.id, userId },
-      });
-      return {
-        provider: method,
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
-        amount,
-      };
-    }
-    if (method === PaymentMethod.STRIPE) {
-      const intent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          amount,
-          'GBP',
-          paymentMetadata,
-        );
-      return {
-        provider: method,
-        clientSecret: intent.client_secret,
-        amount,
-      };
-    }
-    const order = await this.paymentProviderService.createPaypalOrder(
+    const centralUserId =
+      method === PaymentMethod.MCOM_WALLET
+        ? await this.getCentralUserId(userId)
+        : undefined;
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail: method,
       amount,
-      'GBP',
-      paymentMetadata,
-    );
+      currency: 'GBP',
+      payer: { mallUserId: userId, centralUserId },
+      metadata: paymentMetadata,
+      reference: paymentMetadata.reference,
+      idempotencyKey: paymentMetadata.idempotencyKey,
+      walletIdempotencyKey: this.paymentProviderService.buildWalletKey(
+        'coupon-reload-hold',
+        coupon.id,
+        userId,
+        paymentMetadata.idempotencyKey,
+      ),
+      walletHoldMetadata: {
+        purpose: 'COUPON',
+        couponId: coupon.id,
+        userId,
+      },
+      description: `MCOM Mall coupon reload — ${product.name}`,
+      intent: 'PURCHASE',
+      splits: paymentMetadata.splits,
+      walletMode: 'hold',
+    });
+
+    if (initiated.rail === 'mcom_wallet') {
+      return {
+        provider: method,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
+        amount,
+      };
+    }
+    if (initiated.rail === 'stripe') {
+      return {
+        provider: method,
+        clientSecret: initiated.clientSecret,
+        amount,
+      };
+    }
     return {
       provider: method,
-      orderId: order.id,
-      approvalUrl: order.approvalUrl ?? null,
+      orderId: initiated.orderId,
+      approvalUrl: initiated.approvalUrl,
       amount,
     };
   }
@@ -1620,6 +1657,7 @@ export class CouponService {
     }
     const product = await this.couponProductRepository.findOne({
       where: { id: metadata.couponProductId },
+      relations: ['user'],
     });
     if (!product?.allowReloading) {
       throw new BadRequestException('This coupon cannot be reloaded.');
@@ -1629,23 +1667,27 @@ export class CouponService {
       throw new BadRequestException('Enter a valid reload amount.');
     }
     const method = this.normalizeCouponPaymentMethod(dto.paymentProvider);
+    const expectedSplits = this.paymentProviderService.buildSellerSplits(
+      amount,
+      {
+        userId: product.user.id,
+        centralUserId: product.user.centralUserId,
+        externalId: `user:${product.user.id}`,
+      },
+    );
     const verification = await this.verifyCouponPayment(
       method,
       dto.transactionId,
       amount,
       userId,
       `coupon-reload-${coupon.id}-${userId}`,
+      { intent: 'PURCHASE', splits: expectedSplits },
     );
-    const details: any = verification.details ?? {};
-    const paymentReference =
-      details.transactionId || details.id || dto.transactionId;
-    const paidChargeId =
-      details.id && !String(details.id).startsWith('wallet:')
-        ? details.id
-        : null;
-    const paidProviderRef = details.providerRef ?? null;
-    const paidFeeMinor = details.feeMinor ?? null;
-    const paidNetMinor = details.netMinor ?? null;
+    const paymentReference = verification.transactionId || dto.transactionId;
+    const paidChargeId = verification.chargeId;
+    const paidProviderRef = verification.providerRef;
+    const paidFeeMinor = verification.feeMinor;
+    const paidNetMinor = verification.netMinor;
 
     const existingPayment = await this.orderPaymentRepository.findOne({
       where: [
@@ -1728,20 +1770,18 @@ export class CouponService {
     amount: number,
   ): Promise<void> {
     try {
-      if (
-        method === PaymentMethod.STRIPE ||
-        method === PaymentMethod.MCOM_WALLET
-      ) {
-        await this.paymentProviderService.refundStripePayment(
+      if (method === PaymentMethod.MCOM_WALLET) {
+        await this.paymentProviderService.releaseWalletHold(
           transactionId,
-          amount,
+          'Coupon purchase failed',
         );
-      } else if (method === PaymentMethod.PAYPAL) {
-        await this.paymentProviderService.refundPaypalOrder(
-          transactionId,
+      } else {
+        await this.paymentOrchestrator.refund({
+          rail: method,
+          reference: transactionId,
           amount,
-          'GBP',
-        );
+          reason: 'MCOM Mall coupon purchase failed',
+        });
       }
     } catch (refundErr) {
       this.logger.error(

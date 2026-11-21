@@ -20,20 +20,15 @@ import {
   useVerifyVoucherPurchase,
 } from '@/service/hooks/useVoucherService';
 import { CURRENCY } from '@/lib/utils';
-import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
-} from '@stripe/react-stripe-js';
 import { InitiateVoucherPurchaseDto } from '@/service/vouchers/types';
 import PayPalButtonWrapper from '@/components/PayPalButtonWrapper';
+import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { getPaymentErrorInfo, showPaymentError } from '@/lib/payment-errors';
 import {
   buildPayPalReturnUrls,
   storePendingPayPalPurchase,
 } from '@/lib/paypal-return';
+import { usePaymentFlow } from '@mcommall/payments';
 
 interface VoucherPurchaseModalProps {
   product: VoucherProduct;
@@ -42,53 +37,20 @@ interface VoucherPurchaseModalProps {
   onPurchaseSuccess: (voucher: Voucher) => void;
 }
 
-const stripePromise = loadStripe(
-  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
-);
+type VoucherRail = 'stripe' | 'paypal' | 'mcom_wallet';
 
-const StripePaymentForm = ({
-  onSuccess,
-}: {
-  onSuccess: (paymentIntentId: string) => void;
-}) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements) {
-      return;
-    }
-    setIsLoading(true);
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required',
-    });
-
-    if (error) {
-      toast.error(error.message || 'An unexpected error occurred.');
-      setIsLoading(false);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      onSuccess(paymentIntent.id);
-    } else {
-      // Handle other statuses if necessary
-    }
+interface VoucherInitiation {
+  response: {
+    clientSecret?: string;
+    orderId?: string;
+    approvalUrl?: string | null;
+    transactionId?: string;
+    holdId?: string;
+    expiresAt?: string;
+    provider: VoucherRail;
   };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <PaymentElement />
-      <Button
-        type="submit"
-        disabled={isLoading || !stripe || !elements}
-        className="mt-4 w-full"
-      >
-        {isLoading ? 'Processing...' : 'Pay Now'}
-      </Button>
-    </form>
-  );
-};
+  details: InitiateVoucherPurchaseDto;
+}
 
 export default function VoucherPurchaseModal({
   product,
@@ -101,23 +63,68 @@ export default function VoucherPurchaseModal({
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [personalMessage, setPersonalMessage] = useState('');
-  const [paymentProvider, setPaymentProvider] = useState<
-    'stripe' | 'paypal' | 'mcom_wallet'
-  >('stripe');
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
-  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
-    null,
-  );
-  const [isLoading, setIsLoading] = useState(false);
+  const [paymentProvider, setPaymentProvider] =
+    useState<VoucherRail>('stripe');
   const [error, setError] = useState<string | null>(null);
-  const [purchaseDetails, setPurchaseDetails] =
-    useState<InitiateVoucherPurchaseDto | null>(null);
   const hasAmountOptions =
     (product.fixedAmounts?.length ?? 0) > 0 || product.allowCustomAmount;
 
   const initiatePurchase = useInitiateVoucherPurchase();
   const verifyPurchase = useVerifyVoucherPurchase();
+
+  const resetForm = () => {
+    setSelectedAmount(null);
+    setCustomAmountInput('');
+    setRecipientName('');
+    setRecipientEmail('');
+    setPersonalMessage('');
+    setPaymentProvider('stripe');
+    setError(null);
+    flow.reset();
+    onClose();
+  };
+
+  const flow = usePaymentFlow<VoucherInitiation, Voucher>({
+    initiate: async () => {
+      if (!selectedAmount) {
+        throw new Error('Please select or enter a voucher amount.');
+      }
+      const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
+      const details: InitiateVoucherPurchaseDto = {
+        voucherProductId: product.id,
+        amount: Number(selectedAmount),
+        paymentProvider,
+        returnUrl,
+        cancelUrl,
+        ...(recipientName.trim()
+          ? { recipientName: recipientName.trim() }
+          : {}),
+        ...(recipientEmail.trim()
+          ? { recipientEmail: recipientEmail.trim() }
+          : {}),
+        ...(personalMessage.trim()
+          ? { personalMessage: personalMessage.trim() }
+          : {}),
+      };
+      const response = await initiatePurchase.mutateAsync(details);
+      return { response: response as VoucherInitiation['response'], details };
+    },
+    confirm: async (transactionId, handle) => {
+      return verifyPurchase.mutateAsync({
+        paymentProvider: handle.details.paymentProvider,
+        transactionId,
+        purchaseDetails: handle.details,
+      });
+    },
+    onSuccess: (voucher) => {
+      onPurchaseSuccess(voucher);
+      resetForm();
+    },
+    onError: (err) => {
+      setError(getPaymentErrorInfo(err).message);
+      showPaymentError(err);
+    },
+  });
 
   const handleFixedAmountClick = (amount: number) => {
     setSelectedAmount(amount);
@@ -152,110 +159,24 @@ export default function VoucherPurchaseModal({
     }
 
     setError(null);
-    setIsLoading(true);
-    const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
-    const details: InitiateVoucherPurchaseDto = {
-      voucherProductId: product.id,
-      amount: Number(selectedAmount),
-      paymentProvider,
-      returnUrl,
-      cancelUrl,
-      ...(recipientName.trim() ? { recipientName: recipientName.trim() } : {}),
-      ...(recipientEmail.trim()
-        ? { recipientEmail: recipientEmail.trim() }
-        : {}),
-      ...(personalMessage.trim()
-        ? { personalMessage: personalMessage.trim() }
-        : {}),
-    };
-    setPurchaseDetails(details);
+    const handle = await flow.start();
+    if (!handle) return;
 
-    try {
-      const response = await initiatePurchase.mutateAsync(details);
-      if (response.provider === 'mcom_wallet' && response.transactionId) {
-        const verifiedVoucher = await verifyPurchase.mutateAsync({
-          paymentProvider: 'mcom_wallet',
-          transactionId: response.transactionId,
-          purchaseDetails: details,
-        });
-        onPurchaseSuccess(verifiedVoucher);
-        resetForm();
-      } else if (response.provider === 'stripe') {
-        setClientSecret(response.clientSecret);
-      } else {
-        setPaypalOrderId(response.orderId);
-        setPaypalApprovalUrl((response as any).approvalUrl ?? null);
-        storePendingPayPalPurchase(
-          'voucher',
-          details as unknown as Record<string, unknown>,
-        );
-      }
-    } catch (err) {
-      setError(getPaymentErrorInfo(err).message);
-      showPaymentError(err);
-    } finally {
-      setIsLoading(false);
+    const { response, details } = handle;
+    if (response.provider === 'mcom_wallet' && response.transactionId) {
+      await flow.confirm(response.transactionId);
+    } else if (response.provider === 'paypal') {
+      storePendingPayPalPurchase(
+        'voucher',
+        details as unknown as Record<string, unknown>
+      );
     }
   };
 
-  const handleVerifyStripePayment = async (transactionId: string) => {
-    if (!purchaseDetails) {
-      toast.error('Purchase details are missing.');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const verifiedVoucher = await verifyPurchase.mutateAsync({
-        paymentProvider: 'stripe',
-        transactionId,
-        purchaseDetails,
-      });
-      onPurchaseSuccess(verifiedVoucher);
-      resetForm();
-    } catch (err) {
-      setError(getPaymentErrorInfo(err).message);
-      showPaymentError(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePayPalApprove = async (orderId: string) => {
-    if (!purchaseDetails) {
-      toast.error('Purchase details are missing.');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const verifiedVoucher = await verifyPurchase.mutateAsync({
-        paymentProvider: 'paypal',
-        transactionId: orderId,
-        purchaseDetails,
-      });
-      onPurchaseSuccess(verifiedVoucher);
-      resetForm();
-    } catch (err) {
-      setError(getPaymentErrorInfo(err).message);
-      showPaymentError(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setSelectedAmount(null);
-    setCustomAmountInput('');
-    setRecipientName('');
-    setRecipientEmail('');
-    setPersonalMessage('');
-    setPaymentProvider('stripe');
-    setClientSecret(null);
-    setPaypalOrderId(null);
-    setPaypalApprovalUrl(null);
-    setError(null);
-    setPurchaseDetails(null);
-    onClose();
-  };
+  const clientSecret = flow.handle?.response?.clientSecret;
+  const paypalOrderId = flow.handle?.response?.orderId;
+  const paypalApprovalUrl = flow.handle?.response?.approvalUrl ?? null;
+  const isBusy = flow.isBusy;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -265,23 +186,26 @@ export default function VoucherPurchaseModal({
         </DialogHeader>
         {!clientSecret && !paypalOrderId ? (
           <div className="grid gap-4 py-4">
-            {/* Form fields */}
             {product.bonusThreshold && product.bonusAmount && (
-                <div className="rounded-lg bg-green-50 p-4 text-green-700">
-                    <p className="font-bold">Bonus Offer!</p>
-                    <p>Buy a voucher for {CURRENCY}{product.bonusThreshold} or more and get an extra {CURRENCY}{product.bonusAmount} on us!</p>
-                </div>
+              <div className="rounded-lg bg-green-50 p-4 text-green-700">
+                <p className="font-bold">Bonus Offer!</p>
+                <p>
+                  Buy a voucher for {CURRENCY}
+                  {product.bonusThreshold} or more and get an extra {CURRENCY}
+                  {product.bonusAmount} on us!
+                </p>
+              </div>
             )}
             <div className="space-y-2">
               <Label>Select Amount</Label>
               {!hasAmountOptions && (
                 <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700">
-                  This voucher does not have an online purchase amount yet.
-                  Ask the business to add fixed amounts or a custom amount.
+                  This voucher does not have an online purchase amount yet. Ask
+                  the business to add fixed amounts or a custom amount.
                 </p>
               )}
               <div className="flex flex-wrap gap-2">
-                {product.fixedAmounts?.map(amount => (
+                {product.fixedAmounts?.map((amount) => (
                   <Button
                     key={amount}
                     type="button"
@@ -299,7 +223,9 @@ export default function VoucherPurchaseModal({
               </div>
               {product.allowCustomAmount && (
                 <div className="pt-2">
-                  <Label htmlFor="custom-amount">Or enter a custom amount</Label>
+                  <Label htmlFor="custom-amount">
+                    Or enter a custom amount
+                  </Label>
                   <Input
                     id="custom-amount"
                     type="number"
@@ -318,7 +244,7 @@ export default function VoucherPurchaseModal({
               <Input
                 id="recipientName"
                 value={recipientName}
-                onChange={e => setRecipientName(e.target.value)}
+                onChange={(e) => setRecipientName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -327,7 +253,7 @@ export default function VoucherPurchaseModal({
                 id="recipientEmail"
                 type="email"
                 value={recipientEmail}
-                onChange={e => setRecipientEmail(e.target.value)}
+                onChange={(e) => setRecipientEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -337,7 +263,7 @@ export default function VoucherPurchaseModal({
               <Input
                 id="personalMessage"
                 value={personalMessage}
-                onChange={e => setPersonalMessage(e.target.value)}
+                onChange={(e) => setPersonalMessage(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -345,10 +271,8 @@ export default function VoucherPurchaseModal({
               <RadioGroup
                 defaultValue="stripe"
                 value={paymentProvider}
-                onValueChange={value => {
-                  setPaymentProvider(
-                    value as 'stripe' | 'paypal' | 'mcom_wallet'
-                  );
+                onValueChange={(value) => {
+                  setPaymentProvider(value as VoucherRail);
                   setError(null);
                 }}
                 className="flex gap-4"
@@ -379,16 +303,19 @@ export default function VoucherPurchaseModal({
             {error && <p className="text-sm text-rose-600">{error}</p>}
           </div>
         ) : clientSecret ? (
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <StripePaymentForm onSuccess={handleVerifyStripePayment} />
-          </Elements>
+          <StripeCheckoutForm
+            clientSecret={clientSecret}
+            onPaymentSuccess={(paymentIntentId) =>
+              flow.confirm(paymentIntentId)
+            }
+          />
         ) : (
           paypalOrderId && (
             <div className="flex w-full items-center justify-center py-4">
               <PayPalButtonWrapper
                 orderId={paypalOrderId}
                 approvalUrl={paypalApprovalUrl}
-                onApprove={handlePayPalApprove}
+                onApprove={(orderId) => flow.confirm(orderId)}
               />
             </div>
           )
@@ -398,13 +325,15 @@ export default function VoucherPurchaseModal({
           {!clientSecret && !paypalOrderId && (
             <>
               <DialogClose asChild>
-                <Button variant="outline" onClick={resetForm}>Cancel</Button>
+                <Button variant="outline" onClick={resetForm}>
+                  Cancel
+                </Button>
               </DialogClose>
               <Button
                 onClick={handleInitiatePurchase}
-                disabled={!selectedAmount || isLoading || !hasAmountOptions}
+                disabled={!selectedAmount || isBusy || !hasAmountOptions}
               >
-                {isLoading ? 'Loading...' : 'Proceed to Payment'}
+                {isBusy ? 'Loading...' : 'Proceed to Payment'}
               </Button>
             </>
           )}

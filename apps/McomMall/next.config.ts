@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   // Production builds explicitly use webpack (`next build --webpack`) so the
   // Serwist service worker is still generated.
   turbopack: {},
-  transpilePackages: ['react-map-gl', 'maplibre-gl'],
+  transpilePackages: ['react-map-gl', 'maplibre-gl', '@mcommall/payments'],
   onDemandEntries: {
     maxInactiveAge: 15 * 1000,
     pagesBufferLength: 2,

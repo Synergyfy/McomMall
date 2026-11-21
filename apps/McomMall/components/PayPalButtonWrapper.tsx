@@ -1,7 +1,7 @@
 'use client';
 
-import { PayPalButtons, PayPalScriptProvider } from '@paypal/react-paypal-js';
-import { toast } from 'sonner';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+import { PayPalCheckoutButton } from '@mcommall/payments';
 
 interface PayPalButtonWrapperProps {
   orderId?: string;
@@ -11,8 +11,8 @@ interface PayPalButtonWrapperProps {
 }
 
 /**
- * PayPal entry point. Prefer MCOM Pay's official `approvalUrl` (Central owns
- * the PayPal merchant); the SDK path remains only for legacy callers.
+ * Legacy wrapper kept for call sites that are outside the app-level PayPal
+ * provider. The button itself is the shared @mcommall/payments implementation.
  */
 export default function PayPalButtonWrapper({
   orderId,
@@ -20,29 +20,6 @@ export default function PayPalButtonWrapper({
   onApprove,
   disabled,
 }: PayPalButtonWrapperProps) {
-  if (approvalUrl) {
-    return (
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => {
-          window.location.href = approvalUrl;
-        }}
-        className="w-full rounded-lg bg-[#0070ba] px-4 py-3 font-semibold text-white transition hover:bg-[#005ea6] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        Continue with PayPal
-      </button>
-    );
-  }
-
-  if (!orderId) {
-    return (
-      <p className="text-sm text-rose-600">
-        PayPal is not available for this payment.
-      </p>
-    );
-  }
-
   return (
     <PayPalScriptProvider
       options={{
@@ -50,15 +27,11 @@ export default function PayPalButtonWrapper({
         intent: 'capture',
       }}
     >
-      <PayPalButtons
+      <PayPalCheckoutButton
+        orderID={orderId}
+        approvalUrl={approvalUrl}
+        onPaymentSuccess={onApprove}
         disabled={disabled}
-        createOrder={() => Promise.resolve(orderId)}
-        // Never capture in the browser.
-        onApprove={async (data) => {
-          if (data.orderID) onApprove(data.orderID);
-          else toast.error('PayPal order id missing.');
-        }}
-        onError={() => toast.error('PayPal could not complete the payment.')}
       />
     </PayPalScriptProvider>
   );

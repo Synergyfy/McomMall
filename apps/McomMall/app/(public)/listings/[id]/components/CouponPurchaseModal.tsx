@@ -9,7 +9,10 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { CouponProduct } from '@/service/coupon-products/types';
-import { useInitiateCouponPurchase, useVerifyCouponPurchase } from '@/service/coupon-products/hooks';
+import {
+  useInitiateCouponPurchase,
+  useVerifyCouponPurchase,
+} from '@/service/coupon-products/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,12 +28,33 @@ import {
   buildPayPalReturnUrls,
   storePendingPayPalPurchase,
 } from '@/lib/paypal-return';
+import { usePaymentFlow } from '@mcommall/payments';
 
 interface CouponPurchaseModalProps {
   product: CouponProduct;
   isOpen: boolean;
   onClose: () => void;
   onPurchaseSuccess: (coupon: Coupon) => void;
+}
+
+type CouponRail = 'stripe' | 'paypal' | 'mcom_wallet';
+
+interface CouponDetails {
+  couponProductId: string;
+  amount: number;
+}
+
+interface CouponInitiation {
+  response: {
+    data: {
+      clientSecret?: string;
+      orderId?: string;
+      approvalUrl?: string | null;
+      transactionId?: string;
+      provider?: string;
+    };
+  };
+  details: CouponDetails;
 }
 
 export default function CouponPurchaseModal({
@@ -40,120 +64,75 @@ export default function CouponPurchaseModal({
   onPurchaseSuccess,
 }: CouponPurchaseModalProps) {
   const [amount, setAmount] = useState<number | ''>('');
-  const [paymentMethod, setPaymentMethod] = useState<
-    'stripe' | 'paypal' | 'mcom_wallet'
-  >('stripe');
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
-  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
-    null,
-  );
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<CouponRail>('stripe');
   const [error, setError] = useState<string | null>(null);
 
   const initiatePurchase = useInitiateCouponPurchase();
   const verifyPurchase = useVerifyCouponPurchase();
   const fixedAmounts = product.fixedAmounts ?? [];
 
+  const flow = usePaymentFlow<CouponInitiation, Coupon>({
+    initiate: async () => {
+      const details: CouponDetails = {
+        couponProductId: product.id,
+        amount: Number(amount),
+      };
+      const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
+      const response = await initiatePurchase.mutateAsync({
+        ...details,
+        paymentMethod,
+        returnUrl,
+        cancelUrl,
+      });
+      return { response, details };
+    },
+    confirm: async (transactionId, handle) => {
+      const verified = await verifyPurchase.mutateAsync({
+        purchaseDetails: handle.details,
+        paymentProvider: paymentMethod,
+        transactionId,
+      });
+      return verified.data;
+    },
+    onSuccess: (coupon) => onPurchaseSuccess(coupon),
+    onError: (err) => {
+      setError(getPaymentErrorInfo(err).message);
+      showPaymentError(err);
+    },
+  });
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setAmount(value === '' ? '' : Number(value));
   };
 
-  const handleInitiatePayment = () => {
+  const handleInitiatePayment = async () => {
     if (!amount) {
       toast.error('Please choose an amount.');
       return;
     }
 
     setError(null);
-    setIsProcessing(true);
-    const { returnUrl, cancelUrl } = buildPayPalReturnUrls();
-    initiatePurchase.mutate(
-      {
+    const initiated = await flow.start();
+    if (!initiated) return;
+
+    const data = initiated.response.data;
+    if (paymentMethod === 'mcom_wallet' && data.transactionId) {
+      await flow.confirm(data.transactionId);
+    } else if (paymentMethod === 'paypal' && data.orderId) {
+      storePendingPayPalPurchase('coupon', {
         couponProductId: product.id,
         amount: Number(amount),
-        paymentMethod,
-        returnUrl,
-        cancelUrl,
-      },
-      {
-        onSuccess: (data) => {
-          if (paymentMethod === 'mcom_wallet' && data.data.transactionId) {
-            verifyPurchase.mutate(
-              {
-                purchaseDetails: {
-                  couponProductId: product.id,
-                  amount: Number(amount),
-                },
-                paymentProvider: 'mcom_wallet',
-                transactionId: data.data.transactionId,
-              },
-              {
-                onSuccess: (verified) => {
-                  onPurchaseSuccess(verified.data);
-                },
-                onError: (err) => {
-                  setError(getPaymentErrorInfo(err).message);
-                  showPaymentError(err);
-                },
-                onSettled: () => {
-                  setIsProcessing(false);
-                },
-              }
-            );
-            return;
-          }
-          if (paymentMethod === 'stripe' && data.data.clientSecret) {
-            setClientSecret(data.data.clientSecret);
-          } else if (paymentMethod === 'paypal' && data.data.orderId) {
-            setPaypalOrderId(data.data.orderId);
-            setPaypalApprovalUrl(data.data.approvalUrl ?? null);
-            storePendingPayPalPurchase('coupon', {
-              couponProductId: product.id,
-              amount: Number(amount),
-            });
-          }
-        },
-        onError: (err) => {
-          setError(getPaymentErrorInfo(err).message);
-          showPaymentError(err);
-        },
-        onSettled: () => {
-          setIsProcessing(false);
-        },
-      }
-    );
+      });
+    }
   };
 
-  const handlePaymentSuccess = (transactionId: string) => {
-    setError(null);
-    setIsProcessing(true);
-    verifyPurchase.mutate(
-      {
-        purchaseDetails: {
-          couponProductId: product.id,
-          amount: Number(amount),
-        },
-        paymentProvider: paymentMethod,
-        transactionId,
-      },
-      {
-        onSuccess: (data) => {
-          onPurchaseSuccess(data.data);
-        },
-        onError: (err) => {
-          setError(getPaymentErrorInfo(err).message);
-          showPaymentError(err);
-        },
-        onSettled: () => {
-          setIsProcessing(false);
-          setClientSecret(null);
-          setPaypalOrderId(null);
-        },
-      }
-    );
-  };
+  const clientSecret =
+    paymentMethod === 'stripe' ? flow.handle?.response?.data?.clientSecret : null;
+  const paypalOrderId =
+    paymentMethod === 'paypal' ? flow.handle?.response?.data?.orderId : null;
+  const paypalApprovalUrl =
+    flow.handle?.response?.data?.approvalUrl ?? null;
 
   return (
     <>
@@ -161,7 +140,9 @@ export default function CouponPurchaseModal({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Purchase {product.name}</DialogTitle>
-            <DialogDescription>{stripHtmlText(product.description)}</DialogDescription>
+            <DialogDescription>
+              {stripHtmlText(product.description)}
+            </DialogDescription>
           </DialogHeader>
           {!clientSecret && !paypalOrderId && (
             <div className="space-y-4">
@@ -208,10 +189,9 @@ export default function CouponPurchaseModal({
                 <Label>Payment Method</Label>
                 <RadioGroup
                   value={paymentMethod}
-                  onValueChange={(value: 'stripe' | 'paypal' | 'mcom_wallet') => {
+                  onValueChange={(value: CouponRail) => {
                     setPaymentMethod(value);
-                    setClientSecret(null);
-                    setPaypalOrderId(null);
+                    flow.reset();
                     setError(null);
                   }}
                   className="flex flex-wrap gap-4"
@@ -233,9 +213,9 @@ export default function CouponPurchaseModal({
               {error && <p className="text-sm text-rose-600">{error}</p>}
               <Button
                 onClick={handleInitiatePayment}
-                disabled={isProcessing || !amount}
+                disabled={flow.isBusy || !amount}
               >
-                {isProcessing ? 'Processing...' : 'Proceed to Payment'}
+                {flow.isBusy ? 'Processing...' : 'Proceed to Payment'}
               </Button>
             </div>
           )}
@@ -243,7 +223,9 @@ export default function CouponPurchaseModal({
           {clientSecret && paymentMethod === 'stripe' && (
             <StripeCheckoutForm
               clientSecret={clientSecret}
-              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentSuccess={(transactionId) =>
+                flow.confirm(transactionId)
+              }
             />
           )}
 
@@ -251,13 +233,15 @@ export default function CouponPurchaseModal({
             <PayPalCheckoutButton
               orderID={paypalOrderId}
               approvalUrl={paypalApprovalUrl}
-              onPaymentSuccess={(transactionId) => handlePaymentSuccess(transactionId)}
+              onPaymentSuccess={(transactionId) =>
+                flow.confirm(transactionId)
+              }
             />
           )}
         </DialogContent>
       </Dialog>
       <InProgressDialog
-        isOpen={isProcessing && (!!clientSecret || !!paypalOrderId)}
+        isOpen={flow.isBusy && (!!clientSecret || !!paypalOrderId)}
         message="Processing payment... Please do not close this page."
       />
     </>

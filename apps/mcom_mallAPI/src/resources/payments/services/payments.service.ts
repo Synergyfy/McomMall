@@ -8,11 +8,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomUUID } from 'crypto';
 import { User } from '../../users/entities/user.entity';
 import { PaymentHistory } from '../entities/payment-history.entity';
 import { RecordPaymentDto } from '../dto/record-payment.dto';
 import { PaymentProviderService } from './payment-provider.service';
+import { PaymentOrchestratorService } from './payment-orchestrator.service';
 import { McomPayService } from './mcom-pay.service';
 import { PaymentGateway } from '../enums/payment-gateway.enum';
 import { MembershipPayment } from '../../membership/entities/membership-payment.entity';
@@ -29,10 +31,17 @@ import { PlanType as MembershipPlanType } from 'src/resources/membership/dto/ini
 import { PaymentMethod } from 'src/resources/order/entities/order-payment.entity';
 import { OrderPayment } from '../../order/entities/order-payment.entity';
 import { Order } from '../../order/entities/order.entity';
+import { ServicePayment } from '../../booking/entities/service-payment.entity';
 import { OrderStatus } from '../../order/enums/order-status.enum';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreatePaypalOrderDto } from '../dto/create-paypal-order.dto';
 import { PlanType } from '../enums/plan-type.enum';
+import { McomPaymentIntent } from '../entities/mcom-payment-intent.entity';
+import {
+  MCOM_PAY_BOOKING_PAID,
+  MCOM_PAY_INTENT_PAID,
+  MCOM_PAY_PURCHASE_PAID,
+} from '../payments.events';
 
 @Injectable()
 export class PaymentsService {
@@ -47,10 +56,16 @@ export class PaymentsService {
     private readonly orderPaymentRepository: Repository<OrderPayment>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(ServicePayment)
+    private readonly servicePaymentRepository: Repository<ServicePayment>,
     @InjectRepository(MembershipPayment)
     private readonly membershipPaymentRepository: Repository<MembershipPayment>,
+    @InjectRepository(McomPaymentIntent)
+    private readonly paymentIntentRepository: Repository<McomPaymentIntent>,
     private readonly mcomPayService: McomPayService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     private readonly centralIntegrationService: CentralIntegrationService,
     @Inject(forwardRef(() => MembershipService))
     private readonly membershipService: MembershipService,
@@ -58,78 +73,55 @@ export class PaymentsService {
   ) {}
 
   async createStripePaymentIntent(dto: CreatePaymentIntentDto, userId: string) {
-    let amount = dto.amount;
-    const purpose = dto.purpose || PaymentPurpose.MEMBERSHIP;
-    const metadata: any = {
-      purpose,
-      mallUserId: userId,
-      userId,
-      reference: dto.idempotencyKey || `mall-payment-${userId}`,
-      idempotencyKey:
-        dto.idempotencyKey || `payment-intent-${userId}-${randomUUID()}`,
-    };
-
-    const variantId = dto.planVariantId || dto.tierId;
-    if (variantId) {
-      const { price } = await this.plansService.resolveActivePrice(variantId);
-      amount = Number(price.amount);
-      metadata.planVariantId = variantId;
-      metadata.priceId = price.id;
-      metadata.planType = dto.planType || PlanType.MONTHLY;
-    }
-
-    if (purpose === PaymentPurpose.MEMBERSHIP && !variantId) {
-      throw new BadRequestException(
-        'A planVariantId or tierId is required for membership payments.',
-      );
-    }
-    if (!amount)
-      throw new BadRequestException('Amount or planVariantId is required');
-
-    if (
-      !Number.isFinite(Number(amount)) ||
-      Number(amount) <= 0 ||
-      Number(amount) > 50000
-    ) {
-      throw new BadRequestException('Amount must be between 0 and 50000');
-    }
-
-    return this.paymentProviderService.createStripePaymentIntent(
-      amount,
-      'gbp',
-      metadata,
-    );
+    return this.createGatewayPayment(dto, userId, 'stripe');
   }
 
   async createPaypalOrder(dto: CreatePaypalOrderDto, userId: string) {
-    let amount = dto.amount;
+    return this.createGatewayPayment(dto, userId, 'paypal');
+  }
+
+  /**
+   * One front door for the generic intent/order routes.
+   *
+   * Membership is delegated to `MembershipService` so plan pricing, wallet
+   * holds and membership creation have a single owner. Only genuine one-off
+   * PAYG payments are created here.
+   */
+  private async createGatewayPayment(
+    dto: CreatePaymentIntentDto | CreatePaypalOrderDto,
+    userId: string,
+    rail: 'stripe' | 'paypal',
+  ) {
     const purpose = dto.purpose || PaymentPurpose.MEMBERSHIP;
-    const metadata: any = {
-      purpose,
-      mallUserId: userId,
-      userId,
-      reference: dto.idempotencyKey || `mall-payment-${userId}`,
-      idempotencyKey:
-        dto.idempotencyKey || `payment-intent-${userId}-${randomUUID()}`,
-    };
 
-    const variantId = dto.planVariantId || dto.tierId;
-    if (variantId) {
-      const { price } = await this.plansService.resolveActivePrice(variantId);
-      amount = Number(price.amount);
-      metadata.planVariantId = variantId;
-      metadata.priceId = price.id;
-      metadata.planType = dto.planType || PlanType.MONTHLY;
-    }
-
-    if (purpose === PaymentPurpose.MEMBERSHIP && !variantId) {
-      throw new BadRequestException(
-        'A planVariantId or tierId is required for membership payments.',
+    if (purpose === PaymentPurpose.MEMBERSHIP) {
+      const variantId = dto.planVariantId || dto.tierId;
+      if (!variantId) {
+        throw new BadRequestException(
+          'A planVariantId or tierId is required for membership payments.',
+        );
+      }
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) throw new NotFoundException('User not found.');
+      return this.membershipService.initiateMembershipPayment(
+        {
+          paymentProvider:
+            rail === 'stripe' ? PaymentMethod.STRIPE : PaymentMethod.PAYPAL,
+          planVariantId: dto.planVariantId,
+          tierId: dto.tierId,
+          planType: dto.planType as any,
+          idempotencyKey: dto.idempotencyKey,
+        },
+        user,
       );
     }
-    if (!amount)
-      throw new BadRequestException('Amount or planVariantId is required');
 
+    const amount = dto.amount;
+    if (!amount) {
+      throw new BadRequestException('An amount is required for this payment.');
+    }
     if (
       !Number.isFinite(Number(amount)) ||
       Number(amount) <= 0 ||
@@ -138,11 +130,42 @@ export class PaymentsService {
       throw new BadRequestException('Amount must be between 0 and 50000');
     }
 
-    return this.paymentProviderService.createPaypalOrder(
-      amount,
-      'gbp',
-      metadata,
-    );
+    const idempotencyKey =
+      dto.idempotencyKey || `payment-intent-${userId}-${randomUUID()}`;
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail,
+      amount: Number(amount),
+      currency: 'gbp',
+      payer: { mallUserId: userId },
+      metadata: { purpose },
+      reference: dto.idempotencyKey || `mall-payment-${userId}`,
+      idempotencyKey,
+      intent: 'PURCHASE',
+    });
+
+    if (initiated.rail === 'stripe') {
+      return {
+        id: initiated.chargeId,
+        chargeId: initiated.chargeId,
+        providerRef: initiated.providerRef,
+        clientSecret: initiated.clientSecret,
+        client_secret: initiated.clientSecret,
+        amount: initiated.amount,
+        currency: initiated.currency,
+      };
+    }
+    if (initiated.rail === 'paypal') {
+      return {
+        id: initiated.orderId,
+        chargeId: initiated.chargeId,
+        providerRef: initiated.orderId,
+        orderId: initiated.orderId,
+        approvalUrl: initiated.approvalUrl,
+        amount: initiated.amount,
+        currency: initiated.currency,
+      };
+    }
+    throw new BadRequestException('Invalid payment rail specified.');
   }
 
   async recordPayment(
@@ -249,8 +272,8 @@ export class PaymentsService {
       }
     } else {
       // Non-membership records (legacy PAYG/admin) verify directly.
+      const walletReference = recordPaymentDto.holdId || transactionId;
       if (paymentGateway === PaymentGateway.MCOM_WALLET) {
-        const walletReference = recordPaymentDto.holdId || transactionId;
         if (!walletReference) {
           throw new BadRequestException(
             'A wallet payment reference is required for MCOM Wallet payments.',
@@ -261,85 +284,42 @@ export class PaymentsService {
             'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
           );
         }
-        const verification =
-          await this.paymentProviderService.settleWalletReference(
-            walletReference,
-            decimalAmount,
-            'GBP',
-            {
-              mallUserId: userId,
-              mcomUserId: user.centralUserId,
-              holdId: recordPaymentDto.holdId,
-              reference: `payment-${userId}`,
-            },
-            `capture-${walletReference}`,
-          );
-        if (!verification.ok) {
-          throw new BadRequestException(
-            `MCOM Wallet verification failed: ${verification.reason || 'unknown reason'}`,
-          );
-        }
-        const details: any = verification.details ?? {};
-        transactionId =
-          details.transactionId || details.id || walletReference;
-        mcomChargeId =
-          details.id && !String(details.id).startsWith('wallet:')
-            ? details.id
-            : null;
-        providerRef = details.providerRef ?? null;
-        feeMinor = details.feeMinor ?? null;
-        netMinor = details.netMinor ?? null;
-      } else if (paymentGateway === PaymentGateway.STRIPE) {
-        if (!transactionId) {
-          throw new BadRequestException(
-            'A Stripe payment reference is required.',
-          );
-        }
-        const verification =
-          await this.paymentProviderService.verifyStripePaymentIntent(
-            transactionId,
-            decimalAmount,
-            normalizedCurrency,
-            {
-              mallUserId: userId,
-              mcomUserId: user.centralUserId,
-            },
-          );
-        if (!verification.ok) {
-          throw new BadRequestException(
-            `Stripe verification failed: ${verification.reason || 'unknown reason'}`,
-          );
-        }
-        const details: any = verification.details ?? {};
-        mcomChargeId = details.id ?? null;
-        providerRef = details.providerRef ?? null;
-        feeMinor = details.feeMinor ?? null;
-        netMinor = details.netMinor ?? null;
-      } else if (paymentGateway === PaymentGateway.PAYPAL) {
-        if (!transactionId) {
-          throw new BadRequestException('A PayPal order ID is required.');
-        }
-        const verification =
-          await this.paymentProviderService.captureAndVerifyPaypalOrder(
-            transactionId,
-            decimalAmount,
-            normalizedCurrency,
-            {
-              mallUserId: userId,
-              mcomUserId: user.centralUserId,
-            },
-          );
-        if (!verification.ok) {
-          throw new BadRequestException(
-            `PayPal verification failed: ${verification.reason || 'unknown reason'}`,
-          );
-        }
-        const details: any = verification.details ?? {};
-        mcomChargeId = details.id ?? null;
-        providerRef = details.providerRef ?? null;
-        feeMinor = details.feeMinor ?? null;
-        netMinor = details.netMinor ?? null;
+      } else if (!transactionId) {
+        throw new BadRequestException(
+          paymentGateway === PaymentGateway.PAYPAL
+            ? 'A PayPal order ID is required.'
+            : 'A Stripe payment reference is required.',
+        );
       }
+
+      const verification = await this.paymentOrchestrator.confirm({
+        rail: providerMethod,
+        reference: walletReference || transactionId,
+        amount: decimalAmount,
+        currency: normalizedCurrency,
+        payer: { mallUserId: userId, centralUserId: user.centralUserId },
+        holdId:
+          paymentGateway === PaymentGateway.MCOM_WALLET
+            ? recordPaymentDto.holdId
+            : undefined,
+        contextReference: `payment-${userId}`,
+        idempotencyKey:
+          paymentGateway === PaymentGateway.MCOM_WALLET
+            ? `capture-${walletReference}`
+            : undefined,
+      });
+      if (!verification.ok) {
+        throw new BadRequestException(
+          `Payment verification failed: ${verification.reason || 'unknown reason'}`,
+        );
+      }
+      if (paymentGateway === PaymentGateway.MCOM_WALLET) {
+        transactionId = verification.transactionId || walletReference;
+      }
+      mcomChargeId = verification.chargeId;
+      providerRef = verification.providerRef;
+      feeMinor = verification.feeMinor;
+      netMinor = verification.netMinor;
     }
 
     if (!transactionId) {
@@ -426,6 +406,68 @@ export class PaymentsService {
 
     const allocation = await this.mcomPayService.getAllocation(chargeId);
     if (!allocation) {
+      // A paid booking charge whose browser never reached verify-payment.
+      const reference = String(data.reference ?? '');
+      const bookingMatch = reference.match(/^booking-([0-9a-f-]{36})/i);
+      if (bookingMatch) {
+        await this.eventEmitter.emitAsync(MCOM_PAY_BOOKING_PAID, {
+          bookingId: bookingMatch[1],
+          chargeId,
+          amountMinor: String(data.amountMinor ?? '0'),
+          method: String(data.method ?? '').toLowerCase(),
+          providerRef: data.providerRef ?? null,
+        });
+        return;
+      }
+
+      // Gift cards, vouchers, coupons, memberships, top-ups and money vouchers
+      // freeze their purchase context on the charge at initiation.
+      const purchaseContext =
+        await this.mcomPayService.getLocalChargeContext(chargeId);
+      if (purchaseContext?.purpose) {
+        await this.eventEmitter.emitAsync(MCOM_PAY_PURCHASE_PAID, {
+          purpose: purchaseContext.purpose,
+          context: purchaseContext,
+          chargeId,
+          amountMinor: String(data.amountMinor ?? '0'),
+          method: String(data.method ?? '').toLowerCase(),
+          providerRef: data.providerRef ?? null,
+        });
+        return;
+      }
+
+      // No business record was linked yet. For quote-bound checkout intents
+      // written before payment, complete the order now. This is what makes a
+      // paid charge survive a closed tab.
+      let intent = await this.paymentIntentRepository.findOne({
+        where: [
+          { chargeId },
+          ...(data.reference ? [{ reference: String(data.reference) }] : []),
+        ],
+      });
+      if (!intent && data.reference) {
+        // Charge references append `-<method>-<amount>` to the intent
+        // reference. Recover the intent id if the local charge row is missing.
+        const match = String(data.reference).match(
+          /^mall-order-([0-9a-f-]{36})/i,
+        );
+        if (match) {
+          intent = await this.paymentIntentRepository.findOne({
+            where: { id: match[1] },
+          });
+        }
+      }
+      if (intent && intent.status !== 'completed') {
+        this.logger.log(
+          `Completing checkout intent ${intent.id} from MCOM Pay webhook (${chargeId}).`,
+        );
+        await this.eventEmitter.emitAsync(MCOM_PAY_INTENT_PAID, {
+          intentId: intent.id,
+          chargeId,
+        });
+        return;
+      }
+
       this.logger.warn(
         `MCOM Pay charge ${chargeId} has no local allocation (event ${payload?.event}).`,
       );
@@ -434,11 +476,14 @@ export class PaymentsService {
 
     const status = String(data.status || (payload?.event === 'payment.succeeded' ? 'paid' : 'refunded'));
 
+    // Keep the local payment row in step with Central for every purpose that
+    // created an order payment (orders, gift cards, vouchers, coupons, top-ups).
+    await this.orderPaymentRepository.update(
+      { mcomChargeId: chargeId },
+      { status },
+    );
+
     if (allocation.purpose === 'ORDER') {
-      await this.orderPaymentRepository.update(
-        { mcomChargeId: chargeId },
-        { status },
-      );
       if (status === 'paid') {
         const order = await this.orderRepository.findOne({
           where: { id: allocation.entityId },
@@ -453,6 +498,11 @@ export class PaymentsService {
       }
     } else if (allocation.purpose === 'MEMBERSHIP') {
       await this.membershipPaymentRepository.update(
+        { mcomChargeId: chargeId },
+        { status },
+      );
+    } else if (allocation.purpose === 'BOOKING') {
+      await this.servicePaymentRepository.update(
         { mcomChargeId: chargeId },
         { status },
       );

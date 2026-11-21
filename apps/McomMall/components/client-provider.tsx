@@ -10,13 +10,7 @@ import { store } from '@/service/store/store';
 import { loadAuthFromCookies } from '@/service/store/authSlice';
 import { useTokenRefresh } from '@/service/auth/useTokenRefresh';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
 import { MarketplaceProvider } from '@/context/MarketplaceContext';
-
-const mcomStripeKey =
-  process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '';
-const stripePromise = mcomStripeKey ? loadStripe(mcomStripeKey) : null;
 
 const AuthLoader = ({ children }: { children: React.ReactNode }) => {
   const dispatch = useDispatch();
@@ -49,9 +43,7 @@ export function ClientProviders({
               clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
             }}
           >
-            <Elements stripe={stripePromise}>
-              <AuthLoader>{children}</AuthLoader>
-            </Elements>
+            <AuthLoader>{children}</AuthLoader>
           </PayPalScriptProvider>
         </MarketplaceProvider>
         <ReactQueryDevtools initialIsOpen={false} />

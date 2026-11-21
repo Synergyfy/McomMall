@@ -21,6 +21,8 @@ import { WalletRefundReconcileService } from './wallet-refund-reconcile.service'
 import { RewardRedemptionReconcileService } from './reward-redemption-reconcile.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { QuoteCheckoutDto } from './dto/quote-checkout.dto';
+import { CreateOrderPaymentIntentDto } from './dto/create-order-payment-intent.dto';
+import { RefundOrderDto } from './dto/refund-order.dto';
 import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
 import {
   ApiBearerAuth,
@@ -51,6 +53,52 @@ export class OrderController {
   })
   quote(@Body() quoteCheckoutDto: QuoteCheckoutDto, @Req() req) {
     return this.orderService.quote(req.user.id, quoteCheckoutDto);
+  }
+
+  @Post('payment-intent')
+  @ApiOperation({
+    summary: 'Create a quote-bound checkout payment intent',
+    description:
+      'Re-prices the checkout server-side, creates the MCOM Pay charge (with payee splits when enabled) and persists the intent so the webhook can finish the order if the browser closes. Card and PayPal only.',
+  })
+  createPaymentIntent(
+    @Body() dto: CreateOrderPaymentIntentDto,
+    @Req() req,
+  ) {
+    return this.orderService.createCheckoutPaymentIntent(req.user.id, dto);
+  }
+
+  @Post('payment-intent/:id/complete')
+  @ApiOperation({
+    summary: 'Complete a quote-bound checkout intent',
+    description:
+      'Verifies the MCOM Pay charge and creates the order. Used by the PayPal return page and safe to call repeatedly.',
+  })
+  completePaymentIntent(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { orderId?: string },
+    @Req() req,
+  ) {
+    return this.orderService.completeCheckoutPaymentIntent(
+      req.user.id,
+      id,
+      body?.orderId,
+    );
+  }
+
+  @Post(':id/refund')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Refund a completed order (admin only)',
+    description:
+      'Refunds the MCOM Pay charge, reverses local seller earnings, restores tracked stock and cancels bundled service bookings. Full refunds only.',
+  })
+  refundOrder(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RefundOrderDto,
+  ) {
+    return this.orderService.refundOrder(id, dto);
   }
 
   @Post('checkout')

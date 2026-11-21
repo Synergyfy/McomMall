@@ -70,6 +70,10 @@ export const envValidationSchema = Joi.object({
     .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
     .allow('')
     .optional(),
+  MCOM_PAY_SPLITS_ENABLED: Joi.string()
+    .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
+    .allow('')
+    .optional(),
   MCOM_PAY_ENABLED: Joi.string()
     .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
     .allow('')

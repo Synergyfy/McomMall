@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CreditCard, Wallet } from 'lucide-react';
+import { CreditCard, Loader2, Wallet } from 'lucide-react';
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 import { Button } from '@/components/ui/button';
@@ -14,20 +14,25 @@ interface PaymentFormProps {
   totalPrice: number;
   onPaymentSuccess: (orderId: string, method?: PaymentMethod) => void;
   clientSecret?: string;
+  paymentIntentId?: string;
   orderID?: string;
   paypalApprovalUrl?: string | null;
   setPaymentMethod: (method: PaymentMethod) => void;
   allowWallet?: boolean;
+  /** True while the server is creating the card/PayPal payment session. */
+  isPaymentIntentLoading?: boolean;
 }
 
 export default function PaymentForm({
   totalPrice,
   onPaymentSuccess,
   clientSecret,
+  paymentIntentId,
   orderID,
   paypalApprovalUrl,
   setPaymentMethod,
   allowWallet = true,
+  isPaymentIntentLoading = false,
 }: PaymentFormProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
     PaymentMethod.STRIPE
@@ -155,6 +160,12 @@ export default function PaymentForm({
       </div>
 
       <div className="mt-6">
+        {isPaymentIntentLoading ? (
+          <div className="flex justify-center items-center h-32">
+            <Loader2 className="animate-spin text-orange-600 h-8 w-8" />
+          </div>
+        ) : (
+          <>
         {selectedMethod === PaymentMethod.STRIPE && clientSecret && (
           <motion.div
             key="stripe"
@@ -165,6 +176,7 @@ export default function PaymentForm({
           >
             <StripeCheckoutForm
               clientSecret={clientSecret}
+              paymentIntentId={paymentIntentId}
               onPaymentSuccess={onPaymentSuccess}
             />
           </motion.div>
@@ -254,6 +266,8 @@ export default function PaymentForm({
               </div>
             )}
           </motion.div>
+        )}
+          </>
         )}
       </div>
     </motion.div>

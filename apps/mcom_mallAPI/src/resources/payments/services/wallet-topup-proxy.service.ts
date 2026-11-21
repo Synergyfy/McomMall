@@ -7,9 +7,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
 import { User } from '../../users/entities/user.entity';
 import { PaymentProviderService } from './payment-provider.service';
+import { PaymentOrchestratorService } from './payment-orchestrator.service';
 import { McomWalletService } from './mcom-wallet.service';
 
 /**
@@ -29,6 +29,7 @@ export class WalletTopUpProxyService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     private readonly mcomWalletService: McomWalletService,
   ) {}
 
@@ -50,60 +51,6 @@ export class WalletTopUpProxyService {
     return this.getPublishableKey().length > 0;
   }
 
-  async initiateTopUp(
-    mallUserId: string,
-    amount: number,
-    currency = 'GBP',
-  ): Promise<{
-    clientSecret: string;
-    paymentIntentId: string;
-    topUpRequestId: string;
-    amount: number;
-    currency: string;
-    checkoutUrl?: string | null;
-  }> {
-    if (!(amount >= 5 && amount <= 500)) {
-      throw new BadRequestException(
-        'Top-up amount must be between 5 and 500 GBP per attempt.',
-      );
-    }
-    const user = await this.userRepository.findOne({
-      where: { id: mallUserId },
-    });
-    if (!user) throw new NotFoundException('User not found');
-    if (!user.centralUserId) {
-      throw new BadRequestException(
-        'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
-      );
-    }
-
-    const intent =
-      await this.paymentProviderService.createStripePaymentIntent(
-        amount,
-        currency,
-        {
-          reference: `wallet-topup-${mallUserId}`,
-          userId: mallUserId,
-          idempotencyKey: `wallet-topup-${mallUserId}-${randomUUID()}`,
-          description: 'MCOM Wallet top-up',
-        },
-      );
-
-    if (!intent.client_secret) {
-      throw new BadRequestException('Could not start the card top-up.');
-    }
-
-    return {
-      clientSecret: intent.client_secret,
-      // The MCOM charge id is what confirm needs. MCOM Pay resolves the
-      // provider intent from its own ledger.
-      paymentIntentId: intent.id,
-      topUpRequestId: intent.id,
-      amount,
-      currency,
-    };
-  }
-
   async confirmTopUp(
     mallUserId: string,
     topUpRequestId: string,
@@ -123,14 +70,15 @@ export class WalletTopUpProxyService {
       charge.amountMinor,
     );
 
-    const result =
-      await this.paymentProviderService.verifyStripePaymentIntent(
-        // Prefer the charge id: MCOM Pay resolves it back to the provider
-        // intent itself, so a stale client id cannot redirect the credit.
-        topUpRequestId || paymentIntentId,
-        amount,
-        charge.currency,
-      );
+    const result = await this.paymentOrchestrator.confirm({
+      // Prefer the charge id: MCOM Pay resolves it back to the provider
+      // intent itself, so a stale client id cannot redirect the credit.
+      rail: 'stripe',
+      reference: topUpRequestId || paymentIntentId,
+      amount,
+      currency: charge.currency,
+      payer: { mallUserId },
+    });
     if (!result.ok) {
       throw new BadRequestException(
         `Card top-up could not be verified: ${result.reason}`,
@@ -154,20 +102,29 @@ export class WalletTopUpProxyService {
       reference: topUpRequestId,
       metadata: { platform: 'mcom-mall', mallUserId, chargeId: topUpRequestId },
       idempotencyKey: this.mcomWalletService.buildKey(
-        'wallet-topup',
+        'topup',
         topUpRequestId,
       ),
     });
 
-    await this.paymentProviderService.allocateCharge({
-      mcomChargeId: topUpRequestId,
-      purpose: 'WALLET_TOPUP',
-      entityType: 'wallet_topup',
-      entityId: topUpRequestId,
-      userId: mallUserId,
-      amountMinor: String(Math.round(Number(amount) * 100)),
-      currency: 'GBP',
-    });
+    try {
+      await this.paymentProviderService.allocateCharge({
+        mcomChargeId: topUpRequestId,
+        purpose: 'WALLET_TOPUP',
+        entityType: 'wallet_topup',
+        entityId: topUpRequestId,
+        userId: mallUserId,
+        amountMinor: String(Math.round(Number(amount) * 100)),
+        currency: 'GBP',
+      });
+    } catch (err: any) {
+      // The browser-driven /wallet/fund/verify path may have already
+      // allocated this charge to its audit order. That is the same business
+      // event, so treat the conflict as already-recorded instead of failing
+      // the webhook (which Central would retry forever).
+      const message = String(err?.message ?? err);
+      if (!message.includes('CHARGE_ALREADY_USED')) throw err;
+    }
 
     this.logger.log(
       `Wallet top-up ${topUpRequestId} credited ${amount} (central txn ${credited.transactionId})`,
