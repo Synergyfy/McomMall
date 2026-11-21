@@ -704,7 +704,7 @@ function AddServicePageContent() {
                 )}
               </div>
 
-              <footer className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 md:p-6 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+              <footer className="fixed bottom-16 md:bottom-0 left-0 md:left-[var(--admin-sidebar-width)] right-0 bg-white border-t border-gray-200 p-3 md:p-6 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
                 <div className="max-w-5xl mx-auto grid grid-cols-2 gap-2 w-full md:flex md:flex-row md:items-center md:gap-4">
                   <button
                     type="button"
