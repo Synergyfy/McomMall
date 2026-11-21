@@ -48,6 +48,57 @@ function buildService(
     refundPaypalOrder: jest.fn().mockResolvedValue({ id: 'refund-2' }),
   };
   const eventEmitter = { emit: jest.fn() };
+  const paymentOrchestrator = {
+    initiate: jest.fn(async (input: any) => {
+      if (input.rail === 'stripe') {
+        return {
+          rail: 'stripe',
+          chargeId: 'charge-1',
+          providerRef: 'pi_1',
+          clientSecret: 'secret',
+          amount: input.amount,
+          currency: input.currency,
+        };
+      }
+      if (input.rail === 'paypal') {
+        return {
+          rail: 'paypal',
+          chargeId: 'charge-1',
+          orderId: 'paypal-1',
+          approvalUrl: null,
+          amount: input.amount,
+          currency: input.currency,
+        };
+      }
+      return {
+        rail: 'mcom_wallet',
+        chargeId: 'charge-1',
+        holdId: 'hold-1',
+        amount: input.amount,
+        currency: input.currency,
+      };
+    }),
+    confirm: jest.fn(async (input: any) => ({
+      ok: true,
+      chargeId: 'charge-1',
+      transactionId: input.reference,
+      providerRef: null,
+      feeMinor: null,
+      netMinor: null,
+      method: input.rail,
+      amountMinor: String(Math.round(Number(input.amount) * 100)),
+      currency: String(input.currency).toUpperCase(),
+      status: 'paid',
+      raw: {
+        id: 'charge-1',
+        status: 'paid',
+        amountMinor: String(Math.round(Number(input.amount) * 100)),
+        currency: String(input.currency).toUpperCase(),
+      },
+    })),
+    refund: jest.fn().mockResolvedValue({ id: 'refund-1' }),
+    refundCharge: jest.fn().mockResolvedValue({ id: 'refund-1' }),
+  };
   const featureFlags = {
     isCashbackCapEnabled: jest.fn(() => flags.cashbackCap ?? false),
     isFunctionalTypeEnforcementEnabled: jest.fn(
@@ -66,6 +117,7 @@ function buildService(
   const service = new MoneyEngineService(
     dataSource as any,
     paymentProviderService as any,
+    paymentOrchestrator as any,
     eventEmitter as any,
     featureFlags as any,
     digitalValueService as any,
@@ -74,6 +126,7 @@ function buildService(
     service,
     dataSource,
     paymentProviderService,
+    paymentOrchestrator,
     eventEmitter,
     featureFlags,
     digitalValueService,
@@ -929,7 +982,7 @@ describe('MoneyEngineService.contributeToVoucher', () => {
       }),
       save: jest.fn(async (value: any) => value),
     };
-    const { service, paymentProviderService } = buildService(manager);
+    const { service, paymentOrchestrator } = buildService(manager);
 
     await expect(
       service.contributeToVoucher(
@@ -943,7 +996,7 @@ describe('MoneyEngineService.contributeToVoucher', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(paymentProviderService.refundStripePayment).toHaveBeenCalledWith(
+    expect(paymentOrchestrator.refundCharge).toHaveBeenCalledWith(
       'pi_over',
       20,
     );
@@ -1027,7 +1080,7 @@ describe('MoneyEngineService.initiateContribution', () => {
       },
     });
     const manager = { findOne: jest.fn().mockResolvedValue(target) };
-    const { service, paymentProviderService } = buildService(manager);
+    const { service, paymentOrchestrator } = buildService(manager);
 
     await expect(
       service.initiateContribution(
@@ -1037,8 +1090,6 @@ describe('MoneyEngineService.initiateContribution', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(
-      paymentProviderService.createStripePaymentIntent,
-    ).not.toHaveBeenCalled();
+    expect(paymentOrchestrator.initiate).not.toHaveBeenCalled();
   });
 });

@@ -21,6 +21,23 @@ import { useWalletBalance } from '@/service/payments/hooks';
 import { PaymentMethod } from '@/service/bookings/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookingSuccessModal } from './BookingSuccessModal';
+import { usePaymentFlow } from '@mcommall/payments';
+
+interface BookingPaymentResponse {
+  clientSecret?: string;
+  orderId?: string;
+  approvalUrl?: string | null;
+  transactionId?: string;
+  amount: number;
+  totalAmount?: number;
+  rewardDiscount?: number;
+}
+
+function toProvider(method: PaymentMethod): 'stripe' | 'paypal' | 'mcom_wallet' {
+  if (method === PaymentMethod.STRIPE) return 'stripe';
+  if (method === PaymentMethod.PAYPAL) return 'paypal';
+  return 'mcom_wallet';
+}
 
 interface BookingPaymentModalProps {
   isOpen: boolean;
@@ -38,22 +55,50 @@ export default function BookingPaymentModal({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PaymentMethod.STRIPE
   );
-  const [clientSecret, setClientSecret] = useState<string | undefined>();
-  const [orderID, setOrderID] = useState<string | undefined>();
-  const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<string | null>(
-    null,
-  );
   const [amount, setAmount] = useState<number>(0);
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [rewardDiscount, setRewardDiscount] = useState<number>(0);
   const [rewardIssuanceId, setRewardIssuanceId] = useState<string | undefined>();
-  const [isVerifying, setIsVerifying] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isPayingWithWallet, setIsPayingWithWallet] = useState(false);
   const initiateKeyRef = useRef<string | null>(null);
 
   const initiatePaymentMutation = useInitiatePayment();
   const verifyPaymentMutation = useVerifyPayment();
+
+  const flow = usePaymentFlow<BookingPaymentResponse, unknown>({
+    initiate: async () => {
+      const provider = toProvider(paymentMethod);
+      const response = await initiatePaymentMutation.mutateAsync({
+        bookingId,
+        paymentProvider: provider,
+        rewardIssuanceId,
+      });
+      setAmount(response.amount);
+      setTotalAmount(response.totalAmount ?? response.amount);
+      setRewardDiscount(response.rewardDiscount ?? 0);
+      return response;
+    },
+    confirm: async (transactionId, handle) => {
+      return verifyPaymentMutation.mutateAsync({
+        bookingId,
+        amount: handle.amount,
+        paymentProvider: toProvider(paymentMethod),
+        transactionId,
+      });
+    },
+    onSuccess: () => setShowSuccess(true),
+    onError: (error) => {
+      initiateKeyRef.current = null;
+      console.error('Failed to process booking payment', error);
+    },
+  });
+
+  const clientSecret = flow.handle?.clientSecret;
+  const orderID = flow.handle?.orderId;
+  const paypalApprovalUrl = flow.handle?.approvalUrl ?? null;
+  const isVerifying = flow.status === 'confirming';
+  const isInitiating = flow.status === 'initiating';
+  const isPayingWithWallet = flow.isBusy;
   const { data: wallet, isLoading: walletLoading } = useWalletBalance(
     isOpen && paymentMethod === PaymentMethod.MCOM_WALLET
   );
@@ -64,23 +109,26 @@ export default function BookingPaymentModal({
     if (!isOpen || !bookingId) return;
     if (paymentMethod === PaymentMethod.MCOM_WALLET) return;
     const initiateKey = `${bookingId}:${paymentMethod}:${rewardIssuanceId ?? ''}`;
-    if (
-      !clientSecret &&
-      !orderID &&
-      !initiatePaymentMutation.isPending &&
-      initiateKeyRef.current !== initiateKey
-    ) {
+    // Start a fresh session whenever the selected method (or reward) changes.
+    if (!flow.handle && initiateKeyRef.current !== initiateKey) {
       initiateKeyRef.current = initiateKey;
-      handleInitiatePayment(paymentMethod);
+      void flow.start();
     }
-  }, [isOpen, bookingId, paymentMethod, clientSecret, orderID, rewardIssuanceId]);
+  }, [
+    isOpen,
+    bookingId,
+    paymentMethod,
+    flow.handle,
+    flow.start,
+    rewardIssuanceId,
+  ]);
 
   // Reset when method changes to allow switching between Stripe/PayPal
   const switchMethod = (method: PaymentMethod) => {
     if (method !== paymentMethod) {
-        setClientSecret(undefined);
-        setOrderID(undefined);
-        setPaymentMethod(method);
+      flow.reset();
+      initiateKeyRef.current = null;
+      setPaymentMethod(method);
     }
   };
 
@@ -89,98 +137,20 @@ export default function BookingPaymentModal({
     if (next === rewardIssuanceId) return;
     setRewardIssuanceId(next);
     // Force a fresh payment intent for the new amount.
-    setClientSecret(undefined);
-    setOrderID(undefined);
-  };
-
-  const handleInitiatePayment = async (method: PaymentMethod) => {
-    try {
-      const provider =
-        method === PaymentMethod.STRIPE
-          ? 'stripe'
-          : method === PaymentMethod.PAYPAL
-            ? 'paypal'
-            : 'mcom_wallet';
-      const response = await initiatePaymentMutation.mutateAsync({
-        bookingId,
-        paymentProvider: provider,
-        rewardIssuanceId,
-      });
-
-      setAmount(response.amount);
-      setTotalAmount(response.totalAmount ?? response.amount);
-      setRewardDiscount(response.rewardDiscount ?? 0);
-      if (method === PaymentMethod.STRIPE) {
-        setClientSecret(response.clientSecret);
-      } else if (method === PaymentMethod.PAYPAL) {
-        setOrderID(response.orderId);
-        setPaypalApprovalUrl((response as any).approvalUrl ?? null);
-      }
-    } catch (error) {
-      console.error('Failed to initiate payment', error);
-      // Allow the customer to retry after a transient failure.
-      initiateKeyRef.current = null;
-    }
+    flow.reset();
+    initiateKeyRef.current = null;
   };
 
   const handleWalletPay = async () => {
-    if (isPayingWithWallet || isVerifying) return;
-    setIsPayingWithWallet(true);
-    try {
-      const response = await initiatePaymentMutation.mutateAsync({
-        bookingId,
-        paymentProvider: 'mcom_wallet',
-        rewardIssuanceId,
-      });
-      setAmount(response.amount);
-      setTotalAmount(response.totalAmount ?? response.amount);
-      setRewardDiscount(response.rewardDiscount ?? 0);
-      const transactionId = response.transactionId;
-      if (!transactionId) {
-        throw new Error('MCOM Wallet did not return a payment reference.');
-      }
-      await verifyPaymentMutation.mutateAsync({
-        bookingId,
-        amount: response.amount,
-        paymentProvider: 'mcom_wallet',
-        transactionId,
-      });
-      setShowSuccess(true);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        'MCOM Wallet payment failed. Please try again.';
-      console.error('Failed to pay with MCOM Wallet', error);
-      alert(message);
-    } finally {
-      setIsPayingWithWallet(false);
+    if (flow.isBusy) return;
+    const initiated = await flow.start();
+    if (!initiated) return;
+    const transactionId = initiated.transactionId;
+    if (!transactionId) {
+      alert('MCOM Wallet did not return a payment reference.');
+      return;
     }
-  };
-
-  const handlePaymentSuccess = async (transactionId: string) => {
-    if (isVerifying) return;
-    setIsVerifying(true);
-    try {
-      const provider =
-        paymentMethod === PaymentMethod.STRIPE
-          ? 'stripe'
-          : paymentMethod === PaymentMethod.PAYPAL
-            ? 'paypal'
-            : 'mcom_wallet';
-      await verifyPaymentMutation.mutateAsync({
-        bookingId,
-        amount,
-        paymentProvider: provider,
-        transactionId,
-      });
-      setShowSuccess(true);
-      // We don't call onSuccess() yet, we wait for the modal
-    } catch (error) {
-      console.error('Failed to verify payment', error);
-    } finally {
-      setIsVerifying(false);
-    }
+    await flow.confirm(transactionId);
   };
 
   if (showSuccess) {
@@ -431,7 +401,7 @@ export default function BookingPaymentModal({
                                 </div>
                             )}
                         </motion.div>
-                        ) : initiatePaymentMutation.isPending ? (
+                        ) : isInitiating ? (
                         <motion.div 
                             key="loader"
                             initial={{ opacity: 0 }}
@@ -453,7 +423,7 @@ export default function BookingPaymentModal({
                             <div className="p-2">
                                 <StripeCheckoutForm
                                     clientSecret={clientSecret}
-                                    onPaymentSuccess={handlePaymentSuccess}
+                                    onPaymentSuccess={(transactionId) => flow.confirm(transactionId)}
                                 />
                             </div>
                             ) : paymentMethod === PaymentMethod.PAYPAL && orderID ? (
@@ -461,7 +431,7 @@ export default function BookingPaymentModal({
                                 <PayPalCheckoutButton
                                     orderID={orderID}
                                     approvalUrl={paypalApprovalUrl}
-                                    onPaymentSuccess={handlePaymentSuccess}
+                                    onPaymentSuccess={(transactionId) => flow.confirm(transactionId)}
                                 />
                             </div>
                             ) : (

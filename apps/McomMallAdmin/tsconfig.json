@@ -26,6 +26,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@mcommall/payments": [
+        "../../packages/payments/src"
       ]
     },
     "types": [

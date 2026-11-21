@@ -12,12 +12,12 @@ import VoucherInput from './VoucherInput';
 import { useGetProductById } from '@/service/store/products/hook';
 import { useCart, CartItem } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
-import { useCheckout } from '@/hooks/useCheckout';
+import {
+  useCheckout,
+  useCreateOrderPaymentIntent,
+} from '@/hooks/useCheckout';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import { useStripePayment } from '@/hooks/useStripePayment';
-import { usePayPalPayment } from '@/hooks/usePayPalPayment';
-import { PaymentPurpose } from '@/service/payments/types';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import { useCheckGiftCardBalance } from '@/service/gift-card/hook';
 import { useVoucherBalance } from '@/service/vouchers/hook';
@@ -45,6 +45,17 @@ import { Product } from '@/service/listings/types';
 const stripePromise = loadStripe(
   (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
 );
+
+/** Tiny FNV-1a hash so a changed quote always starts a fresh payment intent. */
+function quoteFingerprint(value: unknown): string {
+  const raw = JSON.stringify(value ?? {});
+  let hash = 2166136261;
+  for (let index = 0; index < raw.length; index++) {
+    hash ^= raw.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
 
 export default function CheckoutClient() {
   const searchParams = useSearchParams();
@@ -143,6 +154,9 @@ export default function CheckoutClient() {
   const [clientSecret, setClientSecret] = useState<string | undefined>(
     paymentIntentClientSecret || undefined
   );
+  const [paymentIntentId, setPaymentIntentId] = useState<string | undefined>(
+    searchParams.get('paymentIntentId') || undefined
+  );
 
   const router = useRouter();
   const checkoutIdempotencyKey = useRef<string>(
@@ -152,9 +166,10 @@ export default function CheckoutClient() {
   );
   const lastPaymentIntentKeyRef = useRef<string | null>(null);
   const { mutate: checkout } = useCheckout();
-  const { mutateAsync: createPaymentIntent, isPending: isStripeLoading } =
-    useStripePayment();
-  const { createOrderMutation } = usePayPalPayment();
+  const {
+    mutateAsync: createOrderPaymentIntent,
+    isPending: isPaymentIntentLoading,
+  } = useCreateOrderPaymentIntent();
   const validateCoupon = useValidateCoupon();
   const { mutateAsync: checkGiftCardBalance } = useCheckGiftCardBalance();
   const { mutateAsync: applyVoucher } = useVoucherBalance();
@@ -656,15 +671,18 @@ export default function CheckoutClient() {
   const [paypalApprovalUrl, setPaypalApprovalUrl] = useState<
     string | null | undefined
   >();
-  const createPaypalOrderAsync = createOrderMutation.mutateAsync;
 
   const paymentIntentKey = `${paymentMethod}:${totalPrice.toFixed(2)}`;
+  const paymentAttemptKey = `${checkoutIdempotencyKey.current}-${paymentIntentKey}-${quoteFingerprint(
+    quoteRequest,
+  )}`;
 
   // Any change to the server quote invalidates the payment session. Clear the
   // old client secret before the effect below creates a new one for the new
   // amount, so the browser can never confirm a stale intent.
   useEffect(() => {
     setClientSecret(undefined);
+    setPaymentIntentId(undefined);
     setOrderID(undefined);
     setPaypalApprovalUrl(undefined);
   }, [paymentIntentKey]);
@@ -675,42 +693,45 @@ export default function CheckoutClient() {
 
     lastPaymentIntentKeyRef.current = paymentIntentKey;
 
-    if (paymentMethod === PaymentMethod.STRIPE && totalPrice > 0) {
-      createPaymentIntent({
-        amount: totalPrice,
-        purpose: PaymentPurpose.PAYG_TOPUP,
-        idempotencyKey: checkoutIdempotencyKey.current,
+    if (
+      (paymentMethod === PaymentMethod.STRIPE ||
+        paymentMethod === PaymentMethod.PAYPAL) &&
+      totalPrice > 0
+    ) {
+      createOrderPaymentIntent({
+        quote: quoteRequest,
+        paymentProvider:
+          paymentMethod === PaymentMethod.STRIPE ? 'stripe' : 'paypal',
+        idempotencyKey: paymentAttemptKey,
       })
-        .then((data) => {
-          setClientSecret(data.clientSecret);
+        .then((intent) => {
+          if (intent.completed) {
+            refetchQuote();
+            return;
+          }
+          setPaymentIntentId(intent.paymentIntentId);
+          if (paymentMethod === PaymentMethod.STRIPE) {
+            setClientSecret(intent.clientSecret);
+          } else {
+            setOrderID(intent.orderId);
+            setPaypalApprovalUrl(intent.approvalUrl ?? null);
+          }
         })
         .catch((err) => {
           lastPaymentIntentKeyRef.current = null;
-          console.error('Failed to create payment intent', err);
-        });
-    } else if (paymentMethod === PaymentMethod.PAYPAL && totalPrice > 0) {
-      createPaypalOrderAsync({
-        amount: totalPrice,
-        purpose: PaymentPurpose.PAYG_TOPUP,
-        idempotencyKey: checkoutIdempotencyKey.current,
-      })
-        .then((order) => {
-          setOrderID(order.id);
-          setPaypalApprovalUrl(order.approvalUrl ?? null);
-        })
-        .catch((err) => {
-          lastPaymentIntentKeyRef.current = null;
-          console.error('Failed to create paypal order', err);
+          console.error('Failed to create checkout payment intent', err);
         });
     }
   }, [
     paymentIntentKey,
+    paymentAttemptKey,
     totalPrice,
     paymentMethod,
     quote,
+    quoteRequest,
     isQuoteFetching,
-    createPaymentIntent,
-    createPaypalOrderAsync,
+    createOrderPaymentIntent,
+    refetchQuote,
   ]);
 
   useEffect(() => {
@@ -782,7 +803,7 @@ export default function CheckoutClient() {
                       : quoteErrorMessage}
                     <div className="mt-2 text-sm text-red-500">Please adjust your discounts to proceed.</div>
                   </div>
-                ) : isStripeLoading || isQuoteFetching ? (
+                ) : isQuoteFetching ? (
                   <div className="flex justify-center items-center h-48">
                     <Loader className="animate-spin text-orange-600" size={32} />
                   </div>
@@ -794,8 +815,10 @@ export default function CheckoutClient() {
                     }
                     setPaymentMethod={setPaymentMethod}
                     clientSecret={clientSecret}
+                    paymentIntentId={paymentIntentId}
                     orderID={orderID}
                     paypalApprovalUrl={paypalApprovalUrl}
+                    isPaymentIntentLoading={isPaymentIntentLoading}
                   />
                 )}
               </div>

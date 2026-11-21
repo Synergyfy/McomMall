@@ -34,6 +34,8 @@ import { RewardsIntegrationModule } from '../rewards-integration/rewards-integra
 import { PartnerInstrumentsModule } from '../partner-instruments/partner-instruments.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
 import { MoneyEngineModule } from '../money-engine/money-engine.module';
+import { McomPaymentIntent } from '../payments/entities/mcom-payment-intent.entity';
+import { OrderPaymentIntentListener } from './order-payment-intent.listener';
 
 @Module({
   imports: [
@@ -52,6 +54,7 @@ import { MoneyEngineModule } from '../money-engine/money-engine.module';
       ProductServiceBooking,
       Partnership,
       ShippingAddress,
+      McomPaymentIntent,
     ]),
     CartModule,
     NotificationModule,
@@ -75,6 +78,7 @@ import { MoneyEngineModule } from '../money-engine/money-engine.module';
     OrderService,
     WalletRefundReconcileService,
     RewardRedemptionReconcileService,
+    OrderPaymentIntentListener,
   ],
   exports: [
     OrderService,

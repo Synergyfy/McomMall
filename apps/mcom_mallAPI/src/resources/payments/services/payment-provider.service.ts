@@ -4,14 +4,20 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
+import { Repository } from 'typeorm';
 import Stripe from 'stripe';
+import { User } from '../../users/entities/user.entity';
 import {
+  McomPayIntent,
   McomPayService,
+  McomPaySplit,
   VerifyChargeContext,
 } from './mcom-pay.service';
 import { McomWalletService } from './mcom-wallet.service';
+import { allocateCashSplits } from './payment-splits.util';
 
 export interface PaypalPayoutBatch {
   batch_header: {
@@ -54,6 +60,8 @@ export class PaymentProviderService {
     private configService: ConfigService,
     private readonly mcomPay: McomPayService,
     private readonly mcomWallet: McomWalletService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {
     const stripeKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (stripeKey && !stripeKey.includes('placeholder')) {
@@ -75,12 +83,130 @@ export class PaymentProviderService {
     return this.mcomPay.isEnabled();
   }
 
+  isSplitsEnabled(): boolean {
+    return this.mcomPay.isSplitsEnabled();
+  }
+
+  getLocalChargeSplits(chargeId: string): Promise<McomPaySplit[]> {
+    return this.mcomPay.getLocalChargeSplits(chargeId);
+  }
+
+  getLocalChargeMeta(
+    chargeId: string,
+  ): Promise<{ splits: McomPaySplit[]; intent: string | null }> {
+    return this.mcomPay.getLocalChargeMeta(chargeId);
+  }
+
+  getLocalChargeContext(
+    chargeId: string,
+  ): Promise<Record<string, any> | null> {
+    return this.mcomPay.getLocalChargeContext(chargeId);
+  }
+
+  /**
+   * Splits for a direct purchase from one seller (gift card, voucher, coupon).
+   * There is no platform commission or shipping on these sales.
+   */
+  buildSellerSplits(
+    amount: number,
+    seller: {
+      userId: string;
+      centralUserId?: string | null;
+      externalId?: string | null;
+    },
+  ): McomPaySplit[] | undefined {
+    if (!this.mcomPay.isSplitsEnabled() || amount <= 0) return undefined;
+    const allocation = allocateCashSplits(
+      BigInt(Math.round(amount * 100)),
+      [
+        {
+          key: 'seller',
+          entitlementMinor: BigInt(Math.round(amount * 100)),
+          split: seller.centralUserId
+            ? {
+                payeeType: 'mcom_user',
+                payeeUserId: seller.centralUserId,
+              }
+            : {
+                payeeType: 'external',
+                payeeExternalId:
+                  seller.externalId ?? `user:${seller.userId}`,
+              },
+        },
+      ],
+    );
+    return allocation.splits.length ? allocation.splits : undefined;
+  }
+
+  /** The seller's portion of a charge that was paid through MCOM splits. */
+  sellerCashMinor(
+    splits: McomPaySplit[],
+    seller: {
+      userId: string;
+      centralUserId?: string | null;
+      externalId?: string | null;
+    },
+  ): bigint {
+    if (!splits?.length) return 0n;
+    const externalId = seller.externalId ?? `user:${seller.userId}`;
+    return splits.reduce((total, split) => {
+      const matches = seller.centralUserId
+        ? split.payeeUserId === seller.centralUserId
+        : split.payeeExternalId === externalId;
+      return matches ? total + BigInt(split.amountMinor || '0') : total;
+    }, 0n);
+  }
+
+  private chargeIntent(metadata?: Record<string, any>): McomPayIntent {
+    if (metadata?.intent) return metadata.intent as McomPayIntent;
+    switch (metadata?.purpose) {
+      case 'MEMBERSHIP':
+        return 'SUBSCRIPTION';
+      case 'VOUCHER_PURCHASE':
+      case 'PAYG_TOPUP':
+        return 'PURCHASE';
+      default:
+        return 'ORDER';
+    }
+  }
+
   private assertMcomPayEnabled(): void {
     if (!this.mcomPay.isEnabled()) {
       throw new ServiceUnavailableException(
         'Payments are temporarily unavailable (MCOM Pay is disabled).',
       );
     }
+  }
+
+  /**
+   * Resolve the buyer's Central Hub identity when we have one.
+   *
+   * The Partner Guide (B4.1a) makes `mcomUserId` required for wallet payments
+   * but optional for card/PayPal, where the ledger records a guest buyer. We
+   * always send it when the mall account is SSO-linked so support can trace the
+   * payment; a legacy account can still pay by card as a guest.
+   */
+  private async resolvePayerMcomUserId(
+    metadata?: Record<string, any>,
+  ): Promise<string | undefined> {
+    const explicit = String(
+      metadata?.mcomUserId ?? metadata?.centralUserId ?? '',
+    ).trim();
+    if (explicit) return explicit;
+
+    const mallUserId = String(
+      metadata?.userId ?? metadata?.mallUserId ?? '',
+    ).trim();
+    if (mallUserId) {
+      const user = await this.userRepository.findOne({
+        where: { id: mallUserId },
+        select: ['id', 'centralUserId'],
+      });
+      const centralUserId = user?.centralUserId?.trim();
+      if (centralUserId) return centralUserId;
+    }
+
+    return undefined;
   }
 
   async createStripePaymentIntent(
@@ -90,6 +216,15 @@ export class PaymentProviderService {
   ): Promise<Stripe.PaymentIntent> {
     this.assertMcomPayEnabled();
     const reference = this.paymentReference(metadata, 'stripe', amount);
+    const mcomUserId = await this.resolvePayerMcomUserId(metadata);
+    const {
+      intent: _intent,
+      splits: _splits,
+      localContext,
+      mcomUserId: _mcomUserId,
+      centralUserId: _centralUserId,
+      ...chargeMetadata
+    } = metadata ?? {};
     try {
       const result = await this.mcomPay.createCharge({
         amountMinor: this.mcomPay.toMinorUnits(amount),
@@ -97,10 +232,14 @@ export class PaymentProviderService {
         method: 'stripe',
         reference,
         description: metadata?.description,
+        mcomUserId,
         externalCustomerId: metadata?.userId
           ? String(metadata.userId)
           : undefined,
-        metadata,
+        metadata: chargeMetadata,
+        intent: this.chargeIntent(metadata),
+        splits: metadata?.splits as McomPaySplit[] | undefined,
+        localContext,
         idempotencyKey: this.paymentIdempotencyKey(metadata, 'stripe', amount),
       });
       const charge = result.charge;
@@ -134,6 +273,15 @@ export class PaymentProviderService {
   ): Promise<any> {
     this.assertMcomPayEnabled();
     const reference = this.paymentReference(metadata, 'paypal', amount);
+    const mcomUserId = await this.resolvePayerMcomUserId(metadata);
+    const {
+      intent: _intent,
+      splits: _splits,
+      localContext,
+      mcomUserId: _mcomUserId,
+      centralUserId: _centralUserId,
+      ...chargeMetadata
+    } = metadata ?? {};
     try {
       const result = await this.mcomPay.createCharge({
         amountMinor: this.mcomPay.toMinorUnits(amount),
@@ -141,10 +289,14 @@ export class PaymentProviderService {
         method: 'paypal',
         reference,
         description: metadata?.description,
+        mcomUserId,
         externalCustomerId: metadata?.userId
           ? String(metadata.userId)
           : undefined,
-        metadata,
+        metadata: chargeMetadata,
+        intent: this.chargeIntent(metadata),
+        splits: metadata?.splits as McomPaySplit[] | undefined,
+        localContext,
         returnUrl: metadata?.returnUrl,
         cancelUrl: metadata?.cancelUrl,
         idempotencyKey: this.paymentIdempotencyKey(metadata, 'paypal', amount),
@@ -187,6 +339,12 @@ export class PaymentProviderService {
     }
 
     const reference = this.paymentReference(metadata, 'wallet', amount);
+    const {
+      intent: _intent,
+      splits: _splits,
+      localContext,
+      ...chargeMetadata
+    } = metadata ?? {};
     try {
       const result = await this.mcomPay.createCharge({
         amountMinor: this.mcomPay.toMinorUnits(amount),
@@ -198,7 +356,10 @@ export class PaymentProviderService {
         externalCustomerId: metadata?.userId
           ? String(metadata.userId)
           : undefined,
-        metadata,
+        metadata: chargeMetadata,
+        intent: this.chargeIntent(metadata),
+        splits: metadata?.splits as McomPaySplit[] | undefined,
+        localContext,
         idempotencyKey: this.paymentIdempotencyKey(metadata, 'wallet', amount),
       });
       const charge = result.charge;
@@ -248,6 +409,8 @@ export class PaymentProviderService {
     context: VerifyChargeContext & {
       holdId?: string;
       reference?: string;
+      intent?: McomPayIntent;
+      splits?: McomPaySplit[];
     },
     idempotencyKey?: string,
   ): Promise<{ ok: boolean; details?: any; reason?: string }> {
@@ -288,6 +451,8 @@ export class PaymentProviderService {
               idempotencyKey ||
               this.mcomWallet.buildKey('wallet-pay', chargeReference),
             description: 'MCOM Pay wallet payment',
+            intent: context.intent,
+            splits: context.splits,
           },
           context.mcomUserId,
         );
@@ -395,6 +560,10 @@ export class PaymentProviderService {
 
   fromMinorUnits(amountMinor: string | number): number {
     return this.mcomPay.fromMinorUnits(amountMinor);
+  }
+
+  toMinorUnits(amount: number): string {
+    return this.mcomPay.toMinorUnits(amount);
   }
 
   async capturePaypalOrder(
@@ -558,6 +727,7 @@ export class PaymentProviderService {
   async refundStripePayment(
     paymentIntentId: string,
     amount?: number,
+    reason = 'MCOM Mall refund',
   ): Promise<any> {
     this.assertMcomPayEnabled();
     const chargeId = await this.mcomPay.resolveChargeId(paymentIntentId);
@@ -569,7 +739,7 @@ export class PaymentProviderService {
     return this.mcomPay.refundCharge(
       chargeId,
       amount ? this.mcomPay.toMinorUnits(amount) : undefined,
-      'MCOM Mall refund',
+      reason,
     );
   }
 

@@ -5,7 +5,7 @@ import { Product } from '@/service/listings/types';
 import { Cart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus, Ticket, Gift, Tag, Percent, Calendar, Sparkles } from 'lucide-react';
-import { CURRENCY } from '@/lib/utils';
+import { CURRENCY, getProductMainImage } from '@/lib/utils';
 import { ServiceBookingDetailsDto } from '@/hooks/useCheckout';
 import { format } from 'date-fns';
 import { useCallback } from 'react';
@@ -133,7 +133,7 @@ export default function OrderSummaryCard({
             >
               <div className="relative w-16 h-16">
                 <img
-                  src={item.product.imageUrl || (item.product.fileUrls && item.product.fileUrls[0]) || '/placeholder.svg'}
+                  src={getProductMainImage(item.product) || '/placeholder.svg'}
                   alt={item.product.title}
                   className="absolute inset-0 h-full w-full object-cover rounded-lg shadow-sm"
                 />
@@ -167,7 +167,7 @@ export default function OrderSummaryCard({
             <div className="flex items-center space-x-4">
               <div className="relative w-24 h-24">
                 <img
-                  src={product.imageUrl || (product.fileUrls && product.fileUrls[0]) || '/placeholder.svg'}
+                  src={getProductMainImage(product) || '/placeholder.svg'}
                   alt={product.title}
                   className="absolute inset-0 h-full w-full object-cover rounded-lg shadow-sm"
                 />

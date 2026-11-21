@@ -129,6 +129,48 @@ export const useCheckoutQuote = (
   });
 };
 
+export interface CreateOrderPaymentIntentRequest {
+  quote: CheckoutQuoteRequest;
+  paymentProvider: 'stripe' | 'paypal';
+  idempotencyKey: string;
+  returnUrl?: string;
+  cancelUrl?: string;
+}
+
+export interface CreateOrderPaymentIntentResponse {
+  paymentRequired: boolean;
+  paymentIntentId?: string;
+  provider?: 'stripe' | 'paypal';
+  amount?: number;
+  clientSecret?: string;
+  approvalUrl?: string | null;
+  orderId?: string;
+  chargeId?: string;
+  providerRef?: string;
+  completed?: boolean;
+}
+
+const createOrderPaymentIntent = async (
+  payload: CreateOrderPaymentIntentRequest,
+): Promise<CreateOrderPaymentIntentResponse> => {
+  const { data } = await api.post<CreateOrderPaymentIntentResponse>(
+    '/order/payment-intent',
+    payload,
+  );
+  return data;
+};
+
+/**
+ * Creates the MCOM Pay charge for a checkout from the server quote. The quote
+ * is frozen on the intent so the webhook can complete the order even if the
+ * browser closes after payment.
+ */
+export const useCreateOrderPaymentIntent = () => {
+  return useMutation({
+    mutationFn: createOrderPaymentIntent,
+  });
+};
+
 const checkout = async (checkoutData: CreateCheckoutDto) => {
   const {
     payment,

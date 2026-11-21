@@ -7,11 +7,18 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, EntityManager } from 'typeorm';
+import {
+  DataSource,
+  Repository,
+  EntityManager,
+  In,
+  Like,
+} from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Wallet } from './entities/wallet.entity';
 import { User } from '../users/entities/user.entity';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { PaymentOrchestratorService } from '../payments/services/payment-orchestrator.service';
 import { InitiateFundingDto } from './dto/initiate-funding.dto';
 import {
   OrderPayment,
@@ -62,6 +69,7 @@ export class WalletService {
     @Inject(forwardRef(() => BookingService))
     private readonly bookingService: BookingService,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     private readonly mcomWalletService: McomWalletService,
     private readonly dataSource: DataSource,
   ) {}
@@ -501,6 +509,192 @@ export class WalletService {
     });
   }
 
+  /**
+   * Reverse the provider's **local** booking earnings when a booking is
+   * refunded. Money paid through MCOM Pay splits is reversed by MCOM itself,
+   * so only the un-split remainder credited by this ledger is removed.
+   */
+  async reverseBookingEarnings(
+    bookingId: string,
+    amount: number,
+    manager?: EntityManager,
+  ): Promise<void> {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    const execute = async (mgr: EntityManager) => {
+      const booking = await mgr.findOne(ServiceBooking, {
+        where: { id: bookingId },
+        relations: ['service', 'service.business', 'service.business.user'],
+      });
+      const providerId = booking?.service?.business?.user?.id;
+      if (!booking || !providerId) return;
+
+      const walletRepo = mgr.getRepository(Wallet);
+      const wallet = await walletRepo.findOne({
+        where: { user: { id: providerId } },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!wallet) return;
+
+      let remaining = Number(amount.toFixed(2));
+      const pending = Number(wallet.pendingBalance || 0);
+      const fromPending = Math.min(pending, remaining);
+      wallet.pendingBalance = Number((pending - fromPending).toFixed(2));
+      remaining = Number((remaining - fromPending).toFixed(2));
+
+      if (remaining > 0) {
+        const earnings = Number(wallet.earningsBalance || 0);
+        const fromEarnings = Math.min(earnings, remaining);
+        wallet.earningsBalance = Number((earnings - fromEarnings).toFixed(2));
+        wallet.earningsFromBookings = Math.max(
+          0,
+          Number((Number(wallet.earningsFromBookings || 0) - fromEarnings).toFixed(2)),
+        );
+        remaining = Number((remaining - fromEarnings).toFixed(2));
+      }
+
+      if (remaining > 0.001) {
+        // The provider already withdrew part of the local earnings. Clamp at
+        // zero and flag for operations instead of creating a negative balance.
+        this.logger.warn(
+          `Booking ${bookingId} refund could not reverse £${remaining.toFixed(
+            2,
+          )} of local provider earnings (already withdrawn/spent).`,
+        );
+      }
+
+      const saved = await walletRepo.save(wallet);
+      await this.createTransaction(
+        saved,
+        -Number((amount - remaining).toFixed(2)),
+        WalletTransactionType.ADJUSTMENT,
+        `Reversed local provider earnings for refunded booking #${bookingId}`,
+        Number(saved.earningsBalance) + Number(saved.pendingBalance),
+        mgr,
+      );
+    };
+
+    if (manager) {
+      await execute(manager);
+    } else {
+      await this.dataSource.transaction(execute);
+    }
+  }
+
+  /**
+   * Reverse the local seller earnings recorded for an order.
+   *
+   * MCOM reverses the split/cash portion itself; this removes only the
+   * earnings rows the Mall credited locally (products, gift-card purchases and
+   * bundled service bookings). Idempotent: a second call sees the reversal
+   * transaction and does nothing.
+   */
+  async reverseOrderEarnings(
+    orderId: string,
+    bookingIds: string[] = [],
+    manager?: EntityManager,
+  ): Promise<void> {
+    const description = `Reversed local earnings for refunded order #${orderId}`;
+    const execute = async (mgr: EntityManager) => {
+      const transactionRepo = mgr.getRepository(WalletTransaction);
+      const already = await transactionRepo.findOne({
+        where: { description },
+      });
+      if (already) return;
+
+      const bookingDescriptions = bookingIds.map(
+        (bookingId) => `Pending payment in escrow for booking #${bookingId}`,
+      );
+      const rows = await transactionRepo.find({
+        where: [
+          {
+            type: WalletTransactionType.EARNING_ORDER,
+            description: Like(`Earnings from order #${orderId}%`),
+          },
+          ...(bookingDescriptions.length > 0
+            ? [
+                {
+                  type: WalletTransactionType.EARNING_BOOKING,
+                  description: In(bookingDescriptions),
+                },
+              ]
+            : []),
+        ],
+        relations: ['wallet'],
+      });
+      if (rows.length === 0) return;
+
+      const byWallet = new Map<string, WalletTransaction[]>();
+      for (const row of rows) {
+        const walletId = row.wallet?.id;
+        if (!walletId) continue;
+        const list = byWallet.get(walletId) ?? [];
+        list.push(row);
+        byWallet.set(walletId, list);
+      }
+
+      const walletRepo = mgr.getRepository(Wallet);
+      for (const [walletId, transactions] of byWallet) {
+        const amount = transactions.reduce(
+          (sum, row) => sum + Number(row.amount),
+          0,
+        );
+        if (amount <= 0) continue;
+
+        const wallet = await walletRepo.findOne({
+          where: { id: walletId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!wallet) continue;
+
+        let remaining = Number(amount.toFixed(2));
+        const pending = Number(wallet.pendingBalance || 0);
+        const fromPending = Math.min(pending, remaining);
+        wallet.pendingBalance = Number((pending - fromPending).toFixed(2));
+        remaining = Number((remaining - fromPending).toFixed(2));
+
+        if (remaining > 0) {
+          const earnings = Number(wallet.earningsBalance || 0);
+          const fromEarnings = Math.min(earnings, remaining);
+          wallet.earningsBalance = Number((earnings - fromEarnings).toFixed(2));
+          wallet.earningsFromOrders = Math.max(
+            0,
+            Number(
+              (
+                Number(wallet.earningsFromOrders || 0) - fromEarnings
+              ).toFixed(2),
+            ),
+          );
+          remaining = Number((remaining - fromEarnings).toFixed(2));
+        }
+
+        if (remaining > 0.001) {
+          this.logger.warn(
+            `Order ${orderId} refund could not reverse £${remaining.toFixed(
+              2,
+            )} of seller earnings (already withdrawn/spent).`,
+          );
+        }
+
+        const saved = await walletRepo.save(wallet);
+        await this.createTransaction(
+          saved,
+          -Number((amount - remaining).toFixed(2)),
+          WalletTransactionType.ADJUSTMENT,
+          description,
+          Number(saved.earningsBalance) + Number(saved.pendingBalance),
+          mgr,
+        );
+      }
+    };
+
+    if (manager) {
+      await execute(manager);
+    } else {
+      await this.dataSource.transaction(execute);
+    }
+  }
+
   async getTransactionHistory(walletId: string): Promise<WalletTransaction[]> {
     return this.walletTransactionRepository.find({
       where: { wallet: { id: walletId } },
@@ -525,41 +719,34 @@ export class WalletService {
     }
     const currency = 'GBP';
 
-    if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          initiateDto.amount,
-          currency,
-          {
-            reference: `wallet-topup-${userId}`,
-            userId,
-            idempotencyKey: `wallet-topup-${userId}-${randomUUID()}`,
-            description: 'MCOM Wallet top-up',
-          },
-        );
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail: initiateDto.paymentProvider,
+      amount: initiateDto.amount,
+      currency,
+      payer: { mallUserId: userId },
+      metadata: {
+        localContext: { purpose: 'WALLET_TOPUP', userId },
+      },
+      reference: `wallet-topup-${userId}`,
+      idempotencyKey: `wallet-topup-${userId}-${randomUUID()}`,
+      description: 'MCOM Wallet top-up',
+      intent: 'TOP_UP',
+    });
+
+    if (initiated.rail === 'stripe') {
       return {
-        clientSecret: paymentIntent.client_secret,
+        clientSecret: initiated.clientSecret,
         provider: PaymentMethod.STRIPE,
       };
-    } else if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
-      const order = await this.paymentProviderService.createPaypalOrder(
-        initiateDto.amount,
-        currency,
-        {
-          reference: `wallet-topup-${userId}`,
-          userId,
-          idempotencyKey: `wallet-topup-${userId}-${randomUUID()}`,
-          description: 'MCOM Wallet top-up',
-        },
-      );
+    }
+    if (initiated.rail === 'paypal') {
       return {
-        orderId: order.id,
-        approvalUrl: order.approvalUrl ?? null,
+        orderId: initiated.orderId,
+        approvalUrl: initiated.approvalUrl,
         provider: PaymentMethod.PAYPAL,
       };
-    } else {
-      throw new BadRequestException('Invalid payment provider specified.');
     }
+    throw new BadRequestException('Invalid payment provider specified.');
   }
 
   async verifyAndCompleteFunding(
@@ -573,39 +760,25 @@ export class WalletService {
       );
     }
     const currency = 'GBP';
-    let verificationResult: { ok: boolean; details?: any; reason?: string };
 
-    if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          amount,
-          currency,
-          { mallUserId: userId },
-        );
-    } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          amount,
-          currency,
-          { mallUserId: userId },
-        );
-    } else {
-      throw new BadRequestException('Invalid payment provider specified.');
-    }
+    const verification = await this.paymentOrchestrator.confirm({
+      rail: paymentProvider,
+      reference: transactionId,
+      amount,
+      currency,
+      payer: { mallUserId: userId },
+    });
 
-    if (!verificationResult.ok) {
+    if (!verification.ok) {
       throw new BadRequestException(
-        `Payment verification failed: ${verificationResult.reason}`,
+        `Payment verification failed: ${verification.reason}`,
       );
     }
 
-    const details: any = verificationResult.details ?? {};
-    const mcomChargeId: string | null = details.id ?? null;
-    const providerRef: string | null = details.providerRef ?? null;
-    const feeMinor: string | null = details.feeMinor ?? null;
-    const netMinor: string | null = details.netMinor ?? null;
+    const mcomChargeId: string | null = verification.chargeId;
+    const providerRef: string | null = verification.providerRef;
+    const feeMinor: string | null = verification.feeMinor;
+    const netMinor: string | null = verification.netMinor;
 
     // Credit the centralized MCOM Wallet. The idempotency key is derived from
     // the provider transaction so retries can never double-credit.

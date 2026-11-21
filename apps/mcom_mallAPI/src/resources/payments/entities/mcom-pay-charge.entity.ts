@@ -65,6 +65,14 @@ export class McomPayCharge extends AbstractBaseEntity {
   @Column()
   status: string;
 
+  /** Ledger intent label sent to MCOM Pay (ORDER, BOOKING, ...). */
+  @Column({ nullable: true })
+  intent?: string | null;
+
+  /** Payee splits used for this charge (empty when not applicable). */
+  @Column({ type: 'jsonb', nullable: true })
+  splits?: Record<string, any>[] | null;
+
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any> | null;
 }

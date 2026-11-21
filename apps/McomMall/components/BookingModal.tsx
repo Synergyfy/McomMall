@@ -29,8 +29,6 @@ import { Checkbox } from './ui/checkbox';
 import { SuccessAnimationDialog } from './SuccessAnimationDialog';
 import { StripeCheckoutForm } from './StripeCheckoutForm';
 import { PayPalCheckoutButton } from './PayPalCheckoutButton';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { ClientProviders } from './client-provider';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,10 +47,6 @@ import {
 } from 'lucide-react';
 import { CURRENCY } from '@/lib/utils';
 import { format } from 'date-fns';
-
-const stripePromise = loadStripe(
-  (process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '')
-);
 
 const LoadingOverlay = () => (
   <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-[60] rounded-[2rem]">
@@ -499,9 +493,7 @@ export function BookingModal({
                           </div>
                         </div>
                         {paymentProvider === 'stripe' && clientSecret && (
-                          <Elements stripe={stripePromise} options={{ clientSecret }}>
-                            <StripeCheckoutForm clientSecret={clientSecret} onPaymentSuccess={handlePaymentSuccess} />
-                          </Elements>
+                          <StripeCheckoutForm clientSecret={clientSecret} onPaymentSuccess={handlePaymentSuccess} />
                         )}
                         {paymentProvider === 'paypal' && orderId && (
                           <ClientProviders>

@@ -30,6 +30,7 @@ describe('WalletService.getWalletDetails', () => {
       {} as any, // couponService
       {} as any, // bookingService
       {} as any, // paymentProviderService
+      {} as any, // paymentOrchestrator
       mcomWalletService as any,
       {} as any, // dataSource
     );

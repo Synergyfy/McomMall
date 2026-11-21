@@ -5,7 +5,7 @@ import { Product } from '@/service/listings/types';
 import { Cart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getProductMainImage } from '@/lib/utils';
 
 interface OrderSummaryProps {
   product?: Product;
@@ -60,7 +60,7 @@ export default function OrderSummary({
             >
               <div className="relative w-20 h-20">
                 <img
-                  src={item.product.imageUrl || '/placeholder.svg'}
+                  src={getProductMainImage(item.product) || '/placeholder.svg'}
                   alt={item.product.title}
                   className="absolute inset-0 h-full w-full object-cover rounded-lg shadow-md"
                 />
@@ -85,7 +85,7 @@ export default function OrderSummary({
             <div className="flex items-center space-x-6">
               <div className="relative w-28 h-28">
                 <img
-                  src={product.imageUrl || '/placeholder.svg'}
+                  src={getProductMainImage(product) || '/placeholder.svg'}
                   alt={product.title}
                   className="absolute inset-0 h-full w-full object-cover rounded-lg shadow-md"
                 />

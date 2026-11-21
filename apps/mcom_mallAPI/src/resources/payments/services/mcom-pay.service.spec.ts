@@ -39,6 +39,16 @@ describe('McomPayService charge verification & allocation', () => {
     return { service, allocationRepository };
   }
 
+  it('converts major units to exact integer minor-unit strings', () => {
+    const { service } = build();
+    expect(service.toMinorUnits(102.7)).toBe('10270');
+    expect(service.toMinorUnits('102.70')).toBe('10270');
+    expect(service.toMinorUnits('0.01')).toBe('1');
+    expect(service.toMinorUnits(10.29)).toBe('1029');
+    expect(() => service.toMinorUnits(0)).toThrow();
+    expect(() => service.toMinorUnits('not-a-number')).toThrow();
+  });
+
   it('accepts a paid charge that matches amount, currency, method and payer', async () => {
     const { service } = build();
     const result = await service.verifySettledCharge(

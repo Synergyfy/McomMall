@@ -53,6 +53,7 @@ import {
   ActionType,
 } from '../capability/capability.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { PaymentOrchestratorService } from '../payments/services/payment-orchestrator.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import { InitiatePurchaseDto } from './dto/initiate-purchase.dto';
@@ -124,6 +125,7 @@ export class GiftCardService {
     private readonly themeRepository: Repository<GiftCardTheme>,
     private readonly giftCardAssetService: GiftCardAssetService,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     private readonly centralIntegrationService: CentralIntegrationService,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
@@ -452,62 +454,80 @@ export class GiftCardService {
 
     const reference = `gift-card-purchase-${template.id}-${userId}`;
     const idempotencyKey = `gift-card-${template.id}-${userId}-${randomUUID()}`;
+    const seller = {
+      userId: template.ownerId,
+      centralUserId: template.owner?.centralUserId,
+      externalId: `user:${template.ownerId}`,
+    };
+    const splits = this.paymentProviderService.buildSellerSplits(
+      initiateDto.amount,
+      seller,
+    );
     const metadata = {
       reference,
       userId,
       idempotencyKey,
       description: 'MCOM Mall gift card purchase',
+      intent: 'PURCHASE',
+      splits,
       returnUrl: initiateDto.returnUrl,
       cancelUrl: initiateDto.cancelUrl,
+      localContext: {
+        purpose: 'GIFT_CARD',
+        userId,
+        purchaseDetails: { ...initiateDto },
+      },
     };
 
-    if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
-      const centralUserId = await this.getCentralUserId(userId);
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: centralUserId,
-        amount: initiateDto.amount,
-        reference,
-        idempotencyKey: this.paymentProviderService.buildWalletKey(
-          'gift-card-hold',
-          template.id,
-          userId,
-          idempotencyKey,
-        ),
-        metadata: { purpose: 'GIFT_CARD', templateId: template.id, userId },
-      });
+    const centralUserId =
+      initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET
+        ? await this.getCentralUserId(userId)
+        : undefined;
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail: initiateDto.paymentProvider,
+      amount: initiateDto.amount,
+      currency,
+      payer: { mallUserId: userId, centralUserId },
+      metadata,
+      reference,
+      idempotencyKey,
+      walletIdempotencyKey: this.paymentProviderService.buildWalletKey(
+        'gift-card-hold',
+        template.id,
+        userId,
+        idempotencyKey,
+      ),
+      walletHoldMetadata: {
+        purpose: 'GIFT_CARD',
+        templateId: template.id,
+        userId,
+        intent: 'PURCHASE',
+      },
+      description: 'MCOM Mall gift card purchase',
+      intent: 'PURCHASE',
+      splits,
+      walletMode: 'hold',
+    });
+
+    if (initiated.rail === 'mcom_wallet') {
       return {
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
-
-    if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          initiateDto.amount,
-          currency,
-          metadata,
-        );
+    if (initiated.rail === 'stripe') {
       return {
-        clientSecret: paymentIntent.client_secret,
+        clientSecret: initiated.clientSecret,
         provider: PaymentMethod.STRIPE,
       };
-    } else if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
-      const order = await this.paymentProviderService.createPaypalOrder(
-        initiateDto.amount,
-        currency,
-        metadata,
-      );
-      return {
-        orderId: order.id,
-        approvalUrl: order.approvalUrl ?? null,
-        provider: PaymentMethod.PAYPAL,
-      };
-    } else {
-      throw new BadRequestException('Invalid payment provider specified.');
     }
+    return {
+      orderId: initiated.orderId,
+      approvalUrl: initiated.approvalUrl,
+      provider: PaymentMethod.PAYPAL,
+    };
   }
 
   async verifyAndCompletePurchase(
@@ -571,81 +591,68 @@ export class GiftCardService {
       throw new NotFoundException('Business for this gift card not found.');
     }
 
+    const seller = {
+      userId: template.ownerId,
+      centralUserId: template.owner?.centralUserId,
+      externalId: `user:${template.ownerId}`,
+    };
+    const expectedSplits = this.paymentProviderService.buildSellerSplits(
+      amount,
+      seller,
+    );
     const currency = 'GBP';
-    let verificationResult: { ok: boolean; details?: any; reason?: string };
-    let paidChargeId: string | null = null;
-    let paidProviderRef: string | null = null;
-    let paidFeeMinor: string | null = null;
-    let paidNetMinor: string | null = null;
-    let paymentReference = transactionId;
     const centralUserId =
       paymentProvider === PaymentMethod.MCOM_WALLET
         ? await this.getCentralUserId(userId)
         : undefined;
 
-    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
-      verificationResult =
-        await this.paymentProviderService.settleWalletReference(
-          transactionId,
-          amount,
-          currency,
-          {
-            mallUserId: userId,
-            mcomUserId: centralUserId,
-            holdId: transactionId,
-            reference: `gift-card-purchase-${template.id}-${userId}`,
-          },
-          this.paymentProviderService.buildWalletKey(
-            'gift-card-capture',
-            transactionId,
-          ),
-        );
-      const details: any = verificationResult.details ?? {};
-      paymentReference = details.transactionId || details.id || transactionId;
-      paidChargeId =
-        details.id && !String(details.id).startsWith('wallet:')
-          ? details.id
-          : null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-    } else if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          amount,
-          currency,
-          { mallUserId: userId },
-        );
-      const details: any = verificationResult.details ?? {};
-      paidChargeId = details.id ?? null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-      paymentReference = paidChargeId || transactionId;
-    } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          amount,
-          currency,
-          { mallUserId: userId },
-        );
-      const details: any = verificationResult.details ?? {};
-      paidChargeId = details.id ?? null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-      paymentReference = paidChargeId || transactionId;
-    } else {
-      throw new BadRequestException('Invalid payment provider specified.');
-    }
+    const verification = await this.paymentOrchestrator.confirm({
+      rail: paymentProvider,
+      reference: transactionId,
+      amount,
+      currency,
+      payer: { mallUserId: userId, centralUserId },
+      holdId:
+        paymentProvider === PaymentMethod.MCOM_WALLET
+          ? transactionId
+          : undefined,
+      contextReference: `gift-card-purchase-${template.id}-${userId}`,
+      intent: 'PURCHASE',
+      splits: expectedSplits,
+      idempotencyKey: this.paymentProviderService.buildWalletKey(
+        'gift-card-capture',
+        transactionId,
+      ),
+    });
 
-    if (!verificationResult.ok) {
+    if (!verification.ok) {
       throw new BadRequestException(
-        `Payment verification failed: ${verificationResult.reason}`,
+        `Payment verification failed: ${verification.reason}`,
       );
     }
+
+    const paidChargeId = verification.chargeId;
+    const paidProviderRef = verification.providerRef;
+    const paidFeeMinor = verification.feeMinor;
+    const paidNetMinor = verification.netMinor;
+    const paymentReference = verification.transactionId || transactionId;
+
+    const localCharge = paidChargeId
+      ? await this.paymentProviderService.getLocalChargeMeta(paidChargeId)
+      : { splits: [], intent: null };
+    const appliedSplits = localCharge.splits.length
+      ? localCharge.splits
+      : localCharge.intent === 'PURCHASE'
+        ? expectedSplits ?? []
+        : [];
+    const sellerCashMinor = this.paymentProviderService.sellerCashMinor(
+      appliedSplits,
+      seller,
+    );
+    const localEarningAmount = Math.max(
+      0,
+      Number(amount) - Number(sellerCashMinor) / 100,
+    );
 
     try {
       const savedGiftCard = await this.dataSource.transaction(
@@ -787,15 +794,17 @@ export class GiftCardService {
             }),
           );
 
-          await this.walletService.creditEarning(
-            {
-              userId: business.user.id,
-              amount: purchaseDto.amount,
-              type: WalletTransactionType.EARNING_GIFT_CARD,
-              description: `Gift card purchase - ${saved.code}`,
-            },
-            manager,
-          );
+          if (localEarningAmount > 0) {
+            await this.walletService.creditEarning(
+              {
+                userId: business.user.id,
+                amount: localEarningAmount,
+                type: WalletTransactionType.EARNING_GIFT_CARD,
+                description: `Gift card purchase - ${saved.code}`,
+              },
+              manager,
+            );
+          }
 
           // Process Cashback
           if (user?.email) {
@@ -836,22 +845,18 @@ export class GiftCardService {
         dbErr,
       );
       try {
-        if (paymentProvider === PaymentMethod.STRIPE) {
-          await this.paymentProviderService.refundStripePayment(
+        if (paymentProvider === PaymentMethod.MCOM_WALLET) {
+          await this.paymentProviderService.releaseWalletHold(
             transactionId,
-            amount,
+            'Gift card purchase failed',
           );
-        } else if (paymentProvider === PaymentMethod.PAYPAL) {
-          await this.paymentProviderService.refundPaypalOrder(
-            transactionId,
+        } else {
+          await this.paymentOrchestrator.refund({
+            rail: paymentProvider,
+            reference: transactionId,
             amount,
-            currency,
-          );
-        } else if (paymentProvider === PaymentMethod.MCOM_WALLET) {
-          await this.paymentProviderService.refundStripePayment(
-            transactionId,
-            amount,
-          );
+            reason: 'MCOM Mall gift card purchase failed',
+          });
         }
       } catch (refundErr) {
         this.logger.error(
@@ -906,60 +911,78 @@ export class GiftCardService {
     this.validatePurchaseAmount(initiateDto.amount, template);
 
     const reference = `gift-card-reload-${giftCard.id}-${userId}`;
+    const seller = {
+      userId: template.ownerId,
+      centralUserId: template.owner?.centralUserId,
+      externalId: `user:${template.ownerId}`,
+    };
     const metadata = {
       reference,
       userId,
       idempotencyKey: `gift-card-reload-${giftCard.id}-${userId}-${randomUUID()}`,
       description: 'MCOM Mall gift card reload',
+      intent: 'PURCHASE',
+      splits: this.paymentProviderService.buildSellerSplits(
+        initiateDto.amount,
+        seller,
+      ),
+      localContext: {
+        purpose: 'GIFT_CARD_RELOAD',
+        userId,
+        giftCardId: giftCard.id,
+        code: giftCard.code,
+        amount: initiateDto.amount,
+      },
     };
 
-    if (initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET) {
-      const centralUserId = await this.getCentralUserId(userId);
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: centralUserId,
-        amount: initiateDto.amount,
-        reference,
-        idempotencyKey: this.paymentProviderService.buildWalletKey(
-          'gift-card-reload-hold',
-          giftCard.id,
-          userId,
-          metadata.idempotencyKey,
-        ),
-        metadata: { purpose: 'GIFT_CARD', giftCardId: giftCard.id, userId },
-      });
+    const centralUserId =
+      initiateDto.paymentProvider === PaymentMethod.MCOM_WALLET
+        ? await this.getCentralUserId(userId)
+        : undefined;
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail: initiateDto.paymentProvider,
+      amount: initiateDto.amount,
+      currency,
+      payer: { mallUserId: userId, centralUserId },
+      metadata,
+      reference,
+      idempotencyKey: metadata.idempotencyKey,
+      walletIdempotencyKey: this.paymentProviderService.buildWalletKey(
+        'gift-card-reload-hold',
+        giftCard.id,
+        userId,
+        metadata.idempotencyKey,
+      ),
+      walletHoldMetadata: {
+        purpose: 'GIFT_CARD',
+        giftCardId: giftCard.id,
+        userId,
+      },
+      description: 'MCOM Mall gift card reload',
+      intent: 'PURCHASE',
+      splits: metadata.splits,
+      walletMode: 'hold',
+    });
+
+    if (initiated.rail === 'mcom_wallet') {
       return {
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
         provider: PaymentMethod.MCOM_WALLET,
       };
     }
-
-    if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          initiateDto.amount,
-          currency,
-          metadata,
-        );
+    if (initiated.rail === 'stripe') {
       return {
-        clientSecret: paymentIntent.client_secret,
+        clientSecret: initiated.clientSecret,
         provider: PaymentMethod.STRIPE,
       };
-    } else if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
-      const order = await this.paymentProviderService.createPaypalOrder(
-        initiateDto.amount,
-        currency,
-        metadata,
-      );
-      return {
-        orderId: order.id,
-        approvalUrl: order.approvalUrl ?? null,
-        provider: PaymentMethod.PAYPAL,
-      };
-    } else {
-      throw new BadRequestException('Invalid payment provider specified.');
     }
+    return {
+      orderId: initiated.orderId,
+      approvalUrl: initiated.approvalUrl,
+      provider: PaymentMethod.PAYPAL,
+    };
   }
 
   async verifyAndCompleteReload(
@@ -996,83 +1019,53 @@ export class GiftCardService {
     }
 
     const currency = 'GBP';
-    let verificationResult;
 
     this.validatePurchaseAmount(amount, template);
 
-    let paidChargeId: string | null = null;
-    let paidProviderRef: string | null = null;
-    let paidFeeMinor: string | null = null;
-    let paidNetMinor: string | null = null;
-    let paymentReference = transactionId;
     const centralUserId =
       paymentProvider === PaymentMethod.MCOM_WALLET
         ? await this.getCentralUserId(userId)
         : undefined;
+    const reloadSeller = {
+      userId: template.ownerId,
+      centralUserId: template.owner?.centralUserId,
+      externalId: `user:${template.ownerId}`,
+    };
+    const expectedSplits = this.paymentProviderService.buildSellerSplits(
+      amount,
+      reloadSeller,
+    );
 
-    if (paymentProvider === PaymentMethod.MCOM_WALLET) {
-      verificationResult =
-        await this.paymentProviderService.settleWalletReference(
-          transactionId,
-          amount,
-          currency,
-          {
-            mallUserId: userId,
-            mcomUserId: centralUserId,
-            holdId: transactionId,
-            reference: `gift-card-reload-${giftCard.id}-${userId}`,
-          },
-          this.paymentProviderService.buildWalletKey(
-            'gift-card-reload-capture',
-            transactionId,
-          ),
-        );
-      const details: any = verificationResult.details ?? {};
-      paymentReference = details.transactionId || details.id || transactionId;
-      paidChargeId =
-        details.id && !String(details.id).startsWith('wallet:')
-          ? details.id
-          : null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-    } else if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          amount,
-          currency,
-          { mallUserId: userId },
-        );
-      const details: any = verificationResult.details ?? {};
-      paidChargeId = details.id ?? null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-      paymentReference = paidChargeId || transactionId;
-    } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          amount,
-          currency,
-          { mallUserId: userId },
-        );
-      const details: any = verificationResult.details ?? {};
-      paidChargeId = details.id ?? null;
-      paidProviderRef = details.providerRef ?? null;
-      paidFeeMinor = details.feeMinor ?? null;
-      paidNetMinor = details.netMinor ?? null;
-      paymentReference = paidChargeId || transactionId;
-    } else {
-      throw new BadRequestException('Invalid payment provider specified.');
-    }
+    const verification = await this.paymentOrchestrator.confirm({
+      rail: paymentProvider,
+      reference: transactionId,
+      amount,
+      currency,
+      payer: { mallUserId: userId, centralUserId },
+      holdId:
+        paymentProvider === PaymentMethod.MCOM_WALLET
+          ? transactionId
+          : undefined,
+      contextReference: `gift-card-reload-${giftCard.id}-${userId}`,
+      intent: 'PURCHASE',
+      splits: expectedSplits,
+      idempotencyKey: this.paymentProviderService.buildWalletKey(
+        'gift-card-reload-capture',
+        transactionId,
+      ),
+    });
 
-    if (!verificationResult.ok) {
+    if (!verification.ok) {
       throw new BadRequestException(
-        `Payment verification failed: ${verificationResult.reason}`,
+        `Payment verification failed: ${verification.reason}`,
       );
     }
+
+    const paidChargeId = verification.chargeId;
+    const paidProviderRef = verification.providerRef;
+    const paidFeeMinor = verification.feeMinor;
+    const paidNetMinor = verification.netMinor;
+    const paymentReference = verification.transactionId || transactionId;
 
     return this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(Order);

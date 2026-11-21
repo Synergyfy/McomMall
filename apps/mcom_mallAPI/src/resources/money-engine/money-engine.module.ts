@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MoneyEngineService } from './money-engine.service';
+import { MoneyVoucherPaymentListener } from './money-voucher-payment.listener';
 import { MoneyEngineController } from './money-engine.controller';
 import { VoucherExpiryService } from './voucher-expiry.service';
 import { RewardDefinition } from './entities/reward-definition.entity';
@@ -22,7 +23,11 @@ import { DigitalValueModule } from '../digital-value/digital-value.module';
     DigitalValueModule,
   ],
   controllers: [MoneyEngineController],
-  providers: [MoneyEngineService, VoucherExpiryService],
+  providers: [
+    MoneyEngineService,
+    VoucherExpiryService,
+    MoneyVoucherPaymentListener,
+  ],
   exports: [MoneyEngineService],
 })
 export class MoneyEngineModule {}

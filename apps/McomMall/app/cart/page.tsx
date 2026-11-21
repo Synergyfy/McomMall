@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback } from 'react';
+import { getProductMainImage } from '@/lib/utils';
 
 export default function CartPage() {
   const {
@@ -162,8 +163,7 @@ export default function CartPage() {
                   <Link href={`/products/${item.product.id}`}>
                     <img
                       src={
-                        item.product.imageUrl ||
-                        (item.product.fileUrls && item.product.fileUrls[0]) ||
+                        getProductMainImage(item.product) ||
                         '/images/placeholder.svg'
                       }
                       alt={item.product.title}

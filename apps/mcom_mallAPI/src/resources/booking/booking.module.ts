@@ -9,6 +9,7 @@ import { Service } from '../services/entities/service.entity';
 import { WalletModule } from '../wallet/wallet.module';
 import { BookingController } from './booking.controller';
 import { BookingService } from './booking.service';
+import { BookingPaymentListener } from './booking-payment.listener';
 import { BlockedSlot } from './entities/blocked-slot.entity';
 import { PriceModifier } from './entities/price-modifier.entity';
 import { RentalBooking } from './entities/rental-booking.entity';
@@ -57,7 +58,7 @@ import { MoneyEngineModule } from '../money-engine/money-engine.module';
     MoneyEngineModule,
   ],
   controllers: [BookingController],
-  providers: [BookingService],
+  providers: [BookingService, BookingPaymentListener],
   exports: [BookingService],
 })
 export class BookingModule {}

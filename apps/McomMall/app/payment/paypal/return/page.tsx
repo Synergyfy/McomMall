@@ -27,9 +27,12 @@ function PayPalReturnContent() {
   const [code, setCode] = useState<string | null>(null);
   const [purpose, setPurpose] = useState<PayPalPurchasePurpose | null>(null);
   const [returnTo, setReturnTo] = useState('/dashboard');
+  const [isOrderReturn, setIsOrderReturn] = useState(false);
   const token = searchParams.get('token');
   const cancelled = searchParams.get('cancel') === '1';
   const requestedReturnTo = searchParams.get('returnTo');
+  const orderPaymentIntentId = searchParams.get('paymentIntentId');
+  const isOrderCheckout = searchParams.get('purpose') === 'order';
 
   useEffect(() => {
     if (requestedReturnTo?.startsWith('/')) {
@@ -41,6 +44,41 @@ function PayPalReturnContent() {
       setStatus('cancelled');
       setMessage('PayPal checkout was cancelled.');
       return;
+    }
+
+    if (isOrderCheckout && orderPaymentIntentId) {
+      setIsOrderReturn(true);
+      setReturnTo('/dashboard/orders');
+      if (!token) {
+        setStatus('error');
+        setMessage(
+          'PayPal did not return an order reference. If you were charged, please contact support.',
+        );
+        return;
+      }
+
+      let active = true;
+      api
+        .post(`/order/payment-intent/${orderPaymentIntentId}/complete`, {
+          orderId: token,
+        })
+        .then((response) => {
+          if (!active) return;
+          setCode((response.data as { id?: string })?.id ?? null);
+          setStatus('success');
+          setMessage('Payment received and your order has been placed.');
+        })
+        .catch((error: unknown) => {
+          if (!active) return;
+          setStatus('error');
+          setMessage(
+            getPaymentErrorInfo(error).message ||
+              'We could not finish your order. Please contact support if PayPal shows the payment as completed.',
+          );
+        });
+      return () => {
+        active = false;
+      };
     }
 
     if (!token) {
@@ -103,7 +141,13 @@ function PayPalReturnContent() {
     return () => {
       active = false;
     };
-  }, [token, cancelled, requestedReturnTo]);
+  }, [
+    token,
+    cancelled,
+    requestedReturnTo,
+    isOrderCheckout,
+    orderPaymentIntentId,
+  ]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6 py-16">
@@ -135,16 +179,18 @@ function PayPalReturnContent() {
               </p>
             )}
             <Link
-              href={purchaseHistoryPath(purpose)}
+              href={
+                isOrderReturn ? '/dashboard/orders' : purchaseHistoryPath(purpose)
+              }
               className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-orange-600 px-5 py-3 font-bold text-white hover:bg-orange-700"
             >
-              View my purchase
+              {isOrderReturn ? 'View my orders' : 'View my purchase'}
             </Link>
             <Link
               href={returnTo}
               className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-gray-200 px-5 py-3 font-bold text-gray-700 hover:bg-gray-50"
             >
-              Back to the listing
+              {isOrderReturn ? 'Back to checkout' : 'Back to the listing'}
             </Link>
           </>
         )}

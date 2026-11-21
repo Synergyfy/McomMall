@@ -12,10 +12,6 @@ import { PaymentsService } from '../services/payments.service';
 import { PaymentProviderService } from '../services/payment-provider.service';
 import { McomWalletService } from '../services/mcom-wallet.service';
 import { WalletTopUpProxyService } from '../services/wallet-topup-proxy.service';
-import {
-  ConfirmWalletTopUpDto,
-  InitiateWalletTopUpDto,
-} from '../dto/wallet-topup.dto';
 import { RecordPaymentDto } from '../dto/record-payment.dto';
 import { PauseResumeTrialDto } from '../dto/pause-resume-trial.dto';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
@@ -145,25 +141,5 @@ export class PaymentsController {
       publishableKey: this.walletTopUpProxyService.getPublishableKey() || null,
       limits: { min: 5, max: 500, currency: 'GBP' },
     };
-  }
-
-  @Post('wallet/topup/initiate')
-  @UseGuards(JwtAuthGuard)
-  initiateWalletTopUp(@Body() dto: InitiateWalletTopUpDto, @Req() req) {
-    return this.walletTopUpProxyService.initiateTopUp(
-      req.user.id,
-      dto.amount,
-      dto.currency || 'GBP',
-    );
-  }
-
-  @Post('wallet/topup/confirm')
-  @UseGuards(JwtAuthGuard)
-  confirmWalletTopUp(@Body() dto: ConfirmWalletTopUpDto, @Req() req) {
-    return this.walletTopUpProxyService.confirmTopUp(
-      req.user.id,
-      dto.topUpRequestId,
-      dto.paymentIntentId,
-    );
   }
 }

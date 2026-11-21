@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Coupon } from './entities/coupon.entity';
 import { CouponService } from './coupon.service';
+import { CouponPaymentListener } from './coupon-payment.listener';
 import { CouponController } from './coupon.controller';
 import { User } from '../users/entities/user.entity';
 import { Order } from '../order/entities/order.entity';
@@ -46,7 +47,7 @@ import { CouponProductPublicController } from './coupon-product-public.controlle
     CouponProductBusinessController,
     CouponProductPublicController,
   ],
-  providers: [CouponService, CouponProductService],
+  providers: [CouponService, CouponProductService, CouponPaymentListener],
   exports: [CouponService, CouponProductService],
 })
 export class CouponModule {}

@@ -79,11 +79,42 @@ import {
 import { Service } from '../services/entities/service.entity';
 import { McomWalletService } from '../payments/services/mcom-wallet.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { PaymentOrchestratorService } from '../payments/services/payment-orchestrator.service';
 import { WalletRefundReconcileService } from './wallet-refund-reconcile.service';
 import { UpdateOrderTrackingDto } from './dto/update-order-tracking.dto';
 import { QuoteCheckoutDto } from './dto/quote-checkout.dto';
 import { UserRole } from '../../common/role.enum';
 import { randomUUID } from 'crypto';
+import { McomPaymentIntent } from '../payments/entities/mcom-payment-intent.entity';
+import {
+  McomPayIntent,
+  McomPaySplit,
+} from '../payments/services/mcom-pay.service';
+import {
+  allocateCashSplits,
+  WeightedSplit,
+} from '../payments/services/payment-splits.util';
+import { CreateOrderPaymentIntentDto } from './dto/create-order-payment-intent.dto';
+import { RefundOrderDto } from './dto/refund-order.dto';
+import { BookingStatus } from '../booking/entities/booking.enum';
+
+interface SettlementPayee {
+  ownerId: string;
+  payeeType: 'mcom_user' | 'external';
+  payeeUserId?: string;
+  payeeExternalId?: string;
+}
+
+interface OrderSettlement {
+  /** Gross entitlement per owner in minor units, before discounts/fees. */
+  ownerEntitlementMinor: Map<string, bigint>;
+  /** Payee mapping used to interpret a charge's stored splits. */
+  payees: SettlementPayee[];
+  /** Cash share allocated to each payee when splits are enabled. */
+  cashSplits?: McomPaySplit[];
+  /** Internal ownerId -> cash share, for local earnings reconciliation. */
+  ownerCashMinor: Map<string, bigint>;
+}
 
 interface AppliedReward {
   issuanceId: string;
@@ -245,10 +276,13 @@ export class OrderService {
     @Inject(forwardRef(() => ProductService))
     private readonly productService: ProductService,
     private readonly shippingPricingService: ShippingPricingService,
+    @InjectRepository(McomPaymentIntent)
+    private readonly paymentIntentRepository: Repository<McomPaymentIntent>,
     @Inject(forwardRef(() => McomWalletService))
     private readonly mcomWalletService: McomWalletService,
     @Inject(forwardRef(() => PaymentProviderService))
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     @Inject(forwardRef(() => WalletRefundReconcileService))
     private readonly walletRefundReconcileService: WalletRefundReconcileService,
     private readonly rewardsIntegrationService: RewardsIntegrationService,
@@ -294,9 +328,146 @@ export class OrderService {
     userId: string,
     createCheckoutDto: CreateCheckoutDto,
   ): Promise<Order> {
-    return (await this.resolveCheckout(userId, createCheckoutDto, {
-      dryRun: false,
-    })) as Order;
+    const { result } = await this.resolveCheckoutInternal(
+      userId,
+      createCheckoutDto,
+      { dryRun: false },
+    );
+    const order = result as Order;
+    if (order?.payment?.mcomChargeId) {
+      await this.paymentIntentRepository.update(
+        { chargeId: order.payment.mcomChargeId },
+        { status: 'completed', completedOrderId: order.id },
+      );
+    }
+    return order;
+  }
+
+  /**
+   * Admin-only full order refund.
+   *
+   * MCOM refunds the charge (which reverses any payee splits); then the local
+   * seller earnings that were credited for this order are reversed. Product
+   * stock is restored and bundled service bookings are cancelled by default.
+   *
+   * Consumed customer instruments (gift cards, vouchers, coupons, rewards) are
+   * not re-issued here — the admin handles those separately.
+   */
+  async refundOrder(
+    orderId: string,
+    dto: RefundOrderDto,
+  ): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: [
+        'items',
+        'items.product',
+        'payment',
+        'productServiceBookings',
+        'productServiceBookings.serviceBooking',
+      ],
+    });
+    if (!order) throw new NotFoundException('Order not found.');
+    if (!order.payment) {
+      throw new BadRequestException('This order has no payment to refund.');
+    }
+    if (!order.payment.mcomChargeId) {
+      throw new BadRequestException(
+        'This order has no MCOM Pay charge to refund.',
+      );
+    }
+    if (order.status !== OrderStatus.COMPLETED) {
+      if (order.status === OrderStatus.CANCELLED && order.payment.status === 'refunded') {
+        return order;
+      }
+      throw new BadRequestException(
+        'Only completed orders can be refunded.',
+      );
+    }
+    if (
+      dto.amount != null &&
+      Math.abs(Number(dto.amount) - Number(order.total)) > 0.01
+    ) {
+      throw new BadRequestException(
+        `Only full refunds are supported. The order total is ${Number(
+          order.total,
+        ).toFixed(2)}.`,
+      );
+    }
+
+    // MCOM owns the immutable ledger and reverses the payee splits itself.
+    await this.paymentOrchestrator.refundCharge(
+      order.payment.mcomChargeId,
+      Number(order.total),
+      dto.reason || `Admin refund for order ${order.id}`,
+    );
+
+    const bookingIds = (order.productServiceBookings ?? [])
+      .map((link) => link.serviceBooking?.id)
+      .filter((id): id is string => !!id);
+
+    return this.entityManager.transaction(async (manager) => {
+      // Serialise concurrent refunds. The MCOM refund is idempotent; this lock
+      // ensures the local earnings reversal also runs exactly once.
+      const lockedOrder = await manager.findOne(Order, {
+        where: { id: order.id },
+        relations: ['payment'],
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (
+        lockedOrder?.status === OrderStatus.CANCELLED &&
+        lockedOrder.payment?.status === 'refunded'
+      ) {
+        return lockedOrder;
+      }
+
+      await manager.update(
+        OrderPayment,
+        { id: order.payment.id },
+        { status: 'refunded' },
+      );
+      await manager.update(
+        Order,
+        { id: order.id },
+        { status: OrderStatus.CANCELLED },
+      );
+
+      if (dto.restock !== false) {
+        for (const item of order.items ?? []) {
+          if (!item.product?.enableStockManagement) continue;
+          await manager
+            .createQueryBuilder()
+            .update(Product)
+            .set({ stock: () => `stock + ${Number(item.quantity)}` })
+            .where('id = :id', { id: item.product.id })
+            .execute();
+        }
+      }
+
+      if (dto.cancelBookings !== false) {
+        for (const link of order.productServiceBookings ?? []) {
+          const booking = link.serviceBooking;
+          if (!booking) continue;
+          await manager.update(
+            'service_bookings',
+            { id: booking.id },
+            { status: BookingStatus.CANCELLED },
+          );
+        }
+      }
+
+      await this.walletService.reverseOrderEarnings(
+        order.id,
+        bookingIds,
+        manager,
+      );
+
+      const refreshed = await manager.findOne(Order, {
+        where: { id: order.id },
+        relations: ['items', 'items.product', 'payment'],
+      });
+      return refreshed ?? order;
+    });
   }
 
   /**
@@ -310,7 +481,7 @@ export class OrderService {
     userId: string,
     quoteDto: QuoteCheckoutDto,
   ): Promise<CheckoutQuote> {
-    return (await this.resolveCheckout(
+    const { result } = await this.resolveCheckoutInternal(
       userId,
       {
         ...quoteDto,
@@ -320,7 +491,249 @@ export class OrderService {
         },
       },
       { dryRun: true },
-    )) as CheckoutQuote;
+    );
+    return result as CheckoutQuote;
+  }
+
+  /**
+   * Create the MCOM Pay charge for a checkout before the buyer pays.
+   *
+   * The quote is re-priced here (never trusted from the browser), frozen on the
+   * intent row, and used for both the charge amount and payee splits. The row
+   * is what lets the webhook complete the order if the tab closes.
+   */
+  async createCheckoutPaymentIntent(
+    userId: string,
+    dto: CreateOrderPaymentIntentDto,
+  ): Promise<Record<string, any>> {
+    if (
+      dto.paymentProvider !== PaymentMethod.STRIPE &&
+      dto.paymentProvider !== PaymentMethod.PAYPAL
+    ) {
+      throw new BadRequestException(
+        'Card and PayPal are the only supported checkout intent providers.',
+      );
+    }
+
+    const { result, settlement } = await this.resolveCheckoutInternal(
+      userId,
+      {
+        ...dto.quote,
+        payment: { paymentMethod: dto.paymentProvider, amount: 0 },
+      },
+      { dryRun: true },
+    );
+    const quote = result as CheckoutQuote;
+    const amount = Number(quote.finalAmount || 0);
+    if (amount <= 0) {
+      return { paymentRequired: false, amount: 0 };
+    }
+
+    const amountMinor = String(Math.round(amount * 100));
+    let intent = await this.paymentIntentRepository.findOne({
+      where: { idempotencyKey: dto.idempotencyKey },
+    });
+    if (intent && intent.userId !== userId) {
+      throw new ConflictException(
+        'This payment attempt key is already in use. Please refresh the checkout.',
+      );
+    }
+    if (
+      intent &&
+      (intent.amountMinor !== amountMinor ||
+        intent.provider !== dto.paymentProvider ||
+        JSON.stringify(intent.quote) !== JSON.stringify(dto.quote))
+    ) {
+      throw new ConflictException(
+        'This payment attempt was already started with a different checkout. Please refresh the checkout.',
+      );
+    }
+    if (intent?.status === 'completed' && intent.completedOrderId) {
+      return {
+        paymentRequired: false,
+        completed: true,
+        paymentIntentId: intent.id,
+        orderId: intent.completedOrderId,
+        amount,
+      };
+    }
+
+    const intentId = intent?.id ?? randomUUID();
+    const reference = `mall-order-${intentId}`;
+    const frontend =
+      process.env.MALL_FRONTEND_URL ||
+      process.env.FRONTEND_URL ||
+      'http://localhost:3003';
+    const returnUrl =
+      dto.returnUrl ||
+      `${frontend.replace(/\/$/, '')}/payment/paypal/return?purpose=order&paymentIntentId=${intentId}`;
+    const cancelUrl =
+      dto.cancelUrl || `${frontend.replace(/\/$/, '')}/checkout`;
+    const metadata = {
+      reference,
+      userId,
+      idempotencyKey: dto.idempotencyKey,
+      intent: 'ORDER' as McomPayIntent,
+      splits: settlement.cashSplits,
+      description: 'MCOM Mall order',
+      returnUrl,
+      cancelUrl,
+    };
+
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail: dto.paymentProvider,
+      amount,
+      currency: 'GBP',
+      payer: { mallUserId: userId },
+      metadata,
+      reference,
+      idempotencyKey: dto.idempotencyKey,
+      description: 'MCOM Mall order',
+      intent: 'ORDER' as McomPayIntent,
+      splits: settlement.cashSplits,
+    });
+
+    let response: Record<string, any>;
+    if (initiated.rail === 'stripe') {
+      response = {
+        paymentRequired: true,
+        paymentIntentId: intentId,
+        provider: 'stripe',
+        amount,
+        chargeId: initiated.chargeId,
+        providerRef: initiated.providerRef,
+        clientSecret: initiated.clientSecret,
+      };
+    } else if (initiated.rail === 'paypal') {
+      response = {
+        paymentRequired: true,
+        paymentIntentId: intentId,
+        provider: 'paypal',
+        amount,
+        chargeId: initiated.chargeId,
+        providerRef: initiated.orderId,
+        orderId: initiated.orderId,
+        approvalUrl: initiated.approvalUrl,
+      };
+    } else {
+      throw new BadRequestException(
+        'Card and PayPal are the only supported checkout intent providers.',
+      );
+    }
+
+    const intentFields = {
+      userId,
+      status: 'pending',
+      provider: dto.paymentProvider,
+      amountMinor,
+      currency: 'GBP',
+      chargeId: response.chargeId ?? null,
+      providerRef: response.providerRef ?? null,
+      idempotencyKey: dto.idempotencyKey,
+      reference,
+      quote: dto.quote as unknown as Record<string, any>,
+      splits: (settlement.cashSplits ?? null) as any,
+      metadata: {
+        returnUrl,
+        cancelUrl,
+        platformPayee:
+          process.env.MCOM_PLATFORM_PAYEE_ID || 'mcom-mall-platform',
+      },
+      completedOrderId: null,
+      failureReason: null,
+    };
+    if (intent) {
+      Object.assign(intent, intentFields);
+      await this.paymentIntentRepository.save(intent);
+    } else {
+      intent = await this.paymentIntentRepository.save(
+        this.paymentIntentRepository.create({
+          id: intentId,
+          ...intentFields,
+        }),
+      );
+    }
+
+    return response;
+  }
+
+  /** Finish a quote-bound checkout after PayPal sends the buyer back. */
+  async completeCheckoutPaymentIntent(
+    userId: string,
+    intentId: string,
+    orderId?: string,
+  ): Promise<Order> {
+    const intent = await this.paymentIntentRepository.findOne({
+      where: { id: intentId, userId },
+    });
+    if (!intent) throw new NotFoundException('Payment attempt not found.');
+    return this.completeIntent(intent, orderId);
+  }
+
+  /** Webhook entry point: no authenticated user is present. */
+  async completeCheckoutPaymentIntentFromWebhook(
+    intentId: string,
+  ): Promise<Order> {
+    const intent = await this.paymentIntentRepository.findOne({
+      where: { id: intentId },
+    });
+    if (!intent) throw new NotFoundException('Payment attempt not found.');
+    return this.completeIntent(intent);
+  }
+
+  private async completeIntent(
+    intent: McomPaymentIntent,
+    orderId?: string,
+  ): Promise<Order> {
+    if (intent.status === 'completed' && intent.completedOrderId) {
+      const existing = await this.orderRepository.findOneBy({
+        id: intent.completedOrderId,
+      });
+      if (existing) return existing;
+    }
+    if (!intent.chargeId) {
+      throw new BadRequestException(
+        'This payment attempt has no charge to complete.',
+      );
+    }
+    if (orderId && intent.providerRef && orderId !== intent.providerRef) {
+      throw new BadRequestException(
+        'The returned PayPal order does not match this payment attempt.',
+      );
+    }
+
+    const amountMinor = BigInt(intent.amountMinor);
+    const amount = Number(amountMinor) / 100;
+    const paymentMethod =
+      intent.provider === 'paypal'
+        ? PaymentMethod.PAYPAL
+        : PaymentMethod.STRIPE;
+    try {
+      const order = await this.checkout(intent.userId, {
+        ...(intent.quote as unknown as QuoteCheckoutDto),
+        payment: {
+          paymentMethod,
+          amount,
+          transactionId: intent.providerRef || intent.chargeId,
+          idempotencyKey: intent.idempotencyKey,
+        },
+      });
+      await this.paymentIntentRepository.update(
+        { id: intent.id },
+        {
+          status: 'completed',
+          completedOrderId: order.id,
+          failureReason: null,
+        },
+      );
+      return order;
+    } catch (err: any) {
+      await this.paymentIntentRepository.update(
+        { id: intent.id },
+        { failureReason: err?.message || String(err) },
+      );
+      throw err;
+    }
   }
 
   private buildQuoteResponse(input: QuoteResponseInput): CheckoutQuote {
@@ -436,11 +849,11 @@ export class OrderService {
     };
   }
 
-  private async resolveCheckout(
+  private async resolveCheckoutInternal(
     userId: string,
     createCheckoutDto: CreateCheckoutDto,
     options: { dryRun: boolean },
-  ): Promise<Order | CheckoutQuote> {
+  ): Promise<{ result: Order | CheckoutQuote; settlement: OrderSettlement }> {
     const {
       directPurchase,
       giftCardPurchases,
@@ -471,6 +884,9 @@ export class OrderService {
     const productIds: string[] = [];
     const productOwnerById = new Map<string, string>();
     const earningsPerOwner: Map<string, number> = new Map();
+    const serviceProviderEarnings: Map<string, number> = new Map();
+    const ownerPayees = new Map<string, SettlementPayee>();
+    let platformEntitlement = 0;
     let businessContextId: string | null = null;
     let directPurchaseProduct: Product | null = null;
 
@@ -498,6 +914,16 @@ export class OrderService {
       directPurchaseProduct = product;
       businessContextId = product.business.id;
       const ownerId = product.business.user.id;
+      ownerPayees.set(ownerId, {
+        ownerId,
+        payeeType: product.business.user.centralUserId
+          ? 'mcom_user'
+          : 'external',
+        payeeUserId: product.business.user.centralUserId || undefined,
+        payeeExternalId: product.business.user.centralUserId
+          ? undefined
+          : `business:${product.business.id}`,
+      });
 
       const price = this.productService.calculatePrice(
         product,
@@ -533,6 +959,16 @@ export class OrderService {
         );
         const itemTotal = price * item.quantity;
         const ownerId = item.product.business.user.id;
+        ownerPayees.set(ownerId, {
+          ownerId,
+          payeeType: item.product.business.user.centralUserId
+            ? 'mcom_user'
+            : 'external',
+          payeeUserId: item.product.business.user.centralUserId || undefined,
+          payeeExternalId: item.product.business.user.centralUserId
+            ? undefined
+            : `business:${item.product.business.id}`,
+        });
 
         productTotal += itemTotal;
         productIds.push(item.product.id);
@@ -603,6 +1039,23 @@ export class OrderService {
           bookingDetail.endTime,
         );
         serviceBookingTotal += pricing.totalAmount;
+        const providerOwner = service.business?.user;
+        if (providerOwner?.id) {
+          ownerPayees.set(providerOwner.id, {
+            ownerId: providerOwner.id,
+            payeeType: providerOwner.centralUserId ? 'mcom_user' : 'external',
+            payeeUserId: providerOwner.centralUserId || undefined,
+            payeeExternalId: providerOwner.centralUserId
+              ? undefined
+              : `business:${service.business.id}`,
+          });
+          serviceProviderEarnings.set(
+            providerOwner.id,
+            (serviceProviderEarnings.get(providerOwner.id) || 0) +
+              pricing.providerAmount,
+          );
+        }
+        platformEntitlement += pricing.commissionAmount;
         serviceBookingLines.push({
           serviceId: service.id,
           name: service.name,
@@ -634,6 +1087,14 @@ export class OrderService {
         this.validateBusinessAndOwner(business);
 
         const purchaseOwnerId = business.user.id;
+        ownerPayees.set(purchaseOwnerId, {
+          ownerId: purchaseOwnerId,
+          payeeType: business.user.centralUserId ? 'mcom_user' : 'external',
+          payeeUserId: business.user.centralUserId || undefined,
+          payeeExternalId: business.user.centralUserId
+            ? undefined
+            : `business:${business.id}`,
+        });
 
         if (!businessContextId) {
           businessContextId = gcPurchase.businessId;
@@ -1219,6 +1680,15 @@ export class OrderService {
 
     const finalAmount = round2(totalAfterVoucher - moneyVoucherAmountToApply);
 
+    const settlement = this.buildOrderSettlement({
+      earningsPerOwner,
+      serviceProviderEarnings,
+      ownerPayees,
+      platformEntitlement,
+      shippingFee: estimatedShippingFee,
+      finalAmount,
+    });
+
     const quoteInput: QuoteResponseInput = {
       isDirectPurchase,
       directPurchaseProduct,
@@ -1251,7 +1721,10 @@ export class OrderService {
     };
 
     if (options.dryRun) {
-      return this.buildQuoteResponse(quoteInput);
+      return {
+        result: this.buildQuoteResponse(quoteInput),
+        settlement,
+      };
     }
 
     this.logger.log(
@@ -1305,6 +1778,7 @@ export class OrderService {
     let paidProviderRef: string | null = null;
     let paidFeeMinor: string | null = null;
     let paidNetMinor: string | null = null;
+    let appliedSplits: McomPaySplit[] = [];
 
     try {
     // --- Server-side payment verification for card / PayPal ---
@@ -1320,36 +1794,28 @@ export class OrderService {
             'A payment transaction ID is required for this payment method.',
           );
         }
-        const verification =
-          method === PaymentMethod.STRIPE
-            ? await this.paymentProviderService.verifyStripePaymentIntent(
-                transactionId,
-                Number(finalAmount.toFixed(2)),
-                'gbp',
-                {
-                  mallUserId: userId,
-                  mcomUserId: user.centralUserId,
-                },
-              )
-            : await this.paymentProviderService.captureAndVerifyPaypalOrder(
-                transactionId,
-                Number(finalAmount.toFixed(2)),
-                'gbp',
-                {
-                  mallUserId: userId,
-                  mcomUserId: user.centralUserId,
-                },
-              );
+        const verification = await this.paymentOrchestrator.confirm({
+          rail: method,
+          reference: transactionId,
+          amount: Number(finalAmount.toFixed(2)),
+          currency: 'gbp',
+          payer: {
+            mallUserId: userId,
+            centralUserId: user.centralUserId,
+          },
+        });
         if (!verification.ok) {
           throw new BadRequestException(
             `Payment verification failed: ${verification.reason}`,
           );
         }
-        const details: any = verification.details ?? {};
-        paidChargeId = details.id ?? null;
-        paidProviderRef = details.providerRef ?? null;
-        paidFeeMinor = details.feeMinor ?? null;
-        paidNetMinor = details.netMinor ?? null;
+        paidChargeId = verification.chargeId;
+        paidProviderRef = verification.providerRef;
+        paidFeeMinor = verification.feeMinor;
+        paidNetMinor = verification.netMinor;
+        appliedSplits = paidChargeId
+          ? await this.paymentProviderService.getLocalChargeSplits(paidChargeId)
+          : [];
       } else if (method !== PaymentMethod.MCOM_WALLET) {
         throw new BadRequestException('Unsupported payment method.');
       }
@@ -1375,27 +1841,37 @@ export class OrderService {
           'A checkout idempotency key is required for MCOM Wallet payments.',
         );
       }
-      const charge = await this.paymentProviderService.createWalletCharge(
-        Number(finalAmount.toFixed(2)),
-        'GBP',
-        {
-          reference: `mall-order-${userId}`,
-          userId,
-          idempotencyKey: createCheckoutDto.payment.idempotencyKey,
-          description: 'MCOM Mall order',
-        },
-        centralUserId,
-      );
-      if (charge.status !== 'paid') {
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: PaymentMethod.MCOM_WALLET,
+        amount: Number(finalAmount.toFixed(2)),
+        currency: 'GBP',
+        payer: { mallUserId: userId, centralUserId },
+        reference: `mall-order-${userId}`,
+        idempotencyKey: createCheckoutDto.payment.idempotencyKey,
+        description: 'MCOM Mall order',
+        intent: 'ORDER' as McomPayIntent,
+        splits: settlement.cashSplits,
+        walletMode: 'charge',
+      });
+      if (initiated.rail !== 'mcom_wallet' || !initiated.chargeId) {
         throw new BadRequestException(
-          `MCOM Wallet charge status ${charge.status}; payment was not settled.`,
+          'MCOM Wallet charge could not be created.',
         );
       }
-      walletTransactionId = charge.chargeId;
-      paidChargeId = charge.chargeId;
+      if (initiated.status !== 'paid') {
+        throw new BadRequestException(
+          `MCOM Wallet charge status ${initiated.status}; payment was not settled.`,
+        );
+      }
+      walletTransactionId = initiated.chargeId;
+      paidChargeId = initiated.chargeId;
+      appliedSplits =
+        await this.paymentProviderService.getLocalChargeSplits(
+          initiated.chargeId,
+        );
       try {
-        const details = await this.paymentProviderService.getMcomCharge(
-          charge.chargeId,
+        const details = await this.paymentOrchestrator.getCharge(
+          initiated.chargeId,
         );
         paidProviderRef = details.providerRef ?? null;
         paidFeeMinor = details.feeMinor ?? null;
@@ -1433,17 +1909,54 @@ export class OrderService {
       });
       if (existingPayment?.order) {
         // Idempotent replay: the same charge already funded an order.
-        return existingPayment.order;
+        return { result: existingPayment.order, settlement };
       }
     }
 
+    const splitOffsets = this.ownerSplitOffsets(appliedSplits, settlement);
+    // Set once the order transaction has committed. Post-commit side effects
+    // (reward commit, emails) must never trigger a compensating refund: the
+    // order and seller earnings are already durable at that point.
+    let committedOrder: Order | null = null;
+
     const savedOrder = await this.entityManager
       .transaction(async (manager) => {
+        const remainingSplitOffsets = new Map(splitOffsets);
+        const localCreditAmount = (ownerId: string, amount: number) => {
+          const remaining = remainingSplitOffsets.get(ownerId) ?? 0n;
+          if (remaining <= 0n) return amount;
+          const amountMinor = BigInt(Math.round(amount * 100));
+          const offset = remaining < amountMinor ? remaining : amountMinor;
+          remainingSplitOffsets.set(ownerId, remaining - offset);
+          return Number(amountMinor - offset) / 100;
+        };
+
         const paidReference =
           paidChargeId ||
           walletTransactionId ||
           createCheckoutDto.payment.transactionId ||
           null;
+
+        // A webhook completion may have won the race while the browser was
+        // also completing. Re-read inside the transaction so a concurrent
+        // replay returns the existing order instead of refunding the charge.
+        if (paidReference) {
+          const existingInTx = await manager.getRepository(OrderPayment).findOne({
+            where: [
+              { transactionId: paidReference },
+              ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+            ],
+            relations: ['order'],
+          });
+          if (existingInTx?.order) {
+            return {
+              savedOrder: existingInTx.order,
+              createdGiftCards: [],
+              createdBookingIds: [],
+            };
+          }
+        }
+
         const orderPayment = manager.create(OrderPayment, {
           paymentMethod: createCheckoutDto.payment.paymentMethod,
           transactionId:
@@ -1771,11 +2284,14 @@ export class OrderService {
               await manager.save(serviceBooking);
 
               const providerId = bookedService.business?.user?.id;
-              if (providerId && pricing.providerAmount > 0) {
+              const localProviderAmount = providerId
+                ? localCreditAmount(providerId, pricing.providerAmount)
+                : 0;
+              if (providerId && localProviderAmount > 0) {
                 await this.walletService.creditEarning(
                   {
                     userId: providerId,
-                    amount: pricing.providerAmount,
+                    amount: localProviderAmount,
                     type: WalletTransactionType.EARNING_BOOKING,
                     description: `Pending payment in escrow for booking #${serviceBooking.id}`,
                   },
@@ -1850,13 +2366,16 @@ export class OrderService {
           await this.cartService.clearCart(userId, manager);
         }
 
-        // Credit earnings to all business owners involved in the order
+        // Credit earnings to all business owners involved in the order. Any
+        // cash already paid to the seller through MCOM Pay splits is deducted
+        // so the two rails never exceed the seller's gross entitlement.
         for (const [ownerId, amount] of earningsPerOwner.entries()) {
-          if (amount > 0) {
+          const localAmount = localCreditAmount(ownerId, amount);
+          if (localAmount > 0) {
             await this.walletService.creditEarning(
               {
                 userId: ownerId,
-                amount: amount,
+                amount: localAmount,
                 type: WalletTransactionType.EARNING_ORDER,
                 description: `Earnings from order #${savedOrder.id}`,
               },
@@ -1872,6 +2391,7 @@ export class OrderService {
         return { savedOrder, createdGiftCards, createdBookingIds };
       })
       .then(async ({ savedOrder, createdGiftCards, createdBookingIds }) => {
+        committedOrder = savedOrder;
         if (rewardResolution.applications.length > 0) {
           await this.commitRewards(
             savedOrder.id,
@@ -1904,6 +2424,40 @@ export class OrderService {
         return savedOrder;
       })
       .catch(async (dbErr) => {
+        // The order committed; only a post-commit side effect failed. Keep the
+        // order paid and skip the compensating refund + local-earnings reversal.
+        if (committedOrder) {
+          this.logger.error(
+            `[order.checkout] post-commit step failed for order ${committedOrder.id}; order remains paid`,
+            dbErr as any,
+          );
+          return committedOrder;
+        }
+
+        // A concurrent completion (webhook vs browser) can win the
+        // order_payments unique index. Postgres aborts the transaction, so
+        // this replay check must run outside it — and it must happen BEFORE
+        // the compensating refund so the winning order's charge is not
+        // refunded twice.
+        if (isUniqueViolation(dbErr)) {
+          const replayReference =
+            paidChargeId ||
+            walletTransactionId ||
+            createCheckoutDto.payment.transactionId;
+          if (replayReference) {
+            const replay = await this.orderPaymentRepository.findOne({
+              where: [
+                { transactionId: replayReference },
+                ...(paidChargeId ? [{ mcomChargeId: paidChargeId }] : []),
+              ],
+              relations: ['order'],
+            });
+            if (replay?.order) {
+              return replay.order;
+            }
+          }
+        }
+
         // Order creation failed after rewards were reserved → release them.
         if (rewardResolution.applications.length > 0 && rewardReservationRef) {
           await this.releaseRewards(
@@ -1923,7 +2477,7 @@ export class OrderService {
           createCheckoutDto.payment.transactionId;
         if (finalAmount > 0 && refundReference) {
           try {
-            await this.paymentProviderService.refundStripePayment(
+            await this.paymentOrchestrator.refundCharge(
               refundReference,
               Number(finalAmount.toFixed(2)),
             );
@@ -1951,7 +2505,132 @@ export class OrderService {
       orderId: savedOrder.id,
     });
 
-    return savedOrder;
+    return { result: savedOrder, settlement };
+  }
+
+  /**
+   * Translate the order's gross entitlements into MCOM Pay payee splits for
+   * the cash the buyer is actually paying now.
+   *
+   * Sellers keep the un-split remainder in the local earnings ledger, so the
+   * two rails together add up to their gross entitlement. The platform share
+   * (shipping + service commission) is a payee so the split list reconciles to
+   * the charge amount exactly.
+   */
+  private buildOrderSettlement(input: {
+    earningsPerOwner: Map<string, number>;
+    serviceProviderEarnings: Map<string, number>;
+    ownerPayees: Map<string, SettlementPayee>;
+    platformEntitlement: number;
+    shippingFee: number;
+    finalAmount: number;
+  }): OrderSettlement {
+    const ownerEntitlementMinor = new Map<string, bigint>();
+    const add = (ownerId: string, amount: number) => {
+      if (!ownerId || !Number.isFinite(amount) || amount <= 0) return;
+      ownerEntitlementMinor.set(
+        ownerId,
+        (ownerEntitlementMinor.get(ownerId) ?? 0n) +
+          BigInt(Math.round(amount * 100)),
+      );
+    };
+    for (const [ownerId, amount] of input.earningsPerOwner) {
+      add(ownerId, amount);
+    }
+    for (const [ownerId, amount] of input.serviceProviderEarnings) {
+      add(ownerId, amount);
+    }
+
+    const payees: SettlementPayee[] = [];
+    const weighted: WeightedSplit[] = [];
+    for (const [ownerId, amountMinor] of ownerEntitlementMinor) {
+      const payee = input.ownerPayees.get(ownerId);
+      if (!payee) continue;
+      payees.push(payee);
+      weighted.push({
+        key: ownerId,
+        entitlementMinor: amountMinor,
+        split: {
+          payeeType: payee.payeeType,
+          ...(payee.payeeUserId
+            ? { payeeUserId: payee.payeeUserId }
+            : { payeeExternalId: payee.payeeExternalId }),
+        },
+      });
+    }
+
+    const platformKey =
+      process.env.MCOM_PLATFORM_PAYEE_ID || 'mcom-mall-platform';
+    const platformAmount = round2(
+      input.platformEntitlement + input.shippingFee,
+    );
+    if (platformAmount > 0) {
+      payees.push({
+        ownerId: platformKey,
+        payeeType: 'external',
+        payeeExternalId: platformKey,
+      });
+      weighted.push({
+        key: platformKey,
+        entitlementMinor: BigInt(Math.round(platformAmount * 100)),
+        split: { payeeType: 'external', payeeExternalId: platformKey },
+      });
+    }
+
+    const amountMinor = BigInt(Math.round(input.finalAmount * 100));
+    const allocation =
+      this.paymentProviderService?.isSplitsEnabled?.() && weighted.length > 0
+        ? allocateCashSplits(amountMinor, weighted, platformKey)
+        : undefined;
+
+    const ownerCashMinor = new Map<string, bigint>();
+    if (allocation) {
+      for (const [key, amount] of allocation.allocatedMinor) {
+        if (key !== platformKey) ownerCashMinor.set(key, amount);
+      }
+    }
+
+    return {
+      ownerEntitlementMinor,
+      payees,
+      cashSplits: allocation?.splits?.length ? allocation.splits : undefined,
+      ownerCashMinor,
+    };
+  }
+
+  /**
+   * Map the splits that were actually sent to MCOM Pay back to local owners.
+   *
+   * We deliberately use the stored charge splits (not a fresh calculation) so
+   * the local earnings credit is reduced by exactly the cash the seller has
+   * already received in their MCOM wallet.
+   */
+  private ownerSplitOffsets(
+    splits: McomPaySplit[],
+    settlement: OrderSettlement,
+  ): Map<string, bigint> {
+    if (!splits?.length) return new Map();
+    const ownerByPayee = new Map<string, string>();
+    for (const payee of settlement.payees) {
+      if (payee.payeeUserId) {
+        ownerByPayee.set(`user:${payee.payeeUserId}`, payee.ownerId);
+      }
+      if (payee.payeeExternalId) {
+        ownerByPayee.set(`external:${payee.payeeExternalId}`, payee.ownerId);
+      }
+    }
+
+    const offsets = new Map<string, bigint>();
+    for (const split of splits) {
+      const key = split.payeeUserId
+        ? `user:${split.payeeUserId}`
+        : `external:${split.payeeExternalId}`;
+      const ownerId = ownerByPayee.get(key);
+      if (!ownerId) continue;
+      const amount = BigInt(split.amountMinor || '0');
+      offsets.set(ownerId, (offsets.get(ownerId) ?? 0n) + amount);
+    }
+    return offsets;
   }
 
   private async enqueueInstrumentCallbacks(input: {
@@ -2464,4 +3143,12 @@ export class OrderService {
 
 function round2(value: number): number {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function isUniqueViolation(err: any): boolean {
+  return (
+    err?.code === '23505' ||
+    err?.driverError?.code === '23505' ||
+    /duplicate key/i.test(String(err?.message || ''))
+  );
 }

@@ -13,14 +13,8 @@ import {
 } from '@/service/campaign-cashback/hook';
 import { CampaignCashback } from '@/service/campaign-cashback/types';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
-
-const mcomStripeKey =
-    process.env.NEXT_PUBLIC_MCOM_SOLUTIONS_STRIPE_PUBLISHABLE_KEY || '';
-const stripePromise = mcomStripeKey ? loadStripe(mcomStripeKey) : null;
 
 interface Props {
     isOpen: boolean;
@@ -147,14 +141,12 @@ export const CampaignUnlockModal: React.FC<Props> = ({ isOpen, onClose, campaign
                     )}
 
                     {flowState === 'idle' && clientSecret && (
-                        <Elements stripe={stripePromise} options={{ clientSecret }}>
-                            <StripeCheckoutForm
-                                clientSecret={clientSecret}
-                                onPaymentSuccess={(transactionId) =>
-                                    completeContribution(transactionId, 'stripe')
-                                }
-                            />
-                        </Elements>
+                        <StripeCheckoutForm
+                            clientSecret={clientSecret}
+                            onPaymentSuccess={(transactionId) =>
+                                completeContribution(transactionId, 'stripe')
+                            }
+                        />
                     )}
 
                     {flowState === 'idle' && orderId && (

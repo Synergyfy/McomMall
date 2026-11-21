@@ -18,6 +18,7 @@ import { GiftCardTheme } from './entities/gift-card-theme.entity';
 import { WalletModule } from '../wallet/wallet.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { GiftCardService } from './gift-card.service';
+import { GiftCardPaymentListener } from './gift-card-payment.listener';
 import { GiftCardAssetService } from './gift-card-asset.service';
 import { AssetCategoryService } from './asset-category.service';
 import { User } from '../users/entities/user.entity';
@@ -53,7 +54,12 @@ import { PartnerInstrumentsModule } from '../partner-instruments/partner-instrum
     GiftCardAssetController,
     AssetCategoryController,
   ],
-  providers: [GiftCardService, GiftCardAssetService, AssetCategoryService],
+  providers: [
+    GiftCardService,
+    GiftCardAssetService,
+    AssetCategoryService,
+    GiftCardPaymentListener,
+  ],
   exports: [GiftCardService, GiftCardAssetService, AssetCategoryService],
 })
 export class GiftCardModule {}

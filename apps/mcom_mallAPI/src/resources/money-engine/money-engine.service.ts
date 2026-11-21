@@ -35,9 +35,12 @@ import { Business } from '../listings/entities/listing.entity';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { customAlphabet } from 'nanoid';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { PaymentOrchestratorService } from '../payments/services/payment-orchestrator.service';
+import type { PaymentRail } from '../payments/services/payment-orchestrator.service';
 import { PaymentGateway } from '../payments/enums/payment-gateway.enum';
 import { PaymentHistory } from '../payments/entities/payment-history.entity';
 import { PaymentPurpose } from '../payments/enums/payment-purpose.enum';
+import { paymentGatewayFromMcom } from '../payments/payment-method.util';
 import {
   INSTRUMENT_EVENTS,
   InstrumentEventPayload,
@@ -69,6 +72,7 @@ export class MoneyEngineService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly paymentProviderService: PaymentProviderService,
+    private readonly paymentOrchestrator: PaymentOrchestratorService,
     @Optional()
     private readonly eventEmitter?: EventEmitter2,
     @Optional()
@@ -693,6 +697,13 @@ export class MoneyEngineService {
         dto.idempotencyKey ||
         `money-voucher-${dto.rewardDefinitionId}-${user.id}-${Date.now()}`,
       description: 'MCOM Mall reward voucher purchase',
+      intent: 'PURCHASE',
+      localContext: {
+        purpose: 'MONEY_VOUCHER',
+        userId: user.id,
+        rewardDefinitionId: dto.rewardDefinitionId,
+        amount,
+      },
     };
 
     if (dto.paymentGateway === PaymentGateway.MCOM_WALLET) {
@@ -701,57 +712,98 @@ export class MoneyEngineService {
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: user.centralUserId,
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: 'mcom_wallet',
         amount,
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId: user.centralUserId },
+        metadata,
         reference: metadata.reference,
-        idempotencyKey: this.paymentProviderService.buildWalletKey(
+        idempotencyKey: metadata.idempotencyKey,
+        walletIdempotencyKey: this.paymentProviderService.buildWalletKey(
           'money-voucher-hold',
           dto.rewardDefinitionId,
           user.id,
           metadata.idempotencyKey,
         ),
-        metadata: {
+        walletHoldMetadata: {
           purpose: 'PAYG_TOPUP',
           rewardDefinitionId: dto.rewardDefinitionId,
           userId: user.id,
         },
+        description: 'MCOM Mall money voucher',
+        intent: 'PURCHASE',
+        walletMode: 'hold',
       });
+      if (initiated.rail !== 'mcom_wallet') {
+        throw new BadRequestException('Invalid payment rail.');
+      }
       return {
         provider: PaymentGateway.MCOM_WALLET,
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
       };
     }
 
-    if (dto.paymentGateway === PaymentGateway.STRIPE) {
-      const intent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          amount,
-          'GBP',
-          metadata,
-        );
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail: this.toRail(dto.paymentGateway),
+      amount,
+      currency: 'GBP',
+      payer: { mallUserId: user.id, centralUserId: user.centralUserId },
+      metadata,
+      reference: metadata.reference,
+      idempotencyKey: metadata.idempotencyKey,
+      description: 'MCOM Mall money voucher',
+      intent: 'PURCHASE',
+    });
+    if (initiated.rail === 'stripe') {
       return {
         provider: PaymentGateway.STRIPE,
-        clientSecret: intent.client_secret ?? undefined,
+        clientSecret: initiated.clientSecret ?? undefined,
       };
     }
-
-    if (dto.paymentGateway === PaymentGateway.PAYPAL) {
-      const order = await this.paymentProviderService.createPaypalOrder(
-        amount,
-        'GBP',
-        metadata,
-      );
+    if (initiated.rail === 'paypal') {
       return {
         provider: PaymentGateway.PAYPAL,
-        orderId: order.id,
-        approvalUrl: order.approvalUrl ?? null,
+        orderId: initiated.orderId,
+        approvalUrl: initiated.approvalUrl,
       };
     }
-
     throw new BadRequestException('Unsupported payment gateway');
+  }
+
+  /** Webhook backstop for money-voucher purchases / contributions. */
+  async completePurchaseFromWebhook(input: {
+    context: Record<string, any>;
+    method: string;
+    chargeId: string;
+    providerRef?: string | null;
+  }): Promise<UserVoucher> {
+    const user = await this.dataSource.manager.findOne(User, {
+      where: { id: input.context.userId },
+    });
+    if (!user) throw new NotFoundException('User not found.');
+
+    const paymentGateway = paymentGatewayFromMcom(input.method);
+    const transactionId = input.providerRef || input.chargeId;
+    if (input.context.purpose === 'MONEY_VOUCHER_CONTRIBUTION') {
+      return this.contributeToVoucher(
+        input.context.code,
+        {
+          amount: Number(input.context.amount),
+          paymentGateway,
+          transactionId,
+        },
+        user,
+      );
+    }
+    return this.purchaseVoucher(user.id, {
+      rewardDefinitionId: input.context.rewardDefinitionId,
+      paymentAmount: Number(input.context.amount),
+      transactionId,
+      paymentGateway,
+    });
   }
 
   async purchaseVoucher(
@@ -760,47 +812,31 @@ export class MoneyEngineService {
   ): Promise<UserVoucher> {
     // 1. Verify Payment with Provider
     const currency = 'gbp'; // Default currency for now
-    let verification: { ok: boolean; details?: any; reason?: string };
-
-    if (dto.paymentGateway === PaymentGateway.STRIPE) {
-      verification =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          dto.transactionId,
-          dto.paymentAmount,
-          currency,
-          { mallUserId: userId },
-        );
-    } else if (dto.paymentGateway === PaymentGateway.PAYPAL) {
-      verification =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          dto.transactionId,
-          dto.paymentAmount,
-          currency,
-          { mallUserId: userId },
-        );
-    } else if (dto.paymentGateway === PaymentGateway.MCOM_WALLET) {
-      const buyer = await this.dataSource
-        .getRepository(User)
-        .findOne({ where: { id: userId } });
-      verification =
-        await this.paymentProviderService.settleWalletReference(
-          dto.transactionId,
-          dto.paymentAmount,
-          'GBP',
-          {
-            mallUserId: userId,
-            mcomUserId: buyer?.centralUserId,
-            holdId: dto.transactionId,
-            reference: `money-voucher-${dto.rewardDefinitionId}-${userId}`,
-          },
-          this.paymentProviderService.buildWalletKey(
-            'money-voucher-capture',
-            dto.transactionId,
-          ),
-        );
-    } else {
-      throw new BadRequestException('Unsupported payment gateway');
-    }
+    const buyer =
+      dto.paymentGateway === PaymentGateway.MCOM_WALLET
+        ? await this.dataSource
+            .getRepository(User)
+            .findOne({ where: { id: userId } })
+        : null;
+    const verification = await this.paymentOrchestrator.confirm({
+      rail: this.toRail(dto.paymentGateway),
+      reference: dto.transactionId,
+      amount: dto.paymentAmount,
+      currency,
+      payer: { mallUserId: userId, centralUserId: buyer?.centralUserId },
+      holdId:
+        dto.paymentGateway === PaymentGateway.MCOM_WALLET
+          ? dto.transactionId
+          : undefined,
+      contextReference: `money-voucher-${dto.rewardDefinitionId}-${userId}`,
+      idempotencyKey:
+        dto.paymentGateway === PaymentGateway.MCOM_WALLET
+          ? this.paymentProviderService.buildWalletKey(
+              'money-voucher-capture',
+              dto.transactionId,
+            )
+          : undefined,
+    });
 
     if (!verification.ok) {
       throw new BadRequestException(
@@ -808,7 +844,7 @@ export class MoneyEngineService {
       );
     }
 
-    const verificationDetails: any = verification.details ?? {};
+    const verificationDetails: any = verification.raw ?? {};
     const paymentReference =
       verificationDetails.transactionId ||
       verificationDetails.id ||
@@ -1015,6 +1051,12 @@ export class MoneyEngineService {
    * Verify a provider payment before crediting a wallet. Shared by purchase
    * and contribution flows so the verification rules cannot drift.
    */
+  private toRail(gateway: PaymentGateway): PaymentRail {
+    if (gateway === PaymentGateway.MCOM_WALLET) return 'mcom_wallet';
+    if (gateway === PaymentGateway.PAYPAL) return 'paypal';
+    return 'stripe';
+  }
+
   private async verifyPayment(
     gateway: PaymentGateway,
     transactionId: string,
@@ -1023,49 +1065,30 @@ export class MoneyEngineService {
     reference?: string,
     mcomUserId?: string,
   ): Promise<{ ok: boolean; details?: any; reason?: string }> {
-    let result: { ok: boolean; details?: any; reason?: string };
-
-    if (gateway === PaymentGateway.STRIPE) {
-      result = await this.paymentProviderService.verifyStripePaymentIntent(
-        transactionId,
-        amount,
-        'gbp',
-        { mallUserId: userId },
-      );
-    } else if (gateway === PaymentGateway.PAYPAL) {
-      result =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          amount,
-          'gbp',
-          { mallUserId: userId },
-        );
-    } else if (gateway === PaymentGateway.MCOM_WALLET) {
-      result = await this.paymentProviderService.settleWalletReference(
-        transactionId,
-        amount,
-        'GBP',
-        {
-          mallUserId: userId,
-          mcomUserId,
-          holdId: transactionId,
-          reference,
-        },
-        this.paymentProviderService.buildWalletKey(
-          'money-contribution-capture',
-          transactionId,
-        ),
-      );
-    } else {
-      throw new BadRequestException('Unsupported payment gateway');
-    }
+    const result = await this.paymentOrchestrator.confirm({
+      rail: this.toRail(gateway),
+      reference: transactionId,
+      amount,
+      currency: 'GBP',
+      payer: { mallUserId: userId, centralUserId: mcomUserId },
+      holdId:
+        gateway === PaymentGateway.MCOM_WALLET ? transactionId : undefined,
+      contextReference: reference,
+      idempotencyKey:
+        gateway === PaymentGateway.MCOM_WALLET
+          ? this.paymentProviderService.buildWalletKey(
+              'money-contribution-capture',
+              transactionId,
+            )
+          : undefined,
+    });
 
     if (!result.ok) {
       throw new BadRequestException(
         `Payment verification failed: ${result.reason}`,
       );
     }
-    return result;
+    return { ok: result.ok, details: result.raw, reason: result.reason };
   }
 
   /**
@@ -1269,8 +1292,8 @@ export class MoneyEngineService {
   }
 
   /**
-   * Best-effort compensating refund. `refundStripePayment` already delegates to
-   * MCOM Pay when the charge id resolves, so it covers STRIPE and MCOM_WALLET.
+   * Best-effort compensating refund. The refund resolves the MCOM Pay charge
+   * by reference, so it covers every rail.
    */
   private async refundPayment(
     gateway: PaymentGateway,
@@ -1278,18 +1301,7 @@ export class MoneyEngineService {
     amount: number,
   ): Promise<void> {
     try {
-      if (gateway === PaymentGateway.PAYPAL) {
-        await this.paymentProviderService.refundPaypalOrder(
-          transactionId,
-          amount,
-          'GBP',
-        );
-      } else {
-        await this.paymentProviderService.refundStripePayment(
-          transactionId,
-          amount,
-        );
-      }
+      await this.paymentOrchestrator.refundCharge(transactionId, amount);
     } catch (error: any) {
       this.logger.error(
         `Compensating refund failed for ${gateway} ${transactionId}: ${error?.message ?? error}`,
@@ -1388,6 +1400,13 @@ export class MoneyEngineService {
       userId: user.id,
       idempotencyKey: `money-contribution-${code}-${user.id}-${Date.now()}`,
       description: 'MCOM Mall voucher contribution',
+      intent: 'PURCHASE',
+      localContext: {
+        purpose: 'MONEY_VOUCHER_CONTRIBUTION',
+        userId: user.id,
+        code,
+        amount,
+      },
     };
 
     if (dto.paymentGateway === PaymentGateway.MCOM_WALLET) {
@@ -1396,52 +1415,64 @@ export class MoneyEngineService {
           'MCOM Wallet is not linked for this account. Please re-authenticate via SSO.',
         );
       }
-      const hold = await this.paymentProviderService.createWalletHold({
-        mcomUserId: user.centralUserId,
+      const initiated = await this.paymentOrchestrator.initiate({
+        rail: 'mcom_wallet',
         amount,
+        currency: 'GBP',
+        payer: { mallUserId: user.id, centralUserId: user.centralUserId },
+        metadata,
         reference: metadata.reference,
-        idempotencyKey: this.paymentProviderService.buildWalletKey(
+        idempotencyKey: metadata.idempotencyKey,
+        walletIdempotencyKey: this.paymentProviderService.buildWalletKey(
           'money-contribution-hold',
           code,
           user.id,
           metadata.idempotencyKey,
         ),
-        metadata: { purpose: 'PAYG_TOPUP', voucherCode: code, userId: user.id },
+        walletHoldMetadata: {
+          purpose: 'PAYG_TOPUP',
+          voucherCode: code,
+          userId: user.id,
+        },
+        description: 'MCOM Mall voucher contribution',
+        intent: 'PURCHASE',
+        walletMode: 'hold',
       });
+      if (initiated.rail !== 'mcom_wallet') {
+        throw new BadRequestException('Invalid payment rail.');
+      }
       return {
         provider: PaymentGateway.MCOM_WALLET,
-        transactionId: hold.holdId,
-        holdId: hold.holdId,
-        expiresAt: hold.expiresAt,
+        transactionId: initiated.holdId,
+        holdId: initiated.holdId,
+        expiresAt: initiated.expiresAt,
       };
     }
 
-    if (dto.paymentGateway === PaymentGateway.STRIPE) {
-      const intent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          amount,
-          'GBP',
-          metadata,
-        );
+    const initiated = await this.paymentOrchestrator.initiate({
+      rail: this.toRail(dto.paymentGateway),
+      amount,
+      currency: 'GBP',
+      payer: { mallUserId: user.id, centralUserId: user.centralUserId },
+      metadata,
+      reference: metadata.reference,
+      idempotencyKey: metadata.idempotencyKey,
+      description: 'MCOM Mall voucher contribution',
+      intent: 'PURCHASE',
+    });
+    if (initiated.rail === 'stripe') {
       return {
         provider: PaymentGateway.STRIPE,
-        clientSecret: intent.client_secret ?? undefined,
+        clientSecret: initiated.clientSecret ?? undefined,
       };
     }
-
-    if (dto.paymentGateway === PaymentGateway.PAYPAL) {
-      const order = await this.paymentProviderService.createPaypalOrder(
-        amount,
-        'GBP',
-        metadata,
-      );
+    if (initiated.rail === 'paypal') {
       return {
         provider: PaymentGateway.PAYPAL,
-        orderId: order.id,
-        approvalUrl: order.approvalUrl ?? null,
+        orderId: initiated.orderId,
+        approvalUrl: initiated.approvalUrl,
       };
     }
-
     throw new BadRequestException('Unsupported payment gateway');
   }
 

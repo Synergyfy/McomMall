@@ -4,13 +4,10 @@ import { useSelector } from 'react-redux';
 import api from '../api';
 import { RootState } from '../store/store';
 import {
-  ConfirmWalletTopUpRequest,
   CreatePaypalOrderRequest,
   CreateStripeIntentRequest,
   InitiateMembershipPaymentRequest,
   InitiateMembershipPaymentResponse,
-  InitiateWalletTopUpRequest,
-  InitiateWalletTopUpResponse,
   PauseResumeTrialDto,
   RecordPaymentRequest,
   SubscriptionStatusResponse,
@@ -301,55 +298,6 @@ export const useWalletTopUpConfig = (enabled = true) => {
     queryKey: ['FETCH_WALLET_TOPUP_CONFIG'],
     enabled,
     staleTime: 60_000,
-  });
-};
-
-export const useInitiateWalletTopUp = () => {
-  const create = async (payload: InitiateWalletTopUpRequest) => {
-    try {
-      const response = await api.post<InitiateWalletTopUpResponse>(
-        '/payments/wallet/topup/initiate',
-        payload,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to start card top-up';
-      toast.error(errorMessage);
-      throw new Error(errorMessage);
-    }
-  };
-
-  return useMutation({
-    mutationFn: create,
-  });
-};
-
-export const useConfirmWalletTopUp = () => {
-  const queryClient = useQueryClient();
-  const create = async (payload: ConfirmWalletTopUpRequest) => {
-    try {
-      const response = await api.post('/payments/wallet/topup/confirm', payload);
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to confirm card top-up';
-      toast.error(errorMessage);
-      throw new Error(errorMessage);
-    }
-  };
-
-  return useMutation({
-    mutationFn: create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['FETCH_WALLET_BALANCE'] });
-    },
   });
 };
 

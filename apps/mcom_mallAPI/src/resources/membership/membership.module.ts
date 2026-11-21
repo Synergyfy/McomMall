@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MembershipService } from './membership.service';
+import { MembershipPaymentListener } from './membership-payment.listener';
 import { MembershipController } from './membership.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Membership } from './entities/membership.entity';
@@ -26,7 +27,11 @@ import { PlansModule } from '../plans/plans.module';
     PlansModule,
   ],
   controllers: [MembershipController],
-  providers: [MembershipService, MembershipRenewalService],
+  providers: [
+    MembershipService,
+    MembershipRenewalService,
+    MembershipPaymentListener,
+  ],
   exports: [MembershipService, MembershipRenewalService],
 })
 export class MembershipModule {}
