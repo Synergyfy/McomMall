@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   AlertCircle,
   Archive,
   CheckCircle2,
   Clock,
   Loader2,
+  Package,
   RotateCcw,
   Search,
   ShieldCheck,
@@ -15,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -56,9 +60,11 @@ import {
   ModeratedItem,
   ModeratedResource,
 } from '@/service/moderation/types';
+import { moderationApi } from '@/service/moderation/api';
 import { cn } from '@/lib/utils';
 
 const RESOURCES: { value: ModeratedResource; label: string; icon: typeof Ticket }[] = [
+  { value: 'products', label: 'Products', icon: Package },
   { value: 'gift-card-templates', label: 'Gift cards', icon: Ticket },
   { value: 'voucher-products', label: 'Vouchers', icon: Ticket },
   { value: 'coupon-products', label: 'Coupons', icon: Ticket },
@@ -101,8 +107,9 @@ function statusBadge(item: ModeratedItem) {
 }
 
 export default function CatalogModerationPage() {
+  const queryClient = useQueryClient();
   const [resource, setResource] =
-    useState<ModeratedResource>('gift-card-templates');
+    useState<ModeratedResource>('products');
   const [status, setStatus] = useState<ApprovalStatus | 'all'>('pending');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -111,17 +118,30 @@ export default function CatalogModerationPage() {
     action: 'approve' | 'reject';
   } | null>(null);
   const [reviewNote, setReviewNote] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState<'selected' | 'all' | null>(null);
+  const [bulkPhase, setBulkPhase] = useState<'idle' | 'collecting' | 'approving'>('idle');
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get('resource');
-    if (requested && RESOURCES.some((entry) => entry.value === requested)) {
-      setResource(requested as ModeratedResource);
+    const params = new URLSearchParams(window.location.search);
+    const requestedResource = params.get('resource');
+    if (requestedResource && RESOURCES.some((entry) => entry.value === requestedResource)) {
+      setResource(requestedResource as ModeratedResource);
+    }
+    const requestedStatus = params.get('approvalStatus');
+    if (requestedStatus && STATUS_FILTERS.some((entry) => entry.value === requestedStatus)) {
+      setStatus(requestedStatus as ApprovalStatus | 'all');
     }
   }, []);
 
   useEffect(() => {
     setPage(1);
   }, [resource, status, search]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [resource, status, search, page]);
 
   const params = useMemo(
     () => ({
@@ -144,11 +164,134 @@ export default function CatalogModerationPage() {
   const activeStats = stats?.resources.find(
     (entry) => entry.resource === resource,
   );
+  const pendingOnPage = data?.data.filter((item) => item.approvalStatus === 'pending') ?? [];
+  const selectedPendingIds = Array.from(selectedIds).filter((id) =>
+    pendingOnPage.some((item) => item.id === id),
+  );
+  const allPendingSelected =
+    pendingOnPage.length > 0 && pendingOnPage.every((item) => selectedIds.has(item.id));
+  const somePendingSelected = pendingOnPage.some((item) => selectedIds.has(item.id));
+  const bulkRunning = bulkPhase !== 'idle';
+  const bulkAllCount = status === 'pending' ? data?.total ?? 0 : activeStats?.pending ?? 0;
+
   const busy =
     approve.isPending ||
     reject.isPending ||
     delist.isPending ||
-    republish.isPending;
+    republish.isPending ||
+    bulkRunning;
+
+  const resetBulkState = () => {
+    setBulkConfirm(null);
+    setBulkPhase('idle');
+    setBulkProgress(null);
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllOnPage = (checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      for (const item of pendingOnPage) {
+        if (checked) next.add(item.id);
+        else next.delete(item.id);
+      }
+      return next;
+    });
+  };
+
+  const approveIds = async (ids: string[]) => {
+    const uniqueIds = Array.from(new Set(ids));
+    if (uniqueIds.length === 0) {
+      toast.info('No pending items to approve.');
+      resetBulkState();
+      return;
+    }
+
+    setBulkPhase('approving');
+    setBulkProgress({ done: 0, total: uniqueIds.length });
+    let done = 0;
+    const concurrency = 8;
+
+    try {
+      for (let index = 0; index < uniqueIds.length; index += concurrency) {
+        const batch = uniqueIds.slice(index, index + concurrency);
+        await Promise.all(batch.map((id) => moderationApi.approve(resource, id)));
+        done += batch.length;
+        setBulkProgress({ done, total: uniqueIds.length });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['admin-moderation'] });
+      if (resource === 'products') {
+        queryClient.invalidateQueries({ queryKey: ['FETCH_ALL_ADMIN_PRODUCTS'] });
+        queryClient.invalidateQueries({ queryKey: ['FETCH_ADMIN_PRODUCT_STATS'] });
+      }
+      toast.success(`Approved ${done} ${done === 1 ? 'item' : 'items'}.`);
+      setSelectedIds(new Set());
+    } catch (error) {
+      const err = error as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error(
+        err.response?.data?.message || err.message || 'Bulk approval failed.',
+      );
+    } finally {
+      resetBulkState();
+    }
+  };
+
+  const collectPendingIds = async () => {
+    const ids: string[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+
+    do {
+      const result = await moderationApi.list(resource, {
+        search: search.trim() || undefined,
+        approvalStatus: 'pending',
+        page: currentPage,
+        limit: 100,
+      });
+      ids.push(...result.data.map((item) => item.id));
+      totalPages = result.totalPages;
+      currentPage += 1;
+    } while (currentPage <= totalPages);
+
+    return ids;
+  };
+
+  const confirmBulkApprove = async () => {
+    if (bulkConfirm === 'selected') {
+      await approveIds(selectedPendingIds);
+      return;
+    }
+
+    if (bulkConfirm === 'all') {
+      setBulkPhase('collecting');
+      try {
+        toast.info('Collecting pending items…');
+        const ids = await collectPendingIds();
+        await approveIds(ids);
+      } catch (error) {
+        const err = error as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
+        toast.error(
+          err.response?.data?.message || err.message || 'Could not collect pending items.',
+        );
+        resetBulkState();
+      }
+    }
+  };
 
   const openReview = (
     item: ModeratedItem,
@@ -191,7 +334,7 @@ export default function CatalogModerationPage() {
               Catalog approvals
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Review gift cards, vouchers and coupon products before they appear
+              Review products, gift cards, vouchers and coupons before they appear
               on a business listing.
             </p>
           </div>
@@ -259,9 +402,50 @@ export default function CatalogModerationPage() {
 
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-base font-bold text-slate-800">
-              {data?.total ?? 0} item{(data?.total ?? 0) === 1 ? '' : 's'}
-            </CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-base font-bold text-slate-800">
+                {data?.total ?? 0} item{(data?.total ?? 0) === 1 ? '' : 's'}
+              </CardTitle>
+              {selectedPendingIds.length > 0 && (
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                  <span>{selectedPendingIds.length} selected</span>
+                  <Button
+                    size="sm"
+                    className="h-7 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => setBulkConfirm('selected')}
+                    disabled={busy}
+                  >
+                    {bulkPhase === 'approving' && bulkProgress
+                      ? `Approving ${bulkProgress.done}/${bulkProgress.total}`
+                      : 'Approve selected'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-emerald-700"
+                    onClick={() => setSelectedIds(new Set())}
+                    disabled={busy}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+              {status === 'pending' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                  onClick={() => setBulkConfirm('all')}
+                  disabled={busy || bulkAllCount === 0}
+                >
+                  {bulkPhase === 'collecting'
+                    ? 'Collecting…'
+                    : bulkPhase === 'approving' && bulkProgress
+                      ? `Approving ${bulkProgress.done}/${bulkProgress.total}`
+                      : `Approve all pending (${bulkAllCount})`}
+                </Button>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -307,6 +491,22 @@ export default function CatalogModerationPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        aria-label="Select all pending items on this page"
+                        checked={
+                          allPendingSelected
+                            ? true
+                            : somePendingSelected
+                              ? 'indeterminate'
+                              : false
+                        }
+                        onCheckedChange={(checked) =>
+                          toggleSelectAllOnPage(checked === true)
+                        }
+                        disabled={busy || pendingOnPage.length === 0}
+                      />
+                    </TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Owner / business</TableHead>
                     <TableHead>Status</TableHead>
@@ -320,6 +520,16 @@ export default function CatalogModerationPage() {
                     const Icon = badge.icon;
                     return (
                       <TableRow key={item.id}>
+                        <TableCell>
+                          <Checkbox
+                            aria-label={`Select ${item.name}`}
+                            checked={selectedIds.has(item.id)}
+                            onCheckedChange={(checked) =>
+                              toggleSelect(item.id, checked === true)
+                            }
+                            disabled={busy || item.approvalStatus !== 'pending'}
+                          />
+                        </TableCell>
                         <TableCell className="max-w-[280px]">
                           <p className="truncate font-bold text-slate-900">
                             {item.name || 'Untitled'}
@@ -508,6 +718,47 @@ export default function CatalogModerationPage() {
             >
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {review?.action === 'reject' ? 'Reject item' : 'Approve item'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!bulkConfirm}
+        onOpenChange={(open) => {
+          if (!open && !bulkRunning) setBulkConfirm(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkConfirm === 'all'
+                ? 'Approve all pending items'
+                : 'Approve selected items'}
+            </DialogTitle>
+            <DialogDescription>
+              {bulkConfirm === 'all'
+                ? `This will approve ${bulkAllCount} pending ${bulkAllCount === 1 ? 'item' : 'items'} in the current ${RESOURCES.find((entry) => entry.value === resource)?.label ?? resource} queue using the existing single-item approval action. It runs in your browser, so large queues may take a while.`
+                : `This will approve ${selectedPendingIds.length} selected ${selectedPendingIds.length === 1 ? 'item' : 'items'} using the existing single-item approval action.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkConfirm(null)}
+              disabled={bulkRunning}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={confirmBulkApprove}
+              disabled={bulkRunning}
+            >
+              {bulkRunning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {bulkConfirm === 'all'
+                ? `Approve ${bulkAllCount}`
+                : `Approve ${selectedPendingIds.length}`}
             </Button>
           </DialogFooter>
         </DialogContent>

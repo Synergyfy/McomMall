@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -12,116 +12,44 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-    LayoutDashboard,
-    Map,
-    MapPin,
-    Layers,
-    Calendar,
-    Users,
-    Building2,
-    ListChecks,
-    Package,
-    Briefcase,
-    CreditCard,
-    ShieldCheck,
-    AlertTriangle,
-    Megaphone,
-    FileText,
-    BarChart3,
-    HeadphonesIcon,
-    Settings,
-    ScrollText,
-    Plug,
-    ChevronLeft,
-    ChevronRight,
-    Gift,
-    Heart,
-    Bell,
-    Handshake,
-    Ticket,
-    QrCode,
-    Store,
-    LayoutTemplate,
-    ShieldAlert,
-    Award,
-    GraduationCap,
-    Clock,
-    MessageSquare,
-    PanelLeft,
-    Rocket,
-} from 'lucide-react';
-
-interface NavItem {
-    title: string;
-    href: string;
-    icon: React.ComponentType<{ className?: string }>;
-    badge?: number;
-}
-
-const navItems: NavItem[] = [
-    { title: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { title: 'High Streets', href: '/admin/high-streets', icon: Map },
-    { title: 'Boroughs', href: '/admin/boroughs', icon: MapPin },
-    { title: 'Plans', href: '/admin/plans', icon: Layers },
-    { title: 'Seasons', href: '/admin/seasons', icon: Calendar },
-    { title: 'Users', href: '/admin/users', icon: Users },
-    { title: 'Businesses', href: '/admin/businesses', icon: Building2 },
-    { title: 'Listings', href: '/admin/listings', icon: ListChecks },
-    { title: 'Catalog Approvals', href: '/admin/moderation', icon: ShieldCheck },
-    { title: 'Products', href: '/admin/products', icon: Package },
-    { title: 'Services', href: '/admin/services', icon: Briefcase },
-    { title: 'Bookings', href: '/admin/bookings', icon: Clock },
-    { title: 'Transactions', href: '/admin/transactions', icon: CreditCard },
-    { title: 'Terminal Cashback', href: '/admin/terminal-cashback', icon: QrCode },
-
-    { title: 'Disputes', href: '/admin/disputes', icon: AlertTriangle },
-    { title: 'Campaigns', href: '/admin/campaigns', icon: Megaphone },
-    { title: 'Coupons & Vouchers', href: '/admin/coupons-vouchers', icon: Ticket },
-    { title: 'Loyalty Cashback', href: '/admin/campaign-cashback', icon: Gift },
-    { title: 'Templates', href: '/admin/templates', icon: LayoutTemplate },
-    { title: 'Compliance', href: '/admin/compliance', icon: ShieldAlert },
-    { title: 'Quality Assurance', href: '/admin/quality', icon: Award },
-    { title: 'Training Hub', href: '/admin/training', icon: GraduationCap },
-    { title: 'Content', href: '/admin/content', icon: FileText },
-    { title: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
-    { title: 'Marketplace', href: '/admin/marketplace', icon: Store },
-    { title: 'Memberships', href: '/admin/memberships', icon: Users },
-    { title: 'Community', href: '/admin/community-activity', icon: Users },
-    { title: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-    { title: 'Billing', href: '/admin/billing', icon: CreditCard },
-    { title: 'Data', href: '/admin/data', icon: Package },
-    { title: 'Expo Promo', href: '/admin/expo-promo', icon: Megaphone },
-    { title: 'History', href: '/admin/history', icon: ScrollText },
-    { title: 'Team', href: '/admin/team', icon: Users },
-    // { title: 'Verifications', href: '/admin/verifications', icon: ShieldCheck },
-    { title: 'Vouchers', href: '/admin/moderation?resource=voucher-products', icon: Ticket },
-    { title: 'Support', href: '/admin/support', icon: HeadphonesIcon },
-    { title: 'Partnerships', href: '/admin/partnerships', icon: Handshake },
-    { title: 'Loyalty', href: '/admin/loyalty', icon: Heart },
-    { title: 'Cashback', href: '/admin/cashback', icon: CreditCard },
-    { title: 'Notifications', href: '/admin/notifications', icon: Bell },
-    { title: 'Settings', href: '/admin/settings', icon: Settings },
-    { title: 'Onboarding', href: '/admin/settings/onboarding', icon: Rocket },
-    { title: 'Sidebar Config', href: '/admin/settings/business-sidebar', icon: PanelLeft },
-    { title: 'Roles', href: '/admin/roles', icon: ShieldCheck },
-    { title: 'Integrations', href: '/admin/integrations', icon: Plug },
-];
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { navGroups, navItems } from '../data/navigation';
 
 interface AdminSidebarProps {
     collapsed?: boolean;
     onCollapsedChange?: (collapsed: boolean) => void;
 }
 
+function isNavItemActive(href: string, pathname: string): boolean {
+    const path = href.split('?')[0];
+    if (path === '/admin') return pathname === '/admin';
+    return pathname === path || pathname.startsWith(`${path}/`);
+}
+
 export function AdminSidebar({ collapsed = false, onCollapsedChange }: AdminSidebarProps) {
     const pathname = usePathname();
     const [isCollapsed, setIsCollapsed] = useState(collapsed);
+    const [openGroup, setOpenGroup] = useState<string | null>(() => {
+        const activeGroup = navGroups.find((group) =>
+            group.items.some((item) => isNavItemActive(item.href, pathname))
+        );
+        return activeGroup?.id ?? null;
+    });
+
+    useEffect(() => {
+        const activeGroup = navGroups.find((group) =>
+            group.items.some((item) => isNavItemActive(item.href, pathname))
+        );
+        if (activeGroup) setOpenGroup(activeGroup.id);
+    }, [pathname]);
 
     const handleCollapse = () => {
         const newState = !isCollapsed;
         setIsCollapsed(newState);
         onCollapsedChange?.(newState);
     };
+
+    const visibleNavItems = navItems.filter((item) => !item.hiddenFromSidebar);
 
     return (
         <TooltipProvider delayDuration={0}>
@@ -173,45 +101,24 @@ export function AdminSidebar({ collapsed = false, onCollapsedChange }: AdminSide
                 {/* Navigation */}
                 <ScrollArea className="flex-1 py-4">
                     <nav className="space-y-1 px-2">
-                        {navItems.map((item) => {
-                            const isActive = pathname === item.href ||
-                                (item.href !== '/admin' && pathname.startsWith(item.href));
-
-                            const NavLink = (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={cn(
-                                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                                        isActive
-                                            ? 'bg-gradient-to-r from-orange-500/20 to-orange-600/10 text-orange-400 border-l-2 border-orange-500'
-                                            : 'text-slate-400 hover:text-white hover:bg-slate-700/50',
-                                        isCollapsed && 'justify-center px-2'
-                                    )}
-                                >
-                                    <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-orange-400')} />
-                                    {!isCollapsed && (
-                                        <>
-                                            <span className="flex-1">{item.title}</span>
-                                            {item.badge && (
-                                                <span className={cn(
-                                                    'px-2 py-0.5 text-xs font-semibold rounded-full',
-                                                    isActive
-                                                        ? 'bg-orange-500/20 text-orange-400'
-                                                        : 'bg-slate-700 text-slate-300'
-                                                )}>
-                                                    {item.badge}
-                                                </span>
-                                            )}
-                                        </>
-                                    )}
-                                </Link>
-                            );
-
-                            if (isCollapsed) {
+                        {isCollapsed ? (
+                            visibleNavItems.map((item) => {
+                                const isActive = isNavItemActive(item.href, pathname);
                                 return (
                                     <Tooltip key={item.href}>
-                                        <TooltipTrigger asChild>{NavLink}</TooltipTrigger>
+                                        <TooltipTrigger asChild>
+                                            <Link
+                                                href={item.href}
+                                                className={cn(
+                                                    'flex items-center justify-center px-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                                                    isActive
+                                                        ? 'bg-gradient-to-r from-orange-500/20 to-orange-600/10 text-orange-400 border-l-2 border-orange-500'
+                                                        : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                                                )}
+                                            >
+                                                <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-orange-400')} />
+                                            </Link>
+                                        </TooltipTrigger>
                                         <TooltipContent side="right" className="flex items-center gap-2">
                                             {item.title}
                                             {item.badge && (
@@ -222,10 +129,68 @@ export function AdminSidebar({ collapsed = false, onCollapsedChange }: AdminSide
                                         </TooltipContent>
                                     </Tooltip>
                                 );
-                            }
+                            })
+                        ) : (
+                            navGroups.map((group) => {
+                                const groupActive = group.items.some((item) => isNavItemActive(item.href, pathname));
+                                const isOpen = openGroup === group.id;
 
-                            return NavLink;
-                        })}
+                                return (
+                                    <div key={group.id} className="space-y-0.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenGroup((previous) => previous === group.id ? null : group.id)}
+                                            aria-expanded={isOpen}
+                                            className={cn(
+                                                'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                                                groupActive
+                                                    ? 'bg-slate-700/40 text-orange-300'
+                                                    : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
+                                            )}
+                                        >
+                                            <group.icon className={cn('h-5 w-5 flex-shrink-0', groupActive && 'text-orange-400')} />
+                                            <span className="flex-1 text-left">{group.title}</span>
+                                            <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform duration-200', isOpen && 'rotate-180')} />
+                                        </button>
+
+                                        {isOpen && (
+                                            <div className="space-y-0.5 pl-5">
+                                                {group.items
+                                                    .filter((item) => !item.hiddenFromSidebar)
+                                                    .map((item) => {
+                                                        const isActive = isNavItemActive(item.href, pathname);
+                                                        return (
+                                                            <Link
+                                                                key={item.href}
+                                                                href={item.href}
+                                                                className={cn(
+                                                                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200',
+                                                                    isActive
+                                                                        ? 'bg-gradient-to-r from-orange-500/20 to-orange-600/10 text-orange-400 border-l-2 border-orange-500'
+                                                                        : 'text-slate-400 hover:bg-slate-700/40 hover:text-white'
+                                                                )}
+                                                            >
+                                                                <item.icon className={cn('h-4 w-4 flex-shrink-0', isActive && 'text-orange-400')} />
+                                                                <span className="flex-1">{item.title}</span>
+                                                                {item.badge && (
+                                                                    <span className={cn(
+                                                                        'px-2 py-0.5 text-xs font-semibold rounded-full',
+                                                                        isActive
+                                                                            ? 'bg-orange-500/20 text-orange-400'
+                                                                            : 'bg-slate-700 text-slate-300'
+                                                                    )}>
+                                                                        {item.badge}
+                                                                    </span>
+                                                                )}
+                                                            </Link>
+                                                        );
+                                                    })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
                     </nav>
                 </ScrollArea>
 

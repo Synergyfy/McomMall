@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +33,14 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     useGetAdminProductStats,
     useGetAllAdminProducts,
     useDeactivateProduct,
@@ -37,6 +48,12 @@ import {
     useDeleteProduct
 } from '@/service/product/hook';
 import { AdminProduct } from '@/service/product/types';
+import { clearAuthCookies } from '@/lib/auth-cookies';
+import {
+    useApproveModeration,
+    useRejectModeration,
+} from '@/service/moderation/hook';
+import { moderationApi } from '@/service/moderation/api';
 import {
     Search,
     Plus,
@@ -51,9 +68,15 @@ import {
     XCircle,
     Archive,
     Trash2,
-    Loader2
+    Loader2,
+    ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isAdminCreatedProduct } from '@/lib/platform-business';
+
+type ProductOrigin = 'admin' | 'business';
+
+const PAGE_SIZE = 10;
 
 function getProductDisplayStatus(product: AdminProduct): string {
     if (product.approvalStatus === 'pending') return 'pending';
@@ -88,9 +111,13 @@ function ProductDetailSheet({
     product,
     open,
     onOpenChange,
+    onApprove,
+    onReject,
     onDeactivate,
     onActivate,
     onDelete,
+    isApproving,
+    isRejecting,
     isDeactivating,
     isActivating,
     isDeleting,
@@ -98,9 +125,13 @@ function ProductDetailSheet({
     product: AdminProduct | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onApprove: (id: string) => void;
+    onReject: (id: string) => void;
     onDeactivate: (id: string) => void;
     onActivate: (id: string) => void;
     onDelete: (id: string) => void;
+    isApproving: boolean;
+    isRejecting: boolean;
     isDeactivating: boolean;
     isActivating: boolean;
     isDeleting: boolean;
@@ -198,6 +229,35 @@ function ProductDetailSheet({
 
                 {/* Actions */}
                 <div className="border-t bg-white p-6 space-y-2">
+                    {product.approvalStatus === 'pending' && (
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                className="bg-emerald-600 hover:bg-emerald-700"
+                                onClick={() => onApprove(product.id)}
+                                disabled={isApproving || isRejecting || isDeactivating || isActivating || isDeleting}
+                            >
+                                {isApproving ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                )}
+                                Approve
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                                onClick={() => onReject(product.id)}
+                                disabled={isApproving || isRejecting || isDeactivating || isActivating || isDeleting}
+                            >
+                                {isRejecting ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                )}
+                                Reject
+                            </Button>
+                        </div>
+                    )}
                     <Button className="w-full bg-slate-900 hover:bg-slate-800">
                         Edit Product
                     </Button>
@@ -241,30 +301,92 @@ function ProductDetailSheet({
 }
 
 export default function ProductsPage() {
+    const router = useRouter();
+    const [origin, setOrigin] = useState<ProductOrigin>('business');
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
     const [page, setPage] = useState(1);
-    const limit = 10;
 
     const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+    const [bulkPhase, setBulkPhase] = useState<'idle' | 'approving'>('idle');
+    const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+
+    useEffect(() => {
+        setPage(1);
+    }, [origin, searchQuery, statusFilter, categoryFilter]);
 
     // Hooks
-    const { data: stats, isLoading: statsLoading } = useGetAdminProductStats();
-    const { data: productsData, isLoading: productsLoading } = useGetAllAdminProducts({
+    const queryClient = useQueryClient();
+    const {
+        data: stats,
+        isLoading: statsLoading,
+        isError: statsError,
+        refetch: refetchStats,
+    } = useGetAdminProductStats();
+    const approveProduct = useApproveModeration();
+    const rejectProduct = useRejectModeration();
+
+    const bulkRunning = bulkPhase !== 'idle';
+
+    // Fetch the filtered catalog in one page so the side filter counts and local
+    // pagination stay accurate without changing the admin API.
+    const catalogLimit = Math.max(stats?.total ?? 100, 1);
+    const {
+        data: productsData,
+        isLoading: productsLoading,
+        isError: productsError,
+        refetch: refetchProducts,
+    } = useGetAllAdminProducts({
         search: searchQuery || undefined,
         status: statusFilter === 'all' ? undefined : statusFilter,
         category: categoryFilter === 'all' ? undefined : categoryFilter,
-        page,
-        limit,
+        page: 1,
+        limit: catalogLimit,
     });
     const deactivateMutation = useDeactivateProduct();
     const activateMutation = useActivateProduct();
     const deleteMutation = useDeleteProduct();
 
-    const productsList = productsData?.data || [];
-    const totalPages = productsData?.totalPages || 1;
+    const catalogLoadError = statsError || productsError;
+    const tableColSpan = origin === 'business' ? 7 : 6;
+
+    const retryCatalog = () => {
+        void refetchStats();
+        void refetchProducts();
+    };
+
+    const signInAgain = () => {
+        clearAuthCookies();
+        router.replace('/');
+    };
+
+    const allProducts = productsData?.data ?? [];
+    const adminProducts = allProducts.filter((product) => isAdminCreatedProduct(product.businessId));
+    const businessProducts = allProducts.filter((product) => !isAdminCreatedProduct(product.businessId));
+    const originCounts: Record<ProductOrigin, number> = {
+        admin: adminProducts.length,
+        business: businessProducts.length,
+    };
+    const originProducts = origin === 'admin' ? adminProducts : businessProducts;
+    const pendingProductsInScope = originProducts.filter(
+        (product) => product.approvalStatus === 'pending',
+    );
+    const pendingInScopeCount = pendingProductsInScope.length;
+    const scopeLabel = [
+        origin === 'admin' ? 'Admin-created' : 'Business-created',
+        searchQuery.trim() ? `search "${searchQuery.trim()}"` : null,
+        categoryFilter !== 'all' ? `category ${categoryFilter}` : null,
+        statusFilter !== 'all' ? `status ${statusFilter}` : null,
+    ].filter(Boolean).join(' · ');
+    const totalPages = Math.max(1, Math.ceil(originProducts.length / PAGE_SIZE));
+    const currentPage = Math.min(page, totalPages);
+    const productsList = originProducts.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE,
+    );
     const sheetProduct = selectedProduct
         ? productsList.find(p => p.id === selectedProduct.id) ?? selectedProduct
         : null;
@@ -272,6 +394,74 @@ export default function ProductsPage() {
     const handleView = (p: AdminProduct) => {
         setSelectedProduct(p);
         setSheetOpen(true);
+    };
+
+    const invalidateProductQueries = () => {
+        queryClient.invalidateQueries({ queryKey: ['FETCH_ALL_ADMIN_PRODUCTS'] });
+        queryClient.invalidateQueries({ queryKey: ['FETCH_ADMIN_PRODUCT_STATS'] });
+    };
+
+    const handleApprove = (id: string) => {
+        approveProduct.mutate(
+            { resource: 'products', id },
+            {
+                onSuccess: () => {
+                    invalidateProductQueries();
+                    setSheetOpen(false);
+                },
+            },
+        );
+    };
+
+    const handleReject = (id: string) => {
+        rejectProduct.mutate(
+            { resource: 'products', id },
+            {
+                onSuccess: () => {
+                    invalidateProductQueries();
+                    setSheetOpen(false);
+                },
+            },
+        );
+    };
+
+    const handleBulkApprove = async () => {
+        const ids = pendingProductsInScope.map((product) => product.id);
+        if (ids.length === 0) {
+            setBulkConfirmOpen(false);
+            return;
+        }
+
+        setBulkPhase('approving');
+        setBulkProgress({ done: 0, total: ids.length });
+        let done = 0;
+        const concurrency = 8;
+
+        try {
+            for (let index = 0; index < ids.length; index += concurrency) {
+                const batch = ids.slice(index, index + concurrency);
+                await Promise.all(
+                    batch.map((id) => moderationApi.approve('products', id)),
+                );
+                done += batch.length;
+                setBulkProgress({ done, total: ids.length });
+            }
+            invalidateProductQueries();
+            queryClient.invalidateQueries({ queryKey: ['admin-moderation'] });
+            toast.success(`Approved ${done} ${done === 1 ? 'product' : 'products'}.`);
+            setBulkConfirmOpen(false);
+        } catch (error) {
+            const err = error as {
+                response?: { data?: { message?: string } };
+                message?: string;
+            };
+            toast.error(
+                err.response?.data?.message || err.message || 'Bulk approval failed.',
+            );
+        } finally {
+            setBulkPhase('idle');
+            setBulkProgress(null);
+        }
     };
 
     const handleDeactivate = (id: string) => {
@@ -297,6 +487,16 @@ export default function ProductsPage() {
                     <p className="text-slate-500">Manage all catalog products across the platform</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setBulkConfirmOpen(true)}
+                        disabled={pendingInScopeCount === 0 || bulkRunning}
+                    >
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        {bulkPhase === 'approving' && bulkProgress
+                            ? `Approving ${bulkProgress.done}/${bulkProgress.total}`
+                            : `Approve all products (${pendingInScopeCount})`}
+                    </Button>
                     <Button variant="outline">
                         <Download className="h-4 w-4 mr-2" />
                         Export
@@ -360,197 +560,280 @@ export default function ProductsPage() {
                 </Card>
             </div>
 
-            {/* Search & Filters */}
-            <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Search products, businesses or IDs..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
+            {catalogLoadError && (
+                <Card className="border-red-200 bg-red-50">
+                    <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                            <div>
+                                <p className="text-sm font-semibold text-red-900">
+                                    Products could not be loaded
+                                </p>
+                                <p className="text-sm text-red-700">
+                                    Your admin session may have expired. The catalog data is still available; retry or sign in again.
+                                </p>
+                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[140px]">
-                                    <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="active">Active</SelectItem>
-                                    <SelectItem value="pending">Pending approval</SelectItem>
-                                    <SelectItem value="rejected">Rejected</SelectItem>
-                                    <SelectItem value="inactive">Inactive</SelectItem>
-                                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                                    <SelectItem value="delisted">Delisted</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                                <SelectTrigger className="w-[160px]">
-                                    <SelectValue placeholder="Category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Categories</SelectItem>
-                                    <SelectItem value="Electronics">Electronics</SelectItem>
-                                    <SelectItem value="Fashion">Fashion</SelectItem>
-                                    <SelectItem value="Home">Home</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            <Button variant="ghost" className="text-slate-500" onClick={() => {
-                                setSearchQuery('');
-                                setStatusFilter('all');
-                                setCategoryFilter('all');
-                            }}>
-                                Reset
+                        <div className="flex shrink-0 gap-2">
+                            <Button variant="outline" onClick={retryCatalog}>
+                                Retry
                             </Button>
+                            <Button onClick={signInAgain}>Sign in again</Button>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Search & Filters — no wrapper background, just the controls themselves */}
+            <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                        placeholder="Search products, businesses or IDs..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-9 pl-10"
+                    />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-9 w-[140px]">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="pending">Pending approval</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                            <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                            <SelectItem value="delisted">Delisted</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="h-9 w-[160px]">
+                            <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="Electronics">Electronics</SelectItem>
+                            <SelectItem value="Fashion">Fashion</SelectItem>
+                            <SelectItem value="Home">Home</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Button variant="ghost" size="sm" className="h-9 text-slate-500" onClick={() => {
+                        setSearchQuery('');
+                        setStatusFilter('all');
+                        setCategoryFilter('all');
+                    }}>
+                        Reset
+                    </Button>
+                </div>
+            </div>
 
             {/* Products Table */}
             <Card className="border-0 shadow-sm overflow-hidden">
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-slate-50/50">
-                                    <TableHead className="w-[300px]">Product</TableHead>
-                                    <TableHead>Business</TableHead>
-                                    <TableHead>Category</TableHead>
-                                    <TableHead>Price</TableHead>
-                                    <TableHead>Stock</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {productsLoading ? (
-                                    Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell><div className="h-10 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-6 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-6 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-6 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-6 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-6 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-8 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    productsList.map((product) => (
-                                        <TableRow key={product.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                        {product.images?.[0] ? (
-                                                            <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <Package className="h-5 w-5 text-slate-400" />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="font-medium text-slate-900 truncate">{product.name}</span>
-                                                        <span className="text-xs text-slate-500 font-mono">{product.id}</span>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                                                    <span className="text-sm text-slate-700">{product.businessName}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className="text-xs font-normal border-slate-200">
-                                                    {product.category}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className="font-semibold text-slate-900">£{product.price.toFixed(2)}</span>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-col gap-1">
-                                                    <span className={cn(
-                                                        "text-sm font-medium",
-                                                        product.stock <= 10 ? "text-red-600" : "text-slate-700"
-                                                    )}>
-                                                        {product.stock}
-                                                    </span>
-                                                    <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                                        <div
-                                                            className={cn(
-                                                                "h-full rounded-full",
-                                                                product.stock <= 10 ? "bg-red-500" : "bg-emerald-500"
-                                                            )}
-                                                            style={{ width: `${Math.min(product.stock, 100)}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <ProductStatusBadge status={getProductDisplayStatus(product)} />
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="sm" onClick={() => handleView(product)}>
-                                                    <Eye className="h-4 w-4 mr-2" />
-                                                    Details
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-
-                    {!productsLoading && productsList.length === 0 && (
-                        <div className="py-20 text-center">
-                            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 mb-4">
-                                <Search className="h-6 w-6 text-slate-400" />
-                            </div>
-                            <h3 className="text-sm font-semibold text-slate-900">No products found</h3>
-                            <p className="text-sm text-slate-500 mt-1">
-                                Try adjusting your search or filters to find what you&apos;re looking for.
+                    <div className="flex">
+                        {/* Side filter — lives inside the table, not above it */}
+                        <aside className="w-[168px] shrink-0 border-r border-slate-100 bg-slate-50/80 p-3">
+                            <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                Product source
                             </p>
-                            <Button variant="link" className="text-orange-600 mt-2" onClick={() => {
-                                setSearchQuery('');
-                                setStatusFilter('all');
-                                setCategoryFilter('all');
-                                setPage(1);
-                            }}>
-                                Clear all filters
-                            </Button>
+                            <div className="space-y-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setOrigin('business')}
+                                    aria-pressed={origin === 'business'}
+                                    className={cn(
+                                        'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium transition-colors',
+                                        origin === 'business'
+                                            ? 'bg-white text-slate-900 shadow-sm ring-1 ring-orange-200'
+                                            : 'text-slate-500 hover:bg-white/60 hover:text-slate-700'
+                                    )}
+                                >
+                                    <Building2 className="h-4 w-4 shrink-0" />
+                                    <span className="flex-1 text-left">Business</span>
+                                    <span className={cn(
+                                        'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+                                        origin === 'business'
+                                            ? 'bg-orange-100 text-orange-700'
+                                            : 'bg-slate-200 text-slate-600'
+                                    )}>
+                                        {originCounts.business}
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setOrigin('admin')}
+                                    aria-pressed={origin === 'admin'}
+                                    className={cn(
+                                        'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium transition-colors',
+                                        origin === 'admin'
+                                            ? 'bg-white text-slate-900 shadow-sm ring-1 ring-orange-200'
+                                            : 'text-slate-500 hover:bg-white/60 hover:text-slate-700'
+                                    )}
+                                >
+                                    <Package className="h-4 w-4 shrink-0" />
+                                    <span className="flex-1 text-left">Admin</span>
+                                    <span className={cn(
+                                        'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+                                        origin === 'admin'
+                                            ? 'bg-orange-100 text-orange-700'
+                                            : 'bg-slate-200 text-slate-600'
+                                    )}>
+                                        {originCounts.admin}
+                                    </span>
+                                </button>
+                            </div>
+                        </aside>
+
+                        <div className="min-w-0 flex-1">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-slate-50/50">
+                                            <TableHead className="w-[240px]">Product</TableHead>
+                                            {origin === 'business' && <TableHead>Business</TableHead>}
+                                            <TableHead>Category</TableHead>
+                                            <TableHead>Price</TableHead>
+                                            <TableHead>Stock</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {catalogLoadError ? (
+                                            <TableRow>
+                                                <TableCell colSpan={tableColSpan} className="py-16 text-center text-sm text-slate-500">
+                                                    Unable to load products. Use the retry action above.
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : productsLoading ? (
+                                            Array.from({ length: tableColSpan }).map((_, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell colSpan={1}>
+                                                        <div className="h-6 bg-slate-100 animate-pulse rounded" />
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            productsList.map((product) => (
+                                                <TableRow key={product.id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                                {product.images?.[0] ? (
+                                                                    <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <Package className="h-5 w-5 text-slate-400" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col min-w-0">
+                                                                <span className="font-medium text-slate-900 truncate">{product.name}</span>
+                                                                <span className="text-xs text-slate-500 font-mono">{product.id}</span>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    {origin === 'business' && (
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                                                                <span className="text-sm text-slate-700">{product.businessName}</span>
+                                                            </div>
+                                                        </TableCell>
+                                                    )}
+                                                    <TableCell>
+                                                        <Badge variant="outline" className="text-xs font-normal border-slate-200">
+                                                            {product.category}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <span className="font-semibold text-slate-900">£{product.price.toFixed(2)}</span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className={cn(
+                                                                "text-sm font-medium",
+                                                                product.stock <= 10 ? "text-red-600" : "text-slate-700"
+                                                            )}>
+                                                                {product.stock}
+                                                            </span>
+                                                            <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={cn(
+                                                                        "h-full rounded-full",
+                                                                        product.stock <= 10 ? "bg-red-500" : "bg-emerald-500"
+                                                                    )}
+                                                                    style={{ width: `${Math.min(product.stock, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <ProductStatusBadge status={getProductDisplayStatus(product)} />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="sm" onClick={() => handleView(product)}>
+                                                            <Eye className="h-4 w-4 mr-2" />
+                                                            Details
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+        
+                            {!catalogLoadError && !productsLoading && productsList.length === 0 && (
+                                <div className="py-20 text-center">
+                                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 mb-4">
+                                        <Search className="h-6 w-6 text-slate-400" />
+                                    </div>
+                                    <h3 className="text-sm font-semibold text-slate-900">
+                                        No {origin === 'admin' ? 'admin-created' : 'business-created'} products found
+                                    </h3>
+                                    <p className="text-sm text-slate-500 mt-1">
+                                        Try adjusting your filters, or switch the product source on the left.
+                                    </p>
+                                    <Button variant="link" className="text-orange-600 mt-2" onClick={() => {
+                                        setSearchQuery('');
+                                        setStatusFilter('all');
+                                        setCategoryFilter('all');
+                                        setPage(1);
+                                    }}>
+                                        Clear all filters
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </CardContent>
             </Card>
 
             {/* Pagination placeholder if needed */}
-            {totalPages > 1 && (
+            {!catalogLoadError && totalPages > 1 && (
                 <div className="flex items-center justify-between px-2">
                     <p className="text-sm text-slate-500">
-                        Page {page} of {totalPages}
+                        Page {currentPage} of {totalPages}
                     </p>
                     <div className="flex gap-2">
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
-                            disabled={page === 1}
+                            onClick={() => setPage(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
                         >
                             Previous
                         </Button>
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            disabled={page === totalPages}
+                            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
                         >
                             Next
                         </Button>
@@ -558,14 +841,56 @@ export default function ProductsPage() {
                 </div>
             )}
 
+            {/* Bulk approve confirmation */}
+            <Dialog
+                open={bulkConfirmOpen}
+                onOpenChange={(open) => {
+                    if (!open && !bulkRunning) setBulkConfirmOpen(false);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Approve all products</DialogTitle>
+                        <DialogDescription>
+                            This will approve {pendingInScopeCount} pending{' '}
+                            {pendingInScopeCount === 1 ? 'product' : 'products'} in{' '}
+                            <span className="font-semibold text-slate-700">{scopeLabel}</span>.
+                            Products that are already approved are skipped. It runs through the
+                            existing single-item approval action, so large sets may take a while.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setBulkConfirmOpen(false)}
+                            disabled={bulkRunning}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={handleBulkApprove}
+                            disabled={bulkRunning}
+                        >
+                            {bulkRunning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            Approve {pendingInScopeCount}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Product Detail Sheet */}
             <ProductDetailSheet
                 product={sheetProduct}
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
+                onApprove={handleApprove}
+                onReject={handleReject}
                 onDeactivate={handleDeactivate}
                 onActivate={handleActivate}
                 onDelete={handleDelete}
+                isApproving={approveProduct.isPending}
+                isRejecting={rejectProduct.isPending}
                 isDeactivating={deactivateMutation.isPending}
                 isActivating={activateMutation.isPending}
                 isDeleting={deleteMutation.isPending}

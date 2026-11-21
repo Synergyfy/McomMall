@@ -1,205 +1,778 @@
 'use client';
 
+import React, { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, FormProvider } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
-import { useCreateAdminService } from '@/service/services/hook';
-import { useGetAdminBusinesses } from '@/service/admin/hook';
+import { ChevronRight, Save, ArrowLeft, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
+import Link from 'next/link';
 
-interface ServiceFormValues {
-    name: string;
-    description: string;
-    price: number;
-    duration: number;
-    category: string;
-    businessId: string;
-    status: 'active' | 'inactive';
+import { Form } from '@/components/ui/form';
+import {
+  useAddWizardService,
+  useSaveWizardServiceDraft,
+  useUpdateWizardService,
+} from './hooks';
+import { CreateServiceDto } from './types';
+import { uploadFile } from '@/lib/upload';
+import {
+  zodResolver,
+  parseApiError,
+  scrollToFirstError,
+  toSerializable,
+} from '@/lib/form-validation';
+import {
+  ServiceFormValues,
+  serviceFormSchema,
+  serviceStepFields,
+  serviceStepNames,
+  serviceFieldToStep,
+  serviceKnownFields,
+} from './schema';
+import { ProductStatusModal } from './components/ProductStatusModal';
+
+import { Step1BasicInfo } from './components/Step1BasicInfo';
+import { Step2Pricing } from './components/Step2Pricing';
+import { Step3BookingAvailability } from './components/Step3BookingAvailability';
+import { Step4AdditionalInfo } from './components/Step4AdditionalInfo';
+import { Step5Preview } from './components/Step5Preview';
+
+const STEPS = [
+  { id: 1, name: 'Basic Information', label: '1' },
+  { id: 2, name: 'Pricing', label: '2' },
+  { id: 3, name: 'Booking & Availability', label: '3' },
+  { id: 4, name: 'Additional Information', label: '4' },
+  { id: 5, name: 'Preview', label: '5' },
+];
+
+const DRAFT_STORAGE_KEY = 'mcommall_service_draft';
+const DRAFT_SERVICE_ID_KEY = 'mcommall_service_draft_id';
+
+const DEFAULT_SCHEDULE = [
+  {
+    day: 'monday',
+    enabled: true,
+    startTime: '09:00',
+    endTime: '17:00',
+    breaks: [],
+  },
+  {
+    day: 'tuesday',
+    enabled: true,
+    startTime: '09:00',
+    endTime: '17:00',
+    breaks: [],
+  },
+  {
+    day: 'wednesday',
+    enabled: true,
+    startTime: '09:00',
+    endTime: '17:00',
+    breaks: [],
+  },
+  {
+    day: 'thursday',
+    enabled: true,
+    startTime: '09:00',
+    endTime: '17:00',
+    breaks: [],
+  },
+  {
+    day: 'friday',
+    enabled: true,
+    startTime: '09:00',
+    endTime: '17:00',
+    breaks: [],
+  },
+  {
+    day: 'saturday',
+    enabled: false,
+    startTime: '09:00',
+    endTime: '17:00',
+    breaks: [],
+  },
+  {
+    day: 'sunday',
+    enabled: false,
+    startTime: '09:00',
+    endTime: '17:00',
+    breaks: [],
+  },
+];
+
+const extractServiceId = (result: any): string | null =>
+  result?.id ?? result?.data?.id ?? result?.service?.id ?? null;
+
+const parseNum = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+function AddServicePageContent() {
+  const router = useRouter();
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [draftServiceId, setDraftServiceId] = useState<string | null>(null);
+
+  const { mutateAsync: addService, isPending: isAddingService } =
+    useAddWizardService();
+  const { mutateAsync: saveDraft, isPending: isSavingDraftService } =
+    useSaveWizardServiceDraft();
+  const { mutateAsync: updateService, isPending: isUpdatingService } =
+    useUpdateWizardService();
+
+  const isBusy =
+    isAddingService ||
+    isUpdatingService ||
+    isSavingDraftService ||
+    isUploading ||
+    isSavingDraft;
+
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
+  const form = useForm<ServiceFormValues>({
+    resolver: zodResolver<ServiceFormValues>(serviceFormSchema, { raw: true }),
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      shortDescription: '',
+      description: '',
+      media: [],
+      businessId: '',
+      sector: '',
+      category: '',
+      subcategory: '',
+      pricingType: undefined,
+      price: undefined,
+      priceMax: undefined,
+      deliverySelection: '',
+      deliveryOptions: [],
+      customerAction: undefined,
+      bookingInstructions: '',
+      appointmentArrangements: '',
+      availabilityNotes: '',
+      availability: {
+        schedule: DEFAULT_SCHEDULE,
+        slotDuration: 60,
+        bufferTime: 0,
+        maxBookingsPerSlot: 1,
+        staffPerBooking: 1,
+        serviceRadiusKm: 0,
+      },
+      duration: undefined,
+      serviceConditions: '',
+      faqs: [],
+      isActive: true,
+    },
+  });
+
+  const validateStep = async (stepNumber: number): Promise<boolean> => {
+    const fields = serviceStepFields[stepNumber] ?? [];
+    if (fields.length === 0) return true;
+    return form.trigger(fields as any, { shouldFocus: false });
+  };
+
+  const focusFirstError = (delay = 60) => {
+    const formEl =
+      typeof document !== 'undefined' ? document.querySelector('form') : null;
+    scrollToFirstError(formEl, { delay });
+  };
+
+  const uploadMedia = async (media: (File | string)[]) => {
+    const results = await Promise.all(
+      media.map(async (item) => {
+        if (typeof item === 'string') {
+          return {
+            url: item,
+            type: /\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(item)
+              ? 'video'
+              : 'image',
+          };
+        }
+        const result = await uploadFile(item);
+        return {
+          url: result.secure_url,
+          type: item.type.startsWith('video/') ? 'video' : 'image',
+        };
+      }),
+    );
+    return {
+      images: results
+        .filter((item) => item.type === 'image')
+        .map((item) => item.url),
+      videos: results
+        .filter((item) => item.type === 'video')
+        .map((item) => item.url),
+      hasImage: results.some((item) => item.type === 'image'),
+    };
+  };
+
+  /**
+   * Maps the new Create Service form onto the API payload. The API derives the
+   * legacy booking fields (pricingModel, fixedPrice, deliveryConfig) so both
+   * the old storefront and the new service profile stay consistent.
+   */
+  const buildPayload = async (
+    values: ServiceFormValues,
+    { draft }: { draft: boolean },
+  ): Promise<CreateServiceDto> => {
+    const uploaded = await uploadMedia(
+      (values.media ?? []) as (File | string)[],
+    );
+
+    const duration = parseNum(values.duration);
+    const price = parseNum(values.price);
+    const priceMax = parseNum(values.priceMax);
+    const pricingType = values.pricingType as string | undefined;
+    const customerAction = values.customerAction as string | undefined;
+
+    const schedule = (values.availability?.schedule ?? DEFAULT_SCHEDULE).map(
+      (day: any) => ({
+        ...day,
+        day:
+          typeof day.day === 'string'
+            ? day.day.charAt(0).toUpperCase() + day.day.slice(1)
+            : day.day,
+        breaks: (day.breaks ?? []).map((brk: any) =>
+          typeof brk === 'string' ? brk : `${brk.start}-${brk.end}`,
+        ),
+      }),
+    );
+
+    const isHourly = pricingType === 'hourly';
+    const isQuote =
+      pricingType === 'quote' || customerAction === 'requestQuote';
+
+    return {
+      businessId: values.businessId,
+      name: values.name.trim(),
+      shortDescription: values.shortDescription?.trim() || '',
+      description: values.description?.trim() || '',
+      shortDesc: values.shortDescription?.trim() || '',
+      fullDesc: values.description?.trim() || '',
+      sector: values.sector,
+      category: values.category,
+      subcategory: values.subcategory,
+
+      pricingType: values.pricingType as CreateServiceDto['pricingType'],
+      price,
+      priceMax,
+
+      deliveryOptions: values.deliveryOptions,
+      customerAction:
+        values.customerAction as CreateServiceDto['customerAction'],
+      bookingInstructions: values.bookingInstructions?.trim() || undefined,
+      appointmentArrangements:
+        values.appointmentArrangements?.trim() || undefined,
+      availabilityNotes: values.availabilityNotes?.trim() || undefined,
+
+      duration: duration ?? 0,
+      serviceConditions: values.serviceConditions?.trim() || undefined,
+      faqs: (values.faqs ?? []).filter(
+        (faq) => faq?.question?.trim() && faq?.answer?.trim(),
+      ),
+
+      availability: {
+        schedule,
+        slotDuration: duration && duration > 0 ? duration : 60,
+        bufferTime: 0,
+        maxBookingsPerSlot: 1,
+        staffPerBooking: 1,
+        serviceRadiusKm: 0,
+      },
+
+      images: uploaded.images,
+      media: uploaded.videos,
+
+      // Legacy compatibility fields (the API re-derives these too).
+      pricingModel: isHourly ? 'perHour' : 'fixed',
+      fixedPrice: isHourly ? undefined : price,
+      pricePerHour: isHourly ? price : undefined,
+      enableGuestPricing: false,
+      isQuoteModel: isQuote,
+      requireApproval: customerAction !== 'bookNow',
+
+      isActive: draft ? false : true,
+      status: draft ? 'draft' : 'published',
+    };
+  };
+
+  const persistDraft = async (values: ServiceFormValues) => {
+    const { value: draftValues, dropped } = toSerializable<
+      Record<string, unknown>
+    >({
+      ...values,
+      media: Array.isArray(values.media)
+        ? values.media.filter((item: any) => typeof item === 'string')
+        : [],
+    });
+    if (process.env.NODE_ENV !== 'production' && dropped.length > 0) {
+      console.warn(
+        '[add-service] Dropped non-serializable draft fields:',
+        dropped,
+      );
+    }
+    try {
+      localStorage.setItem(
+        DRAFT_STORAGE_KEY,
+        JSON.stringify({ values: draftValues, step: currentStep }),
+      );
+    } catch (error) {
+      console.error('Failed to save local draft', error);
+    }
+
+    const name = values.name?.trim();
+    if (!values.businessId || !name || name.length < 3) {
+      toast.success(
+        'Draft saved in this browser. Add a service name to save it to your account.',
+      );
+      return;
+    }
+
+    setIsSavingDraft(true);
+    try {
+      const payload = await buildPayload(values, { draft: true });
+      const { value: safePayload } = toSerializable<CreateServiceDto>(payload);
+
+      let saved: any;
+      if (draftServiceId) {
+        try {
+          saved = await updateService({ id: draftServiceId, payload: safePayload, draft: true });
+        } catch (updateError: any) {
+          if (
+            updateError?.response?.status === 404 ||
+            updateError?.response?.status === 403
+          ) {
+            saved = await saveDraft(safePayload);
+          } else {
+            throw updateError;
+          }
+        }
+      } else {
+        saved = await saveDraft(safePayload);
+      }
+
+      const savedId = extractServiceId(saved) ?? draftServiceId;
+      setDraftServiceId(savedId);
+      if (savedId) localStorage.setItem(DRAFT_SERVICE_ID_KEY, savedId);
+      toast.success(
+        'Draft saved to your account. You can continue from the Services dashboard.',
+      );
+    } catch (error) {
+      const parsed = parseApiError(error, serviceKnownFields);
+      toast.error(
+        parsed.general ||
+          'Draft saved in this browser, but could not be saved to your account yet.',
+      );
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (isBusy || isNavigating) return;
+    await persistDraft(form.getValues());
+  };
+
+  const onSubmit = async (data: ServiceFormValues) => {
+    let firstInvalidStep: number | null = null;
+    for (const step of STEPS) {
+      if (step.id === 5) continue;
+      const fields = serviceStepFields[step.id] ?? [];
+      const valid =
+        fields.length === 0 ? true : await form.trigger(fields as any);
+      if (!valid && firstInvalidStep === null) {
+        firstInvalidStep = step.id;
+      }
+    }
+
+    if (firstInvalidStep !== null) {
+      setCurrentStep(firstInvalidStep);
+      toast.error(
+        `Please complete the "${serviceStepNames[firstInvalidStep]}" step before submitting.`,
+      );
+      focusFirstError(350);
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const payload = await buildPayload(data, { draft: false });
+
+      if (!payload.images || payload.images.length === 0) {
+        form.setError('media', {
+          type: 'server',
+          message: 'Upload at least one image of your service.',
+        });
+        setCurrentStep(1);
+        toast.error(
+          'Upload at least one image of your service before submitting.',
+        );
+        return;
+      }
+
+      const { value: safePayload, dropped } =
+        toSerializable<CreateServiceDto>(payload);
+      if (process.env.NODE_ENV !== 'production' && dropped.length > 0) {
+        console.warn(
+          '[add-service] Dropped non-serializable payload fields:',
+          dropped,
+        );
+      }
+
+      setIsUploading(false);
+
+      if (draftServiceId) {
+        try {
+          await updateService({
+            id: draftServiceId,
+            payload: safePayload,
+            draft: false,
+          });
+        } catch (updateError: any) {
+          if (
+            updateError?.response?.status === 404 ||
+            updateError?.response?.status === 403
+          ) {
+            await addService(safePayload);
+          } else {
+            throw updateError;
+          }
+        }
+      } else {
+        await addService(safePayload);
+      }
+
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      localStorage.removeItem(DRAFT_SERVICE_ID_KEY);
+      setDraftServiceId(null);
+      setShowSuccessDialog(true);
+    } catch (error) {
+      setIsUploading(false);
+      const parsed = parseApiError(error, serviceKnownFields);
+      if (Object.keys(parsed.fields).length > 0) {
+        Object.entries(parsed.fields).forEach(([path, fieldMessage]) => {
+          form.setError(path as any, {
+            type: 'server',
+            message: String(fieldMessage),
+          });
+        });
+        const firstPath = Object.keys(parsed.fields)[0];
+        const stepForField = serviceFieldToStep[firstPath];
+        if (stepForField) {
+          setCurrentStep(stepForField);
+          focusFirstError(350);
+        }
+      }
+      toast.error(parsed.general || 'Failed to create service');
+    }
+  };
+
+  const nextStep = async () => {
+    if (isNavigating || isBusy) return;
+    setIsNavigating(true);
+
+    const valid = await validateStep(currentStep);
+
+    if (valid) {
+      const currentIndex = STEPS.findIndex((step) => step.id === currentStep);
+      const nextIndex = Math.min(currentIndex + 1, STEPS.length - 1);
+      setCurrentStep(STEPS[nextIndex].id);
+      setTimeout(() => setIsNavigating(false), 400);
+    } else {
+      setIsNavigating(false);
+      toast.error(
+        `Please fix the highlighted ${serviceStepNames[currentStep] ?? ''} fields before proceeding.`,
+      );
+      focusFirstError(80);
+    }
+  };
+
+  const prevStep = () => {
+    if (isNavigating || isBusy) return;
+    const currentIndex = STEPS.findIndex((step) => step.id === currentStep);
+    const prevIndex = Math.max(currentIndex - 1, 0);
+    setCurrentStep(STEPS[prevIndex].id);
+  };
+
+  const goToStep = async (targetId: number) => {
+    if (isNavigating || isBusy) return;
+    if (targetId === currentStep) return;
+
+    const currentIndex = STEPS.findIndex((step) => step.id === currentStep);
+    const targetIndex = STEPS.findIndex((step) => step.id === targetId);
+    if (targetIndex === -1) return;
+
+    if (targetIndex < currentIndex) {
+      setCurrentStep(targetId);
+      return;
+    }
+
+    setIsNavigating(true);
+    for (let i = currentIndex; i < targetIndex; i++) {
+      const stepId = STEPS[i].id;
+      const valid = await validateStep(stepId);
+      if (!valid) {
+        setIsNavigating(false);
+        setCurrentStep(stepId);
+        toast.error(
+          `Please fix the highlighted ${serviceStepNames[stepId] ?? ''} fields before moving on.`,
+        );
+        focusFirstError(80);
+        return;
+      }
+    }
+
+    setIsNavigating(false);
+    setCurrentStep(targetId);
+  };
+
+  // Restore a previously saved draft on mount.
+  React.useEffect(() => {
+    try {
+      const savedDraftId = localStorage.getItem(DRAFT_SERVICE_ID_KEY);
+      if (savedDraftId) setDraftServiceId(savedDraftId);
+
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft || typeof draft !== 'object' || !draft.values) return;
+      form.reset({ ...form.getValues(), ...draft.values, media: [] });
+      if (
+        Number.isInteger(draft.step) &&
+        draft.step >= 1 &&
+        draft.step <= STEPS.length
+      ) {
+        setCurrentStep(draft.step);
+      }
+      toast.info(
+        'Draft restored from last session. Re-upload any media before submitting.',
+      );
+    } catch (error) {
+      console.error('Failed to restore draft', error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="font-sans min-h-screen bg-gray-50/50 pb-48 md:pb-32">
+      <ProductStatusModal
+        isOpen={showSuccessDialog}
+        onClose={() => {
+          setShowSuccessDialog(false);
+          router.push('/admin/services');
+        }}
+        type="success"
+        title="Service Submitted!"
+        message="Your service has been submitted and is now part of your Mcom Mall catalogue."
+        primaryAction={{
+          label: 'View Service',
+          onClick: () => router.push('/admin/services'),
+        }}
+        secondaryAction={{
+          label: 'Add Another Service',
+          onClick: () => {
+            setShowSuccessDialog(false);
+            form.reset();
+            setCurrentStep(1);
+            setDraftServiceId(null);
+            localStorage.removeItem(DRAFT_STORAGE_KEY);
+            localStorage.removeItem(DRAFT_SERVICE_ID_KEY);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          },
+        }}
+        dashboardAction={{
+          label: 'Go to Services',
+          onClick: () => router.push('/admin/services'),
+        }}
+      />
+
+      <div className="max-w-5xl mx-auto px-3 py-6 sm:px-4 sm:py-8">
+        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 sm:mb-8 gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-[#f48c25]">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              Create Service
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 font-medium">
+              Offer your service on Mcom Mall. Your business details are added
+              automatically from MCOM Mall Admin.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center text-xs sm:text-sm font-bold bg-[#f48c25]/10 px-3 py-2 rounded-xl sm:rounded-full text-[#f48c25] gap-1">
+            <Link href="/admin" className="hover:underline transition-all">
+              Home
+            </Link>
+            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 opacity-50 shrink-0" />
+            <Link
+              href="/admin/services"
+              className="hover:underline transition-all"
+            >
+              Services
+            </Link>
+            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 opacity-50 shrink-0" />
+            <span className="text-gray-900 whitespace-nowrap">
+              Create Service
+            </span>
+          </div>
+        </header>
+
+        {/* Progress */}
+        <div className="mb-6 sm:mb-10 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#f48c25]/10">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <span className="text-[#f48c25] text-[10px] sm:text-xs font-black uppercase tracking-[0.2em]">
+              Step {currentStep} of {STEPS.length}
+            </span>
+            <span className="text-gray-900 text-xs sm:text-sm font-black">
+              {STEPS.find((step) => step.id === currentStep)?.name}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center relative z-10 mb-2">
+            {STEPS.map((step) => (
+              <button
+                key={step.id}
+                type="button"
+                aria-label={`Go to step ${step.id}: ${step.name}`}
+                aria-current={currentStep === step.id ? 'step' : undefined}
+                title={step.name}
+                className="group flex flex-col items-center cursor-pointer focus-visible:outline-none"
+                onClick={() => goToStep(step.id)}
+              >
+                <div
+                  className={`w-10 h-10 sm:w-12 sm:h-12 text-xs sm:text-base rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-[#f48c25] group-focus-visible:ring-offset-2 ${
+                    currentStep >= step.id
+                      ? 'bg-[#f48c25] text-white sm:scale-110 shadow-lg shadow-[#f48c25]/30'
+                      : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                  }`}
+                >
+                  {step.label}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full h-1.5 sm:h-2 bg-gray-100 rounded-full mt-4 sm:mt-6 overflow-hidden">
+            <div
+              className="absolute top-0 left-0 h-full bg-[#f48c25] transition-all duration-700 ease-in-out"
+              style={{
+                width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%`,
+              }}
+            />
+          </div>
+
+          <div className="hidden sm:flex justify-between mt-4">
+            {STEPS.map((step) => (
+              <span
+                key={step.id}
+                className={`text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${
+                  currentStep === step.id ? 'text-[#f48c25]' : 'text-gray-400'
+                }`}
+              >
+                {step.name}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void onSubmit(form.getValues());
+              }}
+            >
+              <div>
+                {currentStep === 1 && <Step1BasicInfo />}
+                {currentStep === 2 && <Step2Pricing />}
+                {currentStep === 3 && <Step3BookingAvailability />}
+                {currentStep === 4 && <Step4AdditionalInfo />}
+                {currentStep === 5 && (
+                  <Step5Preview
+                    onEditStep={(step) => {
+                      setCurrentStep(step);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                  />
+                )}
+              </div>
+
+              <footer className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 md:p-6 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+                <div className="max-w-5xl mx-auto grid grid-cols-2 gap-2 w-full md:flex md:flex-row md:items-center md:gap-4">
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    disabled={currentStep === 1 || isBusy || isNavigating}
+                    className="order-3 md:order-1 md:flex-none px-3 sm:px-6 py-3 rounded-lg border border-gray-200 text-gray-700 font-semibold flex justify-center items-center gap-1 sm:gap-2 text-sm sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                  >
+                    <ArrowLeft size={16} />
+                    Back
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    disabled={isBusy || isNavigating}
+                    className="order-1 md:order-2 md:ml-auto md:flex-none col-span-2 md:col-span-1 px-3 sm:px-6 py-3 rounded-lg border border-gray-200 bg-white text-[#f48c25] font-semibold flex justify-center items-center text-sm sm:text-base whitespace-nowrap hover:bg-orange-50 transition-colors disabled:opacity-50"
+                  >
+                    {isSavingDraft ? 'Saving...' : 'Save Draft'}
+                  </button>
+
+                  {currentStep < STEPS.length ? (
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      disabled={isBusy || isNavigating}
+                      className="order-4 md:order-4 md:flex-none px-3 sm:px-8 py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-sm sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-[#d4791c] transition-colors"
+                    >
+                      Continue
+                      <ArrowRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isBusy || isNavigating}
+                      className="order-4 md:order-4 md:flex-none px-3 sm:px-8 py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-sm sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-[#d4791c] transition-colors"
+                    >
+                      {isUploading ? (
+                        'Uploading...'
+                      ) : isAddingService || isUpdatingService || isSavingDraftService ? (
+                        'Submitting...'
+                      ) : (
+                        <>
+                          <Save size={16} className="hidden sm:block" /> Submit
+                          Service
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </footer>
+            </form>
+          </Form>
+        </FormProvider>
+      </div>
+    </div>
+  );
 }
 
 export default function AddServicePage() {
-    const router = useRouter();
-    const createService = useCreateAdminService();
-    const { data: businessesData, isLoading: businessesLoading } = useGetAdminBusinesses({
-        page: 1,
-        limit: 50,
-    });
-
-    const methods = useForm<ServiceFormValues>({
-        defaultValues: {
-            name: '',
-            description: '',
-            price: 0,
-            duration: 60,
-            category: '',
-            businessId: '',
-            status: 'active',
-        },
-    });
-
-    const {
-        register,
-        handleSubmit,
-        setValue,
-        watch,
-        formState: { errors },
-    } = methods;
-
-    const onSubmit = (data: ServiceFormValues) => {
-        createService.mutate(
-            {
-                name: data.name.trim(),
-                businessId: data.businessId,
-                description: data.description || undefined,
-                category: data.category || undefined,
-                fixedPrice: Number(data.price) || 0,
-                duration: Number(data.duration) || 0,
-                status: data.status,
-            },
-            { onSuccess: () => router.push('/admin/services') },
-        );
-    };
-
-    return (
-        <div className="max-w-3xl mx-auto space-y-6 pb-20">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Add New Service</h1>
-                    <p className="text-slate-500">Creates a live service via POST /admin/services.</p>
-                </div>
-                <Button variant="outline" onClick={() => router.push('/admin/services')}>
-                    Cancel
-                </Button>
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Service Details</CardTitle>
-                    <CardDescription>Enter the details for the new service.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <FormProvider {...methods}>
-                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="businessId">Business *</Label>
-                                <Select
-                                    value={watch('businessId')}
-                                    onValueChange={(val) => setValue('businessId', val, { shouldValidate: true })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={businessesLoading ? 'Loading businesses…' : 'Select business'} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {(businessesData?.data ?? []).map((b) => (
-                                            <SelectItem key={b.id} value={b.id}>
-                                                {b.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <input
-                                    type="hidden"
-                                    {...register('businessId', { required: 'Business is required' })}
-                                />
-                                {errors.businessId && (
-                                    <p className="text-xs text-red-600">{errors.businessId.message}</p>
-                                )}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Service Name *</Label>
-                                <Input
-                                    id="name"
-                                    {...register('name', { required: 'Service name is required' })}
-                                    placeholder="e.g. Full Body Massage"
-                                />
-                                {errors.name && <p className="text-xs text-red-600">{errors.name.message}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="description">Description</Label>
-                                <Textarea
-                                    id="description"
-                                    {...register('description')}
-                                    placeholder="Describe the service..."
-                                    rows={4}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="price">Price (£)</Label>
-                                    <Input
-                                        id="price"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        {...register('price', { valueAsNumber: true })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="duration">Duration (minutes)</Label>
-                                    <Input
-                                        id="duration"
-                                        type="number"
-                                        min="0"
-                                        {...register('duration', { valueAsNumber: true })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="category">Category</Label>
-                                    <Select onValueChange={(val) => setValue('category', val)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Category" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Spa">Spa</SelectItem>
-                                            <SelectItem value="Auto Services">Auto Services</SelectItem>
-                                            <SelectItem value="Tech Services">Tech Services</SelectItem>
-                                            <SelectItem value="Cleaning">Cleaning</SelectItem>
-                                            <SelectItem value="Education">Education</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="status">Status</Label>
-                                    <Select
-                                        onValueChange={(val) => setValue('status', val as 'active' | 'inactive')}
-                                        defaultValue="active"
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="active">Active</SelectItem>
-                                            <SelectItem value="inactive">Inactive</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 flex justify-end">
-                                <Button
-                                    type="submit"
-                                    className="bg-orange-500 hover:bg-orange-600"
-                                    disabled={createService.isPending}
-                                >
-                                    {createService.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                    Create Service
-                                </Button>
-                            </div>
-                        </form>
-                    </FormProvider>
-                </CardContent>
-            </Card>
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f48c25]"></div>
         </div>
-    );
+      }
+    >
+      <AddServicePageContent />
+    </Suspense>
+  );
 }

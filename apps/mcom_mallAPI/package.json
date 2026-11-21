@@ -30,6 +30,7 @@
     "seed:admin": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/admin.seed.ts",
     "seed:plans": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/plans.seed.ts",
     "seed:testman-catalog": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/seed-testman-catalog.ts",
+    "seed:products": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/seed-products.ts",
     "geo:backfill": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register scripts/backfill-marketplace-geo.ts",
     "audit:instruments": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register scripts/audit-instruments.ts",
     "check:mcom-pay": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register scripts/check-mcom-pay.ts"

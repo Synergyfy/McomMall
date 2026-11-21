@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import multer from 'multer';
-import { Readable } from 'stream';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -10,9 +8,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Configure Multer for memory storage
-const storage = multer.memoryStorage();
-multer({ storage });
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,44 +20,50 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    const allowedTypes = ['image/', 'video/', 'application/'];
+    if (!allowedTypes.some(type => file.type.startsWith(type))) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only images are allowed.' },
+        { error: 'Invalid file type. Only images, videos and documents are allowed.' },
         { status: 400 }
       );
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (30MB limit)
+    if (file.size > 30 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'File size exceeds the 5MB limit.' },
+        { error: 'File size exceeds the 30MB limit.' },
         { status: 400 }
       );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const readableStream = new Readable();
-    readableStream.push(buffer);
-    readableStream.push(null);
 
     const result = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: 'profile-pictures', resource_type: 'image' },
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'profile-pictures',
+          resource_type: 'auto',
+          // Ensure we don't hang on large files
+          timeout: 60000
+        },
         (error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
+          if (error) {
             reject(error);
+          } else {
+            resolve(result);
           }
         }
       );
-      readableStream.pipe(stream);
+
+      // Using end() with buffer is more reliable in serverless environments than piping
+      uploadStream.end(buffer);
     });
 
     return NextResponse.json(result);
   } catch (error) {
+    console.error('Upload Error:', error);
     return NextResponse.json(
-      { error: (error as Error).message },
+      { error: (error as Error).message || 'Failed to upload to Cloudinary' },
       { status: 500 }
     );
   }

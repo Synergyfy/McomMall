@@ -1,302 +1,794 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, FormProvider } from 'react-hook-form';
-import { useQuery } from '@tanstack/react-query';
-import { fetchCategories } from '@/app/admin/content/api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { VariantManager } from '@/app/admin/components/products/VariantManager';
-import { ChevronLeft, ChevronRight, CheckCircle2, Package, Tag, Settings2, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Plus, Eye } from 'lucide-react';
+
+import React, { useState } from 'react';
+import Step1BasicInfo from './components/wizard/Step1BasicInfo';
+import Step2MediaContent from './components/wizard/Step2MediaContent';
+import Step3PricingInventory from './components/wizard/Step3PricingInventory';
+import Step4ShippingOptions from './components/wizard/shipping/Step4ShippingOptions';
+import Step4aFulfillmentSelection from './components/wizard/shipping/Step4aFulfillmentSelection';
+import Step4bDeliveryPricing from './components/wizard/shipping/Step4bDeliveryPricing';
+import Step5SelectCarrier from './components/wizard/shipping/Step5SelectCarrier';
+import Step5aPickupConfiguration from './components/wizard/shipping/Step5aPickupConfiguration';
+import Step5bConnectShipStation from './components/wizard/shipping/Step5bConnectShipStation';
+import Step6ShipStationConfig from './components/wizard/shipping/Step6ShipStationConfig';
+import Step7ServiceMapping from './components/wizard/shipping/Step7ServiceMapping';
+import Step7Partnership from './components/wizard/Step7Partnership';
+import Step8Finalize from './components/wizard/Step8Finalize';
+import { ProductStatusModal } from './components/wizard/lib/ProductStatusModal';
+import { useAdminWizardBusiness, useAddWizardProduct } from './hooks';
+import { getBusinessTaxonomy, pickCentralBusiness } from '@/lib/central-business';
+import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
+import { parseApiError, scrollToFirstError, toSerializable } from '@/lib/form-validation';
+import {
+  ProductFormErrors,
+  PRODUCT_ERROR_ALIASES,
+  validateProductStep,
+  getProductStepsToValidate,
+  findFirstInvalidProductStep,
+} from './components/wizard/validation';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
-
-interface ProductAttribute {
-    name: string;
-    options: { name: string; priceModifier?: number }[];
-}
-
-interface ProductVariation {
-    combination: Record<string, string>;
-    sku: string;
-    price: number;
-    stock: number;
-    available: boolean;
-}
-
-interface ProductFormData {
-    title: string;
-    description: string;
-    basePrice: number;
-    category: string;
-    attributes: ProductAttribute[];
-    variations: ProductVariation[];
-}
-
-const STEPS = [
-    { id: 1, title: 'Basic Info', description: 'Product title and description', icon: Package },
-    { id: 2, title: 'Attributes', description: 'Define options like size/color', icon: Tag },
-    { id: 3, title: 'Variations', description: 'Manage SKUs and pricing', icon: Settings2 },
-];
+import { useRouter } from 'next/navigation';
 
 export default function AddProductPage() {
-    const router = useRouter();
-    const [currentStep, setCurrentStep] = useState(1);
+  const router = useRouter();
+  const { data: userListings, isLoading: isLoadingListings } = useAdminWizardBusiness();
+  const { mutate: addProduct, isPending } = useAddWizardProduct();
+  const { mutate: createPartnershipRequest } = useCreateCompositePartnershipRequest();
 
-    const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
-        queryKey: ['categories'],
-        queryFn: fetchCategories,
+  const [step, setStep] = useState(1);
+  const [isPublished, setIsPublished] = useState(false);
+  const [createdProductId, setCreatedProductId] = useState<string | null>(null);
+  const [fulfillmentType, setFulfillmentType] = useState<('shipping' | 'pickup')[]>([]);
+  const [shippingMethod, setShippingMethod] = useState<'existing' | 'shipstation' | null>(null);
+  const [errors, setErrors] = useState<ProductFormErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    productName: '',
+    plusItem: null as any,
+    sector: '',
+    sectorName: '',
+    category: '',
+    categoryName: '',
+    subCategory: '',
+    subCategoryName: '',
+    shortDesc: '',
+    fullDesc: '',
+    product_type: 'physical',
+    brand: '',
+    gender: 'none',
+    productStatus: 'published',
+    hasVariants: false,
+    regular_price: '',
+    sale_price: '',
+    sku: '',
+    images: [] as string[],
+    videos: [] as string[],
+    stock_status: 'instock',
+    quantity: 100,
+    weight: '',
+    length: '',
+    width: '',
+    height: '',
+    attributes: [],
+    variations: [],
+    sizeGuide: {
+      enabled: false,
+      system: 'international',
+      measurements: [],
+      diagrams: { male: '', female: '', unisex: '' }
+    },
+    businessId: '',
+    businessName: '',
+    serviceProviderId: '',
+    fulfillmentType: [] as string[],
+    pickupInstructions: '',
+    isFreeDelivery: false,
+    isPaidDelivery: false,
+    freeDeliveryRadius: 0,
+    tags: [] as string[],
+    useVariantPricing: true,
+    visibility: 'public',
+    enableReviews: true,
+    purchaseNote: '',
+    lowStockThreshold: '',
+    deliveryOriginAddressId: '',
+    deliveryOriginAddressLine1: '',
+    deliveryOriginCity: '',
+    deliveryOriginPostalCode: '',
+    deliveryOriginLat: '',
+    deliveryOriginLng: '',
+    fileUrls: [] as string[],
+    downloadLimit: '',
+    downloadExpiry: '',
+  });
+
+  const updateFormData = (newData: any) => {
+    setFormData((prev) => ({ ...prev, ...newData }));
+
+    // Clear any validation error tied to the fields the user just changed so
+    // the messaging stays in sync as they type.
+    setErrors((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      const next = { ...prev };
+      for (const key of Object.keys(newData)) {
+        const aliases = PRODUCT_ERROR_ALIASES[key] ?? [key];
+        for (const alias of aliases) delete next[alias];
+      }
+      return next;
     });
+  };
 
-    const methods = useForm<ProductFormData>({
-        defaultValues: {
-            title: '',
-            description: '',
-            basePrice: 0,
-            category: '',
-            attributes: [],
-            variations: []
-        }
-    });
+  useEffect(() => {
+    // Admin-created products belong to the dedicated platform business. Inherit
+    // its classification so this wizard mirrors the business flow exactly.
+    const business = pickCentralBusiness(userListings?.data);
+    if (!business) return;
 
-    const onSubmit = (data: any) => {
-        toast.success('Product created successfully!');
-        router.push('/admin/products');
-    };
+    const taxonomy = getBusinessTaxonomy(business as any);
+    const next: Record<string, unknown> = {};
 
-    const nextStep = () => {
-        if (currentStep === 2) {
-            const success = generateVariations();
-            if (!success) {
-                toast.error('Please add options to your attributes before generating variations.');
-                return;
-            }
-        }
-        if (currentStep < STEPS.length) {
-            setCurrentStep(currentStep + 1);
-        }
-    };
+    if (formData.businessId !== business.id) {
+      next.businessId = business.id;
+      next.businessName = business.businessName;
+    }
 
-    const prevStep = () => {
-        if (currentStep > 1) {
-            setCurrentStep(currentStep - 1);
-        }
-    };
+    const sectorValue = taxonomy.sectorId || taxonomy.sectorName;
+    if (sectorValue && (formData.sector !== sectorValue || formData.sectorName !== taxonomy.sectorName)) {
+      next.sector = sectorValue;
+      next.sectorName = taxonomy.sectorName;
+    }
 
-    const generateVariations = (): boolean => {
-        const watchedAttributes = methods.getValues('attributes');
-        if (!watchedAttributes || watchedAttributes.length === 0) return false;
+    const categoryValue = taxonomy.categoryId || taxonomy.categoryName;
+    if (
+      categoryValue &&
+      (formData.category !== categoryValue || formData.categoryName !== taxonomy.categoryName)
+    ) {
+      next.category = categoryValue;
+      next.categoryName = taxonomy.categoryName;
+    }
 
-        const optionsArrays = watchedAttributes.map((attr: any) =>
-            attr.options.map((opt: any) => opt.name).filter(Boolean)
-        );
+    const subCategoryValue = taxonomy.subCategoryId || taxonomy.subCategoryName;
+    if (
+      subCategoryValue &&
+      (formData.subCategory !== subCategoryValue ||
+        formData.subCategoryName !== taxonomy.subCategoryName)
+    ) {
+      next.subCategory = subCategoryValue;
+      next.subCategoryName = taxonomy.subCategoryName;
+    }
 
-        if (optionsArrays.some((arr: any) => arr.length === 0)) return false;
+    if (Object.keys(next).length > 0) {
+      updateFormData(next);
+    }
+  }, [
+    userListings,
+    formData.businessId,
+    formData.sector,
+    formData.sectorName,
+    formData.category,
+    formData.categoryName,
+    formData.subCategory,
+    formData.subCategoryName,
+  ]);
 
-        const cartesian = (arrays: string[][]): string[][] => {
-            return arrays.reduce<string[][]>((acc, curr) => {
-                return acc.flatMap(x => curr.map(y => [...x, y]));
-            }, [[]]);
-        };
+  // Scroll to top of the dashboard main content container on step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const scrollContainer = document.querySelector('main .overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [step]);
 
-        const combinations = cartesian(optionsArrays);
-        const basePrice = methods.getValues('basePrice') || 0;
-
-        const newVariations = combinations.map(combo => {
-            const combinationRecord: Record<string, string> = {};
-            let skuParts: string[] = [];
-            let priceMod = 0;
-
-            combo.forEach((optName, index) => {
-                const attrName = watchedAttributes[index].name;
-                combinationRecord[attrName] = optName;
-                skuParts.push(optName.substring(0, 3).toUpperCase());
-                const optDef = watchedAttributes[index].options.find((o: any) => o.name === optName);
-                if (optDef?.priceModifier) priceMod += Number(optDef.priceModifier);
-            });
-
-            return {
-                combination: combinationRecord,
-                sku: `PROD-${skuParts.join('-')}`,
-                price: Number(basePrice) + priceMod,
-                stock: 0,
-                available: true,
-            };
-        });
-
-        methods.setValue('variations', newVariations);
-        return true;
-    };
-
+  if (isLoadingListings) {
     return (
-        <div className="max-w-4xl mx-auto space-y-8 pb-20">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Add New Product</h1>
-                    <p className="text-slate-500">Follow the steps to create a new product in the catalog.</p>
-                </div>
-                <Button variant="outline" onClick={() => router.push('/admin/products')}>
-                    Cancel
-                </Button>
-            </div>
-
-            {/* Stepper */}
-            <div className="grid grid-cols-3 gap-4">
-                {STEPS.map((step) => {
-                    const Icon = step.icon;
-                    const isActive = currentStep === step.id;
-                    const isCompleted = currentStep > step.id;
-
-                    return (
-                        <div
-                            key={step.id}
-                            className={cn(
-                                "relative p-4 rounded-xl border-2 transition-all",
-                                isActive ? "border-orange-500 bg-orange-50/30" : "border-slate-100 bg-white",
-                                isCompleted && "border-emerald-500 bg-emerald-50/30"
-                            )}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className={cn(
-                                    "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-                                    isActive ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-400",
-                                    isCompleted && "bg-emerald-500 text-white"
-                                )}>
-                                    {isCompleted ? <CheckCircle2 className="h-6 w-6" /> : <Icon className="h-5 w-5" />}
-                                </div>
-                                <div>
-                                    <p className={cn(
-                                        "text-sm font-bold",
-                                        isActive ? "text-orange-700" : "text-slate-500",
-                                        isCompleted && "text-emerald-700"
-                                    )}>
-                                        Step {step.id}
-                                    </p>
-                                    <p className="text-xs text-slate-500 font-medium truncate">{step.title}</p>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Form Content */}
-            <FormProvider {...methods}>
-                <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-8">
-                    {/* Step 1: Basic Information */}
-                    {currentStep === 1 && (
-                        <Card className="border-0 shadow-sm">
-                            <CardHeader>
-                                <CardTitle>Basic Information</CardTitle>
-                                <CardDescription>Start with the core details of your product.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="title">Product Title</Label>
-                                    <Input
-                                        id="title"
-                                        {...methods.register('title')}
-                                        placeholder="e.g. Premium Cotton T-Shirt"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="description">Description</Label>
-                                    <Textarea
-                                        id="description"
-                                        {...methods.register('description')}
-                                        placeholder="Describe your product in detail..."
-                                        rows={5}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="basePrice">Base Price (£)</Label>
-                                        <Input
-                                            id="basePrice"
-                                            type="number"
-                                            step="0.01"
-                                            {...methods.register('basePrice')}
-                                            placeholder="0.00"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="category">Category</Label>
-                                        <Select
-                                            onValueChange={(value) => methods.setValue('category', value)}
-                                            defaultValue={methods.getValues('category')}
-                                        >
-                                            <SelectTrigger id="category">
-                                                <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Select category"} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {categories.map((cat: any) => (
-                                                    <SelectItem key={cat.id} value={cat.name}>
-                                                        {cat.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Step 2: Attributes */}
-                    {currentStep === 2 && (
-                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                            <VariantManager showVariations={false} />
-                        </div>
-                    )}
-
-                    {/* Step 3: Variations */}
-                    {currentStep === 3 && (
-                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                            <VariantManager showAttributes={false} />
-                        </div>
-                    )}
-
-                    {/* Navigation Buttons */}
-                    <div className="flex items-center justify-between pt-4">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={prevStep}
-                            disabled={currentStep === 1}
-                            className="text-slate-600"
-                        >
-                            <ChevronLeft className="h-4 w-4 mr-2" />
-                            Back
-                        </Button>
-
-                        {currentStep < 3 ? (
-                            <Button
-                                key="next-step-btn"
-                                type="button"
-                                onClick={nextStep}
-                                className="bg-slate-900 hover:bg-slate-800"
-                            >
-                                Next Step
-                                <ChevronRight className="h-4 w-4 ml-2" />
-                            </Button>
-                        ) : (
-                            <Button
-                                key="submit-product-btn"
-                                type="submit"
-                                className="bg-orange-500 hover:bg-orange-600 px-8"
-                            >
-                                Create Product
-                            </Button>
-                        )}
-                    </div>
-                </form>
-            </FormProvider>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-100 border-t-orange-500" />
+          <p className="text-sm text-gray-500">Loading the MCOM Mall Admin business profile...</p>
         </div>
+      </div>
     );
+  }
+
+  if (!userListings?.data?.length) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] p-6">
+        <div className="max-w-md rounded-2xl border border-orange-200 bg-white p-6 text-center shadow-sm">
+          <h2 className="text-xl font-bold text-gray-900">Business profile required</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Admin-created products are attached to the MCOM Mall Admin business. Configure the platform business, then try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+
+  const handleSaveDraft = () => {
+    if (!formData.businessId) {
+      toast.error('The MCOM Mall Admin business profile is required before saving a draft.');
+      return;
+    }
+
+    if (!formData.images || formData.images.length === 0) {
+      toast.error('Add at least one product image before saving a draft.');
+      setErrors({ images: 'Add at least one product image before saving a draft.' });
+      setStep(2);
+      return;
+    }
+
+    const draftTitle = formData.productName || 'Untitled product';
+    const draftPayload: Record<string, unknown> = {
+      businessId: formData.businessId,
+      title: draftTitle,
+      productName: draftTitle,
+      description:
+        formData.fullDesc ||
+        formData.shortDesc ||
+        'Draft product — description pending.',
+      shortDescription: formData.shortDesc || '',
+      category: formData.categoryName || formData.category || 'Uncategorised',
+      subCategory: formData.subCategoryName || formData.subCategory || undefined,
+      productType: formData.product_type || 'physical',
+      sku:
+        formData.sku ||
+        `${draftTitle.replace(/[^a-z0-9]/gi, '-').toUpperCase()}-${Math.random()
+          .toString(36)
+          .substring(2, 7)
+          .toUpperCase()}`,
+      price: parseFloat(formData.regular_price) || 0,
+      stock: parseInt(formData.quantity?.toString() ?? '0') || 0,
+      quantity: parseInt(formData.quantity?.toString() ?? '0') || 0,
+      media: [...(formData.images || []), ...(formData.videos || [])],
+      variations: formData.variations || [],
+      productStatus: 'draft',
+      visibility: formData.visibility || 'public',
+      fulfillmentType,
+    };
+
+    const { value: safePayload } = toSerializable<Record<string, unknown>>(draftPayload);
+
+    addProduct(safePayload as any, {
+      onSuccess: () => {
+        toast.success('Draft saved. You can find it under the Draft tab.');
+        router.push('/admin/products');
+      },
+      onError: (error: any) => {
+        console.error('Failed to save product draft:', error);
+        const parsed = parseApiError(error, ['productName', 'title', 'businessId', 'category', 'productType']);
+        setSubmitError(parsed.general || 'Failed to save draft');
+        toast.error(parsed.general || 'Failed to save draft');
+      },
+    });
+  };
+
+  const handlePublish = () => {
+    if (!formData.businessId) {
+      toast.error('The MCOM Mall Admin business profile is required before adding a product.');
+      return;
+    }
+
+    if (!formData.images || formData.images.length === 0) {
+      setErrors({ images: 'Add at least one product image before publishing.' });
+      setStep(2);
+      toast.error('Add at least one product image before publishing.');
+      scrollToFirstError(document.querySelector('main') ?? undefined, { delay: 180 });
+      return;
+    }
+
+    // Final gate: validate every relevant step before we send anything.
+    const stepsToValidate = getProductStepsToValidate(formData, fulfillmentType);
+    const firstInvalid = findFirstInvalidProductStep(formData, stepsToValidate);
+    if (firstInvalid) {
+      setErrors(firstInvalid.errors);
+      setStep(firstInvalid.step);
+      toast.error('Please complete the required details before publishing.');
+      scrollToFirstError(document.querySelector('main') ?? undefined, { delay: 180 });
+      return;
+    }
+
+    setErrors({});
+    setSubmitError(null);
+
+    const variantConfig = formData.attributes.map((attr: any) => ({
+      name: attr.name,
+      type: attr.type || 'select',
+      options: attr.options.map((opt: any) => ({
+        name: opt.name,
+        priceModifier: opt.priceModifier || 0
+      }))
+    }));
+
+    // Determine shipping method based on fulfillment and pricing
+    let finalShippingMethod = 'delivery';
+    if (formData.isFreeDelivery) finalShippingMethod = 'free';
+    else if (fulfillmentType.includes('shipping')) finalShippingMethod = 'delivery';
+    else if (fulfillmentType.includes('pickup')) finalShippingMethod = 'pickup';
+
+    // Auto-generate SKU if empty
+    const finalSku = formData.sku || (formData.productName
+      ? formData.productName.replace(/[^a-z0-9]/gi, '-').toUpperCase() + '-' + Math.random().toString(36).substring(2, 7).toUpperCase()
+      : 'SKU-' + Date.now());
+
+    // Map variations and ensure SKUs exist
+    const finalVariations = (formData.variations || []).map((v: any) => {
+      const generatedSku = (finalSku ? `${finalSku}-${Object.values(v.combination).join('-').toUpperCase()}` : `VAR-${Math.random().toString(36).substring(2, 5).toUpperCase()}`);
+
+      if (!formData.useVariantPricing) {
+        return {
+          ...v,
+          price: parseFloat(formData.regular_price) || 0,
+          salePrice: parseFloat(formData.sale_price) || undefined,
+          sku: v.sku || generatedSku,
+          stock: parseInt(formData.quantity.toString()) || 0
+        };
+      }
+      return {
+        ...v,
+        sku: v.sku || generatedSku
+      };
+    });
+
+    let topLevelPrice = parseFloat(formData.regular_price) || 0;
+    let topLevelSalePrice = parseFloat(formData.sale_price) || undefined;
+    let topLevelSku = finalSku;
+
+    // Requirement: "if a user selects yes price sku should come from the varaition table"
+    if (formData.useVariantPricing && finalVariations.length > 0) {
+      const firstVar = finalVariations[0];
+      if (!topLevelPrice || topLevelPrice === 0) {
+        topLevelPrice = firstVar.price;
+        topLevelSalePrice = firstVar.salePrice;
+      }
+      if (!formData.sku) {
+        topLevelSku = firstVar.sku;
+      }
+    }
+
+    const payload: any = {
+      ...formData,
+      businessId: formData.businessId,
+      title: formData.productName,
+      productName: formData.productName,
+      description: (formData.fullDesc && formData.fullDesc.replace(/<[^>]*>/g, '').trim())
+        ? formData.fullDesc
+        : (formData.shortDesc?.trim() || formData.productName || ''),
+      shortDescription: formData.shortDesc,
+      category: formData.categoryName || formData.category,
+      subCategory: formData.subCategoryName || formData.subCategory,
+      productType: formData.product_type,
+      sku: topLevelSku,
+      price: topLevelPrice,
+      salePrice: topLevelSalePrice,
+      regular_price: topLevelPrice,
+      sale_price: topLevelSalePrice,
+      quantity: parseInt(formData.quantity.toString()) || 0,
+      stock: parseInt(formData.quantity.toString()) || 0,
+      media: [...(formData.images || []), ...(formData.videos || [])],
+      variations: finalVariations,
+      variantConfig,
+      fulfillmentType: fulfillmentType,
+      shippingMethod: finalShippingMethod,
+      freeDeliveryRadius: formData.isFreeDelivery && String(formData.freeDeliveryRadius ?? '') !== ''
+        ? parseFloat(String(formData.freeDeliveryRadius)) || 0
+        : 0,
+      weight: formData.weight ? parseFloat(formData.weight) : 0,
+      length: formData.length ? parseFloat(formData.length) : 0,
+      width: formData.width ? parseFloat(formData.width) : 0,
+      height: formData.height ? parseFloat(formData.height) : 0,
+      lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold.toString()) : 0,
+      fileUrls: formData.product_type === 'downloadable' ? formData.fileUrls : [],
+      downloadLimit: formData.product_type === 'downloadable' && formData.downloadLimit ? parseInt(formData.downloadLimit.toString()) : undefined,
+      downloadExpiry: formData.product_type === 'downloadable' && formData.downloadExpiry ? parseInt(formData.downloadExpiry.toString()) : undefined,
+    };
+
+    // Clean up payload to avoid backend validation errors
+    delete payload.images;
+    delete payload.videos;
+    if (!payload.serviceProviderId) delete payload.serviceProviderId;
+    if (payload.sale_price === undefined || payload.sale_price === null || isNaN(payload.sale_price)) delete payload.sale_price;
+    if (payload.salePrice === undefined || payload.salePrice === null || isNaN(payload.salePrice)) delete payload.salePrice;
+
+    // Ensure price is a positive number
+    if (payload.price <= 0) payload.price = 0;
+    if (payload.regular_price <= 0) payload.regular_price = 0;
+
+    // Strip anything JSON can't serialize (e.g. a Window/DOM handle that
+    // leaked into form state) so the request is never blocked by a
+    // SecurityError before it is sent.
+    const { value: safePayload, dropped } = toSerializable<Record<string, unknown>>(payload);
+    if (process.env.NODE_ENV !== 'production' && dropped.length > 0) {
+      console.warn('[add-product] Dropped non-serializable payload fields:', dropped);
+    }
+
+    addProduct(safePayload as any, {
+      onSuccess: (data: any) => {
+        setCreatedProductId(data.id);
+
+        if (formData.plusItem) {
+            const requestDto: any = {};
+            if (formData.plusItem.type === 'product') {
+                requestDto.plusProductId = formData.plusItem.id;
+            } else {
+                requestDto.plusServiceId = formData.plusItem.id;
+            }
+            // Set base product ID (the one we just created)
+            requestDto.baseProductId = data.id;
+
+            createPartnershipRequest(requestDto, {
+                onSuccess: () => toast.success('Partnership request sent!'),
+                onError: (err) => toast.error('Product created, but partnership request failed: ' + err.message)
+            });
+        }
+
+        setIsPublished(true);
+        toast.success('Product created successfully!');
+      },
+      onError: (error: any) => {
+        console.error('Failed to add product:', error);
+        const parsed = parseApiError(error, [
+          'productName',
+          'title',
+          'businessId',
+          'bussinessId',
+          'category',
+          'subCategory',
+          'regular_price',
+          'sale_price',
+          'price',
+          'salePrice',
+          'sku',
+          'description',
+          'shortDescription',
+          'shortDesc',
+          'fullDesc',
+          'quantity',
+          'weight',
+        ]);
+
+        if (Object.keys(parsed.fields).length > 0) {
+          // Align common backend field names with the wizard's field keys so
+          // errors land under the right input.
+          const normalizedFields: ProductFormErrors = { ...parsed.fields };
+          if (normalizedFields.title && !normalizedFields.productName) {
+            normalizedFields.productName = normalizedFields.title;
+            delete normalizedFields.title;
+          }
+          if (normalizedFields.bussinessId && !normalizedFields.businessId) {
+            normalizedFields.businessId = normalizedFields.bussinessId;
+            delete normalizedFields.bussinessId;
+          }
+          if (normalizedFields.price && !normalizedFields.regular_price) {
+            normalizedFields.regular_price = normalizedFields.price;
+          }
+          if (normalizedFields.salePrice && !normalizedFields.sale_price) {
+            normalizedFields.sale_price = normalizedFields.salePrice;
+          }
+          if (normalizedFields.shortDescription && !normalizedFields.shortDesc) {
+            normalizedFields.shortDesc = normalizedFields.shortDescription;
+            normalizedFields.description = normalizedFields.description ?? normalizedFields.shortDesc;
+          }
+
+          setErrors(normalizedFields);
+
+          const stepForField: Record<string, number> = {
+            businessId: 1,
+            productName: 1,
+            title: 1,
+            category: 1,
+            subCategory: 1,
+            description: 2,
+            shortDescription: 2,
+            shortDesc: 2,
+            fullDesc: 2,
+            fileUrls: 2,
+            regular_price: 3,
+            sale_price: 3,
+            price: 3,
+            sku: 3,
+            variations: 3,
+            attributes: 3,
+            quantity: 3,
+          };
+
+          const firstKey = Object.keys(normalizedFields)[0];
+          const targetStep = stepForField[firstKey];
+          if (targetStep) {
+            setStep(targetStep);
+            scrollToFirstError(document.querySelector('main') ?? undefined, { delay: 200 });
+          }
+        }
+
+        setSubmitError(parsed.general || 'Failed to create product');
+        toast.error(parsed.general || 'Failed to create product');
+      }
+    });
+  };
+
+  const nextStep = (patch?: any) => {
+    // Allow a step to hand over freshly-derived values (e.g. contentEditable
+    // HTML) so validation sees the latest data, not the previous render.
+    const merged = patch ? { ...formData, ...patch } : formData;
+    if (patch) updateFormData(patch);
+
+    // Validate the current step before allowing navigation.
+    const stepErrors = validateProductStep(step, merged);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      toast.error('Please fix the highlighted fields before continuing.');
+      scrollToFirstError(document.querySelector('main') ?? undefined, { delay: 80 });
+      return;
+    }
+
+    setErrors({});
+
+    if (step === 2 && (!formData.images || formData.images.length === 0)) {
+      setErrors({ images: 'Add at least one product image before continuing.' });
+      toast.error('Add at least one product image before continuing.');
+      return;
+    }
+
+    // Branching from Step 3
+    if (step === 3) {
+      if (formData.product_type !== 'physical') {
+        setStep(7.5);
+      } else {
+        const business = userListings?.data?.find((b: any) => b.id === formData.businessId);
+        const modes = (business as any)?.sellingModes || (business as any)?.productSellerProfile?.sellingModes || [];
+        const types: ('shipping' | 'pickup')[] = [];
+        if (modes.includes('pickup') || modes.includes('inStorePickup') || modes.includes('in_store_pickup')) types.push('pickup');
+        if (modes.includes('uk_shipping') || modes.includes('local_delivery') || modes.includes('nationalShipping') || modes.includes('localDelivery')) types.push('shipping');
+        
+        if (types.length === 0) types.push('shipping', 'pickup');
+        
+        setFulfillmentType(types);
+        
+        // Auto-skip Step 4 if only one fulfillment type is configured/allowed for the business
+        if (types.length === 1) {
+          if (types[0] === 'pickup') {
+            setStep(5.1);
+          } else {
+            setStep(4.1);
+          }
+        } else {
+          setStep(4);
+        }
+      }
+      return;
+    }
+
+    if (step === 4) {
+      if (fulfillmentType.includes('shipping')) {
+        setStep(4.1);
+      } else if (fulfillmentType.includes('pickup')) {
+        setStep(5.1);
+      } else {
+        setStep(7.5);
+      }
+      return;
+    }
+
+    // Path: Shipping Options -> Delivery Pricing
+    if (step === 4.1) {
+      setStep(4.2);
+      return;
+    }
+
+    if (step === 4.2) {
+      if (shippingMethod === 'shipstation') {
+        setStep(5.5);
+      } else if (fulfillmentType.includes('pickup')) {
+        setStep(5.1);
+      } else {
+        setStep(7.5);
+      }
+      return;
+    }
+
+    if (step === 5.5) {
+      setStep(6);
+      return;
+    }
+
+    if (step === 6) {
+      setStep(7);
+      return;
+    }
+
+    if (step === 5 || step === 7) {
+
+      if (fulfillmentType.includes('pickup')) {
+
+        setStep(5.1);
+
+      } else {
+
+        setStep(7.5);
+
+      }
+
+      return;
+
+    }
+
+    if (step === 5.1) {
+      setStep(7.5);
+      return;
+    }
+
+    if (step === 7.5) {
+      setStep(8);
+      return;
+    }
+
+    setStep((prev) => prev + 1);
+  };
+
+  const prevStep = () => {
+
+    if (step === 8) {
+
+      setStep(7.5);
+
+      return;
+
+    }
+
+
+
+    if (step === 7.5) {
+
+      if (formData.product_type !== 'physical') return setStep(3);
+
+      if (fulfillmentType.includes('pickup')) return setStep(5.1);
+
+      if (fulfillmentType.includes('shipping')) {
+
+        if (shippingMethod === 'shipstation') return setStep(7);
+
+        return setStep(5);
+
+      }
+
+      return setStep(3);
+
+    }
+
+
+
+    if (step === 7) return setStep(6);
+
+    if (step === 6) return setStep(5.5);
+
+    if (step === 5.5) return setStep(4.2);
+
+
+
+    if (step === 4.1 || step === 5.1) {
+      const business = userListings?.data?.find((b: any) => b.id === formData.businessId);
+      const modes = (business as any)?.sellingModes || (business as any)?.productSellerProfile?.sellingModes || [];
+      const types: ('shipping' | 'pickup')[] = [];
+      if (modes.includes('pickup') || modes.includes('inStorePickup') || modes.includes('in_store_pickup')) types.push('pickup');
+      if (modes.includes('uk_shipping') || modes.includes('local_delivery') || modes.includes('nationalShipping') || modes.includes('localDelivery')) types.push('shipping');
+      
+      if (types.length === 1) {
+        return setStep(3);
+      }
+      return setStep(4);
+    }
+
+    if (step === 4.2) return setStep(4.1);
+
+    if (step === 5) return setStep(4.2);
+
+    setStep((prev) => prev - 1);
+
+  };
+
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.push('/admin/products')} errors={errors} />;
+      case 2:
+        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={handleSaveDraft} errors={errors} />;
+      case 3:
+        return <Step3PricingInventory formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} errors={errors} />;
+      case 4:
+        return (
+          <Step4aFulfillmentSelection
+            initialSelected={fulfillmentType}
+            allowedMethods={fulfillmentType}
+            onSelect={(types: ('shipping' | 'pickup')[]) => {
+              setFulfillmentType(types);
+              if (types.includes('shipping')) {
+                setStep(4.1);
+              } else if (types.includes('pickup')) {
+                setStep(5.1);
+              } else {
+                setStep(7.5);
+              }
+            }}
+            onBack={prevStep}
+          />
+        );
+      case 4.1:
+        return (
+          <Step4ShippingOptions
+            onSelectOption={(opt: 'existing' | 'shipstation') => {
+              setShippingMethod(opt);
+              nextStep();
+            }}
+            onSkip={() => {
+              // Carrier integrations are optional; continue with manual
+              // delivery pricing so products can still be published.
+              setShippingMethod('existing');
+              setStep(4.2);
+            }}
+            onBack={prevStep}
+          />
+        );
+      case 4.2:
+        return <Step4bDeliveryPricing formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} errors={errors} />;
+      case 5:
+        return <Step5SelectCarrier onBack={prevStep} onNext={nextStep} />;
+      case 5.1:
+        return <Step5aPickupConfiguration formData={formData} updateFormData={updateFormData} onBack={prevStep} onNext={nextStep} />
+      case 5.5:
+        return <Step5bConnectShipStation onBack={prevStep} onNext={nextStep} />;
+      case 6:
+        return <Step6ShipStationConfig onBack={prevStep} onNext={nextStep} />;
+      case 7:
+        return <Step7ServiceMapping onBack={prevStep} onFinish={() => setStep(7.5)} />;
+      case 7.5:
+        return <Step7Partnership formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
+      case 8:
+        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={handleSaveDraft} isPending={isPending} submitError={submitError} />
+      default:
+        return <div>Unknown Step</div>;
+    }
+  };
+
+  if (isPublished) {
+    return (
+      <ProductStatusModal
+        isOpen={true}
+        onClose={() => {
+          setIsPublished(false);
+          router.push('/admin/products');
+        }}
+        type="success"
+        title="Product Added Successfully!"
+        message={`${formData.productName} is now live and ready for customers.`}
+        primaryAction={{
+          label: "Add Another Product",
+          icon: <Plus size={16} />,
+          onClick: () => {
+            setIsPublished(false);
+            setCreatedProductId(null);
+            setStep(1);
+          }
+        }}
+        secondaryAction={{
+          label: "View Product",
+          icon: <Eye size={16} />,
+          onClick: () => router.push('/admin/products')
+        }}
+        dashboardAction={{
+          label: "Go to Dashboard",
+          onClick: () => router.push('/admin/products')
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1c140d] p-4 md:p-8 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto">{renderStep()}</div>
+    </div>
+  );
 }
