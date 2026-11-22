@@ -56,4 +56,14 @@ export class UpdatePlanVariantDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'mall-pro-plus',
+    nullable: true,
+    description:
+      'MCOM Central plan id used by membership sync. Send null to clear it.',
+  })
+  @IsString()
+  @IsOptional()
+  externalPlanId?: string | null;
 }

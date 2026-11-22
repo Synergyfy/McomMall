@@ -181,6 +181,9 @@ export class SystemPlanController {
       id: variant.id,
       name: `${variant.plan?.name ?? 'Plan'} · ${label}`,
       description: variant.plan?.description ?? null,
+      // Central uses this id when bundling the plan into a membership and
+      // echoes it back as package.externalPlanId in membership.updated.
+      externalPlanId: variant.externalPlanId ?? variant.id,
       monthlyPrice: amount,
       quarterlyPrice: amount,
       annualPrice: amount,

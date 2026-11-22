@@ -68,6 +68,17 @@ export class PlanVariant extends AbstractBaseEntity {
   isActive: boolean;
 
   @ApiProperty({
+    example: 'mall-pro-plus',
+    nullable: true,
+    description:
+      'MCOM Central plan id used to map a bundled membership package ' +
+      '(membership.updated → package.externalPlanId) onto this variant.',
+  })
+  @Index()
+  @Column({ name: 'external_plan_id', type: 'varchar', nullable: true })
+  externalPlanId: string | null;
+
+  @ApiProperty({
     description: 'Display-only bullet list for pricing pages',
     example: ['Priority support', 'Advanced analytics'],
     nullable: true,

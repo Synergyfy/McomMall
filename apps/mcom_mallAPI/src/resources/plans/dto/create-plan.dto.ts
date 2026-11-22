@@ -131,6 +131,16 @@ export class CreatePlanVariantDto {
   @IsOptional()
   paypalPlanId?: string;
 
+  @ApiPropertyOptional({
+    example: 'mall-pro-plus',
+    description:
+      'MCOM Central plan id. Membership sync maps the bundled package ' +
+      'externalPlanId to this variant.',
+  })
+  @IsString()
+  @IsOptional()
+  externalPlanId?: string;
+
   @ApiPropertyOptional({ example: ['Priority support'] })
   @IsArray()
   @IsString({ each: true })
