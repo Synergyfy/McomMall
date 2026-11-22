@@ -26,6 +26,7 @@ import {
 import { UserRole } from '../../common/role.enum';
 
 import { McomCentralService } from '../sso/mcom-central.service';
+import { MembershipService } from '../membership/membership.service';
 
 @ApiTags('auth')
 @ApiBearerAuth()
@@ -36,6 +37,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly userService: UsersService,
     private readonly mcomCentralService: McomCentralService,
+    private readonly membershipService: MembershipService,
   ) {}
 
   @ApiOperation({ summary: 'Authenticate as user' })
@@ -95,20 +97,31 @@ export class AuthController {
       const authData = await this.authService.loginWithSso(token);
       const user = await this.userService.findCurrentUser(authData.email);
 
-      // Check subscription using Mcom Solutions user ID (Business owners only)
+      // Owners may enter through any of the three supported entitlement
+      // sources: a Mall-owned plan, a CHS membership that bundles a Mall plan,
+      // or an active trial. Only ask Central when local/CHS resolution finds
+      // nothing (e.g. the grant webhook has not arrived yet).
       if (
         user.role?.toLowerCase() === UserRole.OWNER ||
         user.role === UserRole.OWNER
       ) {
-        if (!user.centralUserId) {
-          throw new ForbiddenException(
-            'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
+        const effective =
+          await this.membershipService.resolveEffectiveMembership(user.id);
+        let hasAccess = Boolean(effective);
+
+        if (!hasAccess) {
+          if (!user.centralUserId) {
+            throw new ForbiddenException(
+              'MCOM Solutions user ID not found. Please re-authenticate via SSO.',
+            );
+          }
+          const subscription = await this.mcomCentralService.getUserPackages(
+            user.centralUserId,
           );
+          hasAccess = subscription?.isActive === true;
         }
-        const subscription = await this.mcomCentralService.getUserPackages(
-          user.centralUserId,
-        );
-        if (!subscription || !subscription.isActive || !subscription.tierId) {
+
+        if (!hasAccess) {
           throw new ForbiddenException(
             'Active subscription required. Please subscribe at Mcom Solutions.',
           );

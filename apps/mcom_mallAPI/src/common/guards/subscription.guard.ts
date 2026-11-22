@@ -10,24 +10,16 @@ import {
 import { Reflector } from '@nestjs/core';
 import { McomCentralService } from '../../resources/sso/mcom-central.service';
 import { MembershipService } from '../../resources/membership/membership.service';
+import { SubscriptionAccessCache } from './subscription-access.cache';
 
 const SUBSCRIPTION_KEY = 'requireSubscription';
 
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
   private readonly logger = new Logger(SubscriptionGuard.name);
-  private static cache = new Map<
-    string,
-    { result: boolean; timestamp: number }
-  >();
-  private static readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   static clearCache(userId?: string) {
-    if (userId) {
-      SubscriptionGuard.cache.delete(userId);
-    } else {
-      SubscriptionGuard.cache.clear();
-    }
+    SubscriptionAccessCache.clear(userId);
   }
 
   constructor(
@@ -69,56 +61,59 @@ export class SubscriptionGuard implements CanActivate {
 
     // Check cache
     const cacheKey = centralUserId;
-    const cached = SubscriptionGuard.cache.get(cacheKey);
-    if (
-      cached &&
-      Date.now() - cached.timestamp < SubscriptionGuard.CACHE_TTL_MS
-    ) {
-      if (!cached.result) {
+    const cached = SubscriptionAccessCache.get(cacheKey);
+    if (cached !== null) {
+      if (!cached) {
         throw new ForbiddenException('No active MCOM Mall subscription');
       }
       return true;
     }
 
-    // Query Mcom Solutions
-    const packages =
-      await this.mcomCentralService.getUserPackages(centralUserId);
-
-    // If MCOM Central is unreachable (packages is null), fail open to avoid blocking users
-    // Only block if we successfully queried and found no active subscription
-    let isActive = packages?.isActive === true;
-    const centralReachable = packages !== null;
-
-    // DB is the source of truth for mall entitlement: a local row only exists
-    // after a verified central-wallet payment, admin grant, or trial. It wins
-    // over a silent central — money always moves on Solutions regardless.
-    if (!isActive) {
-      try {
-        const local = await this.membershipService.findActiveWithTier(
-          user.id ?? user.userId,
-        );
-        if (
-          local?.isActive &&
-          local.expiresAt &&
-          new Date(local.expiresAt).getTime() > Date.now()
-        ) {
-          isActive = true;
-        }
-      } catch (e) {
-        this.logger.warn(
-          `Local membership check failed for user ${centralUserId}, falling back to central result`,
-        );
+    // Local entitlement resolution, highest precedence first:
+    //   1. a plan bought directly from the Mall
+    //   2. a CHS membership that bundles a Mall plan
+    //   3. an active trial
+    // A direct Mall plan therefore wins over an included CHS plan while it is
+    // active, and the CHS grant takes over once it expires.
+    let hasLocalAccess = false;
+    try {
+      const effective = await this.membershipService.resolveEffectiveMembership(
+        user.id ?? user.userId,
+      );
+      if (effective) {
+        hasLocalAccess = true;
+        request.membershipSource = effective.source;
       }
+    } catch (e) {
+      this.logger.warn(
+        `Local membership check failed for user ${centralUserId}: ${e}`,
+      );
     }
 
-    // Update cache
-    SubscriptionGuard.cache.set(cacheKey, {
-      result: isActive,
-      timestamp: Date.now(),
-    });
+    // Query MCOM Solutions for CHS memberships (and Central trials) that have
+    // not been delivered to the webhook yet. Central is only consulted when
+    // there is no local/CHS grant, so a Mall purchase is never overridden.
+    const packages = hasLocalAccess
+      ? null
+      : await this.mcomCentralService.getUserPackages(centralUserId);
 
-    // Only throw if central was reachable AND no active subscription found
-    if (centralReachable && !isActive) {
+    const centralReachable = packages !== null;
+    const isActive = hasLocalAccess || packages?.isActive === true;
+
+    // Update cache
+    SubscriptionAccessCache.set(cacheKey, isActive);
+
+    if (isActive) {
+      if (packages?.entitlement) {
+        request.entitlement = packages.entitlement;
+        request.isTrial = packages.isTrial;
+        request.programmeTasks = packages.programmeTasks;
+      }
+      return true;
+    }
+
+    // Only throw if Central was reachable AND no local/CHS/trial access exists.
+    if (centralReachable) {
       const reason = packages?.reason || 'NO_ACTIVE_ENTITLEMENT';
       const upgradeUrl =
         packages?.upgradeUrl ||
@@ -131,19 +126,11 @@ export class SubscriptionGuard implements CanActivate {
       });
     }
 
-    // If central is unreachable, allow access (fail open) but log warning
-    if (!centralReachable) {
-      this.logger.warn(
-        `MCOM Central unreachable for user ${centralUserId}, failing open`,
-      );
-    }
-
-    if (packages?.entitlement) {
-      request.entitlement = packages.entitlement;
-      request.isTrial = packages.isTrial;
-      request.programmeTasks = packages.programmeTasks;
-    }
-
+    // Central unreachable and no local evidence: fail open so an outage does
+    // not lock out legitimate CHS members mid-session.
+    this.logger.warn(
+      `MCOM Central unreachable for user ${centralUserId}, failing open`,
+    );
     return true;
   }
 }

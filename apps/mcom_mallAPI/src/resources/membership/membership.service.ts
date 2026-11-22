@@ -13,6 +13,7 @@ import { Repository, DataSource } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { User } from '../users/entities/user.entity';
 import { Membership } from './entities/membership.entity';
+import { CentralMembershipGrant } from './entities/central-membership-grant.entity';
 import { MembershipTier } from './membership-tier.enum';
 import { McomWalletService } from '../payments/services/mcom-wallet.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
@@ -39,6 +40,15 @@ import { PlansService } from '../plans/services/plans.service';
 import { PlanExpiryService } from '../plans/services/plan-expiry.service';
 import { PlanTier } from '../plans/enums/plan-tier.enum';
 import { PlanVariant } from '../plans/entities/plan-variant.entity';
+import { SubscriptionAccessCache } from '../../common/guards/subscription-access.cache';
+
+/** Where the access currently in force came from. */
+export type MembershipAccessSource = 'local' | 'central' | 'trial';
+
+export interface EffectiveMembership {
+  membership: Membership;
+  source: MembershipAccessSource;
+}
 
 @Injectable()
 export class MembershipService {
@@ -53,6 +63,8 @@ export class MembershipService {
   constructor(
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
+    @InjectRepository(CentralMembershipGrant)
+    private readonly centralGrantRepository: Repository<CentralMembershipGrant>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(MembershipPayment)
@@ -79,7 +91,28 @@ export class MembershipService {
       centralUserId = dbUser?.centralUserId;
     }
 
-    // 1. For SSO users, prioritize real-time MCOM Central entitlement
+    let effective: EffectiveMembership | null = null;
+    try {
+      effective = await this.resolveEffectiveMembership(user.id);
+    } catch (err) {
+      this.logger.warn(
+        `Failed to resolve local membership for user ${user.id}: ${err}`,
+      );
+    }
+
+    // 1. A plan bought directly from the Mall always wins while it is active,
+    //    even when the user also has a CHS membership that bundles a plan.
+    if (effective?.source === 'local') {
+      return this.toLocalMembershipDto(effective.membership, 'local');
+    }
+
+    // 2. A CHS membership that bundles a Mall plan. The webhook-delivered
+    //    grant is the authoritative Central snapshot; when none has arrived
+    //    yet, ask Central's real-time entitlement API instead.
+    if (effective?.source === 'central') {
+      return this.toLocalMembershipDto(effective.membership, 'central');
+    }
+
     if (centralUserId) {
       try {
         const userPackages =
@@ -147,24 +180,13 @@ export class MembershipService {
             }
           }
 
-          let planVariantId: string | null = null;
-          let priceId: string | null = null;
-          try {
-            const localMembership = await this.findActiveWithTier(user.id);
-            planVariantId = localMembership?.planVariantId ?? null;
-            priceId = localMembership?.priceId ?? null;
-          } catch {
-            planVariantId = null;
-            priceId = null;
-          }
-
           return {
             id: `subscription-${user.id}`,
             isActive: true,
             tierId: displayTier.id,
             tier: displayTier,
-            planVariantId,
-            priceId,
+            planVariantId: null,
+            priceId: null,
             planType: userPackages.entitlement?.plan?.billingCycle || null,
             startDate: null,
             expiresAt,
@@ -174,6 +196,7 @@ export class MembershipService {
               userPackages.entitlement?.trialContext?.daysRemaining || 14,
             packages: userPackages.packages || [],
             accessType: userPackages.accessType,
+            source: 'central',
             entitlement: userPackages.entitlement,
             programmeTasks:
               userPackages.programmeTasks ||
@@ -188,18 +211,9 @@ export class MembershipService {
       }
     }
 
-    // 2. Fallback: local active membership row (direct purchases)
-    try {
-      const local = await this.findActiveWithTier(user.id);
-      if (
-        local?.isActive &&
-        local.expiresAt &&
-        new Date(local.expiresAt).getTime() > Date.now()
-      ) {
-        return await this.toLocalMembershipDto(local);
-      }
-    } catch {
-      // Never let a local read break the central fallback path below.
+    // 3. A trial is the last resort; it grants access without a paid plan.
+    if (effective?.source === 'trial') {
+      return this.toLocalMembershipDto(effective.membership, 'trial');
     }
 
     return null;
@@ -210,7 +224,10 @@ export class MembershipService {
    * response so every consumer (badge, membership page, billing) works
    * unchanged regardless of where the subscription originated.
    */
-  private async toLocalMembershipDto(membership: Membership): Promise<any> {
+  private async toLocalMembershipDto(
+    membership: Membership,
+    source: MembershipAccessSource,
+  ): Promise<any> {
     let tier: any = null;
     if (membership.planVariantId) {
       try {
@@ -256,6 +273,7 @@ export class MembershipService {
       isTrial: membership.isTrial ?? false,
       trialDuration: membership.trialDuration ?? 0,
       packages: [],
+      source,
     };
   }
 
@@ -275,16 +293,124 @@ export class MembershipService {
     }
   }
 
-  async findActiveWithTier(userId: string): Promise<Membership> {
-    const membership = await this.membershipRepository.findOne({
+  /** Drop cached guard decisions after a local entitlement change. */
+  private clearAccessCache(user: User, centralUserId?: string): void {
+    SubscriptionAccessCache.clear(user.id);
+    if (user.centralUserId) SubscriptionAccessCache.clear(user.centralUserId);
+    if (centralUserId) SubscriptionAccessCache.clear(centralUserId);
+  }
+
+  /**
+   * Resolve the entitlement that is currently in force for a user.
+   *
+   * Precedence (highest first):
+   *   1. a plan the business bought directly from the Mall
+   *   2. a MCOM Central Hub Solution membership that bundles a Mall plan
+   *   3. an active trial
+   *
+   * A direct Mall plan therefore stays authoritative for its whole term even
+   * when the business also buys a CHS membership. When it expires, the CHS
+   * grant kept alongside it takes over (if that is still active).
+   */
+  async resolveEffectiveMembership(
+    userId: string,
+  ): Promise<EffectiveMembership | null> {
+    const now = new Date();
+
+    const local = await this.membershipRepository.findOne({
       where: { user: { id: userId }, isActive: true },
       relations: ['planVariant', 'planVariant.tierLevel', 'planVariant.plan'],
+      order: { created_at: 'DESC' },
     });
 
-    if (membership) {
-      await this.ensureDates(membership);
+    const localIsLive =
+      local && (!local.expiresAt || new Date(local.expiresAt) > now);
+
+    // 1. Mall-owned purchase (paid or admin grant) wins while it is active.
+    if (
+      localIsLive &&
+      !local.isTrial &&
+      local.renewalMethod !== 'central_membership'
+    ) {
+      await this.ensureDates(local);
+      return { membership: local, source: 'local' };
     }
 
+    // 2. CHS bundled membership. A dedicated grant can coexist with an
+    //    expired/local plan; it is used only when the direct plan is not.
+    const grant = await this.findActiveCentralGrant(userId, now);
+    if (grant) {
+      return { membership: this.grantToMembership(grant), source: 'central' };
+    }
+
+    // Legacy Central grants were written straight into `memberships` before
+    // the grant table existed. Treat them as Central-sourced, never as a
+    // Mall purchase, so they cannot outrank a local plan.
+    if (
+      localIsLive &&
+      local.renewalMethod === 'central_membership' &&
+      !local.isTrial
+    ) {
+      await this.ensureDates(local);
+      return { membership: local, source: 'central' };
+    }
+
+    // 3. Trial is the weakest source of access.
+    if (localIsLive && local.isTrial) {
+      await this.ensureDates(local);
+      return { membership: local, source: 'trial' };
+    }
+
+    return null;
+  }
+
+  /**
+   * Backwards-compatible accessor used by capability checks and guards.
+   * Returns the effective plan regardless of whether it came from the Mall,
+   * a CHS membership or a trial.
+   */
+  async findActiveWithTier(userId: string): Promise<Membership> {
+    const effective = await this.resolveEffectiveMembership(userId);
+    return effective?.membership ?? null;
+  }
+
+  private async findActiveCentralGrant(
+    userId: string,
+    now: Date,
+  ): Promise<CentralMembershipGrant | null> {
+    const grant = await this.centralGrantRepository.findOne({
+      where: { userId, isActive: true },
+      relations: ['planVariant', 'planVariant.tierLevel', 'planVariant.plan'],
+    });
+    if (!grant || !grant.planVariantId || !grant.expiresAt) {
+      return null;
+    }
+    if (new Date(grant.expiresAt) <= now) {
+      return null;
+    }
+    return grant;
+  }
+
+  /** Present a CHS grant in the same shape as a persisted membership row. */
+  private grantToMembership(grant: CentralMembershipGrant): Membership {
+    const membership = new Membership();
+    membership.id = grant.id;
+    membership.user = { id: grant.userId } as User;
+    membership.planVariant = grant.planVariant as PlanVariant;
+    membership.planVariantId = grant.planVariantId;
+    membership.priceId = null;
+    membership.startDate = grant.startsAt ?? grant.created_at;
+    membership.expiresAt = grant.expiresAt as Date;
+    membership.endDate = grant.expiresAt;
+    membership.isActive = true;
+    membership.isTrial = false;
+    membership.trialDuration = 0;
+    membership.planType = grant.planType ?? PlanType.MONTHLY;
+    membership.autoRenew = false;
+    membership.renewalStatus = grant.status || 'active';
+    membership.nextChargeAt = null;
+    membership.renewalAttempts = 0;
+    membership.renewalMethod = 'central_membership';
     return membership;
   }
 
@@ -373,9 +499,8 @@ export class MembershipService {
 
     const variantId = initiateDto.planVariantId || initiateDto.tierId;
     if (variantId) {
-      const { price: activePrice } = await this.plansService.resolveActivePrice(
-        variantId,
-      );
+      const { price: activePrice } =
+        await this.plansService.resolveActivePrice(variantId);
       price = Number(activePrice.amount);
     } else if (initiateDto.tier) {
       // Legacy Enum Support
@@ -505,7 +630,9 @@ export class MembershipService {
       return {
         orderId: initiated.rail === 'paypal' ? initiated.orderId : undefined,
         approvalUrl:
-          initiated.rail === 'paypal' ? initiated.approvalUrl ?? undefined : undefined,
+          initiated.rail === 'paypal'
+            ? (initiated.approvalUrl ?? undefined)
+            : undefined,
         provider: PaymentMethod.PAYPAL,
       };
     } else {
@@ -679,7 +806,7 @@ export class MembershipService {
       );
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const membership = await this.dataSource.transaction(async (manager) => {
       const paymentRepo = manager.getRepository(MembershipPayment);
       const membershipRepo = manager.getRepository(Membership);
       const userRepo = manager.getRepository(User);
@@ -801,6 +928,10 @@ export class MembershipService {
 
       return savedMembership;
     });
+
+    // A fresh purchase must be visible to the subscription guard immediately.
+    this.clearAccessCache(user, centralUserId);
+    return membership;
   }
   // ... (omitting unchanged methods) ...
 
@@ -842,7 +973,7 @@ export class MembershipService {
       throw new NotFoundException('Plan variant not found');
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const membership = await this.dataSource.transaction(async (manager) => {
       const membershipRepo = manager.getRepository(Membership);
       const userRepo = manager.getRepository(User);
 
@@ -867,11 +998,17 @@ export class MembershipService {
       membership.isTrial = true;
       membership.trialDuration = trialDurationDays;
       membership.planType = PlanType.MONTHLY; // Default to monthly after trial usually
+      membership.renewalMethod = 'trial';
+      membership.autoRenew = false;
+      membership.nextChargeAt = null;
 
       const savedMembership = await membershipRepo.save(membership);
 
       return savedMembership;
     });
+
+    this.clearAccessCache(user);
+    return membership;
   }
 
   async grantAccess(
@@ -881,13 +1018,14 @@ export class MembershipService {
   ): Promise<Membership> {
     let variant: PlanVariant;
     try {
-      const resolved = await this.plansService.resolveActivePrice(planVariantId);
+      const resolved =
+        await this.plansService.resolveActivePrice(planVariantId);
       variant = resolved.variant;
     } catch {
       throw new NotFoundException('Plan variant not found');
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const membership = await this.dataSource.transaction(async (manager) => {
       const membershipRepo = manager.getRepository(Membership);
       const userRepo = manager.getRepository(User);
 
@@ -909,11 +1047,17 @@ export class MembershipService {
       membership.isActive = true;
       membership.isTrial = false;
       membership.planType = PlanType.MONTHLY; // Default
+      membership.renewalMethod = 'admin_grant';
+      membership.autoRenew = false;
+      membership.nextChargeAt = null;
 
       const savedMembership = await membershipRepo.save(membership);
 
       return savedMembership;
     });
+
+    this.clearAccessCache(user);
+    return membership;
   }
 
   async getCredits(user: User): Promise<MembershipCredit[]> {

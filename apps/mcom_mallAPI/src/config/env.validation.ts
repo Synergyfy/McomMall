@@ -81,6 +81,8 @@ export const envValidationSchema = Joi.object({
   MCOM_WEBHOOK_SECRET: Joi.string().allow('').optional(),
   // Central -> Mall profile propagation (Profile Update Endpoint).
   MCOM_PROFILE_WEBHOOK_SECRET: Joi.string().allow('').optional(),
+  MCOM_MEMBERSHIP_WEBHOOK_SECRET: Joi.string().allow('').optional(),
+  MCOM_MEMBERSHIP_PLAN_MAP: Joi.string().allow('').optional(),
   MCOM_PROFILE_SYNC_HMAC_FALLBACK: Joi.string()
     .valid('true', 'false', 'True', 'False', 'TRUE', 'FALSE')
     .allow('')

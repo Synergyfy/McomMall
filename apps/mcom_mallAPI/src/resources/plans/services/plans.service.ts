@@ -143,6 +143,7 @@ export class PlansService {
             tierLevelId: level.id,
             isActive: true,
             features: variantDto.features ?? [],
+            externalPlanId: variantDto.externalPlanId ?? null,
             configuration: {
               quotas: { ...variantDto.configuration.quotas },
               featureFlags: { ...variantDto.configuration.featureFlags },
@@ -311,6 +312,11 @@ export class PlansService {
     }
     if (dto.isActive !== undefined) {
       variant.isActive = dto.isActive;
+    }
+    if (dto.externalPlanId !== undefined) {
+      variant.externalPlanId = dto.externalPlanId
+        ? dto.externalPlanId.trim()
+        : null;
     }
     return this.variantRepository.save(variant);
   }

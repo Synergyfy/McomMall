@@ -68,6 +68,7 @@ import { VisibilityModule } from './resources/visibility/visibility.module';
 import { TeamModule } from './resources/team/team.module';
 import { SsoModule } from './resources/sso/sso.module';
 import { ProfileSyncModule } from './resources/profile-sync/profile-sync.module';
+import { MembershipSyncModule } from './resources/membership-sync/membership-sync.module';
 import { MediaProxyModule } from './resources/media-proxy/media-proxy.module';
 import { ServiceMeshModule } from './resources/service-mesh/service-mesh.module';
 import { RewardsIntegrationModule } from './resources/rewards-integration/rewards-integration.module';
@@ -191,6 +192,7 @@ import { InstrumentsModule } from './resources/instruments/instruments.module';
     SeasonsModule,
     SsoModule,
     ProfileSyncModule,
+    MembershipSyncModule,
     MediaProxyModule,
     ServiceMeshModule,
     PartnerInstrumentsModule,
