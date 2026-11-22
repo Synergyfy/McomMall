@@ -11,6 +11,7 @@ import { HashService } from '../../common/hash/hash.service';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { SsoModule } from '../sso/sso.module';
+import { MembershipModule } from '../membership/membership.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SsoModule } from '../sso/sso.module';
     TypeOrmModule.forFeature([User, RevokedToken]),
     UsersModule,
     forwardRef(() => SsoModule),
+    MembershipModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, HashService, JwtStrategy],

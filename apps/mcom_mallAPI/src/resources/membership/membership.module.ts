@@ -4,6 +4,7 @@ import { MembershipPaymentListener } from './membership-payment.listener';
 import { MembershipController } from './membership.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Membership } from './entities/membership.entity';
+import { CentralMembershipGrant } from './entities/central-membership-grant.entity';
 import { User } from '../users/entities/user.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { MembershipPayment } from './entities/membership-payment.entity';
@@ -17,6 +18,7 @@ import { PlansModule } from '../plans/plans.module';
   imports: [
     TypeOrmModule.forFeature([
       Membership,
+      CentralMembershipGrant,
       User,
       MembershipPayment,
       MembershipCredit,

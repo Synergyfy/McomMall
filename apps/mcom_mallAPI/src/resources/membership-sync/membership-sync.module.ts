@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { Membership } from '../membership/entities/membership.entity';
+import { CentralMembershipGrant } from '../membership/entities/central-membership-grant.entity';
 import { Plan } from '../plans/entities/plan.entity';
 import { PlanVariant } from '../plans/entities/plan-variant.entity';
 import { PlansModule } from '../plans/plans.module';
@@ -23,6 +24,7 @@ import { MembershipSyncEvent } from './entities/membership-sync-event.entity';
       MembershipSyncEvent,
       User,
       Membership,
+      CentralMembershipGrant,
       Plan,
       PlanVariant,
     ]),

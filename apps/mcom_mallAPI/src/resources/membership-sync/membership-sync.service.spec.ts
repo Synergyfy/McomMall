@@ -54,6 +54,11 @@ describe('MembershipSyncService', () => {
     create: jest.Mock;
     save: jest.Mock;
   };
+  let grantsRepo: {
+    findOne: jest.Mock;
+    create: jest.Mock;
+    save: jest.Mock;
+  };
   let variantsRepo: { findOne: jest.Mock };
   let plansRepo: { findOne: jest.Mock; find: jest.Mock };
   let profileSync: { syncProfileFromCentral: jest.Mock };
@@ -90,6 +95,11 @@ describe('MembershipSyncService', () => {
         Promise.resolve({ ...value, id: 'membership-1' }),
       ),
     };
+    grantsRepo = {
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn((value) => value ?? {}),
+      save: jest.fn((value) => Promise.resolve({ ...value, id: 'grant-1' })),
+    };
     variantsRepo = { findOne: jest.fn().mockResolvedValue(variant) };
     plansRepo = {
       findOne: jest.fn().mockResolvedValue(null),
@@ -101,6 +111,7 @@ describe('MembershipSyncService', () => {
       eventsRepo as any,
       usersRepo as any,
       membershipsRepo as any,
+      grantsRepo as any,
       variantsRepo as any,
       plansRepo as any,
       profileSync as any,
@@ -190,6 +201,57 @@ describe('MembershipSyncService', () => {
 
     expect(membershipsRepo.save).not.toHaveBeenCalled();
     expect(result).toMatchObject({ applied: { action: 'unchanged' } });
+  });
+
+  it('stores a CHS grant without overwriting a Mall-owned plan', async () => {
+    membershipsRepo.findOne.mockResolvedValue({
+      id: 'membership-1',
+      isActive: true,
+      planVariantId: 'local-variant',
+      expiresAt: new Date('2027-01-01T00:00:00.000Z'),
+      renewalStatus: 'active',
+      renewalMethod: 'mcom_wallet',
+    });
+
+    const result = await service.handleIncomingEvent(clone(PAYLOAD));
+
+    // The direct Mall plan is left untouched; the CHS entitlement is kept
+    // alongside it and becomes active when the Mall plan expires.
+    expect(membershipsRepo.save).not.toHaveBeenCalled();
+    expect(grantsRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'local-1',
+        centralUserId: 'usr_1',
+        planVariantId: 'variant-1',
+        isActive: true,
+        expiresAt: new Date(EXPIRES_AT),
+      }),
+    );
+    expect(result).toMatchObject({
+      applied: { action: 'activated', planVariantId: 'variant-1' },
+    });
+  });
+
+  it('revokes a stored grant even when no Central membership row exists', async () => {
+    const payload = clone(PAYLOAD);
+    payload.data.membership.status = 'cancelled';
+
+    grantsRepo.findOne.mockResolvedValue({
+      id: 'grant-1',
+      userId: 'local-1',
+      planVariantId: 'variant-1',
+      isActive: true,
+      status: 'active',
+      expiresAt: new Date(EXPIRES_AT),
+    });
+
+    const result = await service.handleIncomingEvent(payload);
+
+    expect(grantsRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ isActive: false, status: 'cancelled' }),
+    );
+    expect(membershipsRepo.save).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ applied: { action: 'revoked' } });
   });
 
   it('acknowledges a duplicate delivery without re-applying it', async () => {

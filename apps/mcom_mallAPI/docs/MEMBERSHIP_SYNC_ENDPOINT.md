@@ -34,10 +34,26 @@ bundle this app. Apps excluded from the purchased plan never receive the event.
    and a local account is provisioned first.
 6. Mall maps the package (data.package.externalPlanId / packageName) to a local
    plan_variants row. See "Plan mapping" below.
-7. status active  → membership row is activated until membership.expiresAt.
-   status expired / cancelled / inactive → membership row is revoked.
+7. status active  → the CHS grant is stored/refreshed until membership.expiresAt.
+   status expired / cancelled / inactive → the CHS grant is revoked.
 8. The subscription cache is cleared so the next request sees the new access
    immediately.
+
+## Entitlement precedence
+
+A business can hold both a Mall-owned plan and a CHS membership. Access is
+resolved in this order, first match wins:
+
+| # | Source | Stored in |
+|:--|:--|:--|
+| 1 | Plan bought directly from the Mall (or admin grant) | `memberships` |
+| 2 | CHS membership that bundles a Mall plan | `mcom_central_membership_grants` |
+| 3 | Active trial | `memberships` (`isTrial = true`) |
+
+A direct Mall purchase is never overwritten by a CHS grant. While it is active
+it is the plan used everywhere; when it expires the CHS grant takes over (if it
+is still active). A Central expiry only revokes the CHS grant, so it can never
+cut short a plan the Mall sold itself.
 ```
 
 ## Request contract
@@ -167,6 +183,7 @@ pnpm --filter @mcommall/api migration:run
 | Table | Purpose |
 |:--|:--|
 | `mcom_membership_sync_events` | Durable inbox: unique `eventId`, status, attempts, last error, raw payload. |
+| `mcom_central_membership_grants` | One CHS entitlement per user: mapped variant, expiry, status. Kept separately so it can never replace a Mall-owned plan. |
 | `plan_variants.external_plan_id` | Central → local plan mapping. |
 
 ## Local test
@@ -218,11 +235,11 @@ condition (no local user could be provisioned) and need manual follow-up.
 
 - It does not create a payment, invoice or wallet debit. Central already
   collected the money.
-- It does not enable local auto-renew. Bundled memberships have
-  `autoRenew = false`, `nextChargeAt = null` and
-  `renewalMethod = central_membership`, so the Mall renewal cron cannot
+- It does not enable local auto-renew. CHS grants have `isActive` managed by
+  Central and are never locally renewable, so the Mall renewal cron cannot
   double-charge the customer.
-- It does not revoke a membership the Mall sold itself. A Central expiry is
-  ignored unless the active row is stamped `renewalMethod = central_membership`.
+- It does not replace or revoke a membership the Mall sold itself. A direct
+  Mall plan wins while it is active; the CHS grant is applied only after it
+  expires. A Central expiry only deactivates the CHS grant.
 - It does not bypass the Mall's own role checks. Only the membership grant is
   applied; merchant tooling still enforces its normal permissions.

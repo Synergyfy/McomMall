@@ -10,6 +10,7 @@ import { ILike, Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { User } from '../users/entities/user.entity';
 import { Membership } from '../membership/entities/membership.entity';
+import { CentralMembershipGrant } from '../membership/entities/central-membership-grant.entity';
 import { PlanType } from '../membership/dto/initiate-membership-payment.dto';
 import { Plan } from '../plans/entities/plan.entity';
 import { PlanVariant } from '../plans/entities/plan-variant.entity';
@@ -124,13 +125,19 @@ function normalise(value: unknown): string {
  * When a business buys a Central membership that includes this app, Central
  * provisions the matching platform package and POSTs the event here. The
  * payload names the package (`externalPlanId` / `packageName`) and its expiry;
- * this service maps it onto a local `plan_variants` row and activates the
- * user's membership until that expiry. `expired` / `cancelled` / `inactive`
- * events revoke it.
+ * this service maps it onto a local `plan_variants` row and stores the CHS
+ * grant until that expiry. `expired` / `cancelled` / `inactive` events revoke
+ * the grant.
  *
- * No charge is created here: Central owns the billing relationship. The local
- * row is a grant only (`autoRenew = false`, `renewalMethod = central_membership`)
- * so the mall's renewal cron can never double-debit the customer.
+ * The grant is stored in `mcom_central_membership_grants`, separate from the
+ * single `memberships` row, so it can never overwrite a plan the business
+ * bought directly from the Mall. `MembershipService.resolveEffectiveMembership`
+ * uses the direct plan first, then this grant, then an active trial.
+ *
+ * No charge is created here: Central owns the billing relationship. A mirrored
+ * membership row (for Central-only users) is a grant only (`autoRenew = false`,
+ * `renewalMethod = central_membership`) so the mall's renewal cron can never
+ * double-debit the customer.
  */
 @Injectable()
 export class MembershipSyncService {
@@ -143,6 +150,8 @@ export class MembershipSyncService {
     private readonly users: Repository<User>,
     @InjectRepository(Membership)
     private readonly memberships: Repository<Membership>,
+    @InjectRepository(CentralMembershipGrant)
+    private readonly grants: Repository<CentralMembershipGrant>,
     @InjectRepository(PlanVariant)
     private readonly variants: Repository<PlanVariant>,
     @InjectRepository(Plan)
@@ -295,7 +304,7 @@ export class MembershipSyncService {
   }
 
   // ---------------------------------------------------------------------------
-  // Local membership write
+  // Central entitlement write
   // ---------------------------------------------------------------------------
 
   private async upsertMembership(input: {
@@ -306,16 +315,120 @@ export class MembershipSyncService {
     status: string;
     membershipData: Record<string, any>;
     envelope: MembershipEnvelope;
-  }): Promise<Membership> {
+  }): Promise<{
+    planVariantId: string;
+    expiresAt: Date;
+    membershipRowUpdated: boolean;
+  }> {
     const { user, variant, startDate, expiresAt, status, membershipData } =
       input;
 
-    // One membership row per user (one-to-one). A Central grant updates it in
-    // place instead of inserting a second row.
+    const grant = await this.upsertGrant(input);
+
+    // Mirror the grant into `memberships` only when that row is Central-owned
+    // or absent. A plan the business bought directly from the Mall (or an
+    // active trial) must never be replaced by a CHS grant: the grant waits in
+    // its own row and takes over when the Mall plan expires.
+    const membershipRowUpdated = await this.syncCentralMembershipRow({
+      user,
+      variant,
+      startDate,
+      expiresAt,
+      status,
+      membershipData,
+    });
+
+    return {
+      planVariantId: grant.planVariantId,
+      expiresAt: grant.expiresAt,
+      membershipRowUpdated,
+    };
+  }
+
+  private async upsertGrant(input: {
+    user: User;
+    variant: PlanVariant;
+    startDate: Date;
+    expiresAt: Date;
+    status: string;
+    membershipData: Record<string, any>;
+    envelope: MembershipEnvelope;
+  }): Promise<CentralMembershipGrant> {
+    const {
+      user,
+      variant,
+      startDate,
+      expiresAt,
+      status,
+      membershipData,
+      envelope,
+    } = input;
+
+    // One CHS membership per user. A Central update refreshes it in place.
+    const prior = await this.grants.findOne({ where: { userId: user.id } });
+    const grant = prior ?? this.grants.create();
+
+    grant.userId = user.id;
+    grant.user = { id: user.id } as User;
+    grant.centralUserId = envelope.userId;
+    grant.planVariant = variant;
+    grant.planVariantId = variant.id;
+    grant.isActive = true;
+    grant.status = status || 'active';
+    grant.startsAt = startDate;
+    grant.expiresAt = expiresAt;
+    grant.planType = this.resolvePlanType(membershipData);
+    grant.membershipPlanName =
+      (membershipData.planName as string) ??
+      (membershipData.planId as string) ??
+      null;
+    grant.packageName =
+      (envelope.pkg.packageName as string) ??
+      (envelope.pkg.name as string) ??
+      null;
+    grant.externalPlanId =
+      (envelope.pkg.externalPlanId as string) ??
+      (membershipData.planId as string) ??
+      null;
+    grant.lastEventId = envelope.eventId;
+    grant.lastSyncedAt = new Date();
+    grant.metadata = {
+      businessId: envelope.businessId,
+      membership: membershipData,
+      package: envelope.pkg,
+    };
+
+    return this.grants.save(grant);
+  }
+
+  /**
+   * Keep the legacy single membership row in step with Central *only* while
+   * Central owns it. Central-only users still need a row for the existing
+   * billing/UI reads; a Mall purchase overwrites it on purpose and from then
+   * on the grant above is the fallback.
+   */
+  private async syncCentralMembershipRow(input: {
+    user: User;
+    variant: PlanVariant;
+    startDate: Date;
+    expiresAt: Date;
+    status: string;
+    membershipData: Record<string, any>;
+  }): Promise<boolean> {
+    const { user, variant, startDate, expiresAt, status, membershipData } =
+      input;
+
     const prior = await this.memberships.findOne({
       where: { user: { id: user.id } },
       order: { created_at: 'DESC' },
     });
+
+    if (prior && prior.renewalMethod !== 'central_membership') {
+      this.logger.log(
+        `Preserving Mall-owned plan for user ${user.id}; CHS grant stored separately`,
+      );
+      return false;
+    }
 
     const membership = prior ?? this.memberships.create();
 
@@ -348,66 +461,90 @@ export class MembershipSyncService {
       membershipData.currency || 'GBP',
     ).toUpperCase();
 
-    return this.memberships.save(membership);
+    await this.memberships.save(membership);
+    return true;
   }
 
   private async revokeMembership(
     user: User,
     envelope: MembershipEnvelope,
     status: string,
-  ): Promise<Membership | null> {
+  ): Promise<{ planVariantId: string | null; expiresAt: Date | null } | null> {
+    let changed = false;
+    let planVariantId: string | null = null;
+    let expiresAt: Date | null = null;
+
+    // Revoke the CHS grant whether or not a legacy membership row exists.
+    const grant = await this.grants.findOne({ where: { userId: user.id } });
+    if (grant) {
+      planVariantId = grant.planVariantId;
+      expiresAt = grant.expiresAt;
+      if (grant.isActive || grant.status !== status) {
+        grant.isActive = false;
+        grant.status = status;
+        grant.lastEventId = envelope.eventId;
+        grant.lastSyncedAt = new Date();
+        await this.grants.save(grant);
+        changed = true;
+      }
+    }
+
     const membership = await this.memberships.findOne({
       where: { user: { id: user.id } },
       order: { created_at: 'DESC' },
     });
 
-    // Revoking a membership that was never granted locally is a no-op, not a
-    // failure: the user may have used another app included in the plan.
-    if (!membership) {
-      SubscriptionGuard.clearCache(envelope.userId);
-      SubscriptionGuard.clearCache(user.id);
-      return null;
-    }
-
     // Never let a Central expiry remove a membership the Mall sold itself.
-    // A Central membership activation always stamps this marker, so this also
+    // A Central membership activation stamps this marker, so this also
     // prevents out-of-order expiry deliveries from cancelling a local purchase.
-    if (membership.renewalMethod !== 'central_membership') {
+    if (membership && membership.renewalMethod !== 'central_membership') {
       this.logger.warn(
         `Ignoring Central revocation for user ${envelope.userId}: local membership ` +
           `was not granted by Central (renewalMethod=${membership.renewalMethod ?? 'n/a'})`,
       );
-      return null;
-    }
+    } else if (membership) {
+      const endDate =
+        parseDate(envelope.membership.expiresAt) ??
+        parseDate(envelope.pkg.expiresAt) ??
+        new Date();
 
-    if (!membership.isActive && membership.renewalStatus === status) {
-      return membership;
+      if (
+        membership.isActive ||
+        membership.renewalStatus !== status ||
+        !membership.expiresAt ||
+        membership.expiresAt > endDate
+      ) {
+        membership.isActive = false;
+        membership.renewalStatus = status;
+        membership.autoRenew = false;
+        membership.nextChargeAt = null;
+        // Keep the Central expiry when it already passed; otherwise mark the
+        // access end at the moment we were told it was revoked.
+        membership.endDate = endDate;
+        if (!membership.expiresAt || membership.expiresAt > endDate) {
+          membership.expiresAt = endDate;
+        }
+        membership.renewalMethod = 'central_membership';
+        await this.memberships.save(membership);
+        planVariantId = planVariantId ?? membership.planVariantId;
+        expiresAt = expiresAt ?? membership.expiresAt;
+        changed = true;
+      }
     }
-
-    membership.isActive = false;
-    membership.renewalStatus = status;
-    membership.autoRenew = false;
-    membership.nextChargeAt = null;
-    // Keep the central expiry when it already passed; otherwise mark the
-    // access end at the moment we were told it was revoked.
-    membership.endDate =
-      parseDate(envelope.membership.expiresAt) ??
-      parseDate(envelope.pkg.expiresAt) ??
-      new Date();
-    if (!membership.expiresAt || membership.expiresAt > membership.endDate) {
-      membership.expiresAt = membership.endDate;
-    }
-    membership.renewalMethod = 'central_membership';
-
-    const saved = await this.memberships.save(membership);
 
     SubscriptionGuard.clearCache(envelope.userId);
     SubscriptionGuard.clearCache(user.id);
 
+    if (!changed) {
+      // Revoking something that was never granted locally is a no-op, not a
+      // failure: the user may have used another app included in the plan.
+      return null;
+    }
+
     this.logger.log(
-      `Revoked local membership for Central user ${envelope.userId} (${status})`,
+      `Revoked CHS entitlement for Central user ${envelope.userId} (${status})`,
     );
-    return saved;
+    return { planVariantId, expiresAt };
   }
 
   private resolveStatus(envelope: MembershipEnvelope): string {
