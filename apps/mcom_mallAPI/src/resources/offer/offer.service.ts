@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -29,6 +31,10 @@ import {
   stripModerationFields,
 } from '../../common/moderation/catalog-approval';
 import { UserRole } from '../../common/role.enum';
+import {
+  ActionType,
+  CapabilityService,
+} from '../capability/capability.service';
 @Injectable()
 export class OfferService {
   constructor(
@@ -46,15 +52,22 @@ export class OfferService {
     private readonly pointTransactionRepository: Repository<PointTransaction>,
     private readonly transactionService: TransactionService,
     private readonly activitiesService: ActivitiesService,
+    @Inject(forwardRef(() => CapabilityService))
+    private readonly capabilityService: CapabilityService,
   ) {}
 
   async create(user: User, createOfferDto: CreateOfferDto): Promise<Offer> {
-    const {
-      includedProductIds,
-      excludedProductIds,
-      freeProductId,
-      ...rest
-    } = createOfferDto;
+    if (user.role !== UserRole.ADMIN) {
+      const currentCount = await this.countForUser(user.id);
+      await this.capabilityService.checkPermission(
+        user.id,
+        ActionType.CREATE_LOYALTY_PROGRAM,
+        { currentCount },
+      );
+    }
+
+    const { includedProductIds, excludedProductIds, freeProductId, ...rest } =
+      createOfferDto;
 
     const includedProducts = includedProductIds
       ? await this.productRepository.findBy({ id: In(includedProductIds) })
@@ -153,7 +166,12 @@ export class OfferService {
   async findOne(userId: string, id: string): Promise<Offer> {
     const offer = await this.offerRepository.findOne({
       where: { id, user: { id: userId } },
-      relations: ['user', 'includedProducts', 'excludedProducts', 'freeProduct'],
+      relations: [
+        'user',
+        'includedProducts',
+        'excludedProducts',
+        'freeProduct',
+      ],
     });
     if (!offer) {
       throw new NotFoundException(`Offer with ID "${id}" not found`);
@@ -166,12 +184,8 @@ export class OfferService {
     updateOfferDto: UpdateOfferDto,
     user: User,
   ): Promise<Offer> {
-    const {
-      freeProductId,
-      includedProductIds,
-      excludedProductIds,
-      ...rest
-    } = updateOfferDto;
+    const { freeProductId, includedProductIds, excludedProductIds, ...rest } =
+      updateOfferDto;
 
     const offer = await this.offerRepository.findOne({
       where: { id, user: { id: user.id } },

@@ -50,7 +50,7 @@ export class CapabilityService {
   ) {}
 
   async getEffectiveConfig(userId: string): Promise<TierConfig | null> {
-    // 1. Try Membership (Paid/Assigned)
+    // 1. Try Membership (Paid/Assigned/Trial/CHS)
     const membership = await this.membershipService.findActiveWithTier(userId);
     if (membership && membership.isActive) {
       const isExpired =
@@ -73,19 +73,9 @@ export class CapabilityService {
       }
     }
 
-    // 2. Fallback to Default Plan
-    try {
-      const plans = await this.plansService.findAll();
-      if (plans && plans.length > 0) {
-        const defaultVariant = plans[0].variants?.[0];
-        if (defaultVariant?.configuration) {
-          return defaultVariant.configuration as TierConfig;
-        }
-      }
-    } catch (e) {
-      this.logger.warn(`Failed to resolve default plan configuration: ${e.message}`);
-    }
-
+    // No membership row, no CHS grant and no trial means no plan capability.
+    // Never fall back to an arbitrary plan: that would hand a free/unpaid user
+    // the quotas and feature flags of whichever plan happened to sort first.
     return null;
   }
 
@@ -123,7 +113,11 @@ export class CapabilityService {
             'Your current tier/trial does not allow product listings.',
           );
         }
-        await this.checkProductLimit(userId, config);
+        await this.checkProductLimit(
+          userId,
+          config,
+          context?.currentCount as number | undefined,
+        );
         break;
       case ActionType.CREATE_SERVICE:
         if (!config.quotas.allowServiceListing) {
@@ -131,7 +125,11 @@ export class CapabilityService {
             'Your current tier/trial does not allow service listings.',
           );
         }
-        await this.checkServiceLimit(userId, config);
+        await this.checkServiceLimit(
+          userId,
+          config,
+          context?.currentCount as number | undefined,
+        );
         break;
       case ActionType.CREATE_GIFT_CARD_TEMPLATE:
         const gcCount =
@@ -277,11 +275,93 @@ export class CapabilityService {
     };
   }
 
-  private async checkProductLimit(userId: string, config: TierConfig) {
+  /**
+   * Enforce `maxImagesPerListing` for a product or service. Only image URLs
+   * count; videos in the same media array do not consume an image slot.
+   */
+  async assertListingImageLimit(
+    userId: string,
+    media: string[] = [],
+  ): Promise<void> {
+    const config = await this.getEffectiveConfig(userId);
+    if (!config) {
+      throw new ForbiddenException(
+        'Active membership or trial is required to perform this action.',
+      );
+    }
+
+    const limit = config.quotas.maxImagesPerListing;
+    if (limit === -1) return;
+
+    const imageCount = (media ?? []).filter((url) =>
+      CapabilityService.isListingImage(url),
+    ).length;
+
+    if (imageCount > limit) {
+      throw new ForbiddenException(
+        `Your current plan allows up to ${limit} image${
+          limit === 1 ? '' : 's'
+        } per listing.`,
+      );
+    }
+  }
+
+  /**
+   * Enforce `featuredListingAllowance` across all of the owner's products and
+   * services. Existing featured rows can be excluded when re-saving them so an
+   * update does not consume a second slot for the same listing.
+   */
+  async assertFeaturedListingAllowed(
+    userId: string,
+    exclude?: { productId?: string; serviceId?: string },
+  ): Promise<void> {
+    const config = await this.getEffectiveConfig(userId);
+    if (!config) {
+      throw new ForbiddenException(
+        'Active membership or trial is required to perform this action.',
+      );
+    }
+
+    const limit = config.quotas.featuredListingAllowance;
+    if (limit === -1) return;
+    if (limit <= 0) {
+      throw new ForbiddenException(
+        'Your current plan does not include featured listings.',
+      );
+    }
+
+    const [featuredProducts, featuredServices] = await Promise.all([
+      this.productService.countFeaturedForUser(userId, exclude?.productId),
+      this.servicesService.countFeaturedForUser(userId, exclude?.serviceId),
+    ]);
+
+    if (featuredProducts + featuredServices >= limit) {
+      throw new ForbiddenException(
+        `Your current plan allows ${limit} featured listing${
+          limit === 1 ? '' : 's'
+        }. Unfeature another listing before featuring this one.`,
+      );
+    }
+  }
+
+  private static isListingImage(url: unknown): boolean {
+    return (
+      typeof url === 'string' &&
+      url.trim().length > 0 &&
+      !/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(url)
+    );
+  }
+
+  private async checkProductLimit(
+    userId: string,
+    config: TierConfig,
+    currentCountInput?: number,
+  ) {
     const limit = config.quotas.maxProducts;
     if (limit === -1) return;
 
-    const currentCount = await this.productService.countForUser(userId);
+    const currentCount =
+      currentCountInput ?? (await this.productService.countForUser(userId));
 
     if (currentCount >= limit) {
       throw new ForbiddenException(
@@ -290,11 +370,16 @@ export class CapabilityService {
     }
   }
 
-  private async checkServiceLimit(userId: string, config: TierConfig) {
+  private async checkServiceLimit(
+    userId: string,
+    config: TierConfig,
+    currentCountInput?: number,
+  ) {
     const limit = config.quotas.maxServices;
     if (limit === -1) return;
 
-    const currentCount = await this.servicesService.countForUser(userId);
+    const currentCount =
+      currentCountInput ?? (await this.servicesService.countForUser(userId));
 
     if (currentCount >= limit) {
       throw new ForbiddenException(

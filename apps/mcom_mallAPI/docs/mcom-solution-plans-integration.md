@@ -263,3 +263,31 @@ Error body:
 3. On each CRUD action, make an HTTP request to the mall API with the `x-mcom-solution-api-key` header
 4. Handle errors gracefully (conflicts, validation failures, etc.)
 5. After Stripe/PayPal price creation on your end, send back the price/plan IDs via the `stripe*PriceId` / `paypal*PlanId` fields
+
+---
+
+## Capability Enforcement
+
+Quotas and feature flags are resolved from the membership that is currently in
+force (direct Mall plan → CHS bundled grant → trial). A user with no active
+entitlement gets **no** plan configuration; there is deliberately no fallback
+to an arbitrary/default plan.
+
+| Capability | Enforced in |
+|:--|:--|
+| `allowProductListing` / `maxProducts` | `ProductService.create` via `CapabilityService.CREATE_PRODUCT` |
+| `allowServiceListing` / `maxServices` | `ServicesService.create` via `CapabilityService.CREATE_SERVICE` |
+| `maxGiftCardTemplates` | `GiftCardService.createTemplate` |
+| `maxCouponTemplates` | `CouponService.create` and `CouponProductService.create` |
+| `maxLoyaltyPrograms` | `OfferService.create` |
+| `maxImagesPerListing` | `ProductService` create/update and `ServicesService` create/update via `assertListingImageLimit` |
+| `featuredListingAllowance` | Product/service `isFeatured` on create/update via `assertFeaturedListingAllowed` |
+| `advancedAnalytics` | `StatsService.getSalesChart` and `StatsService.getReports` |
+| `allowCustomBranding` | `GiftCardService.createTheme` and `updateTheme` |
+| `priorityInSearch` | Not yet applied to search ranking (benefit, not an access limit) |
+| `dedicatedSupport` | Informational only |
+| `allowGroupCreation` | Obsolete — grouping was removed from the product |
+
+Limit conventions: `-1` means unlimited; `0` means the capability is not
+included. Exceeding a quota returns `403 Forbidden` with a message naming the
+plan limit.

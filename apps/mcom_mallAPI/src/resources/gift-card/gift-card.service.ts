@@ -165,13 +165,8 @@ export class GiftCardService {
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new BadRequestException('Gift card amount must be positive.');
     }
-    const {
-      recipientEmail,
-      recipientName,
-      message,
-      businessName,
-      issuanceId,
-    } = payload;
+    const { recipientEmail, recipientName, message, businessName, issuanceId } =
+      payload;
     const sourceApp = 'mcom-rewards';
 
     // ── Idempotency: replaying an issuance returns the original instrument ──
@@ -643,7 +638,7 @@ export class GiftCardService {
     const appliedSplits = localCharge.splits.length
       ? localCharge.splits
       : localCharge.intent === 'PURCHASE'
-        ? expectedSplits ?? []
+        ? (expectedSplits ?? [])
         : [];
     const sellerCashMinor = this.paymentProviderService.sellerCashMinor(
       appliedSplits,
@@ -1375,50 +1370,52 @@ export class GiftCardService {
 
     const entityManager = manager || this.dataSource.manager;
 
-    const result = await entityManager.transaction(async (transactionalManager) => {
-      const lockedCard = await transactionalManager.findOne(GiftCard, {
-        where: { id: giftCard.id },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!lockedCard || !lockedCard.isActive) {
-        throw new BadRequestException('This gift card is not active.');
-      }
-      const lockedBalance = this.toMoney(lockedCard.currentBalance);
-      if (amount > lockedBalance) {
-        throw new BadRequestException('Redemption amount exceeds balance.');
-      }
-
-      // Update Digital Value Master
-      try {
-        const dv = await this.digitalValueService.getByCode(redeemDto.code);
-        await this.digitalValueService.redeem(
-          dv.id,
-          {
-            amount,
-            merchantId: redeemingBusinessId,
-          },
-          transactionalManager,
-        );
-      } catch (e) {
-        if (e instanceof NotFoundException) {
-          // Ignore if DV missing (legacy)
-        } else {
-          throw e;
+    const result = await entityManager.transaction(
+      async (transactionalManager) => {
+        const lockedCard = await transactionalManager.findOne(GiftCard, {
+          where: { id: giftCard.id },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!lockedCard || !lockedCard.isActive) {
+          throw new BadRequestException('This gift card is not active.');
         }
-      }
+        const lockedBalance = this.toMoney(lockedCard.currentBalance);
+        if (amount > lockedBalance) {
+          throw new BadRequestException('Redemption amount exceeds balance.');
+        }
 
-      lockedCard.currentBalance = roundMoney(lockedBalance - amount);
+        // Update Digital Value Master
+        try {
+          const dv = await this.digitalValueService.getByCode(redeemDto.code);
+          await this.digitalValueService.redeem(
+            dv.id,
+            {
+              amount,
+              merchantId: redeemingBusinessId,
+            },
+            transactionalManager,
+          );
+        } catch (e) {
+          if (e instanceof NotFoundException) {
+            // Ignore if DV missing (legacy)
+          } else {
+            throw e;
+          }
+        }
 
-      const transaction = this.transactionRepository.create({
-        giftCardId: lockedCard.id,
-        orderId: order.id,
-        type: GiftCardTransactionType.REDEEM,
-        amount: -amount,
-      });
+        lockedCard.currentBalance = roundMoney(lockedBalance - amount);
 
-      await transactionalManager.save(lockedCard);
-      return transactionalManager.save(transaction);
-    });
+        const transaction = this.transactionRepository.create({
+          giftCardId: lockedCard.id,
+          orderId: order.id,
+          type: GiftCardTransactionType.REDEEM,
+          amount: -amount,
+        });
+
+        await transactionalManager.save(lockedCard);
+        return transactionalManager.save(transaction);
+      },
+    );
 
     if (!manager && giftCard.issuanceId) {
       this.eventEmitter?.emit(PARTNER_INSTRUMENT_CONSUMED_EVENT, {
@@ -2078,9 +2075,7 @@ export class GiftCardService {
     const newBalance = previousBalance + transactionAmount;
 
     if (newBalance < 0) {
-      throw new BadRequestException(
-        'Balance cannot be reduced below zero.',
-      );
+      throw new BadRequestException('Balance cannot be reduced below zero.');
     }
 
     giftCard.currentBalance = newBalance;
@@ -2494,6 +2489,12 @@ export class GiftCardService {
     dto: CreateGiftCardThemeDto,
     ownerId?: string,
   ): Promise<GiftCardTheme> {
+    if (ownerId) {
+      await this.capabilityService.checkPermission(
+        ownerId,
+        ActionType.USE_CUSTOM_BRANDING,
+      );
+    }
     const theme = this.themeRepository.create({
       ...dto,
       ownerId: ownerId ?? null,
@@ -2507,6 +2508,10 @@ export class GiftCardService {
     dto: Partial<CreateGiftCardThemeDto>,
     ownerId: string,
   ): Promise<GiftCardTheme> {
+    await this.capabilityService.checkPermission(
+      ownerId,
+      ActionType.USE_CUSTOM_BRANDING,
+    );
     const theme = await this.themeRepository.findOne({ where: { id } });
     if (!theme) {
       throw new NotFoundException(`Gift card theme with ID ${id} not found.`);

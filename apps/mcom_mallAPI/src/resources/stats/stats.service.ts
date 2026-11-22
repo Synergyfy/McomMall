@@ -20,6 +20,10 @@ import { OwnerStatsDto } from './dto/owner-stats.dto';
 import { CustomerStatsDto } from './dto/customer-stats.dto';
 import { SalesChartQueryDto } from './dto/sales-chart.dto';
 import { WalletService } from '../wallet/wallet.service';
+import {
+  ActionType,
+  CapabilityService,
+} from '../capability/capability.service';
 
 @Injectable()
 export class StatsService {
@@ -49,6 +53,8 @@ export class StatsService {
     private readonly bookingRepository: Repository<ServiceBooking>,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
+    @Inject(forwardRef(() => CapabilityService))
+    private readonly capabilityService: CapabilityService,
   ) {}
 
   async getUserStats(user: User): Promise<OwnerStatsDto | CustomerStatsDto> {
@@ -231,6 +237,13 @@ export class StatsService {
   }
 
   async getSalesChart(user: User, query: SalesChartQueryDto) {
+    if (user.role === UserRole.OWNER) {
+      await this.capabilityService.checkPermission(
+        user.id,
+        ActionType.ACCESS_ADVANCED_ANALYTICS,
+      );
+    }
+
     let startDate = query.startDate;
     let endDate = query.endDate;
 
@@ -361,6 +374,13 @@ export class StatsService {
   }
 
   async getReports(user: User, period: 'weekly' | 'monthly') {
+    if (user.role === UserRole.OWNER) {
+      await this.capabilityService.checkPermission(
+        user.id,
+        ActionType.ACCESS_ADVANCED_ANALYTICS,
+      );
+    }
+
     const days = period === 'weekly' ? 7 : 30;
 
     // Use user ID characters to generate deterministic random-like values for simulation

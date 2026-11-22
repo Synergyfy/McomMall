@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Offer } from './entities/offer.entity';
 import { Product } from '../product/entities/product.entity';
@@ -12,9 +12,11 @@ import { TransactionModule } from '../transaction/transaction.module';
 import { ActivitiesModule } from '../activities/activities.module';
 import { TimeBonusEnrollment } from './entities/time-bonus-enrollment.entity';
 import { PointTransaction } from '../transaction/entities/point-transaction.entity';
+import { CapabilityModule } from '../capability/capability.module';
 
 @Module({
   imports: [
+    forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       Offer,
       Product,

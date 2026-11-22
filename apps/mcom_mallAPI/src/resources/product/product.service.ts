@@ -62,6 +62,23 @@ export class ProductService {
     });
   }
 
+  async countFeaturedForUser(
+    userId: string,
+    excludeProductId?: string,
+  ): Promise<number> {
+    const query = this.productRepository
+      .createQueryBuilder('product')
+      .innerJoin('product.business', 'business')
+      .where('business.user = :userId', { userId })
+      .andWhere('product.isFeatured = :featured', { featured: true });
+
+    if (excludeProductId) {
+      query.andWhere('product.id != :excludeProductId', { excludeProductId });
+    }
+
+    return query.getCount();
+  }
+
   async create(createProductDto: CreateProductDto, business: Business) {
     const userId = business.user.id;
     const currentProductCount = await this.productRepository.count({
@@ -177,6 +194,15 @@ export class ProductService {
       throw new BadRequestException(
         'At least one product image is required to create a product.',
       );
+    }
+
+    await this.capabilityService.assertListingImageLimit(
+      userId,
+      restOfDto.media ?? [],
+    );
+
+    if (restOfDto.isFeatured) {
+      await this.capabilityService.assertFeaturedListingAllowed(userId);
     }
 
     const product = this.productRepository.create({
@@ -330,6 +356,19 @@ export class ProductService {
           ...(restOfDto.media || []),
         ]),
       );
+    }
+
+    if (restOfDto.images || restOfDto.videos || restOfDto.media) {
+      await this.capabilityService.assertListingImageLimit(
+        userId,
+        restOfDto.media ?? [],
+      );
+    }
+
+    if (restOfDto.isFeatured === true && !product.isFeatured) {
+      await this.capabilityService.assertFeaturedListingAllowed(userId, {
+        productId: product.id,
+      });
     }
 
     Object.assign(product, restOfDto);
