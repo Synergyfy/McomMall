@@ -15,7 +15,6 @@ import {
   accountMenuItems,
   pluginMenuItems,
   historyMenuItems,
-  marketingMenuItems,
   MenuItem,
 } from '@/lib/menu-items';
 
@@ -30,7 +29,6 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
   const pathname = usePathname();
   const logout = useLogout();
   const customerHiddenRoutes = new Set([
-    '/dashboard/activity-timer',
     '/dashboard/deals',
     '/dashboard/messages',
   ]);
@@ -184,7 +182,7 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
       {userRole !== 'customer' && renderSection('Business', listingMenuItems)}
       {userRole !== 'customer' && renderSection('Product', productMenuItems)}
       {userRole !== 'customer' && renderSection('Service', serviceMenuItems)}
-      {userRole !== 'customer' && renderSection('Marketing', [...pluginMenuItems, ...marketingMenuItems])}
+      {userRole !== 'customer' && renderSection('Marketing', pluginMenuItems)}
       {renderSection('My Purchases', historyMenuItems)}
       <nav className="mt-6">
         <div className="flex items-center justify-between px-2 mb-2 cursor-pointer group" onClick={() => toggleSection('Account')}>

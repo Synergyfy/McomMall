@@ -17,7 +17,6 @@ import { Menu, Plus, Minus, Building2, MapPin, Compass, Globe } from 'lucide-rea
 // Main Dashboard Menu Components
 import SideMenu from './component/SideMenu';
 import { MenuContent as SideMenuContent } from './component/MenuContent';
-import { ActivityTimerBadge } from './component/ActivityTimerBadge';
 import { MembershipBadge } from './component/MembershipBadge';
 import { BottomNav } from './component/BottomNav';
 
@@ -218,7 +217,7 @@ export default function DashboardLayout({
                   </Button>
                 </div>
 
-                {/* --- RIGHT SIDE: Membership, Activity Timer & User Nav (desktop only) --- */}
+                {/* --- RIGHT SIDE: Membership & User Nav (desktop only) --- */}
                 <div className="flex items-center gap-2 sm:gap-4">
                   <div className="hidden sm:flex items-center gap-2 sm:gap-4">
                     {userRole === 'owner' && <MembershipBadge />}
@@ -228,7 +227,6 @@ export default function DashboardLayout({
                     {trialStatus?.isActive && (
                       <TrialCountdownTimer trialStatus={trialStatus} />
                     )}
-                    {userRole === 'owner' && <ActivityTimerBadge />}
                     <ProximityHeaderBadge />
                   </div>
 

@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Timer, Play, Pause, ChevronRight, AlertCircle } from 'lucide-react';
+import { Timer, Play, Pause, AlertCircle } from 'lucide-react';
 import { useGetActivityTimerStatus, usePauseActivityTimer, useResumeActivityTimer } from '@/service/activity-timer/hook';
 import { ActivityTimerType, ActiveTimerResponse } from '@/service/activity-timer/types';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 
 export const HeaderTimer = () => {
     const { data: allTimers, isLoading } = useGetActivityTimerStatus();
@@ -115,17 +114,6 @@ export const HeaderTimer = () => {
                         <Pause className="w-3.5 h-3.5 fill-current" />
                     )}
                 </Button>
-
-                <Link href="/dashboard/activity-timer">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-full hover:bg-white/20 text-white p-0"
-                        title="View All Timers"
-                    >
-                        <ChevronRight className="w-4 h-4" />
-                    </Button>
-                </Link>
             </div>
         </div>
     );

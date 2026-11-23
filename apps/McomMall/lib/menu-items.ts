@@ -16,7 +16,6 @@ import {
   CreditCard,
   History,
   Users,
-  Timer,
   Gift,
   Coins,
   LifeBuoy,
@@ -38,12 +37,6 @@ export interface MenuItem {
 // Export the menu item arrays
 export const mainMenuItems: MenuItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'LocalMall', href: '/dashboard/localmall', icon: MapPin },
-  {
-    title: 'Activity Timer',
-    href: '/dashboard/activity-timer',
-    icon: Timer,
-  },
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
 
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
@@ -67,6 +60,19 @@ export const listingMenuItems: MenuItem[] = [
     title: 'My Storefront',
     href: '/dashboard/my-business',
     icon: Store,
+  },
+  { title: 'LocalMall', href: '/dashboard/localmall', icon: MapPin },
+  {
+    title: 'Partnerships',
+    href: '/dashboard/marketing/my-partners',
+    icon: Users,
+    subMenu: [
+      { title: 'My Partners', href: '/dashboard/marketing/my-partners' },
+      {
+        title: 'Partnership Requests',
+        href: '/dashboard/marketing/partnership-requests',
+      },
+    ],
   },
 ];
 
@@ -104,21 +110,6 @@ export const serviceMenuItems: MenuItem[] = [
       { title: 'Pending', href: '/dashboard/bookings?status=pending' },
       { title: 'Approved', href: '/dashboard/bookings?status=approved' },
       { title: 'Cancelled', href: '/dashboard/bookings?status=cancelled' },
-    ],
-  },
-];
-
-export const marketingMenuItems: MenuItem[] = [
-  {
-    title: 'Partnerships',
-    href: '/dashboard/marketing/my-partners',
-    icon: Users,
-    subMenu: [
-      { title: 'My Partners', href: '/dashboard/marketing/my-partners' },
-      {
-        title: 'Partnership Requests',
-        href: '/dashboard/marketing/partnership-requests',
-      },
     ],
   },
 ];

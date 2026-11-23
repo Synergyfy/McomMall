@@ -24,6 +24,7 @@ import { ServicesModule } from '../services/services.module';
 import { ListingsModule } from '../listings/listings.module';
 import { BookingModule } from '../booking/booking.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { CapabilityModule } from '../capability/capability.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { WalletModule } from '../wallet/wallet.module';
     ListingsModule,
     BookingModule,
     forwardRef(() => WalletModule),
+    CapabilityModule,
   ],
   controllers: [StatsController],
   providers: [StatsService],

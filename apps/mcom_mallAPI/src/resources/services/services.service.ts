@@ -88,6 +88,23 @@ export class ServicesService {
     });
   }
 
+  async countFeaturedForUser(
+    userId: string,
+    excludeServiceId?: string,
+  ): Promise<number> {
+    const query = this.serviceRepository
+      .createQueryBuilder('service')
+      .innerJoin('service.business', 'business')
+      .where('business.user = :userId', { userId })
+      .andWhere('service.isFeatured = :featured', { featured: true });
+
+    if (excludeServiceId) {
+      query.andWhere('service.id != :excludeServiceId', { excludeServiceId });
+    }
+
+    return query.getCount();
+  }
+
   async create(
     createServiceDto: CreateServiceDto,
     userId: string,
@@ -179,6 +196,17 @@ export class ServicesService {
       serviceData.media = Array.from(
         new Set([...(serviceData.images || []), ...(serviceData.media || [])]),
       );
+    }
+
+    if (serviceData.images || serviceData.media) {
+      await this.capabilityService.assertListingImageLimit(
+        userId,
+        serviceData.media ?? [],
+      );
+    }
+
+    if (serviceData.isFeatured) {
+      await this.capabilityService.assertFeaturedListingAllowed(userId);
     }
     if (serviceData.shortDesc && !serviceData.shortDescription) {
       serviceData.shortDescription = serviceData.shortDesc;
@@ -411,6 +439,20 @@ export class ServicesService {
         new Set([...(serviceData.images || []), ...(serviceData.media || [])]),
       );
     }
+
+    if (serviceData.images || serviceData.media) {
+      await this.capabilityService.assertListingImageLimit(
+        userId,
+        serviceData.media ?? [],
+      );
+    }
+
+    if (serviceData.isFeatured === true && !service.isFeatured) {
+      await this.capabilityService.assertFeaturedListingAllowed(userId, {
+        serviceId: service.id,
+      });
+    }
+
     if (serviceData.shortDesc && !serviceData.shortDescription) {
       serviceData.shortDescription = serviceData.shortDesc;
     }
