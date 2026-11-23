@@ -14,6 +14,7 @@ import {
     issueVoucher,
     initiateVoucherContribution,
     contributeToVoucher,
+    getBusinessVoucherCoupons,
 } from './index';
 import {
     TransferDto,
@@ -23,6 +24,7 @@ import {
     InitiateContributionDto,
     ContributeToVoucherDto,
     IssueVoucherDto,
+    GetBusinessVoucherCouponsParams,
 } from './types';
 
 export const useGetMyVouchers = (enabled = true) => {
@@ -64,6 +66,7 @@ export const useIssueVoucher = () => {
             queryClient.invalidateQueries({ queryKey: ['my-vouchers'] });
             queryClient.invalidateQueries({ queryKey: ['FETCH_MY_DEALS'] });
             queryClient.invalidateQueries({ queryKey: ['deals'] });
+            queryClient.invalidateQueries({ queryKey: ['business-voucher-coupons'] });
         },
     });
 };
@@ -109,6 +112,22 @@ export const useGetBusinessStats = (enabled = true) => {
     return useQuery({
         queryKey: ['business-stats'],
         queryFn: getBusinessStats,
+        enabled,
+    });
+};
+
+export const useGetBusinessVoucherCoupons = (
+    params: GetBusinessVoucherCouponsParams = {},
+    enabled = true,
+) => {
+    return useQuery({
+        queryKey: [
+            'business-voucher-coupons',
+            params.status ?? 'all',
+            params.page ?? 1,
+            params.limit ?? 100,
+        ],
+        queryFn: () => getBusinessVoucherCoupons(params),
         enabled,
     });
 };

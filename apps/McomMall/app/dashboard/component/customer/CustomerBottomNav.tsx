@@ -11,6 +11,7 @@ import {
   Building2,
   Wallet,
   User,
+  Ticket,
 } from 'lucide-react';
 
 type TabId = 'home' | 'discover' | 'rewards' | 'more';
@@ -43,6 +44,7 @@ export const CustomerBottomNav: React.FC = () => {
 
   const moreItems = [
     { href: '/dashboard/localmall', icon: Building2, label: 'Local Mall' },
+    { href: '/dashboard/deals', icon: Ticket, label: 'C-V / V-C' },
     { href: '/dashboard/wallet', icon: Wallet, label: 'Wallet' },
     { href: '/dashboard/my-profile', icon: User, label: 'Profile' },
   ];

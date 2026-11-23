@@ -8,7 +8,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { DataSource, EntityManager, ILike, LessThanOrEqual } from 'typeorm';
+import { DataSource, EntityManager, ILike, In, IsNull, LessThanOrEqual, MoreThan } from 'typeorm';
 import {
   BurnStrategy,
   FunctionalType,
@@ -2804,6 +2804,166 @@ export class MoneyEngineService {
       }
     }
     return this.getBusinessStats(shopId);
+  }
+
+  /**
+   * Dashboard for Voucher Coupons (`price_reducer` instruments) issued by the
+   * caller's businesses. Returns the page of issued coupons plus summary stats
+   * used by the business dashboard. Voucher Coupons live on the recipient's
+   * wallet, so the issuer is resolved through `issuerBusinessId` rather than
+   * the wallet owner.
+   */
+  async getBusinessVoucherCoupons(
+    userId: string,
+    options: {
+      page?: number;
+      limit?: number;
+      status?: 'all' | 'active' | 'redeemed' | 'expired';
+    } = {},
+  ): Promise<{
+    data: Array<{
+      id: string;
+      code: string;
+      templateName: string | null;
+      description: string | null;
+      faceValue: number;
+      status: 'active' | 'redeemed' | 'expired';
+      recipientEmail: string | null;
+      recipientName: string | null;
+      expiresAt: string | null;
+      createdAt: string | null;
+      discountRedeemed: number;
+      scopeType: string | null;
+      validShops: string[];
+    }>;
+    count: number;
+    stats: {
+      total: number;
+      active: number;
+      redeemed: number;
+      expired: number;
+      totalDiscountIssued: number;
+      totalDiscountRedeemed: number;
+    };
+  }> {
+    await this.expireStaleVouchers();
+
+    const page = Math.max(1, Math.floor(Number(options.page) || 1));
+    const limit = Math.min(
+      100,
+      Math.max(1, Math.floor(Number(options.limit) || 20)),
+    );
+    const status = options.status ?? 'all';
+
+    const owned = await this.ownedBusinessIds(this.dataSource.manager, userId);
+    const stats = {
+      total: 0,
+      active: 0,
+      redeemed: 0,
+      expired: 0,
+      totalDiscountIssued: 0,
+      totalDiscountRedeemed: 0,
+    };
+    if (owned.length === 0) {
+      return { data: [], count: 0, stats };
+    }
+
+    const now = new Date();
+    const baseWhere: Record<string, unknown> = {
+      issuerBusinessId: In(owned),
+      functionalType: FunctionalType.PRICE_REDUCER,
+    };
+
+    // `expired` also covers active rows whose expiry has passed.
+    let where: any = baseWhere;
+    if (status === 'active') {
+      where = [
+        { ...baseWhere, state: VoucherState.ACTIVE, expiresAt: IsNull() },
+        { ...baseWhere, state: VoucherState.ACTIVE, expiresAt: MoreThan(now) },
+      ];
+    } else if (status === 'redeemed') {
+      where = { ...baseWhere, state: VoucherState.DEPLETED };
+    } else if (status === 'expired') {
+      where = [
+        { ...baseWhere, state: VoucherState.EXPIRED },
+        { ...baseWhere, state: VoucherState.ACTIVE, expiresAt: LessThanOrEqual(now) },
+      ];
+    }
+
+    const [rows, count] = await this.dataSource.manager.findAndCount(
+      UserVoucher,
+      {
+        where,
+        relations: ['definition', 'definition.validShops', 'owner'],
+        order: { created_at: 'DESC' } as any,
+        skip: (page - 1) * limit,
+        take: limit,
+      },
+    );
+
+    // Stats intentionally ignore the status filter so the dashboard always
+    // shows the full issued picture.
+    const allIssued = await this.dataSource.manager.find(UserVoucher, {
+      where: baseWhere,
+      select: ['id', 'state', 'expiresAt', 'faceValue', 'salesAttributed'],
+    });
+
+    for (const issued of allIssued) {
+      const state = this.voucherCouponStatus(issued, now);
+      stats.total += 1;
+      stats[state] += 1;
+      stats.totalDiscountIssued = round2(
+        stats.totalDiscountIssued + Number(issued.faceValue ?? 0),
+      );
+      stats.totalDiscountRedeemed = round2(
+        stats.totalDiscountRedeemed + Number(issued.salesAttributed ?? 0),
+      );
+    }
+
+    return {
+      data: rows.map((row) => ({
+        id: row.id,
+        code: row.code,
+        templateName: row.definition?.name ?? null,
+        description: row.definition?.description ?? null,
+        faceValue: Number(row.faceValue ?? row.definition?.faceValue ?? 0),
+        status: this.voucherCouponStatus(row, now),
+        recipientEmail: row.owner?.email ?? null,
+        recipientName:
+          [row.owner?.firstName, row.owner?.lastName]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || null,
+        expiresAt: row.expiresAt
+          ? new Date(row.expiresAt).toISOString()
+          : null,
+        createdAt: row.created_at
+          ? new Date(row.created_at).toISOString()
+          : null,
+        discountRedeemed: round2(Number(row.salesAttributed ?? 0)),
+        scopeType: row.definition?.scopeType ?? null,
+        validShops: (row.definition?.validShops ?? [])
+          .map((shop) => shop.businessName)
+          .filter(Boolean),
+      })),
+      count,
+      stats,
+    };
+  }
+
+  private voucherCouponStatus(
+    voucher: Pick<UserVoucher, 'state' | 'expiresAt'>,
+    now: Date,
+  ): 'active' | 'redeemed' | 'expired' {
+    if (voucher.state === VoucherState.DEPLETED) return 'redeemed';
+    if (voucher.state === VoucherState.EXPIRED) return 'expired';
+    if (
+      voucher.expiresAt &&
+      new Date(voucher.expiresAt).getTime() <= now.getTime()
+    ) {
+      return 'expired';
+    }
+    return 'active';
   }
 
   async getBusinessStats(shopId: string): Promise<any> {

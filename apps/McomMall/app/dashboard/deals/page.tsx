@@ -7,17 +7,17 @@ import { toast } from 'sonner';
 import {
     Copy,
     Gift,
+    HelpCircle,
     Loader2,
-    PlusCircle,
     Search,
+    Settings2,
     Ticket,
-    Wallet,
 } from 'lucide-react';
 
 import { RootState } from '@/service/store/store';
 import { UserRole } from '@/service/auth/types';
 import { useGetDeals, useGetMyDeals } from '@/service/deals/hook';
-import { Deal, DealKind } from '@/service/deals/types';
+import { Deal } from '@/service/deals/types';
 import { useIssueVoucher } from '@/service/money-engine/hook';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,15 +34,13 @@ import {
 } from '@/components/ui/dialog';
 import { ContributeModal } from './components/ContributeModal';
 
+const MANAGED_KINDS = ['coupon_voucher', 'voucher_coupon'] as const;
+type ManagedDealKind = (typeof MANAGED_KINDS)[number];
+
 const KIND_META: Record<
-    DealKind,
+    ManagedDealKind,
     { label: string; className: string; icon: React.ElementType }
 > = {
-    standard_coupon: {
-        label: 'Standard Coupon',
-        className: 'bg-blue-50 text-blue-700 border-blue-200',
-        icon: Ticket,
-    },
     coupon_voucher: {
         label: 'Coupon Voucher',
         className: 'bg-orange-50 text-orange-700 border-orange-200',
@@ -53,30 +51,12 @@ const KIND_META: Record<
         className: 'bg-purple-50 text-purple-700 border-purple-200',
         icon: Ticket,
     },
-    voucher: {
-        label: 'Voucher',
-        className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        icon: Wallet,
-    },
-    gift_card: {
-        label: 'Gift Card',
-        className: 'bg-pink-50 text-pink-700 border-pink-200',
-        icon: Gift,
-    },
-    promotion: {
-        label: 'Promotion',
-        className: 'bg-slate-50 text-slate-700 border-slate-200',
-        icon: Gift,
-    },
 };
 
-const TABS: Array<{ value: 'all' | DealKind; label: string }> = [
+const TABS: Array<{ value: 'all' | ManagedDealKind; label: string }> = [
     { value: 'all', label: 'All' },
-    { value: 'standard_coupon', label: 'Standard Coupons' },
     { value: 'coupon_voucher', label: 'Coupon Vouchers' },
     { value: 'voucher_coupon', label: 'Voucher Coupons' },
-    { value: 'gift_card', label: 'Gift Cards' },
-    { value: 'promotion', label: 'Promotions' },
 ];
 
 function money(value: number | null | undefined): string {
@@ -87,10 +67,7 @@ function money(value: number | null | undefined): string {
 }
 
 function valueLabel(deal: Deal): string {
-    if (
-        (deal.kind === 'standard_coupon' || deal.kind === 'voucher_coupon') &&
-        deal.faceValue !== null
-    ) {
+    if (deal.kind === 'voucher_coupon' && deal.faceValue !== null) {
         return deal.discountType === 'percentage'
             ? `${deal.faceValue}% off`
             : `${money(deal.faceValue)} off`;
@@ -111,9 +88,10 @@ function DealCard({
     deal: Deal;
     onContribute: (deal: Deal) => void;
 }) {
-    const meta = KIND_META[deal.kind] ?? KIND_META.standard_coupon;
+    const meta =
+        KIND_META[deal.kind as ManagedDealKind] ?? KIND_META.coupon_voucher;
     const Icon = meta.icon;
-    const isUsable = Boolean(deal.code) && deal.kind !== 'promotion';
+    const isUsable = Boolean(deal.code);
 
     const copyCode = () => {
         if (!deal.code) return;
@@ -147,8 +125,7 @@ function DealCard({
 
                 <div className="rounded-xl bg-slate-50 px-4 py-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                        {deal.kind === 'standard_coupon' ||
-                        deal.kind === 'voucher_coupon'
+                        {deal.kind === 'voucher_coupon'
                             ? 'Discount'
                             : 'Spending power'}
                     </p>
@@ -231,10 +208,11 @@ function DealCard({
 export default function DealsPage() {
     const { userRole } = useSelector((state: RootState) => state.auth);
     const isBusiness = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
-    const [activeTab, setActiveTab] = useState<'all' | DealKind>('all');
+    const [activeTab, setActiveTab] = useState<'all' | ManagedDealKind>('all');
     const [search, setSearch] = useState('');
     const [contributeDeal, setContributeDeal] = useState<Deal | null>(null);
     const [issueOpen, setIssueOpen] = useState(false);
+    const [learnOpen, setLearnOpen] = useState(false);
     const [issueTemplateId, setIssueTemplateId] = useState('');
     const [issueEmail, setIssueEmail] = useState('');
     const [issueExpiry, setIssueExpiry] = useState('');
@@ -249,7 +227,13 @@ export default function DealsPage() {
     );
     const issueVoucher = useIssueVoucher();
 
-    const deals = data?.data ?? [];
+    const deals = useMemo(
+        () =>
+            (data?.data ?? []).filter((deal) =>
+                (MANAGED_KINDS as readonly string[]).includes(deal.kind),
+            ),
+        [data],
+    );
     const voucherCouponTemplates = (templateResponse?.data ?? []).filter(
         (template) => !template.code,
     );
@@ -293,14 +277,27 @@ export default function DealsPage() {
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
                         <Gift className="w-8 h-8 text-orange-600" />
-                        Deals
+                        Coupon Voucher / Voucher Coupon
                     </h1>
                     <p className="text-gray-500 mt-1">
-                        Coupons, vouchers and spending power in one place.
+                        <span className="font-semibold text-slate-700">
+                            C-V / V-C
+                        </span>{' '}
+                        — spendable value and single-use discounts in one place.
                     </p>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 rounded-xl"
+                        onClick={() => setLearnOpen(true)}
+                    >
+                        <HelpCircle className="w-4 h-4 mr-2" />
+                        Learn more
+                    </Button>
                 </div>
                 {isBusiness && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <Button
                             type="button"
                             variant="outline"
@@ -310,20 +307,206 @@ export default function DealsPage() {
                             <Ticket className="w-4 h-4 mr-2" />
                             Issue Voucher Coupon
                         </Button>
+                        <Button asChild variant="outline" className="rounded-xl">
+                            <Link href="/dashboard/voucher-coupons">
+                                <Ticket className="w-4 h-4 mr-2" />
+                                Voucher Coupons dashboard
+                            </Link>
+                        </Button>
                         <Button asChild className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl">
                             <Link href="/dashboard/deals/create">
-                                <PlusCircle className="w-4 h-4 mr-2" />
-                                Create offer
+                                <Settings2 className="w-4 h-4 mr-2" />
+                                Manage C-V / V-C
                             </Link>
                         </Button>
                     </div>
                 )}
             </header>
 
+            <Dialog open={learnOpen} onOpenChange={setLearnOpen}>
+                <DialogContent className="sm:max-w-5xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>
+                            How Coupon Vouchers and Voucher Coupons work
+                        </DialogTitle>
+                        <DialogDescription>
+                            Both are stored on the same wallet ledger, but they
+                            do opposite jobs. A Coupon Voucher creates
+                            money-like spending power inside MCOM Mall; a
+                            Voucher Coupon only takes an agreed amount off a
+                            bill. The visual name says how it looks — the
+                            functional type is what the system actually
+                            enforces.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <Card className="border border-orange-100 bg-white rounded-2xl shadow-sm">
+                        <CardContent className="p-6 space-y-4">
+                            <Badge className="bg-orange-50 text-orange-700 border-orange-200 border font-semibold">
+                                <Gift className="w-3.5 h-3.5 mr-1" />
+                                Coupon Voucher · Spending power
+                            </Badge>
+                            <div className="space-y-1">
+                                <h3 className="text-lg font-black text-slate-900">
+                                    Looks like a coupon. Behaves like a voucher
+                                    wallet.
+                                </h3>
+                                <p className="text-sm text-slate-500">
+                                    It puts value in. The customer ends up with
+                                    more spending power than the real money they
+                                    paid.
+                                </p>
+                            </div>
+                            <ul className="space-y-2 text-sm text-slate-600 list-disc pl-5">
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Creates a balance:
+                                    </span>{' '}
+                                    the face value is split into a real-money
+                                    part and a reward part. A £100 Coupon
+                                    Voucher might be £50 paid by the customer +
+                                    £50 added by the campaign.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Full value is displayed:
+                                    </span>{' '}
+                                    the customer sees the full £100 spendable
+                                    balance; the real/reward split stays
+                                    internal.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        It is a wallet, not a ticket:
+                                    </span>{' '}
+                                    the balance goes down as it is spent,
+                                    partial spending is allowed, and any
+                                    remainder stays available until it expires
+                                    or reaches zero.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        It can be funded over time:
+                                    </span>{' '}
+                                    the customer pays the real-money share, or
+                                    friends and family top it up until the
+                                    real-money target is reached.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Used as payment, not a discount:
+                                    </span>{' '}
+                                    at checkout or POS it is applied as a
+                                    payment instrument, only inside the closed
+                                    MCOM network — it cannot be withdrawn as
+                                    cash.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Templates are platform-defined:
+                                    </span>{' '}
+                                    businesses and campaigns issue it against an
+                                    admin-defined template so the split, scope
+                                    and cashback cap stay consistent.
+                                </li>
+                            </ul>
+                            <p className="text-xs font-semibold text-orange-700 bg-orange-50 rounded-xl px-3 py-2">
+                                Best for: cashback-style rewards, campaigns,
+                                gifting, and keeping spend circulating with
+                                nearby businesses.
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border border-purple-100 bg-white rounded-2xl shadow-sm">
+                        <CardContent className="p-6 space-y-4">
+                            <Badge className="bg-purple-50 text-purple-700 border-purple-200 border font-semibold">
+                                <Ticket className="w-3.5 h-3.5 mr-1" />
+                                Voucher Coupon · Discount
+                            </Badge>
+                            <div className="space-y-1">
+                                <h3 className="text-lg font-black text-slate-900">
+                                    Looks like a voucher. Behaves like a
+                                    coupon.
+                                </h3>
+                                <p className="text-sm text-slate-500">
+                                    It takes value off. It never adds a balance,
+                                    so it cannot be spent as money.
+                                </p>
+                            </div>
+                            <ul className="space-y-2 text-sm text-slate-600 list-disc pl-5">
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        A discount, not money:
+                                    </span>{' '}
+                                    it adds nothing to the wallet; it reduces
+                                    the amount due by its agreed face value.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Single use:
+                                    </span>{' '}
+                                    it is applied once, in the discount slot at
+                                    checkout or POS, before shipping — then it
+                                    is consumed.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Scoped:
+                                    </span>{' '}
+                                    it only works for the shops, products,
+                                    services or campaign it was issued for, and
+                                    only until its expiry date.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Locked down:
+                                    </span>{' '}
+                                    it is non-transferable, non-reloadable, and
+                                    cannot be used as a general payment
+                                    instrument.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Issued, not bought:
+                                    </span>{' '}
+                                    a business or admin sends it to a customer&apos;s
+                                    email; it is not purchased like a voucher.
+                                </li>
+                                <li>
+                                    <span className="font-semibold text-slate-800">
+                                        Margin-safe:
+                                    </span>{' '}
+                                    the business gives only the agreed
+                                    reduction, with no ongoing balance
+                                    liability.
+                                </li>
+                            </ul>
+                            <p className="text-xs font-semibold text-purple-700 bg-purple-50 rounded-xl px-3 py-2">
+                                Best for: targeted discounts, win-back offers,
+                                and campaign-specific promotions.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <p className="text-sm text-slate-500">
+                    <span className="font-semibold text-slate-700">
+                        Rule of thumb:
+                    </span>{' '}
+                    if it puts value into the wallet, it is a Coupon Voucher.
+                    If it takes value off the bill, it is a Voucher Coupon.
+                </p>
+                </DialogContent>
+            </Dialog>
+
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <Tabs
                     value={activeTab}
-                    onValueChange={(value) => setActiveTab(value as 'all' | DealKind)}
+                    onValueChange={(value) =>
+                        setActiveTab(value as 'all' | ManagedDealKind)
+                    }
                     className="w-full lg:w-auto"
                 >
                     <TabsList className="bg-white/60 backdrop-blur-md p-1 rounded-xl shadow-inner border border-white/20 flex flex-wrap h-auto">
@@ -344,7 +527,7 @@ export default function DealsPage() {
                     <Input
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Search deals"
+                        placeholder="Search C-V / V-C"
                         className="pl-9 rounded-xl bg-white"
                     />
                 </div>
@@ -353,18 +536,18 @@ export default function DealsPage() {
             {isLoading ? (
                 <div className="py-24 flex items-center justify-center text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                    Loading deals…
+                    Loading coupons and vouchers…
                 </div>
             ) : isError ? (
                 <Card className="border-dashed border-slate-200 bg-white/60">
                     <CardContent className="py-16 text-center space-y-3">
                         <Gift className="w-12 h-12 mx-auto text-slate-200" />
                         <h3 className="text-lg font-black text-slate-900">
-                            Deals hub is not available yet
+                            C-V / V-C hub is not available yet
                         </h3>
                         <p className="text-sm text-slate-500 max-w-md mx-auto">
                             {(error as Error)?.message ||
-                                'The deals hub is still rolling out. Your existing coupons and vouchers are available in the reward hub.'}
+                                'The Coupon Voucher / Voucher Coupon hub is still rolling out.'}
                         </p>
                         <Button asChild variant="outline" className="rounded-xl">
                             <Link href="/dashboard/coupons-vouchers">Open reward hub</Link>
@@ -376,11 +559,13 @@ export default function DealsPage() {
                     <CardContent className="py-20 text-center space-y-3">
                         <Search className="w-12 h-12 mx-auto text-slate-200" />
                         <h3 className="text-lg font-black text-slate-900">
-                            No deals found
+                            No coupon vouchers or voucher coupons found
                         </h3>
                         <p className="text-sm text-slate-500">
                             {deals.length === 0
-                                ? 'Save a coupon or buy a voucher and it will appear here.'
+                                ? isBusiness
+                                    ? 'You have no Coupon Vouchers or Voucher Coupons yet. Issue a Voucher Coupon to a customer, or manage the Coupon Vouchers your shops accept in the Reward Hub.'
+                                    : 'Buy or receive a Coupon Voucher, or ask a business to issue you a Voucher Coupon, and it will appear here.'
                                 : 'Try a different tab or search term.'}
                         </p>
                     </CardContent>

@@ -403,6 +403,33 @@ export class MoneyEngineController {
   async getBusinessStats(@CurrentUser() user: User) {
     return this.moneyEngineService.getBusinessStatsForUser(user.id);
   }
+
+  @Get('business/voucher-coupons')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'List Voucher Coupons issued by the caller’s business',
+    description:
+      'Issued single-use discount instruments with recipient, status, expiry and dashboard stats.',
+  })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['all', 'active', 'redeemed', 'expired'],
+  })
+  async getBusinessVoucherCoupons(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: 'all' | 'active' | 'redeemed' | 'expired',
+  ) {
+    return this.moneyEngineService.getBusinessVoucherCoupons(user.id, {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
+      status: status ?? 'all',
+    });
+  }
   // Revised Business Stats to be more robust
   @Get('business/:shopId/stats')
   @Roles(UserRole.OWNER)

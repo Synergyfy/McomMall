@@ -29,7 +29,6 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
   const pathname = usePathname();
   const logout = useLogout();
   const customerHiddenRoutes = new Set([
-    '/dashboard/deals',
     '/dashboard/messages',
   ]);
   const visibleMainMenuItems =

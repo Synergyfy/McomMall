@@ -46,6 +46,45 @@ export interface IssueVoucherDto {
     issuanceId?: string;
 }
 
+export type VoucherCouponStatus = 'active' | 'redeemed' | 'expired';
+
+export interface BusinessVoucherCoupon {
+    id: string;
+    code: string;
+    templateName: string | null;
+    description: string | null;
+    faceValue: number;
+    status: VoucherCouponStatus;
+    recipientEmail: string | null;
+    recipientName: string | null;
+    expiresAt: string | null;
+    createdAt: string | null;
+    discountRedeemed: number;
+    scopeType: string | null;
+    validShops: string[];
+}
+
+export interface BusinessVoucherCouponStats {
+    total: number;
+    active: number;
+    redeemed: number;
+    expired: number;
+    totalDiscountIssued: number;
+    totalDiscountRedeemed: number;
+}
+
+export interface BusinessVoucherCouponsResponse {
+    data: BusinessVoucherCoupon[];
+    count: number;
+    stats: BusinessVoucherCouponStats;
+}
+
+export interface GetBusinessVoucherCouponsParams {
+    page?: number;
+    limit?: number;
+    status?: 'all' | VoucherCouponStatus;
+}
+
 export interface TransferDto {
     fromVoucherId: string;
     toVoucherId: string;
