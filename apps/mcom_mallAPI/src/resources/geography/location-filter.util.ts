@@ -228,8 +228,12 @@ export function applyBusinessNearOrder<T extends ObjectLiteral>(
   if (!filter) return;
   const { cases, params } = nearCaseSql(businessAlias, filter, 'order');
   if (!cases.length) return;
+  // TypeORM parses ORDER BY expressions containing a dot as `alias.property`
+  // and fails on raw CASE expressions. Select the rank under an alias and sort
+  // by that alias so paginated queries (which build a DISTINCT subquery) work.
+  query.addSelect(`CASE ${cases.join(' ')} ELSE 3 END`, 'near_rank');
   query.setParameters(params);
-  query.addOrderBy(`CASE ${cases.join(' ')} ELSE 3 END`, 'ASC');
+  query.addOrderBy('near_rank', 'ASC');
 }
 
 /** Seller-owned equivalent of {@link applyBusinessNearOrder}. */
@@ -247,12 +251,15 @@ export function applySellerNearOrder<T extends ObjectLiteral>(
     ...params,
     sellerOrderStatus: BusinessStatus.PUBLISHED,
   });
-  query.addOrderBy(
+  // See applyBusinessNearOrder: raw ORDER BY expressions with dots are
+  // mistaken for `alias.property` paths by TypeORM's pagination subquery.
+  query.addSelect(
     `(SELECT MIN(CASE ${cases.join(' ')} ELSE 3 END)
       FROM "businesses" geo
       WHERE geo."userId" = "${sellerAlias}"."${sellerUserColumn}"
         AND geo."status" = :sellerOrderStatus
         AND geo."deleted_at" IS NULL)`,
-    'ASC',
+    'near_seller_rank',
   );
+  query.addOrderBy('near_seller_rank', 'ASC');
 }
