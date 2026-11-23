@@ -21,6 +21,7 @@ import { CreateItemPartnershipRequestDto } from './dto/create-item-partnership-r
 import { PartnershipStatus } from './partnership-status.enum';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
+import { BusinessStatus } from '../listings/listing.enum';
 
 @Injectable()
 export class PartnershipService {
@@ -430,27 +431,52 @@ export class PartnershipService {
     return this.userPartnershipRequestRepository.save(request);
   }
 
+  /**
+   * Resolves the listing a partner is publicly known by. Prefer a published
+   * business, then fall back to the first listing the owner has.
+   */
+  private preferredBusinessId(user?: User | null): string | null {
+    const businesses = user?.businesses || [];
+    if (businesses.length === 0) return null;
+
+    const published = businesses.find(
+      (business) => business.status === BusinessStatus.PUBLISHED,
+    );
+    return (published || businesses[0])?.id ?? null;
+  }
+
   async getReceivedUserRequests(user: User): Promise<UserPartnershipRequest[]> {
-    return this.userPartnershipRequestRepository.find({
+    const requests = await this.userPartnershipRequestRepository.find({
       where: { receiver: { id: user.id } },
-      relations: ['sender'],
+      relations: ['sender', 'sender.businesses'],
       order: { sentAt: 'DESC' },
     });
+
+    return requests.map((request) => ({
+      ...request,
+      senderBusinessId: this.preferredBusinessId(request.sender),
+    }));
   }
 
   async getSentUserRequests(user: User): Promise<UserPartnershipRequest[]> {
-    return this.userPartnershipRequestRepository.find({
+    const requests = await this.userPartnershipRequestRepository.find({
       where: { sender: { id: user.id } },
-      relations: ['receiver'],
+      relations: ['receiver', 'receiver.businesses'],
       order: { sentAt: 'DESC' },
     });
+
+    return requests.map((request) => ({
+      ...request,
+      receiverBusinessId: this.preferredBusinessId(request.receiver),
+    }));
   }
 
   async getReceivedItemRequests(user: User): Promise<ItemPartnershipRequest[]> {
-    return this.itemPartnershipRequestRepository.find({
+    const requests = await this.itemPartnershipRequestRepository.find({
       where: { receiver: { id: user.id } },
       relations: [
         'proposer',
+        'proposer.businesses',
         'baseProduct',
         'baseService',
         'plusProduct',
@@ -459,13 +485,19 @@ export class PartnershipService {
       ],
       order: { sentAt: 'DESC' },
     });
+
+    return requests.map((request) => ({
+      ...request,
+      proposerBusinessId: this.preferredBusinessId(request.proposer),
+    }));
   }
 
   async getSentItemRequests(user: User): Promise<ItemPartnershipRequest[]> {
-    return this.itemPartnershipRequestRepository.find({
+    const requests = await this.itemPartnershipRequestRepository.find({
       where: { proposer: { id: user.id } },
       relations: [
         'receiver',
+        'receiver.businesses',
         'baseProduct',
         'baseService',
         'plusProduct',
@@ -474,6 +506,11 @@ export class PartnershipService {
       ],
       order: { sentAt: 'DESC' },
     });
+
+    return requests.map((request) => ({
+      ...request,
+      receiverBusinessId: this.preferredBusinessId(request.receiver),
+    }));
   }
 
   async getMyPartners(user: User): Promise<any[]> {
@@ -504,6 +541,7 @@ export class PartnershipService {
         partnerName: `${partner.firstName} ${partner.lastName}`,
         partnerEmail: partner.email,
         partnerProfilePicture: partner.profilePictureUrl,
+        partnerBusinessId: this.preferredBusinessId(partner),
         postcodes: Array.from(new Set(postcodes)),
         acceptedAt: p.request?.acceptedAt,
       };

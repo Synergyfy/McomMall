@@ -162,6 +162,9 @@ const UserRequestCard = ({
     const statusUi = getStatusUi(request.status);
     const isSent = type === 'sent';
     const partner = isSent ? request.receiver : request.sender;
+    const partnerBusinessId = isSent
+        ? request.receiverBusinessId
+        : request.senderBusinessId;
 
     if (viewMode === 'list') {
         return (
@@ -183,6 +186,16 @@ const UserRequestCard = ({
                         <p className="text-[10px] text-slate-500 flex items-center gap-1 font-medium">
                             <Clock className="h-2.5 w-2.5" /> {isSent ? 'Sent' : 'Received'} {formatDate(request.sentAt)}
                         </p>
+                        {partnerBusinessId && (
+                            <a
+                                href={`/listings/${partnerBusinessId}?source=in-house`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+                            >
+                                <ExternalLink className="h-2.5 w-2.5" /> View public listing
+                            </a>
+                        )}
                     </div>
                 </div>
 
@@ -235,6 +248,16 @@ const UserRequestCard = ({
                     <div className="flex items-center justify-center gap-4 text-slate-400 text-xs font-medium">
                         <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(request.sentAt)}</span>
                     </div>
+                    {partnerBusinessId && (
+                        <a
+                            href={`/listings/${partnerBusinessId}?source=in-house`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex items-center justify-center gap-1 text-[10px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+                        >
+                            <ExternalLink className="h-3 w-3" /> View public listing
+                        </a>
+                    )}
                     {request.message && (
                         <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-600 font-medium italic relative">
                             <MessageSquare className="h-4 w-4 text-slate-300 absolute -top-2 left-4 bg-slate-50 px-0.5" />
@@ -276,6 +299,9 @@ const ItemRequestCard = ({
     const statusUi = getStatusUi(request.status);
     const isSent = type === 'sent';
     const partner = isSent ? request.receiver : request.proposer;
+    const partnerBusinessId = isSent
+        ? request.receiverBusinessId
+        : request.proposerBusinessId;
     
     const baseItem = request.baseProduct || request.baseService;
     const plusItem = request.plusProduct || request.plusService;
@@ -317,6 +343,16 @@ const ItemRequestCard = ({
                         <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
                             <Users size={10} /> {isSent ? 'To' : 'From'} {partner?.firstName} {partner?.lastName} • {formatDate(request.sentAt)}
                         </p>
+                        {partnerBusinessId && (
+                            <a
+                                href={`/listings/${partnerBusinessId}?source=in-house`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+                            >
+                                <ExternalLink className="h-2.5 w-2.5" /> View public listing
+                            </a>
+                        )}
                     </div>
                 </div>
 
@@ -399,6 +435,16 @@ const ItemRequestCard = ({
                             {isSent ? 'Proposal to' : 'Proposed by'} <span className="font-bold text-slate-700">{partner?.firstName} {partner?.lastName}</span>
                         </p>
                     </div>
+                    {partnerBusinessId && (
+                        <a
+                            href={`/listings/${partnerBusinessId}?source=in-house`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+                        >
+                            <ExternalLink className="h-3 w-3" /> View public listing
+                        </a>
+                    )}
                     {!request.partnershipId && (
                         <div className="mt-4 p-2 bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-2">
                             <Info className="h-3 w-3 text-amber-500" />
@@ -466,9 +512,21 @@ const PartnerCard = ({ partner, onDetails }: { partner: UserPartner, onDetails: 
                     ))}
                     {partner.postcodes.length === 0 && <span className="text-[10px] text-slate-400 font-medium italic">No postcodes listed</span>}
                 </div>
-                <Button className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold h-10 text-xs shadow-md transition-all" onClick={() => onDetails(partner)}>
-                    Collaborations
-                </Button>
+                <div className="flex gap-2">
+                    {partner.partnerBusinessId && (
+                        <a
+                            href={`/listings/${partner.partnerBusinessId}?source=in-house`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-bold h-10 text-xs transition-all"
+                        >
+                            <ExternalLink className="h-3.5 w-3.5" /> Listing
+                        </a>
+                    )}
+                    <Button className={cn("rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold h-10 text-xs shadow-md transition-all", partner.partnerBusinessId ? "flex-1" : "w-full")} onClick={() => onDetails(partner)}>
+                        Collaborations
+                    </Button>
+                </div>
             </CardContent>
         </Card>
     </motion.div>
@@ -915,7 +973,19 @@ function PartnerDetailsDialog({ partner, onClose, onNewLink }: { partner: UserPa
                                 </p>
                             </div>
                         </div>
-                        <Button variant="outline" size="sm" className="rounded-xl border-slate-200 font-bold hover:bg-slate-50" onClick={onClose}>Close</Button>
+                        <div className="flex items-center gap-2">
+                            {partner.partnerBusinessId && (
+                                <a
+                                    href={`/listings/${partner.partnerBusinessId}?source=in-house`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                >
+                                    <ExternalLink className="h-3.5 w-3.5" /> Listing
+                                </a>
+                            )}
+                            <Button variant="outline" size="sm" className="rounded-xl border-slate-200 font-bold hover:bg-slate-50" onClick={onClose}>Close</Button>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">

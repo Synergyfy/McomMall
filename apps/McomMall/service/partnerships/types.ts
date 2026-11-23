@@ -14,6 +14,8 @@ export interface UserPartnershipRequest {
   sentAt: string;
   acceptedAt?: string;
   rejectedAt?: string;
+  senderBusinessId?: string | null;
+  receiverBusinessId?: string | null;
 }
 
 export interface UserPartner {
@@ -22,6 +24,7 @@ export interface UserPartner {
   partnerName: string;
   partnerEmail: string;
   partnerProfilePicture?: string;
+  partnerBusinessId?: string | null;
   postcodes: string[];
   acceptedAt?: string;
 }
@@ -42,6 +45,8 @@ export interface ItemPartnershipRequest {
   sentAt: string;
   acceptedAt?: string;
   rejectedAt?: string;
+  proposerBusinessId?: string | null;
+  receiverBusinessId?: string | null;
 }
 
 export interface CreateUserPartnershipRequestDto {

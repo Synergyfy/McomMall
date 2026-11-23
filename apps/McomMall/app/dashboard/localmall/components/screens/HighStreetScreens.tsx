@@ -224,6 +224,7 @@ export const ClusterScreen: FC<ClusterScreenProps> = ({
             isClaimed={b.isClaimed}
             isVerified={b.isVerified}
             logoUrl={b.logoUrl}
+            listingHref={`/listings/${b.id}?source=in-house`}
             onViewProfile={(id) => onNavigate(`profile:${id}`)}
           />
         ))}

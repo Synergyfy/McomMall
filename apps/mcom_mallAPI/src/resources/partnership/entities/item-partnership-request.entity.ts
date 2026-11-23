@@ -52,4 +52,8 @@ export class ItemPartnershipRequest extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   rejectedAt?: Date;
+
+  /** Convenience fields populated by the service when listing requests. */
+  proposerBusinessId?: string | null;
+  receiverBusinessId?: string | null;
 }

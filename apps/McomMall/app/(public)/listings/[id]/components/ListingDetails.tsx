@@ -6,6 +6,7 @@ import { InHouseBusiness, GooglePlaceResult } from '@/service/listings/types';
 
 import HeroSection from './redesign/HeroSection';
 import RewardBanner from './RewardBanner';
+import PartnershipCTA from './PartnershipCTA';
 
 import AboutSection from './redesign/AboutSection';
 
@@ -316,6 +317,7 @@ export default function ClientListingDetail({
     <div className="min-h-screen bg-[#FDFDFD]">
       <HeroSection listing={inHouseListing} />
       <RewardBanner listingId={placeId} />
+      {!isGoogle && <PartnershipCTA listing={inHouseListing} />}
 
       {/* Sub-Navigation */}
       <div

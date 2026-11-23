@@ -7,15 +7,15 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  ExternalLink,
   Handshake,
-  Loader2,
   MapPin,
   Search,
   Store,
   Users,
 } from 'lucide-react';
-import api from '@/service/api';
 import { BusinessCard } from '../shared/BusinessCard';
+import { PartnershipRequestDialog } from '@/components/partnership/PartnershipRequestDialog';
 
 interface PartnerCandidate {
   businessId: string;
@@ -74,6 +74,7 @@ const initials = (value?: string | null) =>
     .join('');
 
 export const HomeScreen: FC<HomeScreenProps> = ({
+  onNavigate,
   mallData,
   businessName,
   boroughName,
@@ -83,6 +84,17 @@ export const HomeScreen: FC<HomeScreenProps> = ({
     () => mallData?.partnerCandidates || [],
     [mallData],
   );
+
+  // When partnership matching returns nothing (for example while a storefront
+  // has no resolved geo data yet) still surface the businesses in the mall so
+  // owners can open their public listings and request a partnership.
+  const mallBusinesses = useMemo(() => {
+    const own = (businessName || '').trim().toLowerCase();
+    return (mallData?.businesses || []).filter(
+      (business: any) =>
+        (business?.businessName || '').trim().toLowerCase() !== own,
+    );
+  }, [mallData, businessName]);
 
   const city = mallData?.city || '';
   const borough = mallData?.borough || boroughName || '';
@@ -96,8 +108,8 @@ export const HomeScreen: FC<HomeScreenProps> = ({
   const [statuses, setStatuses] = useState<
     Record<string, PartnerCandidate['partnershipStatus']>
   >({});
-  const [sendingId, setSendingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [partnershipTarget, setPartnershipTarget] =
+    useState<PartnerCandidate | null>(null);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -159,30 +171,6 @@ export const HomeScreen: FC<HomeScreenProps> = ({
 
   const statusOf = (candidate: PartnerCandidate) =>
     statuses[candidate.userId] ?? candidate.partnershipStatus ?? 'none';
-
-  const handlePartner = async (candidate: PartnerCandidate) => {
-    if (sendingId) return;
-    setSendingId(candidate.userId);
-    setError(null);
-
-    try {
-      await api.post('partnerships/user-request', {
-        targetUserId: candidate.userId,
-        message: `Hi ${candidate.ownerName}, we'd like to explore a partnership with ${candidate.businessName} through ${mallName}.`,
-      });
-      setStatuses((prev) => ({
-        ...prev,
-        [candidate.userId]: 'pending_sent',
-      }));
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          'Could not send the partnership request. Please try again.',
-      );
-    } finally {
-      setSendingId(null);
-    }
-  };
 
   const hierarchy = [
     { label: 'City', value: city, icon: Building2 },
@@ -311,16 +299,9 @@ export const HomeScreen: FC<HomeScreenProps> = ({
         )}
       </div>
 
-      {error && (
-        <p className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-600">
-          {error}
-        </p>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filtered.map((candidate) => {
           const status = statusOf(candidate);
-          const isSending = sendingId === candidate.userId;
 
           return (
             <div
@@ -393,19 +374,22 @@ export const HomeScreen: FC<HomeScreenProps> = ({
                 </span>
               )}
 
-              <div className="mt-auto">
+              <div className="mt-auto flex flex-col gap-2">
+                <a
+                  href={`/listings/${candidate.businessId}?source=in-house`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2.5 rounded-xl border border-gray-150 bg-white text-gray-700 hover:bg-gray-50 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> View public listing
+                </a>
+
                 {status === 'none' && (
                   <button
-                    onClick={() => handlePartner(candidate)}
-                    disabled={Boolean(sendingId)}
-                    className="w-full py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 disabled:opacity-60 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-150"
+                    onClick={() => setPartnershipTarget(candidate)}
+                    className="w-full py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-150"
                   >
-                    {isSending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Handshake className="w-4 h-4" />
-                    )}
-                    {isSending ? 'Sending request…' : 'Partner with them'}
+                    <Handshake className="w-4 h-4" /> Partner with them
                   </button>
                 )}
 
@@ -438,7 +422,42 @@ export const HomeScreen: FC<HomeScreenProps> = ({
         })}
       </div>
 
-      {filtered.length === 0 && (
+      {candidates.length === 0 && mallBusinesses.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="px-1">
+            <h2 className="text-base font-black text-gray-900 tracking-tight">
+              Businesses in {mallName}
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Open their public listing or view their profile to send a
+              partnership request with your reason.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {mallBusinesses.map((business: any) => (
+              <BusinessCard
+                key={business.id}
+                id={business.id}
+                name={business.businessName}
+                category={business.category || 'Store'}
+                description={
+                  business.shortDescription || 'No description provided.'
+                }
+                address={business.address || ''}
+                isClaimed={business.isClaimed}
+                isVerified={business.isVerified}
+                logoUrl={business.logoUrl}
+                viewLabel="View Profile"
+                listingHref={`/listings/${business.id}?source=in-house`}
+                onViewProfile={(id) => onNavigate(`profile:${id}`)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {filtered.length === 0 &&
+        (candidates.length > 0 || mallBusinesses.length === 0) && (
         <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-10 text-center">
           <Users className="w-8 h-8 text-gray-200 mx-auto mb-3" />
           <p className="text-sm font-bold text-gray-700">
@@ -453,6 +472,22 @@ export const HomeScreen: FC<HomeScreenProps> = ({
           </p>
         </div>
       )}
+
+      <PartnershipRequestDialog
+        open={Boolean(partnershipTarget)}
+        onOpenChange={(open) => {
+          if (!open) setPartnershipTarget(null);
+        }}
+        targetUserId={partnershipTarget?.userId || ''}
+        businessName={partnershipTarget?.businessName || 'this business'}
+        onSent={() => {
+          if (!partnershipTarget) return;
+          setStatuses((prev) => ({
+            ...prev,
+            [partnershipTarget.userId]: 'pending_sent',
+          }));
+        }}
+      />
     </div>
   );
 };
