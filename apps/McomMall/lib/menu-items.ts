@@ -20,6 +20,7 @@ import {
   Coins,
   LifeBuoy,
   MapPin,
+  Ticket,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -42,7 +43,7 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
   {
-    title: 'Deals',
+    title: 'C-V / V-C',
     href: '/dashboard/deals',
     icon: Gift,
   },
@@ -62,6 +63,11 @@ export const listingMenuItems: MenuItem[] = [
     icon: Store,
   },
   { title: 'LocalMall', href: '/dashboard/localmall', icon: MapPin },
+  {
+    title: 'Voucher Coupons',
+    href: '/dashboard/voucher-coupons',
+    icon: Ticket,
+  },
   {
     title: 'Partnerships',
     href: '/dashboard/marketing/my-partners',

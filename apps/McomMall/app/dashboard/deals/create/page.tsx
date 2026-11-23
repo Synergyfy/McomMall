@@ -1,29 +1,23 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Gift, Sparkles, Ticket } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { ArrowLeft, ArrowRight, Gift, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { RootState } from '@/service/store/store';
+import { UserRole } from '@/service/auth/types';
 
 const OFFER_TYPES = [
-    {
-        key: 'standard_coupon',
-        title: 'Standard Coupon',
-        description:
-            'A normal discount: £5 off, 10% off or a scoped promotion. It reduces the price at checkout.',
-        cta: 'Create coupon',
-        href: '/dashboard/coupons/new',
-        icon: Ticket,
-        accent: 'bg-blue-50 text-blue-700',
-    },
     {
         key: 'coupon_voucher',
         title: 'Coupon Voucher',
         description:
-            'Looks like a coupon, creates spending power. Customers pay a real-money share and receive a larger voucher balance.',
-        cta: 'View Coupon Vouchers',
+            'Looks like a coupon, creates spending power. Templates are defined by the platform; here you can view the active ones, issue cashback and redeem spending power.',
+        cta: 'Manage Coupon Vouchers',
         href: '/dashboard/coupons-vouchers',
         icon: Gift,
         accent: 'bg-orange-50 text-orange-700',
@@ -32,15 +26,28 @@ const OFFER_TYPES = [
         key: 'voucher_coupon',
         title: 'Voucher Coupon',
         description:
-            'Looks like a voucher, behaves like a coupon. A scoped, single-use discount entitlement on the wallet ledger.',
-        cta: 'Issue Voucher Coupon',
-        href: '/dashboard/deals?tab=voucher_coupon',
+            'Looks like a voucher, behaves like a coupon. A scoped, single-use discount entitlement that a business can issue to a customer.',
+        cta: 'Manage Voucher Coupon',
+        href: '/dashboard/voucher-coupons',
         icon: Sparkles,
         accent: 'bg-purple-50 text-purple-700',
     },
 ];
 
-export default function CreateDealPage() {
+export default function ManageDealPage() {
+    const router = useRouter();
+    const { userRole } = useSelector((state: RootState) => state.auth);
+    const isBusiness =
+        userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
+
+    useEffect(() => {
+        if (userRole && !isBusiness) {
+            router.replace('/dashboard');
+        }
+    }, [userRole, isBusiness, router]);
+
+    if (!isBusiness) return null;
+
     return (
         <div className="min-h-screen bg-transparent space-y-8 pb-10">
             <header className="space-y-2">
@@ -49,16 +56,18 @@ export default function CreateDealPage() {
                     className="inline-flex items-center text-sm font-semibold text-slate-500 hover:text-orange-600"
                 >
                     <ArrowLeft className="w-4 h-4 mr-1" />
-                    Back to Deals
+                    Back to C-V / V-C
                 </Link>
-                <h1 className="text-3xl font-bold text-gray-900">Create an offer</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Manage C-V / V-C</h1>
                 <p className="text-gray-500">
-                    Choose what the offer should do. The name is only presentation; the
-                    behaviour is what the system enforces.
+                    Coupon Voucher templates are created by the platform, not by
+                    a business. From here you can manage the Coupon Vouchers
+                    your shops accept, or issue a Voucher Coupon discount to a
+                    customer.
                 </p>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {OFFER_TYPES.map((offer) => {
                     const Icon = offer.icon;
                     return (

@@ -12,6 +12,8 @@ import {
     ContributeToVoucherDto,
     ContributionInitiateResponse,
     IssueVoucherDto,
+    BusinessVoucherCouponsResponse,
+    GetBusinessVoucherCouponsParams,
 } from './types';
 
 export const getMyVouchers = async (): Promise<UserVoucherResponseDto[]> => {
@@ -54,6 +56,16 @@ export const initiateVoucherPurchase = async (data: {
 
 export const getBusinessStats = async (): Promise<BusinessStatsResponseDto> => {
     const response = await api.get<BusinessStatsResponseDto>('/money-engine/business/stats');
+    return response.data;
+};
+
+export const getBusinessVoucherCoupons = async (
+    params: GetBusinessVoucherCouponsParams = {},
+): Promise<BusinessVoucherCouponsResponse> => {
+    const response = await api.get<BusinessVoucherCouponsResponse>(
+        '/money-engine/business/voucher-coupons',
+        { params },
+    );
     return response.data;
 };
 
