@@ -21,6 +21,7 @@ import {
 import { BusinessCard } from '../shared/BusinessCard';
 import { StatusBadge } from '../shared/StatusBadge';
 import api from '@/service/api';
+import { PartnershipRequestDialog } from '@/components/partnership/PartnershipRequestDialog';
 
 // ─── DISCOVER SCREEN ─────────────────────────────────────────────────────────
 interface DiscoverScreenProps {
@@ -74,6 +75,9 @@ export const DiscoverScreen: FC<DiscoverScreenProps> = ({
             isVerified={b.isVerified}
             logoUrl={b.logoUrl}
             viewLabel={isCustomer ? 'View Listing' : 'View Profile'}
+            listingHref={
+              isCustomer ? undefined : `/listings/${b.id}?source=in-house`
+            }
             onViewProfile={(id) =>
               isCustomer
                 ? router.push(`/listings/${id}?source=in-house`)
@@ -111,14 +115,16 @@ export const BusinessProfileScreen: FC<BusinessProfileScreenProps> = ({
   );
   const [business, setBusiness] = useState<any>(fromMall || null);
   const [loading, setLoading] = useState(!fromMall);
+  const [partnershipOpen, setPartnershipOpen] = useState(false);
 
   useEffect(() => {
-    if (fromMall) return;
+    // Always fetch the public listing so the full profile (and its owner id)
+    // is available even when the business was seeded from the mall feed.
     const fetchBusiness = async () => {
       try {
         const res = await api.get(`listings/${businessId}`);
         if (res.data) {
-          setBusiness(res.data);
+          setBusiness((prev: any) => ({ ...(prev || {}), ...res.data }));
         }
       } catch (err) {
         console.error('Error fetching business detail profile:', err);
@@ -129,6 +135,9 @@ export const BusinessProfileScreen: FC<BusinessProfileScreenProps> = ({
     fetchBusiness();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId]);
+
+  const ownerUserId = business?.user?.id || business?.userId;
+  const publicListingUrl = `/listings/${business?.id || businessId}?source=in-house`;
 
   if (loading) {
     return (
@@ -210,12 +219,37 @@ export const BusinessProfileScreen: FC<BusinessProfileScreenProps> = ({
 
       {/* B2B Collab Action — business owners only */}
       {!isCustomer && (
-        <button
-          onClick={() => onNavigate('partnerships')}
-          className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-150"
-        >
-          <UserPlus className="w-4 h-4" /> Propose Collaboration Request
-        </button>
+        <div className="flex flex-col gap-3">
+          <a
+            href={publicListingUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="w-full py-3.5 bg-white border border-orange-200 text-orange-600 hover:bg-orange-50 text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-150"
+          >
+            <ExternalLink className="w-4 h-4" /> View Public Listing
+          </a>
+          <button
+            onClick={() => {
+              if (ownerUserId) {
+                setPartnershipOpen(true);
+              } else {
+                onNavigate('request-partner');
+              }
+            }}
+            className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-150"
+          >
+            <UserPlus className="w-4 h-4" /> Propose Collaboration Request
+          </button>
+
+          {ownerUserId && (
+            <PartnershipRequestDialog
+              open={partnershipOpen}
+              onOpenChange={setPartnershipOpen}
+              targetUserId={ownerUserId}
+              businessName={business.businessName}
+            />
+          )}
+        </div>
       )}
     </div>
   );

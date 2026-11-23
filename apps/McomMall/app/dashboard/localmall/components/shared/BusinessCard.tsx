@@ -2,7 +2,7 @@
 
 import { FC } from 'react';
 import { StatusBadge } from './StatusBadge';
-import { MapPin, MessageSquare, Plus } from 'lucide-react';
+import { MapPin, MessageSquare, Plus, ExternalLink } from 'lucide-react';
 
 interface BusinessCardProps {
   id: string;
@@ -18,6 +18,8 @@ interface BusinessCardProps {
   actionLabel?: string;
   /** Copy for the primary navigation button. Customers open a listing page. */
   viewLabel?: string;
+  /** Public listing URL, rendered as a direct external-link shortcut. */
+  listingHref?: string;
 }
 
 export const BusinessCard: FC<BusinessCardProps> = ({
@@ -33,6 +35,7 @@ export const BusinessCard: FC<BusinessCardProps> = ({
   onActionClick,
   actionLabel = 'Collab',
   viewLabel = 'View Profile',
+  listingHref,
 }) => {
   return (
     <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm hover:shadow-[0_8px_24px_rgba(162,63,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 group flex flex-col justify-between">
@@ -55,7 +58,21 @@ export const BusinessCard: FC<BusinessCardProps> = ({
             </div>
           </div>
           {/* Status badge */}
-          <StatusBadge isVerified={isVerified} isClaimed={isClaimed} />
+          <div className="flex shrink-0 items-center gap-1.5">
+            {listingHref && (
+              <a
+                href={listingHref}
+                target="_blank"
+                rel="noreferrer"
+                title="View public listing"
+                aria-label={`View the public listing for ${name}`}
+                className="rounded-lg border border-gray-150 bg-white p-1.5 text-gray-400 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            <StatusBadge isVerified={isVerified} isClaimed={isClaimed} />
+          </div>
         </div>
 
         <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">

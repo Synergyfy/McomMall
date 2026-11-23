@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast, Toaster } from 'sonner';
 import { ItemPartnershipRequest, PartnershipStatus, UserPartnershipRequest } from '@/service/partnerships/types';
-import { CheckCircle, XCircle, Info, GitPullRequest, ArrowRight, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, Info, GitPullRequest, ArrowRight, MessageSquare, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -115,6 +115,16 @@ const PartnershipRequestCard = ({ request }: { request: ItemPartnershipRequest }
                     <div>
                         <CardTitle className="text-base font-bold text-slate-800">{proposer.name || proposer.firstName || 'User'}</CardTitle>
                         <CardDescription className="text-xs font-medium text-slate-500">Wants to partner with you</CardDescription>
+                        {request.proposerBusinessId && (
+                            <a
+                                href={`/listings/${request.proposerBusinessId}?source=in-house`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+                            >
+                                <ExternalLink className="h-2.5 w-2.5" /> View public listing
+                            </a>
+                        )}
                     </div>
                 </div>
                 <Badge className={cn('capitalize flex items-center gap-1.5 text-xs py-1 px-3 rounded-full font-semibold border', statusUi.textColor, statusUi.bgColor, statusUi.borderColor)}>
@@ -181,6 +191,16 @@ const OwnerRequestCard = ({ request }: { request: UserPartnershipRequest }) => {
         <div>
           <CardTitle className="text-base">{name}</CardTitle>
           <CardDescription>{sender?.email}</CardDescription>
+          {request.senderBusinessId && (
+            <a
+              href={`/listings/${request.senderBusinessId}?source=in-house`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+            >
+              <ExternalLink className="h-2.5 w-2.5" /> View public listing
+            </a>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-2 text-sm text-slate-600">

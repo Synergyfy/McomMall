@@ -42,7 +42,7 @@ export const LocalMallShell: FC<LocalMallShellProps> = ({
   const currentView = screenStack[screenStack.length - 1];
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-140px)] md:min-h-[calc(100vh-80px)] w-full max-w-5xl mx-auto bg-gray-50/50 rounded-3xl overflow-hidden shadow-sm border border-gray-100 relative">
+    <div className="flex flex-col min-h-[calc(100vh-140px)] md:min-h-[calc(100vh-80px)] w-full max-w-none bg-gray-50/50 rounded-3xl overflow-hidden shadow-sm border border-gray-100 relative">
       {/* Contextual Header */}
       <LocalMallHeader
         businessName={businessName}

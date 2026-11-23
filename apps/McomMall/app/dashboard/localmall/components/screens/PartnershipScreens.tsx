@@ -14,7 +14,8 @@ import {
   Map,
   Compass,
   ArrowRight,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 import api from '@/service/api';
 import { stripHtmlText } from '@/lib/utils';
@@ -124,6 +125,16 @@ export const PartnershipsScreen: FC<PartnershipsScreenProps> = ({
                       'Neighbor Store'}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-0.5">{req.message || 'Proposing joint campaign partnership.'}</p>
+                  {req.senderBusinessId && (
+                    <a
+                      href={`/listings/${req.senderBusinessId}?source=in-house`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" /> View public listing
+                    </a>
+                  )}
                 </div>
                 <div className="flex gap-1.5">
                   <button 
@@ -162,6 +173,16 @@ export const PartnershipsScreen: FC<PartnershipsScreenProps> = ({
                 <div>
                   <p className="text-xs font-bold text-gray-900">{partner.partnerName || 'Partner'}</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">{partner.postcodes?.[0] || 'High Street Merchant'}</p>
+                  {partner.partnerBusinessId && (
+                    <a
+                      href={`/listings/${partner.partnerBusinessId}?source=in-house`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" /> View public listing
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
