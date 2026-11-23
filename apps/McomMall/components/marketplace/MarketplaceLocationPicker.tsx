@@ -141,6 +141,8 @@ export default function MarketplaceLocationPicker({
   const currentNodes =
     path.length === 0 ? facets?.cities || [] : path[path.length - 1].children || [];
   const currentLevel = DEPTH_LEVEL[path.length] || 'city';
+  const nextLevel = DEPTH_LEVEL[path.length + 1];
+  const nextLevelLabel = nextLevel ? LEVEL_LABEL[nextLevel].toLowerCase() : null;
   const parent = path[path.length - 1] || null;
 
   const triggerLabel =
@@ -415,11 +417,16 @@ export default function MarketplaceLocationPicker({
                           {node.children?.length ? (
                             <button
                               type="button"
-                              aria-label={`Explore ${node.name}`}
+                              aria-label={
+                                nextLevelLabel
+                                  ? `See ${nextLevelLabel} in ${node.name}`
+                                  : `Explore ${node.name}`
+                              }
                               onClick={() => handleDrill(node)}
-                              className="mr-2 rounded-md p-1.5 text-gray-400 hover:bg-white hover:text-orange-500"
+                              className="mr-2 flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-semibold text-orange-600 transition-colors hover:bg-orange-50 hover:text-orange-700"
                             >
-                              <ChevronRight className="h-4 w-4" />
+                              <span>See {nextLevelLabel ?? 'more'}</span>
+                              <ChevronRight className="h-3.5 w-3.5" />
                             </button>
                           ) : (
                             <button
