@@ -297,9 +297,20 @@ export default function ServicesPage() {
                     <p className="text-slate-500">Manage professional services and bookings</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href="/admin/promotional-offers">
+                            Promotional Offers
+                        </Link>
+                    </Button>
                     <Button variant="outline">
                         <Download className="h-4 w-4 mr-2" />
                         Export
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <Link href="/admin/promotional-offers/new/service">
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Promotional Service
+                        </Link>
                     </Button>
                     <Button className="bg-orange-500 hover:bg-orange-600" asChild>
                         <Link href="/admin/services/add">
@@ -311,6 +322,18 @@ export default function ServicesPage() {
             </div>
 
             {/* Quick Stats Cards */}
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                <span className="font-semibold">Merchant catalogue.</span>{' '}
+                This page lists services owned by businesses. External
+                promotional services created by MCOM are managed separately in{' '}
+                <Link
+                    href="/admin/promotional-offers"
+                    className="font-semibold underline"
+                >
+                    Promotional Offers
+                </Link>
+                .
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card className="border-0 shadow-sm bg-gradient-to-br from-indigo-50 to-indigo-100/50">
                     <CardContent className="p-4">

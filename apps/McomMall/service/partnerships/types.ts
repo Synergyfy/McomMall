@@ -74,6 +74,17 @@ export interface PartnershipAnalytics {
   pendingItemRequests: number;
 }
 
+export interface PartnerOffer {
+  type: 'product' | 'service';
+  id: string;
+  title: string;
+  image?: string | null;
+  price?: number | null;
+  businessId: string;
+  businessName: string;
+  url: string;
+}
+
 // Deprecated (keeping for compatibility during transition)
 export type PartnershipRequestStatus = PartnershipStatus;
 export interface PartnershipRequest {

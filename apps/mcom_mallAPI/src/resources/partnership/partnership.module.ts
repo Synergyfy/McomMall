@@ -13,8 +13,8 @@ import { ProductModule } from '../product/product.module';
 import { ServicesModule } from '../services/services.module';
 import { UsersModule } from '../users/users.module';
 import { User } from '../users/entities/user.entity';
+import { Business } from '../listings/entities/listing.entity';
 import { EmailModule } from '../email/email.module';
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -26,6 +26,7 @@ import { EmailModule } from '../email/email.module';
       Product,
       Service,
       User,
+      Business,
     ]),
     forwardRef(() => ProductModule),
     forwardRef(() => ServicesModule),

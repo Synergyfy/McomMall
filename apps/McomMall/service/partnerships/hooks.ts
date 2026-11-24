@@ -7,7 +7,8 @@ import {
   UserPartnershipRequest,
   UserPartner,
   ItemPartnershipRequest,
-  PartnershipAnalytics
+  PartnershipAnalytics,
+  PartnerOffer,
 } from './types';
 
 // --- User Partnerships ---
@@ -136,6 +137,16 @@ export const useSearchPartnerItems = (query: string) => {
     queryKey: ['search-partner-items', query],
     queryFn: async () => (await api.get(`/partnerships/search-items?q=${query}`)).data,
     enabled: query.length >= 2,
+  });
+};
+
+export const useGetBusinessPartnerOffers = (businessId?: string) => {
+  return useQuery<{ businessId: string; data: PartnerOffer[] }, Error>({
+    queryKey: ['business-partner-offers', businessId],
+    queryFn: async () =>
+      (await api.get(`/partnerships/business/${businessId}/partner-offers`))
+        .data,
+    enabled: !!businessId,
   });
 };
 

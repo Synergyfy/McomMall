@@ -20,6 +20,12 @@ import OffersSection from './redesign/OffersSection';
 
 import ContactSection from './redesign/ContactSection';
 
+import PromotionalOffersSection from '@/components/promotional/PromotionalOffersSection';
+
+import PublicCampaignsSection from '@/components/promotional/PublicCampaignsSection';
+
+import PartnerPromotionsSection from '@/components/promotional/PartnerPromotionsSection';
+
 import Footer from '@/components/Footer';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,7 +47,9 @@ import {
 
   PhoneCall,
 
-  ChevronDown
+  ChevronDown,
+
+  BadgePercent
 
 } from 'lucide-react';
 
@@ -66,6 +74,8 @@ const NAV_ITEMS = [
   { id: 'products', label: 'Products', icon: Package },
 
   { id: 'services', label: 'Services', icon: Wrench },
+
+  { id: 'promotions', label: 'Promotions', icon: BadgePercent },
 
   { id: 'offers', label: 'Offers', icon: Tag },
 
@@ -336,6 +346,7 @@ export default function ClientListingDetail({
               // Skip sections that don't have content based on listingType
               if (item.id === 'products' && !hasProducts) return null;
               if (item.id === 'services' && !hasServices) return null;
+              if (item.id === 'promotions' && isGoogle) return null;
               if (item.id === 'media' && (!inHouseListing.media || inHouseListing.media.length === 0)) return null;
 
               return (
@@ -397,6 +408,33 @@ export default function ClientListingDetail({
             {activeSection === 'services' && (
               <section id="services">
                 <ServicesSection businessId={inHouseListing.id} />
+              </section>
+            )}
+
+            {/* Promotions Section */}
+            {activeSection === 'promotions' && (
+              <section id="promotions" className="space-y-14">
+                <div>
+                  <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
+                    <BadgePercent className="text-sky-600" /> Promotions &amp; Partner Offers
+                  </h2>
+                  <p className="text-gray-500 font-medium">
+                    Approved promotional products, services and external
+                    advertiser offers selected by this business.
+                  </p>
+                </div>
+                <PromotionalOffersSection
+                  businessId={inHouseListing.id}
+                  offeringType="product"
+                  title="Promotional Products"
+                />
+                <PromotionalOffersSection
+                  businessId={inHouseListing.id}
+                  offeringType="service"
+                  title="Promotional Services"
+                />
+                <PublicCampaignsSection businessId={inHouseListing.id} />
+                <PartnerPromotionsSection businessId={inHouseListing.id} />
               </section>
             )}
 

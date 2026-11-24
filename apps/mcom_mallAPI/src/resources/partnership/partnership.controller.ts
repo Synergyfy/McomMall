@@ -30,6 +30,15 @@ import { Public } from 'src/common/decorators/public.decorator';
 export class PartnershipController {
   constructor(private readonly partnershipService: PartnershipService) {}
 
+  @Public()
+  @Get('business/:businessId/partner-offers')
+  @ApiOperation({
+    summary: 'Get partner-owned offerings promoted by a business',
+  })
+  getBusinessPartnerOffers(@Param('businessId') businessId: string) {
+    return this.partnershipService.getBusinessPartnerOffers(businessId);
+  }
+
   @Get('search-items')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()

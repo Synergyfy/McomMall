@@ -24,6 +24,9 @@ import {
     HeadphonesIcon,
     Handshake,
     Heart,
+    BadgePercent,
+    Megaphone,
+    MousePointerClick,
 } from 'lucide-react';
 
 export type NavGroupId =
@@ -58,6 +61,9 @@ export const navItems: NavItem[] = [
     { title: 'Catalog Approvals', href: '/admin/moderation', icon: ShieldCheck, description: 'Approve gift cards, vouchers and coupons before they go live', group: 'commerce' },
     { title: 'Products', href: '/admin/products', icon: Package, description: 'Manage marketplace products', group: 'commerce' },
     { title: 'Services', href: '/admin/services', icon: Briefcase, description: 'Manage service listings', group: 'commerce' },
+    { title: 'Promotional Offers', href: '/admin/promotional-offers', icon: BadgePercent, description: 'Admin-managed external products and services', group: 'commerce' },
+    { title: 'Promotional Campaigns', href: '/admin/promotional-campaigns', icon: Megaphone, description: 'Campaigns available to selected businesses', group: 'commerce' },
+    { title: 'Affiliate Reporting', href: '/admin/affiliate', icon: MousePointerClick, description: 'Clicks, transactions and commission attribution', group: 'commerce' },
     { title: 'Marketplace', href: '/admin/marketplace', icon: Store, description: 'Main marketplace settings', group: 'commerce' },
     { title: 'Coupons & Vouchers', href: '/admin/coupons-vouchers', icon: Ticket, description: 'Manage digital coupons and vouchers', group: 'commerce' },
     { title: 'Vouchers', href: '/admin/moderation?resource=voucher-products', icon: Ticket, description: 'Review and manage business vouchers', group: 'commerce' },

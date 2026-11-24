@@ -69,7 +69,8 @@ import {
     Archive,
     Trash2,
     Loader2,
-    ShieldCheck
+    ShieldCheck,
+    BadgePercent
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isAdminCreatedProduct } from '@/lib/platform-business';
@@ -486,7 +487,7 @@ export default function ProductsPage() {
                     <h1 className="text-2xl font-bold text-slate-900">Products</h1>
                     <p className="text-slate-500">Manage all catalog products across the platform</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <Button
                         variant="outline"
                         onClick={() => setBulkConfirmOpen(true)}
@@ -496,6 +497,12 @@ export default function ProductsPage() {
                         {bulkPhase === 'approving' && bulkProgress
                             ? `Approving ${bulkProgress.done}/${bulkProgress.total}`
                             : `Approve all products (${pendingInScopeCount})`}
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <Link href="/admin/promotional-offers">
+                            <BadgePercent className="h-4 w-4 mr-2" />
+                            Promotional Offers
+                        </Link>
                     </Button>
                     <Button variant="outline">
                         <Download className="h-4 w-4 mr-2" />
@@ -514,6 +521,18 @@ export default function ProductsPage() {
             </div>
 
             {/* Quick Stats Cards */}
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                <span className="font-semibold">Merchant catalogue.</span>{' '}
+                This page lists products owned by businesses. External
+                promotional products created by MCOM are managed separately in{' '}
+                <Link
+                    href="/admin/promotional-offers"
+                    className="font-semibold underline"
+                >
+                    Promotional Offers
+                </Link>
+                .
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100/50">
                     <CardContent className="p-4">
