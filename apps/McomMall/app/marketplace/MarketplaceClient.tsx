@@ -18,6 +18,7 @@ import {
   LayoutDashboard,
   ArrowRight,
   Store,
+  BadgePercent,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MarketplaceSidebar, {
@@ -63,6 +64,8 @@ import {
 } from '@/service/marketplace/types';
 import { PromotionalItem } from '@/lib/listing-data';
 import { Product } from '@/service/listings/types';
+import ExternalOfferCard from '@/components/promotional/ExternalOfferCard';
+import { useGetPublicPromotionalOffers } from '@/service/promotional-offers/hook';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -73,7 +76,8 @@ type ListingType =
   | 'businesses'
   | 'vouchers'
   | 'gift-cards'
-  | 'coupons';
+  | 'coupons'
+  | 'promotional';
 
 type MarketItem = {
   id?: string | number;
@@ -383,6 +387,27 @@ export default function MarketplaceClient({
       enabled: listingType === 'businesses',
     });
 
+  const {
+    data: promotionalOffersData,
+    isLoading: promotionalOffersLoading,
+  } = useGetPublicPromotionalOffers(
+    {
+      page: currentPage,
+      limit: ITEMS_PER_PAGE,
+      search: searchQuery.trim() || undefined,
+    },
+    { enabled: listingType === 'promotional' },
+  );
+
+  const { data: promotionalHighlights } = useGetPublicPromotionalOffers(
+    {
+      page: 1,
+      limit: 5,
+      search: searchQuery.trim() || undefined,
+    },
+    { enabled: listingType === 'all' },
+  );
+
   // Businesses matching the current query on the combined "All" search view.
   const { data: searchBusinessesData, isLoading: searchBusinessesLoading } =
     useGetPublicBusinesses(
@@ -441,6 +466,8 @@ export default function MarketplaceClient({
         return giftCardsLoading;
       case 'coupons':
         return couponsLoading;
+      case 'promotional':
+        return promotionalOffersLoading;
       case 'all':
         return isPublicDataLoading;
       default:
@@ -454,6 +481,7 @@ export default function MarketplaceClient({
     vouchersLoading,
     giftCardsLoading,
     couponsLoading,
+    promotionalOffersLoading,
     isPublicDataLoading,
   ]);
 
@@ -529,10 +557,28 @@ export default function MarketplaceClient({
     );
   }, [currentData, listingType]);
 
-  const pageMeta: PageMetaDto | undefined = currentData?.meta;
+  const pageMeta: PageMetaDto | undefined =
+    listingType === 'promotional'
+      ? promotionalOffersData
+        ? {
+            totalItems: promotionalOffersData.total,
+            itemCount: promotionalOffersData.data.length,
+            itemsPerPage: promotionalOffersData.limit,
+            totalPages: promotionalOffersData.totalPages,
+            currentPage: promotionalOffersData.page,
+            hasNextPage:
+              promotionalOffersData.page < promotionalOffersData.totalPages,
+            hasPreviousPage: promotionalOffersData.page > 1,
+          }
+        : undefined
+      : currentData?.meta;
   const businessItems: PublicBusiness[] = businessesData?.data || [];
   const resultsCount =
-    listingType === 'businesses' ? businessItems.length : displayItems.length;
+    listingType === 'businesses'
+      ? businessItems.length
+      : listingType === 'promotional'
+        ? promotionalOffersData?.total ?? 0
+        : displayItems.length;
 
   // Sections Config Helper
   const getSection = (
@@ -872,6 +918,61 @@ export default function MarketplaceClient({
     );
   };
 
+  // Promotional/affiliate offers are visually distinct from merchant stock.
+  const PromotionalRow = ({
+    title,
+    offers,
+    onSeeAll,
+    subtitle,
+  }: {
+    title: string;
+    offers: any[];
+    onSeeAll?: () => void;
+    subtitle?: string;
+  }) => {
+    if (!offers || offers.length === 0) return null;
+
+    return (
+      <div className="mb-6 overflow-hidden rounded-xl border border-sky-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-sky-100 bg-sky-50/60 p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-6 w-1 rounded-full bg-sky-600" />
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 md:text-xl">
+                {title}
+              </h2>
+              {subtitle ? (
+                <p className="text-xs font-medium text-sky-700">{subtitle}</p>
+              ) : null}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onSeeAll}
+            className="group flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-700"
+          >
+            SEE ALL{' '}
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </button>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4">
+            {offers
+              .slice(0, 5)
+              .map((offer) => (
+                <ExternalOfferCard
+                  key={offer.id}
+                  offer={offer}
+                  source="marketplace"
+                  compact
+                />
+              ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="relative min-h-screen w-full bg-[#f1f1f2] text-gray-900 selection:bg-orange-500 selection:text-white font-sans pt-20 pb-12">
       <div className="container relative z-10 mx-auto px-4">
@@ -1008,6 +1109,7 @@ export default function MarketplaceClient({
               { key: 'vouchers', label: 'Vouchers', icon: Ticket },
               { key: 'gift-cards', label: 'Gift Cards', icon: Gift },
               { key: 'coupons', label: 'Coupons', icon: Tag },
+              { key: 'promotional', label: 'MCOM Offers', icon: BadgePercent },
             ].map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -1190,6 +1292,15 @@ export default function MarketplaceClient({
                       </Link>
                     )}
                   </div>
+
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setListingType('promotional')}
+                      className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'promotional' ? 'bg-sky-50 text-sky-700 font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}
+                    >
+                      <BadgePercent className="w-4 h-4" /> MCOM Offers
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1237,6 +1348,9 @@ export default function MarketplaceClient({
                           <SelectItem value="vouchers">Vouchers</SelectItem>
                           <SelectItem value="gift-cards">Gift Cards</SelectItem>
                           <SelectItem value="coupons">Coupons</SelectItem>
+                          <SelectItem value="promotional">
+                            MCOM Offers
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1315,10 +1429,21 @@ export default function MarketplaceClient({
                     }}
                   />
 
+                  <PromotionalRow
+                    title={`MCOM offers matching “${searchQuery}”`}
+                    subtitle="Claimed and promoted by local businesses"
+                    offers={promotionalHighlights?.data || []}
+                    onSeeAll={() => {
+                      setListingType('promotional');
+                      setCurrentPage(1);
+                    }}
+                  />
+
                   {!searchBusinessesLoading &&
                     !newProductsLoading &&
                     featuredBusinesses.length === 0 &&
-                    (newProductsData?.data?.length ?? 0) === 0 && (
+                    (newProductsData?.data?.length ?? 0) === 0 &&
+                    (promotionalHighlights?.data?.length ?? 0) === 0 && (
                       <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                         <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Search className="h-8 w-8 text-gray-400" />
@@ -1387,6 +1512,15 @@ export default function MarketplaceClient({
                     type="services"
                     items={publicData?.services || []}
                   />
+                  <PromotionalRow
+                    title="MCOM Promotional Offers"
+                    subtitle="External products and services claimed and promoted by local businesses"
+                    offers={promotionalHighlights?.data || []}
+                    onSeeAll={() => {
+                      setListingType('promotional');
+                      setCurrentPage(1);
+                    }}
+                  />
                   <SectionRow
                     title="Newest Vouchers"
                     type="vouchers"
@@ -1409,6 +1543,7 @@ export default function MarketplaceClient({
                     !publicData?.vouchers?.length &&
                     !publicData?.giftCards?.length &&
                     !publicData?.coupons?.length &&
+                    !(promotionalHighlights?.data?.length ?? 0) &&
                     !isPublicDataLoading && (
                       <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                         <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1462,7 +1597,9 @@ export default function MarketplaceClient({
                   </div>
                 ) : (listingType === 'businesses'
                     ? businessItems.length
-                    : displayItems.length) > 0 ? (
+                    : listingType === 'promotional'
+                      ? promotionalOffersData?.data.length ?? 0
+                      : displayItems.length) > 0 ? (
                   <div
                     className={
                       viewMode === 'grid'
@@ -1478,9 +1615,17 @@ export default function MarketplaceClient({
                             viewMode={viewMode}
                           />
                         ))
-                      : displayItems.map((item) =>
-                          renderItemCard(item, viewMode, listingType),
-                        )}
+                      : listingType === 'promotional'
+                        ? (promotionalOffersData?.data || []).map((offer) => (
+                            <ExternalOfferCard
+                              key={offer.id}
+                              offer={offer}
+                              source="marketplace"
+                            />
+                          ))
+                        : displayItems.map((item) =>
+                            renderItemCard(item, viewMode, listingType),
+                          )}
                   </div>
                 ) : (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">

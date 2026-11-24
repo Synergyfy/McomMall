@@ -93,6 +93,8 @@ import { WebhooksModule } from './resources/webhooks/webhooks.module';
 import { InstitutionalPartnersModule } from './resources/institutional-partners/institutional-partners.module';
 import { DealsModule } from './resources/deals/deals.module';
 import { InstrumentsModule } from './resources/instruments/instruments.module';
+import { PromotionalOfferModule } from './resources/promotional-offer/promotional-offer.module';
+import { PromotionalCampaignModule } from './resources/promotional-campaign/promotional-campaign.module';
 
 @Module({
   imports: [
@@ -113,6 +115,8 @@ import { InstrumentsModule } from './resources/instruments/instruments.module';
     InstitutionalPartnersModule,
     DealsModule,
     InstrumentsModule,
+    PromotionalOfferModule,
+    PromotionalCampaignModule,
     // Single global EventEmitter instance. Modules (order, shipping, …) inject
     // EventEmitter2 from this root registration instead of calling forRoot().
     EventEmitterModule.forRoot(),

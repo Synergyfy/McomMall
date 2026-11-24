@@ -22,6 +22,7 @@ import { PartnershipStatus } from './partnership-status.enum';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { BusinessStatus } from '../listings/listing.enum';
+import { Business } from '../listings/entities/listing.entity';
 
 @Injectable()
 export class PartnershipService {
@@ -40,6 +41,8 @@ export class PartnershipService {
     private readonly serviceRepository: Repository<Service>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
     private readonly emailService: EmailService,
@@ -513,8 +516,116 @@ export class PartnershipService {
     }));
   }
 
-  async getMyPartners(user: User): Promise<any[]> {
-    const partnerships = await this.userPartnershipRepository.find({
+  /**
+   * Public storefront cross-promotion: items owned by partners that this
+   * business is allowed to promote through an active partnership link.
+   */
+  async getBusinessPartnerOffers(businessId: string): Promise<{
+    businessId: string;
+    data: Array<Record<string, unknown>>;
+  }> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['user'],
+    });
+    if (!business?.user) {
+      return { businessId, data: [] };
+    }
+
+    const userId = business.user.id;
+    const memberships = await this.userPartnershipRepository.find({
+      where: [
+        { user1: { id: userId }, isActive: true },
+        { user2: { id: userId }, isActive: true },
+      ],
+      relations: ['user1', 'user2'],
+    });
+
+    const results = new Map<string, Record<string, unknown>>();
+
+    for (const membership of memberships) {
+      const partnerId =
+        membership.user1.id === userId
+          ? membership.user2.id
+          : membership.user1.id;
+
+      const links = await this.partnershipRepository.find({
+        where: {
+          itemPartnershipRequest: { partnership: { id: membership.id } },
+          isActive: true,
+        },
+        relations: [
+          'baseProduct',
+          'baseProduct.business',
+          'baseProduct.business.user',
+          'baseService',
+          'baseService.business',
+          'baseService.business.user',
+          'plusProduct',
+          'plusProduct.business',
+          'plusProduct.business.user',
+          'plusService',
+          'plusService.business',
+          'plusService.business.user',
+        ],
+      });
+
+      for (const link of links) {
+        const candidates = [
+          { type: 'product' as const, item: link.baseProduct },
+          { type: 'service' as const, item: link.baseService },
+          { type: 'product' as const, item: link.plusProduct },
+          { type: 'service' as const, item: link.plusService },
+        ];
+
+        for (const candidate of candidates) {
+          const item = candidate.item as any;
+          if (!item?.business?.user) continue;
+          if (item.business.user.id !== partnerId) continue;
+
+          if (candidate.type === 'product') {
+            if (
+              item.productStatus !== 'published' ||
+              item.adminDisabled ||
+              item.approvalStatus === 'rejected' ||
+              item.approvalStatus === 'pending'
+            ) {
+              continue;
+            }
+          } else if (item.status !== 'published' || item.isActive === false) {
+            continue;
+          }
+
+          const key = `${candidate.type}:${item.id}`;
+          if (results.has(key)) continue;
+
+          results.set(key, {
+            type: candidate.type,
+            id: item.id,
+            title:
+              candidate.type === 'product' ? item.title : item.name,
+            image:
+              (candidate.type === 'product' ? item.media?.[0] : item.media?.[0]) ||
+              null,
+            price:
+              candidate.type === 'product'
+                ? Number(item.salePrice ?? item.price ?? 0)
+                : Number(item.fixedPrice ?? item.price ?? 0),
+            businessId: item.business.id,
+            businessName: item.business.businessName,
+            url:
+              candidate.type === 'product'
+                ? `/products/${item.id}`
+                : `/services/${item.id}`,
+          });
+        }
+      }
+    }
+
+    return { businessId, data: Array.from(results.values()) };
+  }
+
+  async getMyPartners(user: User): Promise<any[]> {    const partnerships = await this.userPartnershipRepository.find({
       where: [
         { user1: { id: user.id }, isActive: true },
         { user2: { id: user.id }, isActive: true },

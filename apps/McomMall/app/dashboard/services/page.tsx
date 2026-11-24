@@ -55,6 +55,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Service } from '@/service/services/types';
+import PromotionalCatalogPanel from '@/components/promotional/PromotionalCatalogPanel';
 import {
   getPricingTypeLabel,
   getServicePriceLabel,
@@ -100,6 +101,9 @@ export default function ServicesDashboard() {
     React.useState<Service | null>(null);
   const [showSpareCapacityModal, setShowSpareCapacityModal] =
     React.useState(false);
+  const [activeView, setActiveView] = React.useState<'mine' | 'promotional'>(
+    'mine',
+  );
 
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -214,7 +218,26 @@ export default function ServicesDashboard() {
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-4">
               <div className="flex flex-wrap items-center text-sm text-gray-600 -mb-2">
-                {/* Tabs can be added here if needed in the future */}
+                <button
+                  type="button"
+                  onClick={() => setActiveView('mine')}
+                  className={`px-3 py-2 rounded-md mb-2 ${activeView === 'mine'
+                    ? 'bg-gray-100 font-semibold text-gray-800'
+                    : ''
+                    }`}
+                >
+                  My Services ({services.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('promotional')}
+                  className={`px-3 py-2 rounded-md mb-2 ${activeView === 'promotional'
+                    ? 'bg-sky-50 font-semibold text-sky-700'
+                    : ''
+                    }`}
+                >
+                  MCOM Promotional Services
+                </button>
               </div>
               <Button
                 className="mt-4 sm:mt-0 w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
@@ -224,6 +247,10 @@ export default function ServicesDashboard() {
               </Button>
             </div>
 
+            {activeView === 'promotional' ? (
+              <PromotionalCatalogPanel offeringType="service" />
+            ) : (
+              <>
             <div className="rounded-md border overflow-x-auto">
               <Table className="min-w-full">
                 <TableHeader className="hidden md:table-header-group bg-gray-50">
@@ -482,6 +509,8 @@ export default function ServicesDashboard() {
                 </TableBody>
               </Table>
             </div>
+              </>
+            )}
           </div>
         </div>
       </div>

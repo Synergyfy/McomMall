@@ -38,6 +38,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PromoteProductModal } from './components/PromoteProductModal';
 import { Product } from '@/service/listings/types';
+import PromotionalCatalogPanel from '@/components/promotional/PromotionalCatalogPanel';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -263,6 +264,7 @@ export default function StoreDashboard() {
     { key: 'pending', label: 'Pending Review' },
     { key: 'in_stock', label: 'In stock' },
     { key: 'disabled', label: 'Disabled' },
+    { key: 'promotional', label: 'MCOM Promotions' },
   ];
   const categories = [...new Set((products || []).map(p => p.category))].filter((cat): cat is string => Boolean(cat));
   const brands = [...new Set((products || []).map(p => p.brand))].filter((brand): brand is string => Boolean(brand));
@@ -351,12 +353,15 @@ export default function StoreDashboard() {
                       : ''
                       }`}
                   >
-                    {tab.label} (
-                    {tab.key === 'All'
-                      ? products?.length || 0
-                      : products?.filter(p => matchesTab(p, tab.key)).length ||
-                      0}
-                    )
+                    {tab.label}
+                    {tab.key === 'promotional'
+                      ? ''
+                      : ` (${
+                          tab.key === 'All'
+                            ? products?.length || 0
+                            : products?.filter(p => matchesTab(p, tab.key))
+                                .length || 0
+                        })`}
                   </button>
                 ))}
               </div>
@@ -370,6 +375,10 @@ export default function StoreDashboard() {
               </Button>
             </div>
 
+            {activeTab === 'promotional' ? (
+              <PromotionalCatalogPanel offeringType="product" />
+            ) : (
+              <>
             {/* Filters and Search Section */}
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <div className="flex flex-col sm:flex-row gap-4 flex-grow">
@@ -764,6 +773,8 @@ export default function StoreDashboard() {
                 </TableBody>
               </Table>
             </div>
+              </>
+            )}
           </div>
         </div>
       </div>
