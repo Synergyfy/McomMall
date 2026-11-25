@@ -56,8 +56,44 @@ X-Mcom-Webhook-Signature: sha256=<hex>
 Both `sha256=<hex>` and bare-hex signature headers are accepted. The Mall
 refuses to process any delivery when no webhook secret is configured.
 
-Supported events: `profile.updated`, `profile.created` (same pull path).
+Supported events:
+
+- `profile.updated`, `profile.created` — pull the canonical profile and mirror
+  it onto the local user / business (also restores a previously deleted
+  account).
+- `profile.deleted` — deactivate the local account without deleting data:
+  - sign-in and token refresh are refused;
+  - every owned listing is archived (public `/listings/:id` and marketplace
+    product/service/voucher/gift-card/coupon results disappear);
+  - user and item partnerships are deactivated and pending requests declined.
+
+  Rows changed by the deletion are marked (`centralSuspendedAt` /
+  `centralDeclinedAt`), so an admin restore in Central can reverse exactly those
+  changes without touching partnerships that were already inactive.
+
+- A later `profile.updated` — the event Central emits when an admin restores a
+  deleted account — reactivates the user, restores each listing to its previous
+  status, and reconnects the partnerships/requests that were suspended by the
+  deletion. A `profile.updated` older than the deletion is ignored, so an
+  out-of-order retry cannot restore the account by accident.
+
 Anything else is acknowledged with `200` and ignored so Central does not retry.
+
+`profile.deleted` carries the same envelope as `profile.updated` plus optional
+`data.deletedAt` / `data.deleted: true`:
+
+```json
+{
+  "event": "profile.deleted",
+  "data": {
+    "eventId": "9a2b...",
+    "occurredAt": "2026-11-24T10:15:00.000Z",
+    "userId": "usr_123",
+    "deletedAt": "2026-11-24T10:15:00.000Z",
+    "deleted": true
+  }
+}
+```
 
 ## Responses
 

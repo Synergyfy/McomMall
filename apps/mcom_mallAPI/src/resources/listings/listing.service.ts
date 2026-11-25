@@ -67,6 +67,7 @@ export class ListingsService {
 
   async findRecent(limit = 6): Promise<Business[]> {
     return this.businessRepository.find({
+      where: { status: BusinessStatus.PUBLISHED },
       take: limit,
       order: { created_at: 'DESC' },
       relations: ['sector', 'category', 'subCategory', 'location'],
@@ -130,15 +131,26 @@ export class ListingsService {
       throw new NotFoundException(`Business with ID ${id} not found.`);
     }
 
+    const isOwner = !!user && business.user?.id === user.id;
+    const isAdmin = user?.role === UserRole.ADMIN;
+    const canSeeUnapproved = isOwner || isAdmin;
+
+    // Archived / Central-deleted listings disappear from the public page.
+    // Owners and admins keep access to the record so nothing is lost.
+    if (
+      !canSeeUnapproved &&
+      (business.status !== BusinessStatus.PUBLISHED ||
+        business.user?.centralDeletedAt ||
+        business.user?.isActive === false)
+    ) {
+      throw new NotFoundException(`Business with ID ${id} not found.`);
+    }
+
     const response = {
       ...business,
       giftCard: business.user.giftCard,
       voucher: business.user.voucher,
     };
-
-    const canSeeUnapproved =
-      !!user &&
-      (user.role === UserRole.ADMIN || business.user?.id === user.id);
 
     if (!canSeeUnapproved) {
       response.products = (business.products || []).filter(
@@ -289,34 +301,29 @@ export class ListingsService {
       .leftJoinAndSelect('business.location', 'location')
       .leftJoinAndSelect('business.sector', 'sector')
       .leftJoinAndSelect('business.category', 'category')
-      .leftJoinAndSelect('business.subCategory', 'subCategory');
+      .leftJoinAndSelect('business.subCategory', 'subCategory')
+      .where('business.status = :status', {
+        status: BusinessStatus.PUBLISHED,
+      });
 
     if (queryText) {
-      queryBuilder.where(
+      queryBuilder.andWhere(
         '(business.businessName ILIKE :query OR business.shortDescription ILIKE :query OR business.about ILIKE :query)',
         { query: `%${queryText}%` },
       );
     }
 
     if (category) {
-      const condition = 'category.name ILIKE :category';
-      const params = { category: `%${category}%` };
-      if (queryText) {
-        queryBuilder.andWhere(condition, params);
-      } else {
-        queryBuilder.where(condition, params);
-      }
+      queryBuilder.andWhere('category.name ILIKE :category', {
+        category: `%${category}%`,
+      });
     }
 
     if (locationQuery) {
-      const condition =
-        '(location.addressLine1 ILIKE :location OR location.city ILIKE :location OR location.postcode ILIKE :location)';
-      const params = { location: `%${locationQuery}%` };
-      if (queryText || category) {
-        queryBuilder.andWhere(condition, params);
-      } else {
-        queryBuilder.where(condition, params);
-      }
+      queryBuilder.andWhere(
+        '(location.addressLine1 ILIKE :location OR location.city ILIKE :location OR location.postcode ILIKE :location)',
+        { location: `%${locationQuery}%` },
+      );
     }
 
     // Sorting

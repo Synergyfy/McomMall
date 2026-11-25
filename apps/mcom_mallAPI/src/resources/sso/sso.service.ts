@@ -18,6 +18,7 @@ import { encryptToken } from './token-crypto';
 import {
   buildNewUserIdentity,
   syncCentralIdentity,
+  tokenPredatesCentralDeletion,
 } from './central-profile-sync';
 import { Business } from '../listings/entities/listing.entity';
 import { hierarchyToBusinessGeoPatch } from '../geography/business-geography.service';
@@ -394,6 +395,26 @@ export class SsoService {
       phoneNumber: identity.phoneNumber,
       role: identity.role,
     });
+
+    // A Central `profile.deleted` account must not sign in again with a stale
+    // token. A token issued after the deletion can only exist because an admin
+    // restored the account, so allow the identity sync to reactivate it (this
+    // also covers a restore webhook that has not arrived yet).
+    if (localUser.centralDeletedAt) {
+      const decoded = tokenData?.accessToken
+        ? (this.jwtService.decode(tokenData.accessToken) as any)
+        : null;
+      if (
+        tokenPredatesCentralDeletion(
+          localUser.centralDeletedAt,
+          decoded?.iat,
+        )
+      ) {
+        throw new UnauthorizedException('This account has been deleted.');
+      }
+    } else if (localUser.isActive === false) {
+      throw new UnauthorizedException('This account has been deleted.');
+    }
 
     // MCOM Central is the identity source of truth. Diff and refresh every
     // local field (person, contact, business profile, storefront) on login.

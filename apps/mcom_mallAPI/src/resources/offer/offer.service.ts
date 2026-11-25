@@ -13,6 +13,7 @@ import { CreateOfferDto } from './dto/create-offer.dto';
 import { UpdateOfferDto } from './dto/update-offer.dto';
 import { Product } from '../product/entities/product.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { User } from '../users/entities/user.entity';
 import { TransactionService } from '../transaction/transaction.service';
 import { ApplyOfferDto } from './dto/apply-offer.dto';
@@ -138,10 +139,16 @@ export class OfferService {
       where: { id: businessId },
       relations: ['user'],
     });
-    const ownerId = business?.user?.id;
-    if (!ownerId) {
+    if (
+      !business ||
+      business.status !== BusinessStatus.PUBLISHED ||
+      business.user?.isActive === false ||
+      business.user?.centralDeletedAt ||
+      business.centralDeletedAt
+    ) {
       return [];
     }
+    const ownerId = business.user?.id;
 
     const now = new Date();
     const offers = await this.offerRepository.find({
@@ -274,7 +281,16 @@ export class OfferService {
       where: { id: businessId },
       relations: ['user'],
     });
-    const ownerId = business?.user?.id;
+    if (
+      !business ||
+      business.status !== BusinessStatus.PUBLISHED ||
+      business.user?.isActive === false ||
+      business.user?.centralDeletedAt ||
+      business.centralDeletedAt
+    ) {
+      return [];
+    }
+    const ownerId = business.user?.id;
     if (!ownerId) return [];
 
     const now = new Date();

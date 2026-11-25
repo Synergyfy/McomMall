@@ -53,6 +53,14 @@ export class ItemPartnershipRequest extends AbstractBaseEntity {
   @Column({ nullable: true })
   rejectedAt?: Date;
 
+  /** Marker: declined automatically because a Central account was deleted. */
+  @Column({ type: 'timestamptz', nullable: true })
+  centralDeclinedAt?: Date | null;
+
+  /** Central-deleted account that caused the automatic decline (for restore). */
+  @Column({ type: 'uuid', nullable: true })
+  centralDeclinedForUserId?: string | null;
+
   /** Convenience fields populated by the service when listing requests. */
   proposerBusinessId?: string | null;
   receiverBusinessId?: string | null;

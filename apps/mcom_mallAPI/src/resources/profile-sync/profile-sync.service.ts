@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { UserRole } from '../../common/role.enum';
 import { User } from '../users/entities/user.entity';
@@ -18,9 +18,22 @@ import {
   syncCentralIdentity,
 } from '../sso/central-profile-sync';
 import { ProfileSyncEvent } from './entities/profile-sync-event.entity';
+import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
+import { Product } from '../product/entities/product.entity';
+import { Service } from '../services/entities/service.entity';
+import { Partnership } from '../partnership/entities/partnership.entity';
+import { UserPartnership } from '../partnership/entities/user-partnership.entity';
+import { ItemPartnershipRequest } from '../partnership/entities/item-partnership-request.entity';
+import { UserPartnershipRequest } from '../partnership/entities/user-partnership-request.entity';
+import { PartnershipStatus } from '../partnership/partnership-status.enum';
 
 /** Signals that should trigger a canonical profile pull. */
-const SUPPORTED_EVENTS = new Set(['profile.updated', 'profile.created']);
+const SUPPORTED_EVENTS = new Set([
+  'profile.updated',
+  'profile.created',
+  'profile.deleted',
+]);
 
 /** The pull request must not hang a Central retry slot. */
 const PROFILE_PULL_TIMEOUT_MS = 10_000;
@@ -71,6 +84,11 @@ export interface ProfileSyncOutcome {
     localBusinessId: string | null;
     role: string;
   };
+  deleted?: {
+    localUserId: string;
+    businesses: number;
+    partnerships: number;
+  };
 }
 
 function unwrapProfile(body: any): Record<string, any> | null {
@@ -87,8 +105,12 @@ function isUniqueViolation(err: any): boolean {
 }
 
 /**
- * Receives Central's `profile.updated` signal and mirrors the canonical
- * profile onto this app.
+ * Receives Central's profile signals (`profile.updated`, `profile.created`,
+ * `profile.deleted`) and mirrors the canonical profile onto this app.
+ *
+ * `profile.updated` / `profile.created` pull the canonical record and diff it
+ * onto the local user + storefront. `profile.deleted` deactivates the local
+ * account and archives its listings/partnerships without deleting any rows.
  *
  * Central is the source of truth and never ships profile data in the webhook:
  * it sends a signed signal containing only the immutable `userId`, and this
@@ -155,6 +177,52 @@ export class ProfileSyncService {
     }
 
     try {
+      if (envelope.event === 'profile.deleted') {
+        const deleted = await this.disableAccountForDeletedProfile(
+          envelope.userId,
+          envelope.occurredAt ?? new Date(),
+        );
+        await this.finaliseEvent(claim.record.id, 'completed');
+        this.logger.log(
+          `Central profile ${envelope.userId} was deleted; disabled local user ` +
+            `${deleted.localUserId} (${deleted.businesses} listing(s), ` +
+            `${deleted.partnerships} partnership(s))`,
+        );
+        return {
+          event: envelope.event,
+          userId: envelope.userId,
+          duplicate: false,
+          deleted,
+        };
+      }
+
+      // An at-least-once retry can deliver an older `profile.updated` after the
+      // deletion. Only a genuinely newer update is a restore.
+      if (envelope.occurredAt) {
+        const local = await this.userRepository.findOne({
+          where: { centralUserId: envelope.userId },
+          withDeleted: true,
+        });
+        if (
+          local?.centralDeletedAt &&
+          envelope.occurredAt.getTime() <=
+            new Date(local.centralDeletedAt).getTime()
+        ) {
+          await this.finaliseEvent(
+            claim.record.id,
+            'skipped',
+            'stale_profile_update',
+          );
+          return {
+            event: envelope.event,
+            userId: envelope.userId,
+            duplicate: false,
+            ignored: true,
+            reason: 'stale_profile_update',
+          };
+        }
+      }
+
       const synced = await this.syncProfileFromCentral(envelope.userId);
       await this.finaliseEvent(claim.record.id, 'completed');
       this.logger.log(
@@ -244,6 +312,202 @@ export class ProfileSyncService {
       localBusinessId: business?.id ?? null,
       role: user.role,
     };
+  }
+
+  /**
+   * Apply Central's `profile.deleted` signal.
+   *
+   * Nothing is removed. The local account is deactivated (which also blocks
+   * sign-in and seller purchases), each listing is archived so existing
+   * marketplace / product / service / voucher / gift-card / coupon queries stop
+   * returning it, and every partnership involving the account is disconnected.
+   * A later `profile.updated` (Central restore) reactivates the account and
+   * restores the listing status recorded here.
+   */
+  async disableAccountForDeletedProfile(
+    centralUserId: string,
+    deletedAt: Date = new Date(),
+  ): Promise<{
+    localUserId: string;
+    businesses: number;
+    partnerships: number;
+  }> {
+    const localUser = await this.userRepository.findOne({
+      where: { centralUserId },
+      withDeleted: true,
+    });
+
+    if (!localUser) {
+      throw new PermanentProfileSyncError(
+        'unknown_user',
+        `No local account is linked to Central user ${centralUserId}`,
+      );
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const userRepository = manager.getRepository(User);
+      const businessRepository = manager.getRepository(Business);
+
+      await userRepository.update(localUser.id, {
+        isActive: false,
+        centralDeletedAt: deletedAt,
+        centralRefreshToken: null,
+      });
+
+      const businesses = await businessRepository.find({
+        where: { user: { id: localUser.id } },
+      });
+
+      for (const business of businesses) {
+        await businessRepository.update(business.id, {
+          status: BusinessStatus.ARCHIVED,
+          centralDeletedAt: deletedAt,
+          // Preserve the state that existed before the deletion so a restore
+          // does not un-suspend a listing an admin had already archived.
+          centralDeletedStatus:
+            business.centralDeletedStatus ?? business.status,
+        });
+      }
+
+      const businessIds = businesses.map((business) => business.id);
+      const productIds = businessIds.length
+        ? (
+            await manager.getRepository(Product).find({
+              where: { business: { id: In(businessIds) } },
+              select: ['id'],
+            })
+          ).map((product) => product.id)
+        : [];
+      const serviceIds = businessIds.length
+        ? (
+            await manager.getRepository(Service).find({
+              where: { businessId: In(businessIds) },
+              select: ['id'],
+            })
+          ).map((service) => service.id)
+        : [];
+
+      const partnershipRepository = manager.getRepository(Partnership);
+      const partnershipWhere: Record<string, any>[] = [];
+      if (productIds.length) {
+        partnershipWhere.push(
+          { baseProduct: { id: In(productIds) } },
+          { plusProduct: { id: In(productIds) } },
+        );
+      }
+      if (serviceIds.length) {
+        partnershipWhere.push(
+          { baseService: { id: In(serviceIds) } },
+          { plusService: { id: In(serviceIds) } },
+        );
+      }
+      const itemPartnerships = partnershipWhere.length
+        ? await partnershipRepository.find({
+            where: partnershipWhere,
+            select: ['id', 'isActive'],
+          })
+        : [];
+      const itemPartnershipIds = itemPartnerships
+        .filter((partnership) => partnership.isActive)
+        .map((partnership) => partnership.id);
+
+      const userPartnershipRepository = manager.getRepository(UserPartnership);
+      const userPartnerships = await userPartnershipRepository.find({
+        where: [
+          { user1: { id: localUser.id } },
+          { user2: { id: localUser.id } },
+        ],
+        select: ['id', 'isActive'],
+      });
+      const userPartnershipIds = userPartnerships
+        .filter((partnership) => partnership.isActive)
+        .map((partnership) => partnership.id);
+
+      if (itemPartnershipIds.length) {
+        await partnershipRepository.update(itemPartnershipIds, {
+          isActive: false,
+          centralSuspendedAt: deletedAt,
+          centralSuspendedForUserId: localUser.id,
+        });
+      }
+      if (userPartnershipIds.length) {
+        await userPartnershipRepository.update(userPartnershipIds, {
+          isActive: false,
+          centralSuspendedAt: deletedAt,
+          centralSuspendedForUserId: localUser.id,
+        });
+      }
+
+      // Pending proposals must not be accepted by the other party after the
+      // account is gone.
+      const itemRequestRepository = manager.getRepository(
+        ItemPartnershipRequest,
+      );
+      const pendingItemRequests = await itemRequestRepository.find({
+        where: [
+          {
+            proposer: { id: localUser.id },
+            status: PartnershipStatus.PENDING,
+          },
+          {
+            receiver: { id: localUser.id },
+            status: PartnershipStatus.PENDING,
+          },
+          ...(itemPartnershipIds.length
+            ? [
+                {
+                  partnership: { id: In(itemPartnershipIds) },
+                  status: PartnershipStatus.PENDING,
+                },
+              ]
+            : []),
+        ],
+        select: ['id'],
+      });
+      if (pendingItemRequests.length) {
+        await itemRequestRepository.update(
+          pendingItemRequests.map((request) => request.id),
+          {
+            status: PartnershipStatus.DECLINED,
+            centralDeclinedAt: deletedAt,
+            centralDeclinedForUserId: localUser.id,
+          },
+        );
+      }
+
+      const userRequestRepository = manager.getRepository(
+        UserPartnershipRequest,
+      );
+      const pendingUserRequests = await userRequestRepository.find({
+        where: [
+          {
+            sender: { id: localUser.id },
+            status: PartnershipStatus.PENDING,
+          },
+          {
+            receiver: { id: localUser.id },
+            status: PartnershipStatus.PENDING,
+          },
+        ],
+        select: ['id'],
+      });
+      if (pendingUserRequests.length) {
+        await userRequestRepository.update(
+          pendingUserRequests.map((request) => request.id),
+          {
+            status: PartnershipStatus.DECLINED,
+            centralDeclinedAt: deletedAt,
+            centralDeclinedForUserId: localUser.id,
+          },
+        );
+      }
+
+      return {
+        localUserId: localUser.id,
+        businesses: businesses.length,
+        partnerships: itemPartnershipIds.length + userPartnershipIds.length,
+      };
+    });
   }
 
   // ---------------------------------------------------------------------------

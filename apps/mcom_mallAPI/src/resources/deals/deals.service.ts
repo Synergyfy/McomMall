@@ -16,6 +16,7 @@ import { GiftCard } from '../gift-card/entities/gift-card.entity';
 import { GiftCardTemplate } from '../gift-card/entities/gift-card-template.entity';
 import { MarketingCampaign } from '../campaign/entities/marketing-campaign.entity';
 import { MarketingCampaignStatus } from '../campaign/marketing-campaign.enum';
+import { BusinessStatus } from '../listings/listing.enum';
 import { FeatureFlagsService } from '../../common/feature-flags/feature-flags.service';
 import { InstrumentsService } from '../instruments/instruments.service';
 import { DealDto, DealPageDto, DealScopeDto } from './dto/deal.dto';
@@ -112,7 +113,7 @@ export class DealsService {
       await Promise.all([
         this.couponRepository.find({
           where: { status: CouponStatus.ACTIVE },
-          relations: ['business', 'campaign'],
+          relations: ['business', 'business.user', 'campaign'],
           take,
           order: { created_at: 'DESC' } as any,
         }),
@@ -129,14 +130,36 @@ export class DealsService {
         }),
         this.giftCardTemplateRepository.find({
           where: { isActive: true },
+          relations: ['owner', 'owner.businesses'],
           take,
           order: { created_at: 'DESC' } as any,
         }),
       ]);
 
     const now = Date.now();
+    const visibleCoupons = coupons.filter(
+      (coupon) =>
+        !coupon.business ||
+        (coupon.business.status === BusinessStatus.PUBLISHED &&
+          coupon.business.user?.isActive !== false &&
+          !coupon.business.user?.centralDeletedAt &&
+          !coupon.business.centralDeletedAt),
+    );
+    const visibleGiftCardTemplates = giftCardTemplates.filter((template) => {
+      const owner = template.owner;
+      return (
+        owner?.isActive !== false &&
+        !owner?.centralDeletedAt &&
+        (owner?.businesses ?? []).some(
+          (business) =>
+            business.status === BusinessStatus.PUBLISHED &&
+            !business.centralDeletedAt,
+        )
+      );
+    });
+
     const deals: DealDto[] = [
-      ...coupons.map((coupon) => this.couponToDeal(coupon)),
+      ...visibleCoupons.map((coupon) => this.couponToDeal(coupon)),
       ...definitions
         .filter(
           (definition) =>
@@ -145,7 +168,7 @@ export class DealsService {
         )
         .map((definition) => this.definitionToDeal(definition)),
       ...campaigns.map((campaign) => this.campaignToDeal(campaign)),
-      ...giftCardTemplates.map((template) =>
+      ...visibleGiftCardTemplates.map((template) =>
         this.giftCardTemplateToDeal(template),
       ),
     ];

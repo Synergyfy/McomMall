@@ -52,7 +52,9 @@ export class AuthController {
     const { email, password } = createAuthDto;
     const user = await this.userService.findCurrentUser(email);
 
-    if (!user) throw ErrorFactory.invalidCredentials();
+    if (!user || user.centralDeletedAt || user.isActive === false) {
+      throw ErrorFactory.invalidCredentials();
+    }
 
     const validPassword = await this.authService.comparePassword(
       password,

@@ -109,6 +109,183 @@ describe('ProfileSyncService', () => {
     });
   });
 
+  it('disables the local account for profile.deleted without pulling Central', async () => {
+    const disable = jest
+      .spyOn(service, 'disableAccountForDeletedProfile')
+      .mockResolvedValue({
+        localUserId: 'local-1',
+        businesses: 1,
+        partnerships: 2,
+      });
+
+    const result = await service.handleIncomingEvent({
+      event: 'profile.deleted',
+      data: { userId: 'usr_1', eventId: 'evt_del' },
+    });
+
+    expect(serviceMesh.callPeer).not.toHaveBeenCalled();
+    expect(disable).toHaveBeenCalledWith('usr_1', expect.any(Date));
+    expect(eventsRepo.update).toHaveBeenCalledWith(
+      'row-1',
+      expect.objectContaining({ status: 'completed' }),
+    );
+    expect(result).toMatchObject({
+      event: 'profile.deleted',
+      duplicate: false,
+      deleted: {
+        localUserId: 'local-1',
+        businesses: 1,
+        partnerships: 2,
+      },
+    });
+  });
+
+  it('archives listings and disconnects partnerships without deleting data', async () => {
+    const userUpdate = jest.fn().mockResolvedValue({});
+    const businessRepo = {
+      find: jest.fn().mockResolvedValue([
+        { id: 'biz-1', status: 'published', centralDeletedStatus: null },
+      ]),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    const productRepo = {
+      find: jest.fn().mockResolvedValue([{ id: 'product-1' }]),
+    };
+    const serviceRepo = {
+      find: jest.fn().mockResolvedValue([{ id: 'service-1' }]),
+    };
+    const partnershipRepo = {
+      find: jest
+        .fn()
+        .mockResolvedValue([{ id: 'item-partnership-1', isActive: true }]),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    const userPartnershipRepo = {
+      find: jest
+        .fn()
+        .mockResolvedValue([{ id: 'user-partnership-1', isActive: true }]),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    const itemRequestRepo = {
+      find: jest.fn().mockResolvedValue([{ id: 'item-request-1' }]),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    const userRequestRepo = {
+      find: jest.fn().mockResolvedValue([{ id: 'user-request-1' }]),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    const repositories: Record<string, any> = {
+      User: { update: userUpdate },
+      Business: businessRepo,
+      Product: productRepo,
+      Service: serviceRepo,
+      Partnership: partnershipRepo,
+      UserPartnership: userPartnershipRepo,
+      ItemPartnershipRequest: itemRequestRepo,
+      UserPartnershipRequest: userRequestRepo,
+    };
+
+    (service as any).userRepository = {
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 'local-1', centralUserId: 'usr_1' }),
+    };
+    (service as any).dataSource = {
+      transaction: jest.fn(async (callback: any) =>
+        callback({
+          getRepository: (entity: any) => repositories[entity.name],
+        }),
+      ),
+    };
+
+    const deletedAt = new Date('2026-11-24T12:00:00.000Z');
+    const result = await service.disableAccountForDeletedProfile(
+      'usr_1',
+      deletedAt,
+    );
+
+    expect(result).toEqual({
+      localUserId: 'local-1',
+      businesses: 1,
+      partnerships: 2,
+    });
+    expect(userUpdate).toHaveBeenCalledWith(
+      'local-1',
+      expect.objectContaining({
+        isActive: false,
+        centralDeletedAt: deletedAt,
+        centralRefreshToken: null,
+      }),
+    );
+    expect(businessRepo.update).toHaveBeenCalledWith(
+      'biz-1',
+      expect.objectContaining({
+        status: 'archived',
+        centralDeletedAt: deletedAt,
+        centralDeletedStatus: 'published',
+      }),
+    );
+    expect(partnershipRepo.update).toHaveBeenCalledWith(
+      ['item-partnership-1'],
+      expect.objectContaining({
+        isActive: false,
+        centralSuspendedAt: deletedAt,
+        centralSuspendedForUserId: 'local-1',
+      }),
+    );
+    expect(userPartnershipRepo.update).toHaveBeenCalledWith(
+      ['user-partnership-1'],
+      expect.objectContaining({
+        isActive: false,
+        centralSuspendedAt: deletedAt,
+        centralSuspendedForUserId: 'local-1',
+      }),
+    );
+    expect(itemRequestRepo.update).toHaveBeenCalledWith(
+      ['item-request-1'],
+      expect.objectContaining({
+        status: 'declined',
+        centralDeclinedAt: deletedAt,
+        centralDeclinedForUserId: 'local-1',
+      }),
+    );
+    expect(userRequestRepo.update).toHaveBeenCalledWith(
+      ['user-request-1'],
+      expect.objectContaining({
+        status: 'declined',
+        centralDeclinedAt: deletedAt,
+        centralDeclinedForUserId: 'local-1',
+      }),
+    );
+  });
+
+  it('does not let an older profile.updated restore a deleted account', async () => {
+    (service as any).userRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        centralDeletedAt: new Date('2026-11-24T12:00:00.000Z'),
+      }),
+    };
+
+    const result = await service.handleIncomingEvent({
+      event: 'profile.updated',
+      data: {
+        userId: 'usr_1',
+        eventId: 'evt_old',
+        occurredAt: '2026-11-24T11:00:00.000Z',
+      },
+    });
+
+    expect(result).toMatchObject({
+      ignored: true,
+      reason: 'stale_profile_update',
+    });
+    expect(serviceMesh.callPeer).not.toHaveBeenCalled();
+    expect(eventsRepo.update).toHaveBeenCalledWith(
+      'row-1',
+      expect.objectContaining({ status: 'skipped' }),
+    );
+  });
+
   it('acknowledges a duplicate delivery without re-pulling', async () => {
     eventsRepo.findOne.mockResolvedValue({
       id: 'row-1',

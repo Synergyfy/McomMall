@@ -68,6 +68,10 @@ export class PartnershipService {
       .leftJoinAndSelect('p.business', 'b')
       .leftJoinAndSelect('b.user', 'u')
       .where('u.id != :currentUserId', { currentUserId })
+      .andWhere('u.isActive = true')
+      .andWhere('b.status = :publishedStatus', {
+        publishedStatus: BusinessStatus.PUBLISHED,
+      })
       .andWhere(
         new Brackets((qb) => {
           qb.where('p.title ILIKE :searchTerm', { searchTerm }).orWhere(
@@ -85,6 +89,10 @@ export class PartnershipService {
       .leftJoinAndSelect('s.business', 'b')
       .leftJoinAndSelect('b.user', 'u')
       .where('u.id != :currentUserId', { currentUserId })
+      .andWhere('u.isActive = true')
+      .andWhere('b.status = :publishedStatus', {
+        publishedStatus: BusinessStatus.PUBLISHED,
+      })
       .andWhere(
         new Brackets((qb) => {
           qb.where('s.name ILIKE :searchTerm', { searchTerm }).orWhere(
@@ -582,6 +590,13 @@ export class PartnershipService {
           const item = candidate.item as any;
           if (!item?.business?.user) continue;
           if (item.business.user.id !== partnerId) continue;
+          if (
+            item.business.status !== BusinessStatus.PUBLISHED ||
+            item.business.user.isActive === false ||
+            item.business.user.centralDeletedAt
+          ) {
+            continue;
+          }
 
           if (candidate.type === 'product') {
             if (

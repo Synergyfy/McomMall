@@ -182,6 +182,15 @@ export class User extends AbstractBaseEntity {
   @Column({ type: 'timestamptz', nullable: true })
   centralProfileSyncedAt?: Date | null;
 
+  /**
+   * Set when Central publishes `profile.deleted` for this account. The local
+   * account and its data are retained (never hard-deleted); this marker is the
+   * single source of truth for blocking sign-in and public visibility. A later
+   * `profile.updated` (Central restore) clears it.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  centralDeletedAt?: Date | null;
+
   @Column({ type: 'int', default: 100 })
   trustScore: number;
 

@@ -13,6 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
 import { Repository } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { User } from '../users/entities/user.entity';
 import { Partnership } from '../partnership/entities/partnership.entity';
 import { PartnershipRequest } from '../partnership/entities/partnership-request.entity';
@@ -264,7 +265,13 @@ export class ProductService {
 
     const isOwner = !!user && product.business?.user?.id === user.id;
     const isAdmin = user?.role === UserRole.ADMIN;
+    const businessIsLive =
+      product.business?.status === BusinessStatus.PUBLISHED &&
+      product.business?.user?.isActive !== false &&
+      !product.business?.user?.centralDeletedAt &&
+      !product.business?.centralDeletedAt;
     const isPubliclyVisible =
+      businessIsLive &&
       product.approvalStatus === ApprovalStatus.APPROVED &&
       product.productStatus === 'published' &&
       product.visibility === 'public' &&
@@ -454,6 +461,16 @@ export class ProductService {
     const isAdmin = user?.role === UserRole.ADMIN;
     const canSeeAll = isOwner || isAdmin;
 
+    if (
+      !canSeeAll &&
+      (!business ||
+        business.status !== BusinessStatus.PUBLISHED ||
+        business.user?.isActive === false ||
+        business.user?.centralDeletedAt)
+    ) {
+      throw new NotFoundException('Business not found');
+    }
+
     const where: Record<string, unknown> = { business: { id: businessId } };
     if (!canSeeAll) {
       where.approvalStatus = ApprovalStatus.APPROVED;
@@ -493,6 +510,9 @@ export class ProductService {
       .andWhere('product.visibility = :visibility', { visibility: 'public' })
       .andWhere('product.adminDisabled = :adminDisabled', {
         adminDisabled: false,
+      })
+      .andWhere('business.status = :businessStatus', {
+        businessStatus: BusinessStatus.PUBLISHED,
       })
       .andWhere(
         '(product.enableStockManagement = :disableStockManagement OR product.stock > :minStock OR (product.variations IS NOT NULL AND jsonb_path_exists(product.variations, :jsonPath)))',

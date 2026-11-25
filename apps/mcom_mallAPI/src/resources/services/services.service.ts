@@ -13,7 +13,7 @@ import { Service } from './entities/service.entity';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { Business } from '../listings/entities/listing.entity';
-import { ListingType } from '../listings/listing.enum';
+import { BusinessStatus, ListingType } from '../listings/listing.enum';
 import { User } from '../users/entities/user.entity';
 import {
   BundledServiceDto,
@@ -292,6 +292,15 @@ export class ServicesService {
     const isAdmin = user?.role === UserRole.ADMIN;
     const canSeeAll = isOwner || isAdmin;
 
+    if (
+      !canSeeAll &&
+      (business.status !== BusinessStatus.PUBLISHED ||
+        business.user?.isActive === false ||
+        business.user?.centralDeletedAt)
+    ) {
+      throw new NotFoundException(`Business with ID ${businessId} not found`);
+    }
+
     const where: Record<string, unknown> = { businessId };
     if (!canSeeAll) {
       where.approvalStatus = ApprovalStatus.APPROVED;
@@ -360,7 +369,13 @@ export class ServicesService {
 
     const isOwner = !!user && service.business?.user?.id === user.id;
     const isAdmin = user?.role === UserRole.ADMIN;
+    const businessIsLive =
+      service.business?.status === BusinessStatus.PUBLISHED &&
+      service.business?.user?.isActive !== false &&
+      !service.business?.user?.centralDeletedAt &&
+      !service.business?.centralDeletedAt;
     const isPubliclyVisible =
+      businessIsLive &&
       service.approvalStatus === ApprovalStatus.APPROVED &&
       service.status === 'published' &&
       service.isActive === true &&
@@ -1053,6 +1068,9 @@ export class ServicesService {
       .andWhere('service.status = :status', { status: 'published' })
       .andWhere('service.adminDisabled = :adminDisabled', {
         adminDisabled: false,
+      })
+      .andWhere('business.status = :businessStatus', {
+        businessStatus: BusinessStatus.PUBLISHED,
       });
 
     if (search) {

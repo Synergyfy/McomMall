@@ -565,6 +565,17 @@ export class CouponService {
       relations: ['campaign', 'business', 'business.user'],
     });
     if (!coupon) throw new NotFoundException('Coupon not found');
+
+    if (coupon.sourceType === CouponSourceType.BUSINESS && coupon.business) {
+      if (
+        coupon.business.status !== BusinessStatus.PUBLISHED ||
+        coupon.business.user?.isActive === false ||
+        coupon.business.user?.centralDeletedAt
+      ) {
+        throw new NotFoundException('Coupon not found');
+      }
+    }
+
     return coupon;
   }
 
