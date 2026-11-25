@@ -28,6 +28,7 @@ import { UpdateVoucherProductDto } from './dto/update-voucher-product.dto';
 import { RedeemVoucherDto } from './dto/redeem-voucher.dto';
 import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import {
   applySellerLocationFilter,
   applySellerNearOrder,
@@ -249,6 +250,15 @@ export class VoucherService {
     if (!business.user) {
       throw new InternalServerErrorException(
         `Business with ID "${businessId}" has no associated owner.`,
+      );
+    }
+    if (
+      business.status !== BusinessStatus.PUBLISHED ||
+      business.user.isActive === false ||
+      business.user.centralDeletedAt
+    ) {
+      throw new NotFoundException(
+        `Business with ID "${businessId}" not found.`,
       );
     }
     return this.voucherProductRepository.find({
@@ -1772,6 +1782,7 @@ export class VoucherService {
           'owner',
           'buyer',
           'recipient',
+          'business',
         ],
       })) ?? locked
     );
@@ -1780,7 +1791,12 @@ export class VoucherService {
   private async findActiveVoucherByCode(code: string): Promise<Voucher> {
     const voucher = await this.voucherRepository.findOne({
       where: { code },
-      relations: ['voucherProduct', 'voucherProduct.user', 'owner'],
+      relations: [
+        'voucherProduct',
+        'voucherProduct.user',
+        'owner',
+        'business',
+      ],
     });
 
     if (!voucher) {
@@ -2116,6 +2132,17 @@ export class VoucherService {
     if (voucher.status === VoucherStatus.DISABLED) {
       throw new BadRequestException('This voucher is currently disabled.');
     }
+    const issuer = voucher.voucherProduct?.user ?? voucher.owner;
+    if (
+      (issuer && (issuer.isActive === false || issuer.centralDeletedAt)) ||
+      (voucher.business &&
+        (voucher.business.status !== BusinessStatus.PUBLISHED ||
+          voucher.business.centralDeletedAt))
+    ) {
+      throw new BadRequestException(
+        'This voucher is no longer redeemable because its issuer is inactive.',
+      );
+    }
     if (voucher.expiresAt && new Date() > voucher.expiresAt) {
       voucher.status = VoucherStatus.EXPIRED;
       const voucherRepo = manager
@@ -2181,7 +2208,17 @@ export class VoucherService {
       .andWhere('voucherProduct.approvalStatus = :approvalStatus', {
         approvalStatus: ApprovalStatus.APPROVED,
       })
-      .andWhere('voucherProduct.adminDisabled = false');
+      .andWhere('voucherProduct.adminDisabled = false')
+      .andWhere('user.isActive = :ownerActive', { ownerActive: true })
+      .andWhere(
+        `EXISTS (
+          SELECT 1 FROM "businesses" voucher_owner
+          WHERE voucher_owner."userId" = "voucherProduct"."userId"
+            AND voucher_owner."status" = :voucherOwnerStatus
+            AND voucher_owner."deleted_at" IS NULL
+        )`,
+        { voucherOwnerStatus: BusinessStatus.PUBLISHED },
+      );
 
     if (search) {
       queryBuilder.andWhere(
@@ -2252,6 +2289,18 @@ export class VoucherService {
     });
 
     if (!product) {
+      throw new NotFoundException('Voucher product not found.');
+    }
+
+    const ownerIsLive =
+      product.user?.isActive !== false && !product.user?.centralDeletedAt;
+    const hasLiveBusiness =
+      product.user?.businesses?.some(
+        (business) =>
+          business.status === BusinessStatus.PUBLISHED &&
+          !business.centralDeletedAt,
+      ) ?? false;
+    if (!ownerIsLive || !hasLiveBusiness) {
       throw new NotFoundException('Voucher product not found.');
     }
 

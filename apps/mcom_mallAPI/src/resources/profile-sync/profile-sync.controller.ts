@@ -38,11 +38,12 @@ export class ProfileSyncController {
   @Post('profile-updated')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Receive a profile.updated signal from MCOM Central',
+    summary: 'Receive a profile.updated / profile.deleted signal from MCOM Central',
     description:
       'Verifies the HMAC signature, deduplicates on data.eventId, then pulls ' +
       'the canonical profile from Central over the RS256 service mesh and ' +
-      'mirrors it onto the local user / business.',
+      'mirrors it onto the local user / business. A profile.deleted signal ' +
+      'deactivates the account and archives its listings without deleting data.',
   })
   @ApiResponse({ status: 200, description: 'Event accepted (or duplicate)' })
   @ApiResponse({ status: 401, description: 'Missing or invalid signature' })

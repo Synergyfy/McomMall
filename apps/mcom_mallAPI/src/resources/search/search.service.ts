@@ -53,9 +53,9 @@ export class SearchService {
     const entityManager = this.productRepository.manager;
 
     const baseQuery = `
-      (SELECT id, created_at, 'product' as type FROM "Products" WHERE ("title" ILIKE $1 OR "shortDescription" ILIKE $1 OR "description" ILIKE $1 OR "category" ILIKE $1 OR "tags" ILIKE $1) AND "approvalStatus" = 'approved' AND "productStatus" = 'published' AND "visibility" = 'public' AND "adminDisabled" = false AND "deleted_at" IS NULL)
+      (SELECT id, created_at, 'product' as type FROM "Products" WHERE ("title" ILIKE $1 OR "shortDescription" ILIKE $1 OR "description" ILIKE $1 OR "category" ILIKE $1 OR "tags" ILIKE $1) AND "approvalStatus" = 'approved' AND "productStatus" = 'published' AND "visibility" = 'public' AND "adminDisabled" = false AND "deleted_at" IS NULL AND EXISTS (SELECT 1 FROM "businesses" b WHERE b.id = "Products"."businessId" AND b."status" = 'published' AND b."deleted_at" IS NULL AND b."centralDeletedAt" IS NULL))
       UNION ALL
-      (SELECT id, created_at, 'service' as type FROM "services" WHERE ("name" ILIKE $1 OR "description" ILIKE $1) AND "approvalStatus" = 'approved' AND "status" = 'published' AND "isActive" = true AND "adminDisabled" = false AND "deleted_at" IS NULL)
+      (SELECT id, created_at, 'service' as type FROM "services" WHERE ("name" ILIKE $1 OR "description" ILIKE $1) AND "approvalStatus" = 'approved' AND "status" = 'published' AND "isActive" = true AND "adminDisabled" = false AND "deleted_at" IS NULL AND EXISTS (SELECT 1 FROM "businesses" b WHERE b.id = "services"."businessId" AND b."status" = 'published' AND b."deleted_at" IS NULL AND b."centralDeletedAt" IS NULL))
     `;
 
     const countQuery = `SELECT COUNT(*) FROM (${baseQuery}) as combined_results`;

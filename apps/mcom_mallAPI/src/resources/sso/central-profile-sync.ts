@@ -11,6 +11,11 @@ import { Sector } from '../taxonomy/entities/sector.entity';
 import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity';
 import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
 import { User } from '../users/entities/user.entity';
+import { Partnership } from '../partnership/entities/partnership.entity';
+import { UserPartnership } from '../partnership/entities/user-partnership.entity';
+import { ItemPartnershipRequest } from '../partnership/entities/item-partnership-request.entity';
+import { UserPartnershipRequest } from '../partnership/entities/user-partnership-request.entity';
+import { PartnershipStatus } from '../partnership/partnership-status.enum';
 
 /**
  * Canonical MCOM Central identity payload (protocol 2026-10-01).
@@ -261,6 +266,22 @@ export function normalizeCentralUser(centralUser: any): NormalizedCentralUser {
   };
 }
 
+/**
+ * A token minted before Central deleted the account must never be accepted.
+ *
+ * A token minted after the deletion can only exist because an admin restored
+ * the account, so the login flow may proceed and restore the local mirror.
+ */
+export function tokenPredatesCentralDeletion(
+  centralDeletedAt: Date | string,
+  tokenIssuedAtSeconds?: number | null,
+): boolean {
+  if (!tokenIssuedAtSeconds) return true;
+  return (
+    tokenIssuedAtSeconds * 1000 <= new Date(centralDeletedAt).getTime()
+  );
+}
+
 export function resolveLocalRole(centralUser: any): UserRole {
   const profile = normalizeCentralUser(centralUser);
   return profile.role === 'business' ||
@@ -396,6 +417,13 @@ export async function syncLocalUserFromCentral(
     profile.centralUserId !== localUser.centralUserId
   ) {
     updates.centralUserId = profile.centralUserId;
+  }
+
+  // A successful pull means Central considers this profile live again. This is
+  // the restore path for a previous `profile.deleted` event.
+  if (localUser.centralDeletedAt) {
+    updates.centralDeletedAt = null;
+    updates.isActive = true;
   }
 
   // Always keep the canonical snapshot + sync timestamp. This is the raw
@@ -562,6 +590,16 @@ function businessUpdatesFromProfile(
   profile: NormalizedBusinessProfile,
 ): Partial<Business> {
   const updates: Partial<Business> = {};
+
+  // Central restored a previously deleted profile: put the listing back the
+  // way it was before we archived it for the deletion.
+  if (existing.centralDeletedAt) {
+    updates.status =
+      (existing.centralDeletedStatus as BusinessStatus) ??
+      BusinessStatus.PUBLISHED;
+    updates.centralDeletedAt = null;
+    updates.centralDeletedStatus = null;
+  }
 
   if (!existing.isClaimed) {
     updates.isClaimed = true;
@@ -855,6 +893,63 @@ export async function syncLocalBusinessFromCentral(
   return existing;
 }
 
+/**
+ * Undo the side effects of a Central `profile.deleted` signal once Central
+ * restores the account. Only rows explicitly suspended/declined by the
+ * deletion are touched, so partnerships that were already inactive (or
+ * requests that were already declined) stay that way.
+ */
+export async function restoreCentralDeletionArtifacts(
+  dataSource: DataSource,
+  localUserId: string,
+): Promise<void> {
+  await dataSource
+    .getRepository(Partnership)
+    .update(
+      { centralSuspendedForUserId: localUserId },
+      {
+        isActive: true,
+        centralSuspendedAt: null,
+        centralSuspendedForUserId: null,
+      },
+    );
+
+  await dataSource
+    .getRepository(UserPartnership)
+    .update(
+      { centralSuspendedForUserId: localUserId },
+      {
+        isActive: true,
+        centralSuspendedAt: null,
+        centralSuspendedForUserId: null,
+      },
+    );
+
+  await dataSource
+    .getRepository(ItemPartnershipRequest)
+    .update(
+      { centralDeclinedForUserId: localUserId },
+      {
+        status: PartnershipStatus.PENDING,
+        rejectedAt: null,
+        centralDeclinedAt: null,
+        centralDeclinedForUserId: null,
+      },
+    );
+
+  await dataSource
+    .getRepository(UserPartnershipRequest)
+    .update(
+      { centralDeclinedForUserId: localUserId },
+      {
+        status: PartnershipStatus.PENDING,
+        rejectedAt: null,
+        centralDeclinedAt: null,
+        centralDeclinedForUserId: null,
+      },
+    );
+}
+
 export interface CentralIdentitySyncResult {
   user: User;
   business: Business | null;
@@ -874,11 +969,17 @@ export async function syncCentralIdentity(params: {
 }): Promise<CentralIdentitySyncResult> {
   const { userRepository, dataSource, localUser, centralUser, logger } = params;
 
+  const wasDeleted = Boolean(localUser.centralDeletedAt);
+
   const user = await syncLocalUserFromCentral(
     userRepository,
     localUser,
     centralUser,
   );
+
+  if (wasDeleted) {
+    await restoreCentralDeletionArtifacts(dataSource, user.id);
+  }
 
   let business: Business | null = null;
   if (user.role === UserRole.OWNER) {

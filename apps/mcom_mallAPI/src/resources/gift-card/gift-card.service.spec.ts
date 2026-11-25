@@ -23,6 +23,15 @@ describe('GiftCardService redemption', () => {
 
     service.giftCardRepository = {
       findOne: jest.fn().mockResolvedValue(card),
+      manager: {
+        getRepository: jest.fn().mockReturnValue({
+          findOne: jest.fn().mockResolvedValue({
+            id: 'recipient-1',
+            isActive: true,
+            centralDeletedAt: null,
+          }),
+        }),
+      },
     };
     service.transactionRepository = {
       create: jest.fn((value) => value),
@@ -35,9 +44,19 @@ describe('GiftCardService redemption', () => {
       findOne: jest.fn().mockResolvedValue({ ownerId: 'owner-1' }),
     };
     service.businessRepository = {
-      findOne: jest
-        .fn()
-        .mockResolvedValue({ id: 'template-business', user: { id: 'owner-1' } }),
+      findOne: jest.fn().mockResolvedValue({
+        id: 'template-business',
+        status: 'published',
+        user: { id: 'owner-1', isActive: true, centralDeletedAt: null },
+      }),
+      find: jest.fn().mockResolvedValue([
+        {
+          id: 'template-business',
+          status: 'published',
+          centralDeletedAt: null,
+          user: { id: 'owner-1', isActive: true, centralDeletedAt: null },
+        },
+      ]),
     };
     service.eventEmitter = undefined;
 

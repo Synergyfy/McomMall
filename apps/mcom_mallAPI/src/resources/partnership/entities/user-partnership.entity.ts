@@ -17,4 +17,12 @@ export class UserPartnership extends AbstractBaseEntity {
 
   @Column({ default: true })
   isActive: boolean;
+
+  /** Marker: this partnership was suspended because a Central account was deleted. */
+  @Column({ type: 'timestamptz', nullable: true })
+  centralSuspendedAt?: Date | null;
+
+  /** Central-deleted account that caused the suspension (for restore). */
+  @Column({ type: 'uuid', nullable: true })
+  centralSuspendedForUserId?: string | null;
 }

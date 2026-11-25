@@ -10,6 +10,7 @@ import {
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { CapabilityService, ActionType } from '../capability/capability.service';
 import { CreateCouponProductDto } from './dto/create-coupon-product.dto';
 import { UpdateCouponProductDto } from './dto/update-coupon-product.dto';
@@ -43,6 +44,15 @@ export class CouponProductService {
     if (!business.user) {
       throw new InternalServerErrorException(
         `Business with ID "${businessId}" has no associated owner.`,
+      );
+    }
+    if (
+      business.status !== BusinessStatus.PUBLISHED ||
+      business.user.isActive === false ||
+      business.user.centralDeletedAt
+    ) {
+      throw new NotFoundException(
+        `Business with ID "${businessId}" not found.`,
       );
     }
     return this.couponProductRepository.find({
@@ -118,9 +128,20 @@ export class CouponProductService {
         approvalStatus: ApprovalStatus.APPROVED,
         adminDisabled: false,
       },
-      relations: ['user'],
+      relations: ['user', 'user.businesses'],
     });
     if (!product) {
+      throw new NotFoundException(`Coupon product with ID "${id}" not found.`);
+    }
+    const ownerIsLive =
+      product.user?.isActive !== false && !product.user?.centralDeletedAt;
+    const hasLiveBusiness =
+      product.user?.businesses?.some(
+        (business) =>
+          business.status === BusinessStatus.PUBLISHED &&
+          !business.centralDeletedAt,
+      ) ?? false;
+    if (!ownerIsLive || !hasLiveBusiness) {
       throw new NotFoundException(`Coupon product with ID "${id}" not found.`);
     }
     return product;
@@ -138,7 +159,17 @@ export class CouponProductService {
       .andWhere('couponProduct.approvalStatus = :approvalStatus', {
         approvalStatus: ApprovalStatus.APPROVED,
       })
-      .andWhere('couponProduct.adminDisabled = false');
+      .andWhere('couponProduct.adminDisabled = false')
+      .andWhere('user.isActive = :ownerActive', { ownerActive: true })
+      .andWhere(
+        `EXISTS (
+          SELECT 1 FROM "businesses" coupon_owner
+          WHERE coupon_owner."userId" = "couponProduct"."userId"
+            AND coupon_owner."status" = :couponOwnerStatus
+            AND coupon_owner."deleted_at" IS NULL
+        )`,
+        { couponOwnerStatus: BusinessStatus.PUBLISHED },
+      );
 
     if (search) {
       queryBuilder.andWhere(

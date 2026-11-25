@@ -87,6 +87,18 @@ export class Business extends AbstractBaseEntity {
   @Column({ type: 'timestamptz', nullable: true })
   centralProfileSyncedAt?: Date | null;
 
+  /**
+   * Set when the owner's Central account is deleted. The listing is archived
+   * (hidden from the marketplace and its public page) but every row is kept so
+   * it can be restored by a later `profile.updated`.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  centralDeletedAt?: Date | null;
+
+  /** Status the listing had before Central deleted its owner's account. */
+  @Column({ nullable: true })
+  centralDeletedStatus?: string | null;
+
   @Column()
   @Length(20, 180)
   shortDescription: string;

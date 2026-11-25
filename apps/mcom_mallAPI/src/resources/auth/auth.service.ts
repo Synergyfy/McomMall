@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   buildNewUserIdentity,
   syncCentralIdentity,
+  tokenPredatesCentralDeletion,
 } from '../sso/central-profile-sync';
 
 @Injectable()
@@ -108,6 +109,9 @@ export class AuthService {
       if (!user) {
         throw new Error('User not found');
       }
+      if (user.centralDeletedAt || user.isActive === false) {
+        throw new Error('Account is no longer active');
+      }
 
       const { id, role, firstName, lastName, email, centralUserId } = user;
       const name = `${firstName} ${lastName}`;
@@ -167,6 +171,18 @@ export class AuthService {
         phoneNumber: identity.phoneNumber,
         role: identity.role,
       });
+
+      // A deleted Central profile must never be able to sign back in with a
+      // token minted before the deletion. A token minted after it can only
+      // come from an admin restore, so let the identity sync reactivate the
+      // account (and cover a restore webhook that has not arrived yet).
+      if (
+        user.isActive === false ||
+        (user.centralDeletedAt &&
+          tokenPredatesCentralDeletion(user.centralDeletedAt, payload.iat))
+      ) {
+        throw new Error('Account is no longer active');
+      }
 
       // MCOM Central is the identity source of truth. Diff and refresh every
       // local field (person, contact, business profile, storefront) on login.

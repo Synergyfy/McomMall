@@ -11,6 +11,7 @@ import { FlashSaleStatus } from './flash-sale.enum';
 import { CreateFlashSaleItemDto } from './dto/create-flash-sale-item.dto';
 import { UpdateFlashSaleItemDto } from './dto/update-flash-sale-item.dto';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { Product } from '../product/entities/product.entity';
 import { UserRole } from '../../common/role.enum';
 import { ApprovalStatus } from '../../common/moderation/catalog-approval';
@@ -97,15 +98,31 @@ export class FlashSalesService {
                 adminDisabled: false,
                 productStatus: 'published',
                 visibility: 'public',
+                business: { status: BusinessStatus.PUBLISHED },
               },
             })
           ).map((product) => product.id),
         )
       : new Set<string>();
 
+    const businessIds = items
+      .map((item) => item.businessId)
+      .filter((id): id is string => !!id);
+    const allowedBusinessIds = businessIds.length
+      ? new Set(
+          (
+            await this.businessRepository.find({
+              where: { id: In(businessIds), status: BusinessStatus.PUBLISHED },
+            })
+          ).map((business) => business.id),
+        )
+      : new Set<string>();
+
     return items
       .filter(
-        (item) => !item.productId || allowedProductIds.has(item.productId),
+        (item) =>
+          (!item.productId || allowedProductIds.has(item.productId)) &&
+          (!item.businessId || allowedBusinessIds.has(item.businessId)),
       )
       .map((item) => ({
         ...item,

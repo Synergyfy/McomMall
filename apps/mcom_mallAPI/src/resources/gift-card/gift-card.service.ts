@@ -38,6 +38,7 @@ import { PurchaseGiftCardDto } from './dto/purchase-gift-card.dto';
 import { CheckBalanceResponseDto } from './dto/check-balance-response.dto';
 import { RedeemGiftCardDto } from './dto/redeem-gift-card.dto';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { Order } from '../order/entities/order.entity';
 import { OrderStatus } from '../order/enums/order-status.enum';
 import { GiftCardSettings } from './entities/gift-card-settings.entity';
@@ -1182,7 +1183,12 @@ export class GiftCardService {
       where: { id: businessId },
       relations: ['user'],
     });
-    if (!business) {
+    if (
+      !business ||
+      business.status !== BusinessStatus.PUBLISHED ||
+      business.user?.isActive === false ||
+      business.user?.centralDeletedAt
+    ) {
       throw new NotFoundException('Business not found.');
     }
     const ownerId = business.user.id;
@@ -1711,12 +1717,54 @@ export class GiftCardService {
           'This gift card cannot be redeemed at this business.',
         );
       }
+      await this.assertIssuerIsLive(context.businessId, [...ids]);
       return;
     }
 
     if (!context.userId || context.userId !== giftCard.ownerId) {
       throw new ForbiddenException(
         'This gift card cannot be redeemed for this order.',
+      );
+    }
+
+    const owner = await this.giftCardRepository.manager
+      .getRepository(User)
+      .findOne({ where: { id: giftCard.ownerId } });
+    if (!owner || owner.isActive === false || owner.centralDeletedAt) {
+      throw new ForbiddenException(
+        'This gift card belongs to an account that is no longer active.',
+      );
+    }
+  }
+
+  /**
+   * A business-bound card issued by a Central-deleted (or admin-suspended)
+   * business must stop being redeemable. Existing rows are retained for audit.
+   */
+  private async assertIssuerIsLive(
+    redeemingBusinessId: string | null | undefined,
+    businessIds: string[],
+  ): Promise<void> {
+    const targetId =
+      (redeemingBusinessId && businessIds.includes(redeemingBusinessId)
+        ? redeemingBusinessId
+        : businessIds[0]) ?? null;
+    if (!targetId) return;
+
+    const business = await this.businessRepository.findOne({
+      where: { id: targetId },
+      relations: ['user'],
+    });
+    const issuerIsLive =
+      !!business &&
+      business.status === BusinessStatus.PUBLISHED &&
+      business.user?.isActive !== false &&
+      !business.user?.centralDeletedAt &&
+      !business.centralDeletedAt;
+
+    if (!issuerIsLive) {
+      throw new BadRequestException(
+        'This gift card is no longer redeemable because the issuing business is inactive.',
       );
     }
   }
@@ -2380,7 +2428,17 @@ export class GiftCardService {
       .andWhere('template.approvalStatus = :approvalStatus', {
         approvalStatus: ApprovalStatus.APPROVED,
       })
-      .andWhere('template.adminDisabled = false');
+      .andWhere('template.adminDisabled = false')
+      .andWhere('owner.isActive = :ownerActive', { ownerActive: true })
+      .andWhere(
+        `EXISTS (
+          SELECT 1 FROM "businesses" template_owner
+          WHERE template_owner."userId" = "template"."ownerId"
+            AND template_owner."status" = :templateOwnerStatus
+            AND template_owner."deleted_at" IS NULL
+        )`,
+        { templateOwnerStatus: BusinessStatus.PUBLISHED },
+      );
 
     if (search) {
       queryBuilder.andWhere(
@@ -2461,6 +2519,20 @@ export class GiftCardService {
     });
 
     if (!template) {
+      throw new NotFoundException('Gift card template not found.');
+    }
+
+    const ownerIsLive =
+      template.owner?.isActive !== false && !template.owner?.centralDeletedAt;
+    const business = await this.businessRepository.findOne({
+      where: { user: { id: template.ownerId } },
+    });
+    if (
+      !ownerIsLive ||
+      !business ||
+      business.status !== BusinessStatus.PUBLISHED ||
+      business.centralDeletedAt
+    ) {
       throw new NotFoundException('Gift card template not found.');
     }
 
