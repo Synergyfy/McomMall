@@ -135,7 +135,10 @@ export class PromotionalOffersService {
       offeringType,
       search,
       sector,
+      sectorId,
       category,
+      categoryId,
+      subCategoryId,
       businessId,
     } = query;
 
@@ -157,11 +160,18 @@ export class PromotionalOffersService {
     if (offeringType) {
       qb.andWhere('offer.offeringType = :offeringType', { offeringType });
     }
-    if (sector) {
+    if (sectorId) {
+      qb.andWhere('offer.sectorId = :sectorId', { sectorId });
+    } else if (sector) {
       qb.andWhere('offer.sector = :sector', { sector });
     }
-    if (category) {
+    if (categoryId) {
+      qb.andWhere('offer.categoryId = :categoryId', { categoryId });
+    } else if (category) {
       qb.andWhere('offer.category = :category', { category });
+    }
+    if (subCategoryId) {
+      qb.andWhere('offer.subCategoryId = :subCategoryId', { subCategoryId });
     }
     if (search) {
       qb.andWhere(

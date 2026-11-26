@@ -9,6 +9,11 @@ export interface AdminPromotionalOffer {
   id: string;
   name: string;
   offeringType: PromotionalOfferingType;
+  /** Stable MCOM Central Hub taxonomy IDs. */
+  sectorId?: string | null;
+  categoryId?: string | null;
+  subCategoryId?: string | null;
+  /** Legacy name columns, kept in sync by the API. */
   sector?: string | null;
   category?: string | null;
   subCategory?: string | null;
@@ -65,6 +70,9 @@ export interface PromotionalOfferFilters {
   offeringType?: PromotionalOfferingType;
   status?: PromotionalOfferStatus;
   availability?: 'all' | 'selected';
+  sectorId?: string;
+  categoryId?: string;
+  subCategoryId?: string;
   page?: number;
   limit?: number;
 }
@@ -72,6 +80,10 @@ export interface PromotionalOfferFilters {
 export interface CreatePromotionalOfferPayload {
   name: string;
   offeringType: PromotionalOfferingType;
+  sectorId?: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  /** Legacy name fields are still sent for backward compatibility. */
   sector?: string;
   category?: string;
   subCategory?: string;

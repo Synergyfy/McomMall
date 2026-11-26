@@ -6,6 +6,9 @@ import { BusinessPromotionalOffer } from './entities/business-promotional-offer.
 import { AffiliateClick } from './entities/affiliate-click.entity';
 import { AffiliateTransaction } from './entities/affiliate-transaction.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { Sector } from '../taxonomy/entities/sector.entity';
+import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity';
+import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
 import { PromotionalOffersService } from './promotional-offers.service';
 import { PromotionalOffersAdminService } from './promotional-offers.admin.service';
 import { AwinSyncService } from './awin-sync.service';
@@ -22,6 +25,9 @@ import { AffiliateAdminController } from './affiliate.admin.controller';
       AffiliateClick,
       AffiliateTransaction,
       Business,
+      Sector,
+      TaxonomyCategory,
+      TaxonomySubcategory,
     ]),
   ],
   controllers: [

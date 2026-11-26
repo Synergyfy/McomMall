@@ -1,17 +1,46 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  Unique,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Sector } from './sector.entity';
 import { TaxonomySubcategory } from './taxonomy-subcategory.entity';
 
 @Entity('taxonomy_categories')
+@Unique('UQ_taxonomy_categories_parent_name', ['sectorId', 'name'])
 export class TaxonomyCategory extends AbstractBaseEntity {
   @ApiProperty({
     example: 'Mobile Phones',
     description: 'The name of the category',
   })
-  @Column({ unique: true })
+  @Column()
   name: string;
+
+  @ApiProperty({
+    description: 'Stable ID of the matching taxonomy row in MCOM Central Hub',
+    required: false,
+  })
+  @Column({ nullable: true, unique: true })
+  centralId: string;
+
+  @ApiProperty({
+    description: 'Slug of the matching taxonomy row in MCOM Central Hub',
+    required: false,
+  })
+  @Column({ nullable: true })
+  centralSlug: string;
+
+  @ApiProperty({
+    description: 'When this row was linked to MCOM Central Hub',
+    required: false,
+  })
+  @Column({ type: 'timestamp', nullable: true })
+  centralSyncedAt: Date;
 
   @ApiProperty({
     example: 'https://example.com/cat.jpg',

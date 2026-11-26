@@ -25,6 +25,7 @@
     "test:e2e": "ts-node scripts/create-test-db.ts && dotenv -e .env.test -- jest --config ./test/jest-e2e.json --runInBand --forceExit",
     "migration:generate": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d src/database/data-source.ts",
     "migration:run": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
+    "sync:central-taxonomy": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register scripts/run-central-taxonomy-sync.ts",
     "migration:revert": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
     "seed:taxonomy": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/taxonomy.seed.ts",
     "seed:admin": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register src/database/seeds/admin.seed.ts",

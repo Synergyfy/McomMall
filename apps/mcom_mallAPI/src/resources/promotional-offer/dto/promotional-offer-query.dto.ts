@@ -31,7 +31,23 @@ export class PromotionalOfferQueryDto {
 
   @IsOptional()
   @IsString()
+  sectorId?: string;
+
+  @IsOptional()
+  @IsString()
   category?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  subCategory?: string;
+
+  @IsOptional()
+  @IsString()
+  subCategoryId?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -66,7 +82,23 @@ export class PublicPromotionalOfferQueryDto {
 
   @IsOptional()
   @IsString()
+  sectorId?: string;
+
+  @IsOptional()
+  @IsString()
   category?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  subCategory?: string;
+
+  @IsOptional()
+  @IsString()
+  subCategoryId?: string;
 
   /** When present, only offers imported by this business are returned. */
   @IsOptional()

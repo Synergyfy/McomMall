@@ -27,15 +27,36 @@ export class CreatePromotionalOfferDto {
   @IsIn(['product', 'service', 'offer'])
   offeringType?: 'product' | 'service' | 'offer';
 
+  @ApiPropertyOptional({
+    description: 'MCOM Central Hub sector ID (or local taxonomy ID)',
+  })
+  @IsOptional()
+  @IsString()
+  sectorId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   sector?: string;
 
+  @ApiPropertyOptional({
+    description: 'MCOM Central Hub category ID (or local taxonomy ID)',
+  })
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({
+    description: 'MCOM Central Hub subcategory ID (or local taxonomy ID)',
+  })
+  @IsOptional()
+  @IsString()
+  subCategoryId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
