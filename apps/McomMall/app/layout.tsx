@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     template: APP_TITLE_TEMPLATE,
   },
   description: APP_DESCRIPTION,
+  verification: {
+    other: {
+      'mitgo-verification': '75f5694f-b4ab-4cd5-bcf2-d8f430539830',
+    },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
