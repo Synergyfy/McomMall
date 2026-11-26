@@ -4,8 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, ObjectLiteral, Repository } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
+import { Sector } from '../taxonomy/entities/sector.entity';
+import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity';
+import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
 import { PromotionalOffer } from './entities/promotional-offer.entity';
 import { PromotionalOfferBusiness } from './entities/promotional-offer-business.entity';
 import { BusinessPromotionalOffer } from './entities/business-promotional-offer.entity';
@@ -35,6 +38,12 @@ export class PromotionalOffersAdminService {
     private readonly transactionRepository: Repository<AffiliateTransaction>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
+    @InjectRepository(Sector)
+    private readonly sectorRepository: Repository<Sector>,
+    @InjectRepository(TaxonomyCategory)
+    private readonly categoryRepository: Repository<TaxonomyCategory>,
+    @InjectRepository(TaxonomySubcategory)
+    private readonly subcategoryRepository: Repository<TaxonomySubcategory>,
     private readonly awinSyncService: AwinSyncService,
   ) {}
 
@@ -54,6 +63,153 @@ export class PromotionalOffersAdminService {
     }
 
     return patch;
+  }
+
+  private inputString(value: unknown): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    const trimmed = String(value).trim();
+    return trimmed.length ? trimmed : null;
+  }
+
+  private taxonomyId(row: { id: string; centralId?: string | null }): string {
+    return row.centralId || row.id;
+  }
+
+  private async findTaxonomyRow<
+    T extends ObjectLiteral & {
+      id: string;
+      name: string;
+      centralId?: string | null;
+    },
+  >(
+    repository: Repository<T>,
+    idValue: string | null | undefined,
+    nameValue: string | null | undefined,
+    label: string,
+    strictId: boolean,
+  ): Promise<T | null> {
+    if (idValue) {
+      const row = await repository
+        .createQueryBuilder('taxonomy')
+        .where('taxonomy.centralId = :id OR taxonomy.id = :id', { id: idValue })
+        .andWhere('taxonomy."centralId" IS NOT NULL')
+        .getOne();
+      if (!row && strictId) {
+        throw new BadRequestException(
+          `${label} "${idValue}" was not found in the MCOM taxonomy.`,
+        );
+      }
+      return row ?? null;
+    }
+
+    if (nameValue) {
+      return repository
+        .createQueryBuilder('taxonomy')
+        .where('lower(btrim(taxonomy.name)) = lower(btrim(:name))', {
+          name: nameValue,
+        })
+        .andWhere('taxonomy."centralId" IS NOT NULL')
+        .getOne();
+    }
+
+    return null;
+  }
+
+  /**
+   * Stores stable MCOM Central Hub taxonomy IDs on the offer while keeping the
+   * legacy name columns in sync. Name-only payloads are still accepted so old
+   * clients and existing offers keep working; when a name matches a mirrored
+   * taxonomy row its ID is attached automatically.
+   */
+  private async resolveTaxonomy(
+    patch: Record<string, unknown>,
+    existing?: PromotionalOffer | null,
+  ): Promise<void> {
+    const sectorIdInput = this.inputString(patch.sectorId);
+    const sectorNameInput = this.inputString(patch.sector);
+    if (sectorIdInput === null || sectorNameInput === null) {
+      patch.sector = null;
+      patch.sectorId = null;
+      patch.category = null;
+      patch.categoryId = null;
+      patch.subCategory = null;
+      patch.subCategoryId = null;
+      return;
+    }
+
+    const sector = await this.findTaxonomyRow(
+      this.sectorRepository,
+      sectorIdInput ?? existing?.sectorId,
+      sectorNameInput ?? existing?.sector,
+      'Sector',
+      !!sectorIdInput,
+    );
+    if (sector) {
+      patch.sector = sector.name;
+      patch.sectorId = this.taxonomyId(sector);
+    } else if (sectorNameInput) {
+      patch.sector = sectorNameInput;
+      patch.sectorId = null;
+    }
+
+    const categoryIdInput = this.inputString(patch.categoryId);
+    const categoryNameInput = this.inputString(patch.category);
+    if (categoryIdInput === null || categoryNameInput === null) {
+      patch.category = null;
+      patch.categoryId = null;
+      patch.subCategory = null;
+      patch.subCategoryId = null;
+      return;
+    }
+
+    const category = await this.findTaxonomyRow(
+      this.categoryRepository,
+      categoryIdInput ?? existing?.categoryId,
+      categoryNameInput ?? existing?.category,
+      'Category',
+      !!categoryIdInput,
+    );
+    if (category && sector && category.sectorId !== sector.id) {
+      throw new BadRequestException(
+        'Category does not belong to the selected sector.',
+      );
+    }
+    if (category) {
+      patch.category = category.name;
+      patch.categoryId = this.taxonomyId(category);
+    } else if (categoryNameInput) {
+      patch.category = categoryNameInput;
+      patch.categoryId = null;
+    }
+
+    const subCategoryIdInput = this.inputString(patch.subCategoryId);
+    const subCategoryNameInput = this.inputString(patch.subCategory);
+    if (subCategoryIdInput === null || subCategoryNameInput === null) {
+      patch.subCategory = null;
+      patch.subCategoryId = null;
+      return;
+    }
+
+    const subcategory = await this.findTaxonomyRow(
+      this.subcategoryRepository,
+      subCategoryIdInput ?? existing?.subCategoryId,
+      subCategoryNameInput ?? existing?.subCategory,
+      'Subcategory',
+      !!subCategoryIdInput,
+    );
+    if (subcategory && category && subcategory.categoryId !== category.id) {
+      throw new BadRequestException(
+        'Subcategory does not belong to the selected category.',
+      );
+    }
+    if (subcategory) {
+      patch.subCategory = subcategory.name;
+      patch.subCategoryId = this.taxonomyId(subcategory);
+    } else if (subCategoryNameInput) {
+      patch.subCategory = subCategoryNameInput;
+      patch.subCategoryId = null;
+    }
   }
 
   async getStats() {
@@ -80,8 +236,19 @@ export class PromotionalOffersAdminService {
   }
 
   async findAll(query: PromotionalOfferQueryDto) {
-    const { page = 1, limit = 20, search, offeringType, status, availability } =
-      query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      offeringType,
+      status,
+      availability,
+      sector,
+      sectorId,
+      category,
+      categoryId,
+      subCategoryId,
+    } = query;
     const qb = this.offersRepository
       .createQueryBuilder('offer')
       .leftJoinAndSelect('offer.availableBusinesses', 'selection')
@@ -104,6 +271,19 @@ export class PromotionalOffersAdminService {
     }
     if (availability) {
       qb.andWhere('offer.availability = :availability', { availability });
+    }
+    if (sectorId) {
+      qb.andWhere('offer.sectorId = :sectorId', { sectorId });
+    } else if (sector) {
+      qb.andWhere('offer.sector = :sector', { sector });
+    }
+    if (categoryId) {
+      qb.andWhere('offer.categoryId = :categoryId', { categoryId });
+    } else if (category) {
+      qb.andWhere('offer.category = :category', { category });
+    }
+    if (subCategoryId) {
+      qb.andWhere('offer.subCategoryId = :subCategoryId', { subCategoryId });
     }
 
     const [offers, total] = await qb.getManyAndCount();
@@ -166,6 +346,7 @@ export class PromotionalOffersAdminService {
 
   async create(dto: CreatePromotionalOfferDto, adminId?: string) {
     const patch = this.toPatch(dto);
+    await this.resolveTaxonomy(patch);
     const offer = this.offersRepository.create({
       ...(patch as Partial<PromotionalOffer>),
       createdById: adminId ?? null,
@@ -185,7 +366,9 @@ export class PromotionalOffersAdminService {
     const offer = await this.offersRepository.findOne({ where: { id } });
     if (!offer) throw new NotFoundException('Promotional offer not found');
 
-    Object.assign(offer, this.toPatch(dto));
+    const patch = this.toPatch(dto);
+    await this.resolveTaxonomy(patch, offer);
+    Object.assign(offer, patch);
     await this.offersRepository.save(offer);
 
     if (dto.businessIds !== undefined || dto.availability !== undefined) {

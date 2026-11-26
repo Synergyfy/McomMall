@@ -53,13 +53,26 @@ interface PromotionalOfferFormProps {
   onSubmit: (payload: CreatePromotionalOfferPayload) => void;
 }
 
+// Selects use the stable MCOM Central Hub ID, falling back to the local
+// taxonomy ID for rows that have not been mirrored yet.
+const taxonomyValue = (row: { id: string; centralId?: string | null }) =>
+    row.centralId || row.id;
+
+const sameTaxonomyName = (left?: string | null, right?: string | null) =>
+    !!left &&
+    !!right &&
+    left.trim().toLowerCase() === right.trim().toLowerCase();
+
 const emptyDefaults = (
   offeringType: PromotionalOfferingType,
 ): CreatePromotionalOfferPayload => ({
   name: '',
   offeringType,
+  sectorId: '',
   sector: '',
+  categoryId: '',
   category: '',
+  subCategoryId: '',
   subCategory: '',
   brand: '',
   tags: [],
@@ -121,14 +134,24 @@ export default function PromotionalOfferForm({
 
   const filteredSectors = sectors;
   const selectedSector = useMemo(
-    () => sectors.find((sector) => sector.name === values.sector),
-    [sectors, values.sector],
-  );
-  const selectedCategoryId = useMemo(
     () =>
-      categories.find((category) => category.name === values.category)?.id,
-    [categories, values.category],
+      sectors.find((sector) => taxonomyValue(sector) === values.sectorId) ??
+      sectors.find((sector) => sameTaxonomyName(sector.name, values.sector)),
+    [sectors, values.sectorId, values.sector],
   );
+  const selectedCategory = useMemo(
+    () =>
+      categories.find(
+        (category) => taxonomyValue(category) === values.categoryId,
+      ) ??
+      categories.find((category) =>
+        sameTaxonomyName(category.name, values.category),
+      ),
+    [categories, values.categoryId, values.category],
+  );
+  // The subcategory endpoint expects the local category UUID, not the
+  // Central ID used by the select controls.
+  const localCategoryId = selectedCategory?.id;
   const filteredCategories = useMemo(
     () =>
       selectedSector
@@ -139,9 +162,9 @@ export default function PromotionalOfferForm({
     [categories, selectedSector],
   );
   const { data: subcategories = [] } = useQuery({
-    queryKey: ['admin-promotional-subcategories', selectedCategoryId],
-    queryFn: () => fetchSubcategories(selectedCategoryId as string),
-    enabled: !!selectedCategoryId,
+    queryKey: ['admin-promotional-subcategories', localCategoryId],
+    queryFn: () => fetchSubcategories(localCategoryId as string),
+    enabled: !!localCategoryId,
   });
 
   useEffect(() => {
@@ -150,8 +173,11 @@ export default function PromotionalOfferForm({
       ...emptyDefaults(offeringType),
       name: initial.name,
       offeringType: initial.offeringType,
+      sectorId: initial.sectorId ?? '',
       sector: initial.sector ?? '',
+      categoryId: initial.categoryId ?? '',
       category: initial.category ?? '',
+      subCategoryId: initial.subCategoryId ?? '',
       subCategory: initial.subCategory ?? '',
       brand: initial.brand ?? '',
       shortDescription: initial.shortDescription ?? '',
@@ -185,6 +211,42 @@ export default function PromotionalOfferForm({
       displayOrder: initial.displayOrder ?? 0,
     });
   }, [initial, offeringType, reset]);
+
+  // Legacy offers only contain taxonomy names. As soon as the mirrored rows
+  // load, resolve those names to stable IDs so subsequent saves use IDs.
+  useEffect(() => {
+    if (!initial) return;
+    if (!values.sectorId && values.sector) {
+      const match = sectors.find((sector) =>
+        sameTaxonomyName(sector.name, values.sector),
+      );
+      if (match) setValue('sectorId', taxonomyValue(match));
+    }
+    if (!values.categoryId && values.category) {
+      const match = categories.find((category) =>
+        sameTaxonomyName(category.name, values.category),
+      );
+      if (match) setValue('categoryId', taxonomyValue(match));
+    }
+    if (!values.subCategoryId && values.subCategory) {
+      const match = subcategories.find((subcategory) =>
+        sameTaxonomyName(subcategory.name, values.subCategory),
+      );
+      if (match) setValue('subCategoryId', taxonomyValue(match));
+    }
+  }, [
+    initial,
+    sectors,
+    categories,
+    subcategories,
+    values.sectorId,
+    values.sector,
+    values.categoryId,
+    values.category,
+    values.subCategoryId,
+    values.subCategory,
+    setValue,
+  ]);
 
   const updateImage = (index: number, url: string) => {
     const next = [...images];
@@ -226,6 +288,19 @@ export default function PromotionalOfferForm({
         ...data,
         offeringType,
         status,
+        // Send both IDs and canonical names; the API resolves IDs and keeps
+        // the legacy name columns in sync.
+        sector:
+          sectors.find((sector) => taxonomyValue(sector) === data.sectorId)
+            ?.name ?? data.sector,
+        category:
+          categories.find(
+            (category) => taxonomyValue(category) === data.categoryId,
+          )?.name ?? data.category,
+        subCategory:
+          subcategories.find(
+            (subcategory) => taxonomyValue(subcategory) === data.subCategoryId,
+          )?.name ?? data.subCategory,
         images: (data.images ?? []).filter(Boolean),
         tags: (data.tags ?? []).filter(Boolean),
         price: numeric(data.price),
@@ -302,10 +377,18 @@ export default function PromotionalOfferForm({
                 <div className="space-y-2">
                   <Label>Sector</Label>
                   <Select
-                    value={values.sector || ''}
+                    value={values.sectorId || ''}
                     onValueChange={(value) => {
-                      setValue('sector', value);
+                      setValue('sectorId', value);
+                      setValue(
+                        'sector',
+                        sectors.find(
+                          (sector) => taxonomyValue(sector) === value,
+                        )?.name ?? '',
+                      );
+                      setValue('categoryId', '');
                       setValue('category', '');
+                      setValue('subCategoryId', '');
                       setValue('subCategory', '');
                     }}
                   >
@@ -314,7 +397,10 @@ export default function PromotionalOfferForm({
                     </SelectTrigger>
                     <SelectContent>
                       {filteredSectors.map((sector) => (
-                        <SelectItem key={sector.id} value={sector.name}>
+                        <SelectItem
+                          key={sector.id}
+                          value={taxonomyValue(sector)}
+                        >
                           {sector.name}
                         </SelectItem>
                       ))}
@@ -324,9 +410,16 @@ export default function PromotionalOfferForm({
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <Select
-                    value={values.category || ''}
+                    value={values.categoryId || ''}
                     onValueChange={(value) => {
-                      setValue('category', value);
+                      setValue('categoryId', value);
+                      setValue(
+                        'category',
+                        categories.find(
+                          (category) => taxonomyValue(category) === value,
+                        )?.name ?? '',
+                      );
+                      setValue('subCategoryId', '');
                       setValue('subCategory', '');
                     }}
                   >
@@ -335,7 +428,10 @@ export default function PromotionalOfferForm({
                     </SelectTrigger>
                     <SelectContent>
                       {filteredCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.name}>
+                        <SelectItem
+                          key={category.id}
+                          value={taxonomyValue(category)}
+                        >
                           {category.name}
                         </SelectItem>
                       ))}
@@ -345,9 +441,17 @@ export default function PromotionalOfferForm({
                 <div className="space-y-2">
                   <Label>Subcategory</Label>
                   <Select
-                    value={values.subCategory || ''}
-                    onValueChange={(value) => setValue('subCategory', value)}
-                    disabled={!values.category}
+                    value={values.subCategoryId || ''}
+                    onValueChange={(value) => {
+                      setValue('subCategoryId', value);
+                      setValue(
+                        'subCategory',
+                        subcategories.find(
+                          (subcategory) => taxonomyValue(subcategory) === value,
+                        )?.name ?? '',
+                      );
+                    }}
+                    disabled={!values.categoryId}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select subcategory" />
@@ -356,7 +460,7 @@ export default function PromotionalOfferForm({
                       {subcategories.map((subcategory) => (
                         <SelectItem
                           key={subcategory.id}
-                          value={subcategory.name}
+                          value={taxonomyValue(subcategory)}
                         >
                           {subcategory.name}
                         </SelectItem>

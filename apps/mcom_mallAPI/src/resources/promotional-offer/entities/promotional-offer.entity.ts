@@ -37,11 +37,24 @@ export class PromotionalOffer extends AbstractBaseEntity {
   @Column({ nullable: true })
   sector?: string;
 
+  /** Stable MCOM Central Hub taxonomy ID (local taxonomy ID when unmapped). */
+  @Index('IDX_promotional_offers_sector_id')
+  @Column({ nullable: true })
+  sectorId?: string | null;
+
   @Column({ nullable: true })
   category?: string;
 
+  @Index('IDX_promotional_offers_category_id')
+  @Column({ nullable: true })
+  categoryId?: string | null;
+
   @Column({ nullable: true })
   subCategory?: string;
+
+  @Index('IDX_promotional_offers_subcategory_id')
+  @Column({ nullable: true })
+  subCategoryId?: string | null;
 
   @Column({ nullable: true })
   brand?: string;

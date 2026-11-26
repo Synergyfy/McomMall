@@ -208,6 +208,9 @@ export interface Voucher {
 // ============== Sector/Category Types ==============
 export interface Sector {
     id: string;
+    centralId?: string | null;
+    centralSlug?: string | null;
+    centralSyncedAt?: string | Date | null;
     name: string;
     shortDescription: string;
     longDescription?: string;
@@ -219,6 +222,9 @@ export interface Sector {
 
 export interface Category {
     id: string;
+    centralId?: string | null;
+    centralSlug?: string | null;
+    centralSyncedAt?: string | Date | null;
     sectorId: string;
     sectorName: string;
     name: string;
@@ -232,6 +238,9 @@ export interface Category {
 
 export interface Subcategory {
     id: string;
+    centralId?: string | null;
+    centralSlug?: string | null;
+    centralSyncedAt?: string | Date | null;
     categoryId: string;
     categoryName: string;
     name: string;

@@ -15,6 +15,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { TaxonomyService } from './taxonomy.service';
+import {
+  CentralTaxonomySyncResult,
+  CentralTaxonomySyncService,
+} from './central-taxonomy-sync.service';
 import { CreateSectorDto } from './dto/create-sector.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateSubcategoryDto } from './dto/create-subcategory.dto';
@@ -33,7 +37,25 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 @ApiTags('Taxonomy')
 @Controller('taxonomy')
 export class TaxonomyController {
-  constructor(private readonly taxonomyService: TaxonomyService) {}
+  constructor(
+    private readonly taxonomyService: TaxonomyService,
+    private readonly centralTaxonomySyncService: CentralTaxonomySyncService,
+  ) {}
+
+  @Post('sync')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Mirror new Central Hub taxonomy rows into the local catalog (Admin only)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Counts of rows added, linked and skipped during the sync.',
+  })
+  syncFromCentral(): Promise<CentralTaxonomySyncResult> {
+    return this.centralTaxonomySyncService.syncFromCentral();
+  }
 
   // --- Sectors ---
 

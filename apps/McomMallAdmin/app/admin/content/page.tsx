@@ -2,25 +2,9 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import {
-    Plus,
-    Edit,
-    Trash2,
     FolderTree,
     Image as ImageIcon,
     FileText,
@@ -29,450 +13,73 @@ import {
     GripVertical,
     Layers,
     ArrowRight,
-    AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 import {
     fetchSectors,
-    createSector,
-    updateSector,
-    deleteSector,
     fetchCategories,
-    createCategory,
-    updateCategory,
-    deleteCategory,
     fetchSubcategories,
-    createSubcategory,
-    updateSubcategory,
-    deleteSubcategory,
 } from './api';
 import { Sector, Category, Subcategory } from '@/app/admin/types';
-import { ImageUpload } from '@/components/ui/image-upload';
 
-// --- Dialog Components ---
+function getLastSyncedAt(rows: Array<{ centralSyncedAt?: string | Date | null }>): string | null {
+    const timestamps = rows
+        .map((row) => (row.centralSyncedAt ? new Date(row.centralSyncedAt).getTime() : NaN))
+        .filter((value) => Number.isFinite(value));
 
-interface SectorFormData {
-    name: string;
-    description: string;
-    image: string;
-}
-
-function SectorDialog({
-    open,
-    onOpenChange,
-    sector,
-    onSubmit,
-}: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    sector?: Sector;
-    onSubmit: (data: SectorFormData) => void;
-}) {
-    const isEdit = !!sector;
-    const [formData, setFormData] = useState({
-        name: sector?.name || '',
-        description: sector?.shortDescription || '',
-        image: sector?.icon || '',
-    });
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{isEdit ? 'Edit Sector' : 'Create Sector'}</DialogTitle>
-                    <DialogDescription>
-                        {isEdit ? 'Update sector details' : 'Add a new sector to the platform'}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label>Name</Label>
-                        <Input
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g., Food & Beverage"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Input
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Brief description"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Image</Label>
-                        <ImageUpload
-                            value={formData.image}
-                            onChange={(url) => setFormData({ ...formData, image: url })}
-                        />
-                    </div>
-                </div>
-
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        className="bg-orange-500 hover:bg-orange-600"
-                        onClick={() => onSubmit(formData)}
-                    >
-                        {isEdit ? 'Save Changes' : 'Create Sector'}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-interface CategoryFormData {
-    name: string;
-    description: string;
-    image: string;
-}
-
-function CategoryDialog({
-    open,
-    onOpenChange,
-    category,
-    sectorName,
-    onSubmit,
-}: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    category?: Category;
-    sectorName: string;
-    onSubmit: (data: CategoryFormData) => void;
-}) {
-    const isEdit = !!category;
-    const [formData, setFormData] = useState({
-        name: category?.name || '',
-        description: category?.shortDescription || '',
-        image: category?.image || '',
-    });
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{isEdit ? 'Edit Category' : 'Create Category'}</DialogTitle>
-                    <DialogDescription>
-                        {isEdit ? 'Update category details' : `Add a new category to ${sectorName}`}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label>Name</Label>
-                        <Input
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g., Restaurants"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Input
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Brief description"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Image</Label>
-                        <ImageUpload
-                            value={formData.image}
-                            onChange={(url) => setFormData({ ...formData, image: url })}
-                        />
-                    </div>
-                </div>
-
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        className="bg-orange-500 hover:bg-orange-600"
-                        onClick={() => onSubmit(formData)}
-                    >
-                        {isEdit ? 'Save Changes' : 'Create Category'}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-interface SubcategoryFormData {
-    name: string;
-    description: string;
-    image: string;
-}
-
-function SubcategoryDialog({
-    open,
-    onOpenChange,
-    subcategory,
-    categoryName,
-    onSubmit,
-}: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    subcategory?: Subcategory;
-    categoryName: string;
-    onSubmit: (data: SubcategoryFormData) => void;
-}) {
-    const isEdit = !!subcategory;
-    const [formData, setFormData] = useState({
-        name: subcategory?.name || '',
-        description: subcategory?.description || '',
-        image: subcategory?.image || '',
-    });
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{isEdit ? 'Edit Subcategory' : 'Create Subcategory'}</DialogTitle>
-                    <DialogDescription>
-                        {isEdit ? 'Update subcategory details' : `Add a new subcategory to ${categoryName}`}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label>Name</Label>
-                        <Input
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g., Italian"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Input
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Brief description"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Image</Label>
-                        <ImageUpload
-                            value={formData.image}
-                            onChange={(url) => setFormData({ ...formData, image: url })}
-                        />
-                    </div>
-                </div>
-
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        className="bg-orange-500 hover:bg-orange-600"
-                        onClick={() => onSubmit(formData)}
-                    >
-                        {isEdit ? 'Save Changes' : 'Create Subcategory'}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+    if (timestamps.length === 0) return null;
+    return new Date(Math.max(...timestamps)).toLocaleString();
 }
 
 export default function ContentPage() {
     const [activeTab, setActiveTab] = useState('sectors');
-    const queryClient = useQueryClient();
 
     // Selection State
     const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-    // Dialog State
-    const [sectorDialogOpen, setSectorDialogOpen] = useState(false);
-    const [editingSector, setEditingSector] = useState<Sector | undefined>();
-
-    const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-    const [editingCategory, setEditingCategory] = useState<Category | undefined>();
-
-    const [subcategoryDialogOpen, setSubcategoryDialogOpen] = useState(false);
-    const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | undefined>();
-
     // --- Data Queries ---
-    const { data: sectors = [], isLoading: isLoadingSectors } = useQuery({
+    const { data: sectors = [] } = useQuery({
         queryKey: ['sectors'],
         queryFn: fetchSectors,
     });
 
-    const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
+    const { data: categories = [] } = useQuery({
         queryKey: ['categories'],
         queryFn: fetchCategories,
     });
 
-    const { data: subcategories = [], isLoading: isLoadingSubcategories } = useQuery({
+    const { data: subcategories = [] } = useQuery({
         queryKey: ['subcategories', selectedCategoryId],
         queryFn: () => fetchSubcategories(selectedCategoryId!),
         enabled: !!selectedCategoryId,
     });
 
     // Derived Data
-    const selectedSector = sectors.find(s => s.id === selectedSectorId);
-    const selectedCategory = categories.find(c => c.id === selectedCategoryId);
-
-    const sectorCategories = categories.filter(c => c.sectorId === selectedSectorId);
-    // No longer need to filter locally since we fetch by category ID
+    const selectedSector = sectors.find((sector) => sector.id === selectedSectorId);
+    const selectedCategory = categories.find((category) => category.id === selectedCategoryId);
+    const sectorCategories = categories.filter((category) => category.sectorId === selectedSectorId);
     const categorySubcategories = subcategories;
-
-    // --- Mutations ---
-
-    // Sector Mutations
-    const createSectorMutation = useMutation({
-        mutationFn: createSector,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['sectors'] });
-            setSectorDialogOpen(false);
-            toast.success('Sector created successfully');
-        },
-        onError: () => toast.error('Failed to create sector'),
-    });
-
-    const updateSectorMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: { name: string; image?: string; description?: string } }) => updateSector(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['sectors'] });
-            setSectorDialogOpen(false);
-            toast.success('Sector updated successfully');
-        },
-        onError: () => toast.error('Failed to update sector'),
-    });
-
-    const deleteSectorMutation = useMutation({
-        mutationFn: deleteSector,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['sectors'] });
-            if (selectedSectorId === editingSector?.id) setSelectedSectorId(null);
-            toast.success('Sector deleted successfully');
-        },
-        onError: () => toast.error('Failed to delete sector'),
-    });
-
-    // Category Mutations
-    const createCategoryMutation = useMutation({
-        mutationFn: createCategory,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['categories'] });
-            queryClient.invalidateQueries({ queryKey: ['sectors'] }); // Update counts
-            setCategoryDialogOpen(false);
-            toast.success('Category created successfully');
-        },
-        onError: () => toast.error('Failed to create category'),
-    });
-
-    const updateCategoryMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: { name: string; sectorId: string; image?: string; description?: string } }) => updateCategory(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['categories'] });
-            setCategoryDialogOpen(false);
-            toast.success('Category updated successfully');
-        },
-        onError: () => toast.error('Failed to update category'),
-    });
-
-    const deleteCategoryMutation = useMutation({
-        mutationFn: deleteCategory,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['categories'] });
-            queryClient.invalidateQueries({ queryKey: ['sectors'] });
-            if (selectedCategoryId === editingCategory?.id) setSelectedCategoryId(null);
-            toast.success('Category deleted successfully');
-        },
-        onError: () => toast.error('Failed to delete category'),
-    });
-
-    // Subcategory Mutations
-    const createSubcategoryMutation = useMutation({
-        mutationFn: createSubcategory,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['subcategories', selectedCategoryId] });
-            queryClient.invalidateQueries({ queryKey: ['categories'] }); // Update counts
-            setSubcategoryDialogOpen(false);
-            toast.success('Subcategory created successfully');
-        },
-        onError: () => toast.error('Failed to create subcategory'),
-    });
-
-    const updateSubcategoryMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: { name: string; categoryId: string; image?: string; description?: string } }) => updateSubcategory(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['subcategories', selectedCategoryId] });
-            setSubcategoryDialogOpen(false);
-            toast.success('Subcategory updated successfully');
-        },
-        onError: () => toast.error('Failed to update subcategory'),
-    });
-
-    const deleteSubcategoryMutation = useMutation({
-        mutationFn: deleteSubcategory,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['subcategories', selectedCategoryId] });
-            queryClient.invalidateQueries({ queryKey: ['categories'] });
-            toast.success('Subcategory deleted successfully');
-        },
-        onError: () => toast.error('Failed to delete subcategory'),
-    });
-
-
-    // --- Handlers ---
-
-    const handleSectorSubmit = (data: SectorFormData) => {
-        if (editingSector) {
-            updateSectorMutation.mutate({ id: editingSector.id, data });
-        } else {
-            createSectorMutation.mutate(data);
-        }
-    };
-
-    const handleCategorySubmit = (data: CategoryFormData) => {
-        if (editingCategory) {
-            updateCategoryMutation.mutate({
-                id: editingCategory.id,
-                data: { ...data, sectorId: editingCategory.sectorId }
-            });
-        } else if (selectedSectorId) {
-            createCategoryMutation.mutate({
-                ...data,
-                sectorId: selectedSectorId
-            });
-        }
-    };
-
-    const handleSubcategorySubmit = (data: SubcategoryFormData) => {
-        if (editingSubcategory) {
-            updateSubcategoryMutation.mutate({
-                id: editingSubcategory.id,
-                data: { ...data, categoryId: editingSubcategory.categoryId }
-            });
-        } else if (selectedCategoryId) {
-            createSubcategoryMutation.mutate({
-                ...data,
-                categoryId: selectedCategoryId
-            });
-        }
-    };
-
+    const lastSyncedAt = getLastSyncedAt([...sectors, ...categories]);
 
     return (
         <div className="space-y-6 h-[calc(100vh-100px)] flex flex-col">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Content Taxonomy</h1>
-                    <p className="text-slate-500">Manage sectors, categories, and subcategories</p>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-slate-900">Content Taxonomy</h1>
+                        <Badge variant="outline" className="border-orange-200 text-orange-600">
+                            Read-only · MCOM Central Hub
+                        </Badge>
+                    </div>
+                    <p className="text-slate-500">
+                        Sectors, categories and subcategories are synced from MCOM Central Hub. Manage them there.
+                    </p>
+                    {lastSyncedAt && (
+                        <p className="text-xs text-slate-400">Last synced: {lastSyncedAt}</p>
+                    )}
                 </div>
             </div>
 
@@ -509,16 +116,6 @@ export default function ContentPage() {
                                     <CardTitle className="text-base font-semibold">Sectors</CardTitle>
                                     <CardDescription className="text-xs">{sectors.length} items</CardDescription>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    className="h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600"
-                                    onClick={() => {
-                                        setEditingSector(undefined);
-                                        setSectorDialogOpen(true);
-                                    }}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
                             </CardHeader>
                             <CardContent className="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50/50">
                                 {sectors.map((sector) => (
@@ -542,36 +139,9 @@ export default function ContentPage() {
                                                 <p className="text-xs text-slate-500 truncate">{sector.categoryCount} categories</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            {selectedSectorId === sector.id && (
-                                                <ChevronRight className="h-4 w-4 text-orange-500" />
-                                            )}
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setEditingSector(sector);
-                                                        setSectorDialogOpen(true);
-                                                    }}
-                                                >
-                                                    <Edit className="h-3 w-3 text-slate-500" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 hover:bg-red-50"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm('Delete this sector?')) deleteSectorMutation.mutate(sector.id);
-                                                    }}
-                                                >
-                                                    <Trash2 className="h-3 w-3 text-red-500" />
-                                                </Button>
-                                            </div>
-                                        </div>
+                                        {selectedSectorId === sector.id && (
+                                            <ChevronRight className="h-4 w-4 text-orange-500" />
+                                        )}
                                     </div>
                                 ))}
                             </CardContent>
@@ -586,18 +156,6 @@ export default function ContentPage() {
                                         {selectedSector ? `In ${selectedSector.name}` : 'Select a sector'}
                                     </CardDescription>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    disabled={!selectedSectorId}
-                                    variant="outline"
-                                    onClick={() => {
-                                        setEditingCategory(undefined);
-                                        setCategoryDialogOpen(true);
-                                    }}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
                             </CardHeader>
                             <CardContent className="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50/50">
                                 {!selectedSectorId ? (
@@ -629,36 +187,9 @@ export default function ContentPage() {
                                                     <p className="text-xs text-slate-500 truncate">{category.subcategoryCount} subcategories</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                                {selectedCategoryId === category.id && (
-                                                    <ChevronRight className="h-4 w-4 text-orange-500" />
-                                                )}
-                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setEditingCategory(category);
-                                                            setCategoryDialogOpen(true);
-                                                        }}
-                                                    >
-                                                        <Edit className="h-3 w-3 text-slate-500" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 hover:bg-red-50"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (confirm('Delete this category?')) deleteCategoryMutation.mutate(category.id);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-3 w-3 text-red-500" />
-                                                    </Button>
-                                                </div>
-                                            </div>
+                                            {selectedCategoryId === category.id && (
+                                                <ChevronRight className="h-4 w-4 text-orange-500" />
+                                            )}
                                         </div>
                                     ))
                                 )}
@@ -674,18 +205,6 @@ export default function ContentPage() {
                                         {selectedCategory ? `In ${selectedCategory.name}` : 'Select a category'}
                                     </CardDescription>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    disabled={!selectedCategoryId}
-                                    variant="outline"
-                                    onClick={() => {
-                                        setEditingSubcategory(undefined);
-                                        setSubcategoryDialogOpen(true);
-                                    }}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
                             </CardHeader>
                             <CardContent className="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50/50">
                                 {!selectedCategoryId ? (
@@ -699,7 +218,7 @@ export default function ContentPage() {
                                         <p className="text-sm">No subcategories</p>
                                     </div>
                                 ) : (
-                                    categorySubcategories.map((sub) => (
+                                    categorySubcategories.map((sub: Subcategory) => (
                                         <div
                                             key={sub.id}
                                             className="group flex items-center justify-between p-3 rounded-lg bg-white border border-transparent hover:border-slate-200 shadow-sm"
@@ -710,29 +229,6 @@ export default function ContentPage() {
                                                     <p className="font-medium text-sm text-slate-900 truncate">{sub.name}</p>
                                                     <p className="text-xs text-slate-500 truncate">{sub.description}</p>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6"
-                                                    onClick={() => {
-                                                        setEditingSubcategory(sub);
-                                                        setSubcategoryDialogOpen(true);
-                                                    }}
-                                                >
-                                                    <Edit className="h-3 w-3 text-slate-500" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 hover:bg-red-50"
-                                                    onClick={() => {
-                                                        if (confirm('Delete this subcategory?')) deleteSubcategoryMutation.mutate(sub.id);
-                                                    }}
-                                                >
-                                                    <Trash2 className="h-3 w-3 text-red-500" />
-                                                </Button>
                                             </div>
                                         </div>
                                     ))
@@ -752,36 +248,14 @@ export default function ContentPage() {
                 <TabsContent value="banners">
                      <div className="p-4 bg-slate-50 rounded-lg border border-dashed border-slate-300 text-center text-slate-500">
                         Banners content not implemented in this task
-                    </div>
+                     </div>
                 </TabsContent>
                 <TabsContent value="faqs">
                      <div className="p-4 bg-slate-50 rounded-lg border border-dashed border-slate-300 text-center text-slate-500">
                         FAQs content not implemented in this task
-                    </div>
+                     </div>
                 </TabsContent>
             </Tabs>
-
-            {/* Dialogs */}
-            <SectorDialog
-                open={sectorDialogOpen}
-                onOpenChange={setSectorDialogOpen}
-                sector={editingSector}
-                onSubmit={handleSectorSubmit}
-            />
-            <CategoryDialog
-                open={categoryDialogOpen}
-                onOpenChange={setCategoryDialogOpen}
-                category={editingCategory}
-                sectorName={selectedSector?.name || ''}
-                onSubmit={handleCategorySubmit}
-            />
-            <SubcategoryDialog
-                open={subcategoryDialogOpen}
-                onOpenChange={setSubcategoryDialogOpen}
-                subcategory={editingSubcategory}
-                categoryName={selectedCategory?.name || ''}
-                onSubmit={handleSubcategorySubmit}
-            />
         </div>
     );
 }
