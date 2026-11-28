@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +44,13 @@ export default function MarketplaceSidebar({
   const [selectedBrands, setSelectedBrands] = useState<string[]>(initialFilters?.brands || []);
   const [minRating, setMinRating] = useState<number | null>(initialFilters?.minRating || null);
   const [brandSearch, setBrandSearch] = useState('');
+
+  useEffect(() => {
+    setSelectedCategories(initialFilters?.categories || []);
+    setPriceRange(initialFilters?.priceRange || [0, maxPrice]);
+    setSelectedBrands(initialFilters?.brands || []);
+    setMinRating(initialFilters?.minRating || null);
+  }, [initialFilters, maxPrice]);
 
   const handleCategoryChange = (category: string) => {
     let newCategories;

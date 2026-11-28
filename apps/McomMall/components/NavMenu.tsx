@@ -49,6 +49,10 @@ export const menuItems: NavMenuItem[] = [
     href: '/marketplace',
   },
   {
+    title: 'Deals',
+    href: '/deals',
+  },
+  {
     title: 'Pricing',
     href: '/pricing',
   },

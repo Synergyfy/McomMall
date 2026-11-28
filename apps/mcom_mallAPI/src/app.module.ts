@@ -95,6 +95,7 @@ import { DealsModule } from './resources/deals/deals.module';
 import { InstrumentsModule } from './resources/instruments/instruments.module';
 import { PromotionalOfferModule } from './resources/promotional-offer/promotional-offer.module';
 import { PromotionalCampaignModule } from './resources/promotional-campaign/promotional-campaign.module';
+import { TakeadsModule } from './resources/takeads/takeads.module';
 
 @Module({
   imports: [
@@ -117,6 +118,7 @@ import { PromotionalCampaignModule } from './resources/promotional-campaign/prom
     InstrumentsModule,
     PromotionalOfferModule,
     PromotionalCampaignModule,
+    TakeadsModule,
     // Single global EventEmitter instance. Modules (order, shipping, …) inject
     // EventEmitter2 from this root registration instead of calling forRoot().
     EventEmitterModule.forRoot(),

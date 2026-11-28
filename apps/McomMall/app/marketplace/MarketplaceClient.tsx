@@ -66,6 +66,9 @@ import { PromotionalItem } from '@/lib/listing-data';
 import { Product } from '@/service/listings/types';
 import ExternalOfferCard from '@/components/promotional/ExternalOfferCard';
 import { useGetPublicPromotionalOffers } from '@/service/promotional-offers/hook';
+import TakeadsOfferCard from '@/components/takeads/TakeadsOfferCard';
+import { useGetPublicTakeadsOffers } from '@/service/takeads/hook';
+import { PublicTakeadsOffer } from '@/service/takeads/types';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -77,7 +80,8 @@ type ListingType =
   | 'vouchers'
   | 'gift-cards'
   | 'coupons'
-  | 'promotional';
+  | 'promotional'
+  | 'affiliate';
 
 type MarketItem = {
   id?: string | number;
@@ -95,43 +99,150 @@ type MarketItem = {
   category?: string;
 };
 
+type MarketplaceQueryParams = Record<string, string | string[] | undefined>;
+
+const LISTING_TYPES: ListingType[] = [
+  'all',
+  'products',
+  'services',
+  'businesses',
+  'vouchers',
+  'gift-cards',
+  'coupons',
+  'promotional',
+  'affiliate',
+];
+
+const MARKETPLACE_QUERY_KEYS = [
+  'search',
+  'q',
+  'type',
+  'category',
+  'minPrice',
+  'maxPrice',
+  'brand',
+  'rating',
+  'locationLevel',
+  'locationId',
+  'locationName',
+  'sort',
+  'page',
+];
+
+function getQueryValues(
+  query: MarketplaceQueryParams,
+  key: string,
+): string[] {
+  const value = query[key];
+  if (Array.isArray(value)) return value;
+  return typeof value === 'string' ? [value] : [];
+}
+
+function getInitialLocationSelection(
+  query: MarketplaceQueryParams,
+): MarketplaceLocationSelection {
+  const [level] = getQueryValues(query, 'locationLevel');
+  const [id] = getQueryValues(query, 'locationId');
+  const [name] = getQueryValues(query, 'locationName');
+
+  if (level === 'all') return { level, name: name || 'All locations' };
+  if (level === 'near') return { level, name: name || 'Near me' };
+  if (
+    ['city', 'borough', 'high-street', 'local-mall', 'area', 'postcode'].includes(
+      level || '',
+    ) &&
+    id
+  ) {
+    return {
+      level: level as Exclude<
+        MarketplaceLocationSelection['level'],
+        'all' | 'near'
+      >,
+      id,
+      name: name || id,
+    };
+  }
+
+  return { level: 'all', name: 'All locations' };
+}
+
+function getInitialFilters(
+  query: MarketplaceQueryParams,
+): MarketplaceFiltersState {
+  const numberParam = (key: string, fallback: number) => {
+    const value = Number(getQueryValues(query, key)[0]);
+    return Number.isFinite(value) ? value : fallback;
+  };
+  const minPrice = Math.min(5000, Math.max(0, numberParam('minPrice', 0)));
+  const maxPrice = Math.min(
+    5000,
+    Math.max(minPrice, numberParam('maxPrice', 5000)),
+  );
+  const rating = numberParam('rating', 0);
+
+  return {
+    categories: getQueryValues(query, 'category'),
+    priceRange: [minPrice, maxPrice],
+    brands: getQueryValues(query, 'brand'),
+    minRating: rating > 0 ? rating : null,
+  };
+}
+
 interface MarketplaceClientProps {
   initialPublicData?: MarketplacePublicData;
   initialNewProducts?: PageDto<Product>;
   initialSearch?: string;
+  initialQueryParams?: MarketplaceQueryParams;
 }
 
 export default function MarketplaceClient({
   initialPublicData,
   initialNewProducts,
   initialSearch = '',
+  initialQueryParams = {},
 }: MarketplaceClientProps) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeSidebarSlide, setActiveSidebarSlide] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [listingType, setListingType] = useState<ListingType>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortOption, setSortOption] = useState('newest');
-  const [searchQuery, setSearchQuery] = useState(initialSearch);
-  const [filters, setFilters] = useState<MarketplaceFiltersState>({
-    categories: [],
-    priceRange: [0, 5000],
-    brands: [],
-    minRating: null,
+  const [listingType, setListingType] = useState<ListingType>(() => {
+    const [type] = getQueryValues(initialQueryParams, 'type');
+    return LISTING_TYPES.includes(type as ListingType)
+      ? (type as ListingType)
+      : 'all';
   });
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = Number(getQueryValues(initialQueryParams, 'page')[0]);
+    return Number.isInteger(page) && page > 0 ? page : 1;
+  });
+  const [sortOption, setSortOption] = useState(
+    () => getQueryValues(initialQueryParams, 'sort')[0] || 'newest',
+  );
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [filters, setFilters] = useState<MarketplaceFiltersState>(() =>
+    getInitialFilters(initialQueryParams),
+  );
 
   // ── Location ────────────────────────────────────────────────────────────
   const [locationSelection, setLocationSelection] =
-    useState<MarketplaceLocationSelection>({
-      level: 'all',
-      name: 'All locations',
-    });
+    useState<MarketplaceLocationSelection>(() =>
+      getInitialLocationSelection(initialQueryParams),
+    );
   const [resolveParams, setResolveParams] =
     useState<ResolveLocationParams | null>(null);
   const [cachedResolved, setCachedResolved] =
     useState<ResolvedMarketplaceLocation | null>(null);
   const hasUserSelectedLocation = useRef(false);
   const locationRestored = useRef(false);
+  const previousLocationSelection = useRef(locationSelection);
+  const hasInitialPageParam = useRef(
+    Number.isInteger(Number(getQueryValues(initialQueryParams, 'page')[0])) &&
+      Number(getQueryValues(initialQueryParams, 'page')[0]) > 0,
+  ).current;
+  const hasMarketplaceQuery = useRef(
+    MARKETPLACE_QUERY_KEYS.some((key) =>
+      Object.prototype.hasOwnProperty.call(initialQueryParams, key),
+    ),
+  ).current;
 
   const { data: resolvedQueryData, isFetching: isResolvingLocation } =
     useResolveMarketplaceLocation(resolveParams);
@@ -142,29 +253,33 @@ export default function MarketplaceClient({
     let hasFreshResolved = false;
 
     try {
-      const stored = localStorage.getItem('mcom_marketplace_location');
-      if (stored) {
-        const parsed = JSON.parse(stored) as MarketplaceLocationSelection;
-        const validLevels = [
-          'all',
-          'near',
-          'city',
-          'borough',
-          'high-street',
-          'local-mall',
-          'area',
-          'postcode',
-        ];
-        const validExplicit =
-          parsed?.level === 'all' ||
-          parsed?.level === 'near' ||
-          (validLevels.includes(parsed?.level) &&
-            Boolean((parsed as { id?: string }).id));
-        if (parsed?.level && validExplicit) {
-          setLocationSelection(parsed);
-          // "Near me" should keep tracking the shopper; an explicit
-          // city/borough/high street/mall choice should not be overwritten.
-          hasUserSelectedLocation.current = parsed.level !== 'near';
+      if (hasMarketplaceQuery) {
+        hasUserSelectedLocation.current = locationSelection.level !== 'near';
+      } else {
+        const stored = localStorage.getItem('mcom_marketplace_location');
+        if (stored) {
+          const parsed = JSON.parse(stored) as MarketplaceLocationSelection;
+          const validLevels = [
+            'all',
+            'near',
+            'city',
+            'borough',
+            'high-street',
+            'local-mall',
+            'area',
+            'postcode',
+          ];
+          const validExplicit =
+            parsed?.level === 'all' ||
+            parsed?.level === 'near' ||
+            (validLevels.includes(parsed?.level) &&
+              Boolean((parsed as { id?: string }).id));
+          if (parsed?.level && validExplicit) {
+            setLocationSelection(parsed);
+            // "Near me" should keep tracking the shopper; an explicit
+            // city/borough/high street/mall choice should not be overwritten.
+            hasUserSelectedLocation.current = parsed.level !== 'near';
+          }
         }
       }
 
@@ -222,7 +337,10 @@ export default function MarketplaceClient({
     } catch {
       // Storage may be unavailable (private mode).
     }
-    setCurrentPage(1);
+    if (previousLocationSelection.current !== locationSelection) {
+      setCurrentPage(1);
+    }
+    previousLocationSelection.current = locationSelection;
   }, [locationSelection]);
 
   useEffect(() => {
@@ -238,10 +356,56 @@ export default function MarketplaceClient({
   // view with the query already applied. Switching tabs keeps the query.
   useEffect(() => {
     setSearchQuery(initialSearch);
-    if (initialSearch.trim()) {
+    if (initialSearch.trim() && !hasInitialPageParam) {
       setCurrentPage(1);
     }
   }, [initialSearch]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+
+    MARKETPLACE_QUERY_KEYS.forEach((key) => params.delete(key));
+
+    if (searchQuery.trim()) params.set('search', searchQuery.trim());
+    if (listingType !== 'all') params.set('type', listingType);
+    filters.categories.forEach((category) =>
+      params.append('category', category),
+    );
+    if (filters.priceRange[0] > 0) {
+      params.set('minPrice', String(filters.priceRange[0]));
+    }
+    if (filters.priceRange[1] < 5000) {
+      params.set('maxPrice', String(filters.priceRange[1]));
+    }
+    filters.brands.forEach((brand) => params.append('brand', brand));
+    if (filters.minRating !== null) {
+      params.set('rating', String(filters.minRating));
+    }
+    if (locationSelection.level !== 'all') {
+      params.set('locationLevel', locationSelection.level);
+      if ('id' in locationSelection) {
+        params.set('locationId', locationSelection.id);
+      }
+      params.set('locationName', locationSelection.name);
+    }
+    if (sortOption !== 'newest') params.set('sort', sortOption);
+    if (currentPage > 1) params.set('page', String(currentPage));
+
+    const queryString = params.toString();
+    const nextUrl = `${url.pathname}${queryString ? `?${queryString}` : ''}${url.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(window.history.state, '', nextUrl);
+    }
+  }, [
+    currentPage,
+    filters,
+    listingType,
+    locationSelection,
+    searchQuery,
+    sortOption,
+  ]);
 
   const handleLocationSelect = (selection: MarketplaceLocationSelection) => {
     hasUserSelectedLocation.current = true;
@@ -408,6 +572,26 @@ export default function MarketplaceClient({
     { enabled: listingType === 'all' },
   );
 
+  // Approved affiliate products are part of the marketplace, not a separate
+  // microsite. They only appear here when approved and published upstream.
+  const affiliateParams = {
+    q: searchQuery.trim() || undefined,
+    categoryId: selectedCategoryId,
+  };
+  const { data: affiliateOffersData, isLoading: affiliateOffersLoading } =
+    useGetPublicTakeadsOffers(
+      {
+        ...affiliateParams,
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+      },
+      { enabled: listingType === 'affiliate' },
+    );
+  const { data: affiliateHighlights } = useGetPublicTakeadsOffers(
+    { ...affiliateParams, page: 1, limit: 5 },
+    { enabled: listingType === 'all' },
+  );
+
   // Businesses matching the current query on the combined "All" search view.
   const { data: searchBusinessesData, isLoading: searchBusinessesLoading } =
     useGetPublicBusinesses(
@@ -468,6 +652,8 @@ export default function MarketplaceClient({
         return couponsLoading;
       case 'promotional':
         return promotionalOffersLoading;
+      case 'affiliate':
+        return affiliateOffersLoading;
       case 'all':
         return isPublicDataLoading;
       default:
@@ -482,6 +668,7 @@ export default function MarketplaceClient({
     giftCardsLoading,
     couponsLoading,
     promotionalOffersLoading,
+    affiliateOffersLoading,
     isPublicDataLoading,
   ]);
 
@@ -571,14 +758,29 @@ export default function MarketplaceClient({
             hasPreviousPage: promotionalOffersData.page > 1,
           }
         : undefined
-      : currentData?.meta;
+      : listingType === 'affiliate'
+        ? affiliateOffersData
+          ? {
+              totalItems: affiliateOffersData.total,
+              itemCount: affiliateOffersData.data.length,
+              itemsPerPage: affiliateOffersData.limit,
+              totalPages: affiliateOffersData.totalPages,
+              currentPage: affiliateOffersData.page,
+              hasNextPage:
+                affiliateOffersData.page < affiliateOffersData.totalPages,
+              hasPreviousPage: affiliateOffersData.page > 1,
+            }
+          : undefined
+        : currentData?.meta;
   const businessItems: PublicBusiness[] = businessesData?.data || [];
   const resultsCount =
     listingType === 'businesses'
       ? businessItems.length
       : listingType === 'promotional'
         ? promotionalOffersData?.total ?? 0
-        : displayItems.length;
+        : listingType === 'affiliate'
+          ? affiliateOffersData?.total ?? 0
+          : displayItems.length;
 
   // Sections Config Helper
   const getSection = (
@@ -973,6 +1175,60 @@ export default function MarketplaceClient({
     );
   };
 
+  const AffiliateRow = ({
+    title,
+    offers,
+    onSeeAll,
+    subtitle,
+  }: {
+    title: string;
+    offers: PublicTakeadsOffer[];
+    onSeeAll?: () => void;
+    subtitle?: string;
+  }) => {
+    if (!offers.length) return null;
+
+    return (
+      <div className="mb-6 overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-50/60 p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-6 w-1 rounded-full bg-emerald-600" />
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 md:text-xl">
+                {title}
+              </h2>
+              {subtitle ? (
+                <p className="text-xs font-medium text-emerald-700">
+                  {subtitle}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onSeeAll}
+            className="group flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+          >
+            SEE ALL{' '}
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </button>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4">
+            {offers.slice(0, 5).map((offer) => (
+              <TakeadsOfferCard
+                key={offer.id}
+                offer={offer}
+                source="marketplace"
+                compact
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="relative min-h-screen w-full bg-[#f1f1f2] text-gray-900 selection:bg-orange-500 selection:text-white font-sans pt-20 pb-12">
       <div className="container relative z-10 mx-auto px-4">
@@ -1110,6 +1366,7 @@ export default function MarketplaceClient({
               { key: 'gift-cards', label: 'Gift Cards', icon: Gift },
               { key: 'coupons', label: 'Coupons', icon: Tag },
               { key: 'promotional', label: 'MCOM Offers', icon: BadgePercent },
+              { key: 'affiliate', label: 'Affiliate', icon: BadgePercent },
             ].map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -1301,6 +1558,15 @@ export default function MarketplaceClient({
                       <BadgePercent className="w-4 h-4" /> MCOM Offers
                     </button>
                   </div>
+
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setListingType('affiliate')}
+                      className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'affiliate' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}
+                    >
+                      <BadgePercent className="w-4 h-4" /> Affiliate Products
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1350,6 +1616,9 @@ export default function MarketplaceClient({
                           <SelectItem value="coupons">Coupons</SelectItem>
                           <SelectItem value="promotional">
                             MCOM Offers
+                          </SelectItem>
+                          <SelectItem value="affiliate">
+                            Affiliate Products
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -1439,11 +1708,22 @@ export default function MarketplaceClient({
                     }}
                   />
 
+                  <AffiliateRow
+                    title={`Affiliate products matching “${searchQuery}”`}
+                    subtitle="Selected national-brand offers from approved merchants"
+                    offers={affiliateHighlights?.data || []}
+                    onSeeAll={() => {
+                      setListingType('affiliate');
+                      setCurrentPage(1);
+                    }}
+                  />
+
                   {!searchBusinessesLoading &&
                     !newProductsLoading &&
                     featuredBusinesses.length === 0 &&
                     (newProductsData?.data?.length ?? 0) === 0 &&
-                    (promotionalHighlights?.data?.length ?? 0) === 0 && (
+                    (promotionalHighlights?.data?.length ?? 0) === 0 &&
+                    (affiliateHighlights?.data?.length ?? 0) === 0 && (
                       <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                         <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Search className="h-8 w-8 text-gray-400" />
@@ -1521,6 +1801,15 @@ export default function MarketplaceClient({
                       setCurrentPage(1);
                     }}
                   />
+                  <AffiliateRow
+                    title="Affiliate Products"
+                    subtitle="Approved national-brand offers. Buying redirects to the merchant."
+                    offers={affiliateHighlights?.data || []}
+                    onSeeAll={() => {
+                      setListingType('affiliate');
+                      setCurrentPage(1);
+                    }}
+                  />
                   <SectionRow
                     title="Newest Vouchers"
                     type="vouchers"
@@ -1544,6 +1833,7 @@ export default function MarketplaceClient({
                     !publicData?.giftCards?.length &&
                     !publicData?.coupons?.length &&
                     !(promotionalHighlights?.data?.length ?? 0) &&
+                    !(affiliateHighlights?.data?.length ?? 0) &&
                     !isPublicDataLoading && (
                       <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                         <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1599,7 +1889,9 @@ export default function MarketplaceClient({
                     ? businessItems.length
                     : listingType === 'promotional'
                       ? promotionalOffersData?.data.length ?? 0
-                      : displayItems.length) > 0 ? (
+                      : listingType === 'affiliate'
+                        ? affiliateOffersData?.data.length ?? 0
+                        : displayItems.length) > 0 ? (
                   <div
                     className={
                       viewMode === 'grid'
@@ -1623,9 +1915,17 @@ export default function MarketplaceClient({
                               source="marketplace"
                             />
                           ))
-                        : displayItems.map((item) =>
-                            renderItemCard(item, viewMode, listingType),
-                          )}
+                        : listingType === 'affiliate'
+                          ? (affiliateOffersData?.data || []).map((offer) => (
+                              <TakeadsOfferCard
+                                key={offer.id}
+                                offer={offer}
+                                source="marketplace"
+                              />
+                            ))
+                          : displayItems.map((item) =>
+                              renderItemCard(item, viewMode, listingType),
+                            )}
                   </div>
                 ) : (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
