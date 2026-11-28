@@ -20,6 +20,7 @@ import {
   LifeBuoy,
   MapPin,
   Megaphone,
+  BadgePercent,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -168,6 +169,11 @@ export const accountMenuItems: MenuItem[] = [
 ];
 
 export const pluginMenuItems: MenuItem[] = [
+  {
+    title: 'Affiliate Deals',
+    href: '/dashboard/marketing/affiliate-deals',
+    icon: BadgePercent,
+  },
   {
     title: 'C-V / V-C',
     href: '/dashboard/deals',

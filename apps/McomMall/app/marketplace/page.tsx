@@ -81,7 +81,7 @@ export default async function MarketplacePage({
         initialPublicData={initialPublicData}
         initialNewProducts={initialNewProducts}
         initialSearch={initialSearch}
+        initialQueryParams={resolvedSearchParams}
     />
   );
 }
-
